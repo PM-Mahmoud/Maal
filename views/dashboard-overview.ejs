@@ -1,0 +1,73 @@
+<div class="page-header">
+  <h1>Welcome back<%= session.name ? ', ' + session.name.split(' ')[0] : '' %></h1>
+  <p>Your financial health at a glance.</p>
+</div>
+
+<% if (profile && profile.completed_onboarding) { %>
+
+<div class="score-cards">
+  <div class="score-card">
+    <div class="score-card-label">Financial Health Score</div>
+    <div class="score-card-big"><%= financialScore ? financialScore.score_value : '—' %><span class="score-card-max">/100</span></div>
+    <% if (financialScore && financialScore.grade) { %>
+      <span class="grade-pill <%= financialScore.grade.toLowerCase().replace(' ', '-') %>"><%= financialScore.grade %></span>
+    <% } else { %>
+      <span style="font-size:0.8rem;color:var(--fg-muted)">No score yet</span>
+    <% } %>
+  </div>
+  <div class="score-card">
+    <div class="score-card-label">Halal / ESG Score</div>
+    <div class="score-card-big"><%= ethicalScore ? ethicalScore.score_value : '—' %><span class="score-card-max">/100</span></div>
+    <span style="font-size:0.8rem;color:var(--fg-muted)">Compliance</span>
+  </div>
+  <div class="score-card">
+    <div class="score-card-label">Super Health Score</div>
+    <div class="score-card-big"><%= superScore ? superScore.score_value : '—' %><span class="score-card-max">/100</span></div>
+    <span style="font-size:0.8rem;color:var(--fg-muted)">Fund adequacy</span>
+  </div>
+</div>
+
+<% if (financialScore) { %>
+<div style="margin-bottom:1.25rem;font-size:0.8rem;color:var(--fg-muted);">
+  Last updated <%= new Date(financialScore.calculated_at).toLocaleDateString('en-AU', { day:'numeric', month:'short', year:'numeric' }) %>
+</div>
+<% } %>
+
+<div style="margin-bottom:1.75rem;">
+  <a href="/dashboard/scores" class="btn-secondary" style="margin-right:0.5rem;">View score details</a>
+  <a href="/dashboard/recommendations" class="btn-secondary" style="margin-right:0.5rem;">Recommendations</a>
+  <a href="/onboarding" class="btn-primary">Update your data</a>
+</div>
+
+<% if (financialScore && financialScore.score_breakdown && Object.keys(financialScore.score_breakdown).length) { %>
+<div class="card">
+  <div class="card-title">Score breakdown</div>
+  <% const breakdown = financialScore.score_breakdown; const maxes = {debtRatio:20,savingsRate:15,emergencyFund:15,superAdequacy:20,insuranceCoverage:10,investmentDiversity:10,retirementReadiness:10}; %>
+  <% Object.entries(breakdown).forEach(function([key, val]) { %>
+    <% const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, function(s) { return s.toUpperCase(); }); const max = maxes[key] || 10; %>
+    <div class="breakdown-row">
+      <span class="breakdown-label"><%= label %></span>
+      <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:<%= Math.round(val/max*100) %>%"></div></div>
+      <span class="breakdown-val"><%= val %>/<%= max %></span>
+    </div>
+  <% }); %>
+</div>
+<% } %>
+
+<% if (financialScore && financialScore.diagnosis) { %>
+<div class="card">
+  <div class="card-title">AI Diagnosis</div>
+  <p style="font-size:0.875rem;color:var(--fg-muted);line-height:1.7;margin:0;"><%= financialScore.diagnosis %></p>
+</div>
+<% } %>
+
+<% } else { %>
+
+<div class="empty-state">
+  <div class="icon">◈</div>
+  <h3>Complete your profile</h3>
+  <p>Answer a few questions about your finances to get your personalised Financial Health Score and action plan.</p>
+  <a href="/onboarding" class="btn-primary">Start onboarding</a>
+</div>
+
+<% } %>

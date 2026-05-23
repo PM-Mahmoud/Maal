@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Financial Health Score Calculator — Mizan</title>
+  <meta name="description" content="Get your personalised Financial Health Score in 2 minutes. Built for Australian health professionals — doctors, pharmacists, dentists, nurses.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <%- themeCSS %>
+  <style>
+    /* ── Score calculator page styles ── */
+    .score-page {
+      min-height: 100vh;
+      background: var(--bg);
+      padding-top: 80px;
+    }
+    .score-container {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 5rem;
+    }
+    .score-header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    .score-header .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid rgba(201,168,76,0.3);
+      border-radius: 100px;
+      padding: 0.25rem 0.85rem;
+      margin-bottom: 1rem;
+    }
+    .score-header h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5vw, 2.75rem);
+      font-weight: 600;
+      color: var(--fg);
+      line-height: 1.15;
+      margin-bottom: 0.75rem;
+    }
+    .score-header p {
+      color: var(--fg-muted);
+      font-size: 1rem;
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* Progress bar */
+    .progress-bar-wrap {
+      background: rgba(255,255,255,0.05);
+      border-radius: 100px;
+      height: 4px;
+      margin-bottom: 2.5rem;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--green-light), var(--accent));
+      border-radius: 100px;
+      transition: width 0.4s ease;
+    }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--fg-muted);
+    }
+
+    /* Step card */
+    .step-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2rem 2rem;
+      display: none;
+    }
+    .step-card.active { display: block; }
+    .step-title {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--fg);
+      margin-bottom: 0.35rem;
+    }
+    .step-subtitle {
+      color: var(--fg-muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.75rem;
+      line-height: 1.6;
+    }
+
+    /* Form fields */
+    .field-group {
+      margin-bottom: 1.25rem;
+    }
+    .field-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--fg-muted);
+      margin-bottom: 0.4rem;
+      letter-spacing: 0.02em;
+    }
+    .field-group label .required {
+      color: var(--accent);
+      margin-left: 2px;
+    }
+    .field-group input,
+    .field-group select {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(201,168,76,0.2);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      color: var(--fg);
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+    .field-group input:focus,
+    .field-group select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .field-group input::placeholder { color: rgba(240,239,233,0.3); }
+    .field-group select option { background: #0F2E24; color: var(--fg); }
+    .field-hint {
+      font-size: 0.78rem;
+      color: var(--fg-muted);
+      margin-top: 0.3rem;
+      opacity: 0.7;
+    }
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    @media (max-width: 480px) { .field-row { grid-template-columns: 1fr; } }
+
+    /* Buttons */
+    .btn-row {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.75rem;
+      justify-content: flex-end;
+    }
+    .btn-back {
+      background: transparent;
+      border: 1px solid rgba(201,168,76,0.25);
+      border-radius: 10px;
+      color: var(--fg-muted);
+      padding: 0.75rem 1.4rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-family: var(--font-body);
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-back:hover { border-color: var(--accent); color: var(--fg); }
+    .btn-next, .btn-submit {
+      background: linear-gradient(135deg, var(--green-mid), var(--green-light));
+      border: none;
+      border-radius: 10px;
+      color: var(--fg);
+      padding: 0.75rem 1.75rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-body);
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .btn-next:hover, .btn-submit:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-submit {
+      background: linear-gradient(135deg, var(--accent-dim), var(--accent));
+      color: #0A0F0D;
+    }
+
+    /* Mortgage toggle */
+    .toggle-section { display: none; }
+    .toggle-section.visible { display: block; }
+
+    /* Error */
+    .form-error {
+      background: rgba(220,50,50,0.12);
+      border: 1px solid rgba(220,50,50,0.3);
+      border-radius: 10px;
+      color: #f87171;
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── Result section ── */
+    .result-wrap { animation: fadeUp 0.4s ease both; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .gauge-wrap {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .gauge-svg {
+      width: 220px;
+      height: 120px;
+    }
+    .gauge-score-text {
+      font-family: var(--font-display);
+      font-size: 3rem;
+      font-weight: 700;
+      fill: var(--fg);
+    }
+    .gauge-grade-text {
+      font-size: 0.9rem;
+      fill: var(--fg-muted);
+    }
+    .score-grade-badge {
+      display: inline-block;
+      margin-top: 0.75rem;
+      padding: 0.3rem 1rem;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .diagnosis-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .diagnosis-card h3 {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+    .diagnosis-card p {
+      color: var(--fg);
+      font-size: 0.95rem;
+      line-height: 1.75;
+    }
+
+    .breakdown-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 480px) { .breakdown-grid { grid-template-columns: 1fr; } }
+    .breakdown-item {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+    }
+    .breakdown-item .b-label {
+      font-size: 0.75rem;
+      color: var(--fg-muted);
+      margin-bottom: 0.35rem;
+    }
+    .breakdown-item .b-bar-wrap {
+      background: rgba(255,255,255,0.06);
+      border-radius: 100px;
+      height: 5px;
+      margin-bottom: 0.3rem;
+      overflow: hidden;
+    }
+    .breakdown-item .b-bar {
+      height: 100%;
+      border-radius: 100px;
+      background: linear-gradient(90deg, var(--green-light), var(--accent));
+    }
+    .breakdown-item .b-pts {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--fg);
+    }
+
+    .recs-section h2 {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      color: var(--fg);
+      margin-bottom: 1rem;
+    }
+    .rec-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem 1.25rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+    .rec-num {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--green-mid), var(--accent-dim));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--fg);
+      margin-top: 2px;
+    }
+    .rec-body .rec-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--fg);
+      margin-bottom: 0.3rem;
+    }
+    .rec-body .rec-detail {
+      font-size: 0.875rem;
+      color: var(--fg-muted);
+      line-height: 1.65;
+    }
+
+    /* CTA section */
+    .cta-section {
+      background: linear-gradient(135deg, var(--green-deep), rgba(15,46,36,0.7));
+      border: 1px solid rgba(201,168,76,0.2);
+      border-radius: 20px;
+      padding: 2rem;
+      text-align: center;
+      margin-top: 2rem;
+    }
+    .cta-section h3 {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      color: var(--fg);
+      margin-bottom: 0.5rem;
+    }
+    .cta-section p {
+      color: var(--fg-muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+      line-height: 1.65;
+    }
+    .cta-email-form {
+      display: flex;
+      gap: 0.75rem;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    @media (max-width: 480px) {
+      .cta-email-form { flex-direction: column; }
+    }
+    .cta-email-form input[type="email"] {
+      flex: 1;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(201,168,76,0.25);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      color: var(--fg);
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+    }
+    .cta-email-form input[type="email"]::placeholder { color: rgba(240,239,233,0.35); }
+    .cta-email-form button {
+      background: linear-gradient(135deg, var(--accent-dim), var(--accent));
+      border: none;
+      border-radius: 10px;
+      color: #0A0F0D;
+      padding: 0.75rem 1.4rem;
+      font-weight: 700;
+      font-size: 0.875rem;
+      cursor: pointer;
+      font-family: var(--font-body);
+      white-space: nowrap;
+      transition: opacity 0.2s;
+    }
+    .cta-email-form button:hover { opacity: 0.9; }
+    .cta-success {
+      color: #6ee7b7;
+      font-size: 0.9rem;
+      margin-top: 0.75rem;
+    }
+    .cta-recalc {
+      display: inline-block;
+      margin-top: 1.25rem;
+      font-size: 0.85rem;
+      color: var(--fg-muted);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .cta-recalc:hover { color: var(--fg); }
+
+    /* Disclaimer */
+    .disclaimer {
+      margin-top: 2.5rem;
+      font-size: 0.75rem;
+      color: rgba(138,141,131,0.55);
+      text-align: center;
+      line-height: 1.65;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <span class="logo-mark">◈</span>
+        <span class="logo-text">Mizan</span>
+      </a>
+      <div class="nav-links">
+        <a href="/#features">Scores</a>
+        <a href="/#waitlist" class="nav-cta">Join Waitlist</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="score-page">
+    <div class="score-container">
+
+      <% if (!result) { %>
+      <!-- ── Calculator form ── -->
+      <div class="score-header">
+        <span class="badge">Free Tool</span>
+        <h1>Financial Health Score</h1>
+        <p>2-minute assessment. Personalised score + action plan. No sign-up required.</p>
+      </div>
+
+      <% if (error) { %>
+      <div class="form-error"><%- error %></div>
+      <% } %>
+
+      <div class="progress-label">
+        <span id="stepLabel">Step 1 of 4</span>
+        <span id="stepPct">25%</span>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progressFill" style="width:25%"></div>
+      </div>
+
+      <form method="POST" action="/score/calculate" id="scoreForm">
+
+        <!-- Step 1: About You -->
+        <div class="step-card active" id="step1">
+          <div class="step-title">About you</div>
+          <div class="step-subtitle">Helps us contextualise your score against peers at the same career stage.</div>
+
+          <div class="field-group">
+            <label>Profession</label>
+            <select name="profession">
+              <option value="" <% if (!formData || !formData.profession) { %>selected<% } %>>Select profession</option>
+              <option value="Doctor" <% if (formData && formData.profession === 'Doctor') { %>selected<% } %>>Doctor (GP, Specialist, Registrar)</option>
+              <option value="Pharmacist" <% if (formData && formData.profession === 'Pharmacist') { %>selected<% } %>>Pharmacist</option>
+              <option value="Dentist" <% if (formData && formData.profession === 'Dentist') { %>selected<% } %>>Dentist</option>
+              <option value="Nurse" <% if (formData && formData.profession === 'Nurse') { %>selected<% } %>>Nurse / Midwife</option>
+              <option value="Allied Health" <% if (formData && formData.profession === 'Allied Health') { %>selected<% } %>>Allied Health Professional</option>
+              <option value="Other Health" <% if (formData && formData.profession === 'Other Health') { %>selected<% } %>>Other Health Professional</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label>Career stage</label>
+            <select name="stage">
+              <option value="" disabled <% if (!formData || !formData.stage) { %>selected<% } %>>Select stage</option>
+              <option value="Student / Intern" <% if (formData && formData.stage === 'Student / Intern') { %>selected<% } %>>Student / Intern</option>
+              <option value="Registrar / Junior" <% if (formData && formData.stage === 'Registrar / Junior') { %>selected<% } %>>Registrar / Junior</option>
+              <option value="Consultant / Senior" <% if (formData && formData.stage === 'Consultant / Senior') { %>selected<% } %>>Consultant / Senior</option>
+              <option value="Practice Owner" <% if (formData && formData.stage === 'Practice Owner') { %>selected<% } %>>Practice Owner / Partner</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label>Your age</label>
+            <input type="number" name="age" min="18" max="80" placeholder="e.g. 34"
+              value="<%= formData && formData.age ? formData.age : '' %>">
+          </div>
+
+          <div class="btn-row">
+            <button type="button" class="btn-next" onclick="goStep(2)">Next →</button>
+          </div>
+        </div>
+
+        <!-- Step 2: Income & Debt -->
+        <div class="step-card" id="step2">
+          <div class="step-title">Income &amp; debt</div>
+          <div class="step-subtitle">All figures in AUD. Gross income = before tax.</div>
+
+          <div class="field-group">
+            <label>Gross annual income (AUD)</label>
+            <input type="number" name="annualIncome" min="0" placeholder="e.g. 180000"
+              value="<%= formData && formData.annualIncome ? formData.annualIncome : '' %>">
+            <div class="field-hint">Your total income before tax. Include base + super + any locum/private earnings.</div>
+          </div>
+
+          <div class="field-group">
+            <label>HECS/HELP debt balance ($)</label>
+            <input type="number" name="hecsBalance" min="0" placeholder="0 if none"
+              value="<%= formData && formData.hecsBalance ? formData.hecsBalance : '0' %>">
+            <div class="field-hint">Check your myGov account for your current HECS-HELP balance.</div>
+          </div>
+
+          <div class="field-group">
+            <label>Other debt balance — credit card, personal loan, car ($)</label>
+            <input type="number" name="otherDebtBalance" min="0" placeholder="0 if none"
+              value="<%= formData && formData.otherDebtBalance ? formData.otherDebtBalance : '0' %>">
+          </div>
+
+          <div class="field-group">
+            <label>Average interest rate on that debt (%)</label>
+            <input type="number" name="otherDebtRate" min="0" max="100" step="0.1" placeholder="e.g. 19.99"
+              value="<%= formData && formData.otherDebtRate ? formData.otherDebtRate : '0' %>">
+            <div class="field-hint">Use 0 if you have no other debt. Enter your highest rate if multiple debts.</div>
+          </div>
+
+          <div class="field-group">
+            <label>Do you have a mortgage?</label>
+            <select name="mortgageYesNo" id="mortgageToggle" onchange="toggleMortgage(this.value)">
+              <option value="no" <% if (!formData || formData.mortgageYesNo !== 'yes') { %>selected<% } %>>No</option>
+              <option value="yes" <% if (formData && formData.mortgageYesNo === 'yes') { %>selected<% } %>>Yes</option>
+            </select>
+          </div>
+
+          <div class="toggle-section <%= formData && formData.mortgageYesNo === 'yes' ? 'visible' : '' %>" id="mortgageFields">
+            <div class="field-row">
+              <div class="field-group">
+                <label>Mortgage balance ($)</label>
+                <input type="number" name="mortgageBalance" min="0" placeholder="e.g. 650000"
+                  value="<%= formData && formData.mortgageBalance ? formData.mortgageBalance : '0' %>">
+              </div>
+              <div class="field-group">
+                <label>Mortgage rate (%)</label>
+                <input type="number" name="mortgageRate" min="0" max="20" step="0.01" placeholder="e.g. 6.2"
+                  value="<%= formData && formData.mortgageRate ? formData.mortgageRate : '0' %>">
+              </div>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button type="button" class="btn-back" onclick="goStep(1)">← Back</button>
+            <button type="button" class="btn-next" onclick="goStep(3)">Next →</button>
+          </div>
+        </div>
+
+        <!-- Step 3: Super & Savings -->
+        <div class="step-card" id="step3">
+          <div class="step-title">Super &amp; savings</div>
+          <div class="step-subtitle">Log in to your super fund app for your current balance.</div>
+
+          <div class="field-group">
+            <label>Superannuation balance ($)</label>
+            <input type="number" name="superBalance" min="0" placeholder="e.g. 85000"
+              value="<%= formData && formData.superBalance ? formData.superBalance : '0' %>">
+          </div>
+
+          <div class="field-group">
+            <label>Employer super contribution rate (%)</label>
+            <input type="number" name="employerContribRate" min="0" max="30" step="0.5" placeholder="11"
+              value="<%= formData && formData.employerContribRate ? formData.employerContribRate : '11' %>">
+            <div class="field-hint">The mandatory Superannuation Guarantee is 11% (FY25). Hospital employees may receive more.</div>
+          </div>
+
+          <div class="field-group">
+            <label>Emergency fund — months of expenses covered</label>
+            <input type="number" name="emergencyMonths" min="0" max="24" step="0.5" placeholder="e.g. 2"
+              value="<%= formData && formData.emergencyMonths ? formData.emergencyMonths : '0' %>">
+            <div class="field-hint">How many months could you cover all living expenses from savings alone?</div>
+          </div>
+
+          <div class="field-group">
+            <label>Monthly savings amount ($)</label>
+            <input type="number" name="monthlySavings" min="0" placeholder="e.g. 1500"
+              value="<%= formData && formData.monthlySavings ? formData.monthlySavings : '0' %>">
+            <div class="field-hint">What you reliably save each month after all expenses (before super).</div>
+          </div>
+
+          <div class="btn-row">
+            <button type="button" class="btn-back" onclick="goStep(2)">← Back</button>
+            <button type="button" class="btn-next" onclick="goStep(4)">Next →</button>
+          </div>
+        </div>
+
+        <!-- Step 4: Investments -->
+        <div class="step-card" id="step4">
+          <div class="step-title">Investments</div>
+          <div class="step-subtitle">Outside of super — shares, ETFs, crypto, managed funds.</div>
+
+          <div class="field-group">
+            <label>Total investment balance outside super ($)</label>
+            <input type="number" name="investmentBalance" min="0" placeholder="0 if none"
+              value="<%= formData && formData.investmentBalance ? formData.investmentBalance : '0' %>">
+            <div class="field-hint">Include brokerage accounts, ETFs, shares, crypto (at current value). Exclude your home and super.</div>
+          </div>
+
+          <div class="btn-row">
+            <button type="button" class="btn-back" onclick="goStep(3)">← Back</button>
+            <button type="submit" class="btn-submit">Calculate my score →</button>
+          </div>
+        </div>
+
+      </form>
+      <!-- ── end form ── -->
+
+      <% } else { %>
+      <!-- ── Result ── -->
+      <div class="result-wrap">
+
+        <div class="score-header">
+          <span class="badge">Your Result</span>
+          <h1>Financial Health Score</h1>
+        </div>
+
+        <!-- Gauge -->
+        <div class="gauge-wrap">
+          <%
+            const s = result.score;
+            // Semicircle arc: radius 80, centre 110,100
+            // arc from 180° to 0° → maps score 0-100 to 0°-180°
+            const R = 80;
+            const cx = 110, cy = 100;
+            const toRad = (deg) => deg * Math.PI / 180;
+            // score 0 = left (180°), score 100 = right (0°)
+            // angle decreasing as score increases
+            const startAngle = 180;
+            const endAngle = 180 - (s / 100) * 180;
+            const x1 = cx + R * Math.cos(toRad(startAngle));
+            const y1 = cy + R * Math.sin(toRad(startAngle));
+            const x2 = cx + R * Math.cos(toRad(endAngle));
+            const y2 = cy + R * Math.sin(toRad(endAngle));
+            const largeArc = (s >= 50) ? 1 : 0;
+            // color by grade
+            const gaugeColor = s >= 80 ? '#6ee7b7' : s >= 65 ? '#C9A84C' : s >= 50 ? '#f59e0b' : s >= 35 ? '#f87171' : '#ef4444';
+            const gradeBg = s >= 80 ? 'rgba(110,231,183,0.15)' : s >= 65 ? 'rgba(201,168,76,0.15)' : s >= 50 ? 'rgba(245,158,11,0.15)' : 'rgba(248,113,113,0.15)';
+            const gradeColor = gaugeColor;
+          %>
+          <svg class="gauge-svg" viewBox="0 0 220 110">
+            <!-- Track -->
+            <path d="M 30 100 A 80 80 0 0 1 190 100" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="12" stroke-linecap="round"/>
+            <!-- Fill -->
+            <% if (s > 0) { %>
+            <path d="M <%= x1.toFixed(2) %> <%= y1.toFixed(2) %> A <%= R %> <%= R %> 0 <%= largeArc %> 1 <%= x2.toFixed(2) %> <%= y2.toFixed(2) %>"
+              fill="none" stroke="<%= gaugeColor %>" stroke-width="12" stroke-linecap="round"/>
+            <% } %>
+            <!-- Score number -->
+            <text x="110" y="88" text-anchor="middle" class="gauge-score-text" font-family="Georgia,serif" font-size="38" font-weight="700" fill="<%= gaugeColor %>"><%= s %></text>
+            <text x="110" y="105" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="12" fill="#8A8D83">out of 100</text>
+          </svg>
+          <br>
+          <span class="score-grade-badge" style="background:<%= gradeBg %>; color:<%= gradeColor %>; border:1px solid <%= gaugeColor %>33;">
+            <%= result.grade %>
+          </span>
+        </div>
+
+        <!-- Diagnosis -->
+        <div class="diagnosis-card">
+          <h3>Diagnosis</h3>
+          <p><%- result.diagnosis %></p>
+        </div>
+
+        <!-- Score breakdown -->
+        <div class="breakdown-grid">
+          <%
+          const breakdownLabels = {
+            debtRatio: { label: 'Debt Ratio', max: 20 },
+            superAdequacy: { label: 'Super Adequacy', max: 20 },
+            savingsRate: { label: 'Savings Rate', max: 15 },
+            emergencyFund: { label: 'Emergency Fund', max: 15 },
+            investmentDiversity: { label: 'Investment Diversity', max: 10 },
+            retirementReadiness: { label: 'Retirement Readiness', max: 10 },
+            insuranceCoverage: { label: 'Insurance Cover', max: 10 },
+          };
+          Object.entries(result.components || {}).forEach(([key, pts]) => {
+            const info = breakdownLabels[key];
+            if (!info) return; // skip unknown component keys
+            const pct = Math.round((pts / info.max) * 100);
+          %>
+          <div class="breakdown-item">
+            <div class="b-label"><%= info.label %></div>
+            <div class="b-bar-wrap">
+              <div class="b-bar" style="width:<%= pct %>%"></div>
+            </div>
+            <div class="b-pts"><%= pts %>/<%= info.max %> pts</div>
+          </div>
+          <% }); %>
+        </div>
+
+        <!-- Halal & Portfolio scores -->
+        <% if (result.halalComplianceScore !== undefined) { %>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.5rem;">
+          <div class="breakdown-item">
+            <div class="b-label">Halal / Ethical Compliance</div>
+            <div class="b-bar-wrap">
+              <div class="b-bar" style="width:<%= result.halalComplianceScore %>%"></div>
+            </div>
+            <div class="b-pts"><%= result.halalComplianceScore %>/100</div>
+          </div>
+          <div class="breakdown-item">
+            <div class="b-label">Portfolio Health</div>
+            <div class="b-bar-wrap">
+              <div class="b-bar" style="width:<%= result.portfolioHealthScore %>%"></div>
+            </div>
+            <div class="b-pts"><%= result.portfolioHealthScore %>/100</div>
+          </div>
+        </div>
+        <% } %>
+
+        <!-- Recommendations -->
+        <div class="recs-section">
+          <h2>Your top 3 actions — ranked by impact</h2>
+          <% result.recommendations.forEach((rec, i) => { %>
+          <div class="rec-card">
+            <div class="rec-num"><%= i + 1 %></div>
+            <div class="rec-body">
+              <div class="rec-title"><%= rec.title %></div>
+              <div class="rec-detail"><%= rec.detail %></div>
+            </div>
+          </div>
+          <% }); %>
+        </div>
+
+        <!-- Email CTA -->
+        <div class="cta-section">
+          <h3>Get your full Mizan report</h3>
+          <p>Portfolio screening + halal/ethical compliance + ongoing monitoring — built for Australian health professionals. Join the waitlist for early access.</p>
+          <form class="cta-email-form" id="ctaForm" onsubmit="submitCTA(event)">
+            <input type="email" id="ctaEmail" placeholder="your@email.com" required>
+            <button type="submit">Join waitlist →</button>
+          </form>
+          <div class="cta-success" id="ctaSuccess" style="display:none">
+            ✓ You're on the waitlist. We'll be in touch.
+          </div>
+          <br>
+          <a class="cta-recalc" href="/score">Recalculate with different figures</a>
+        </div>
+
+        <div class="disclaimer">
+          This score is for informational purposes only and does not constitute personal financial advice. Always seek advice from a qualified financial adviser before making investment decisions.
+        </div>
+
+      </div>
+      <!-- ── end result ── -->
+      <% } %>
+
+    </div>
+  </div>
+
+  <script>
+    // Multi-step form navigation
+    let currentStep = 1;
+    const totalSteps = 4;
+
+    function highlightEmpty(el) {
+      el.style.borderColor = '#f87171';
+      setTimeout(() => el.style.borderColor = '', 2000);
+      el.focus();
+    }
+
+    function isEmpty(val) {
+      return val === null || val === undefined || String(val).trim() === '';
+    }
+
+    function validateStep(step) {
+      if (step === 1) {
+        const age = document.querySelector('[name="age"]');
+        if (isEmpty(age.value) || Number(age.value) < 18 || Number(age.value) > 80) {
+          highlightEmpty(age);
+          return false;
+        }
+      }
+      if (step === 2) {
+        const income = document.querySelector('[name="annualIncome"]');
+        if (isEmpty(income.value) || Number(income.value) < 0) {
+          highlightEmpty(income);
+          return false;
+        }
+      }
+      if (step === 3) {
+        const superBal = document.querySelector('[name="superBalance"]');
+        if (isEmpty(superBal.value)) {
+          highlightEmpty(superBal);
+          return false;
+        }
+        const months = document.querySelector('[name="emergencyMonths"]');
+        if (isEmpty(months.value) || Number(months.value) < 0) {
+          highlightEmpty(months);
+          return false;
+        }
+        const savings = document.querySelector('[name="monthlySavings"]');
+        if (isEmpty(savings.value) || Number(savings.value) < 0) {
+          highlightEmpty(savings);
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function goStep(n) {
+      if (n > currentStep && !validateStep(currentStep)) return;
+      document.getElementById('step' + currentStep).classList.remove('active');
+      document.getElementById('step' + n).classList.add('active');
+      currentStep = n;
+      updateProgress();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function updateProgress() {
+      const pct = Math.round((currentStep / totalSteps) * 100);
+      document.getElementById('progressFill').style.width = pct + '%';
+      document.getElementById('stepLabel').textContent = 'Step ' + currentStep + ' of ' + totalSteps;
+      document.getElementById('stepPct').textContent = pct + '%';
+    }
+
+    function toggleMortgage(val) {
+      const section = document.getElementById('mortgageFields');
+      section.classList.toggle('visible', val === 'yes');
+    }
+
+    // Waitlist CTA
+    async function submitCTA(e) {
+      e.preventDefault();
+      const email = document.getElementById('ctaEmail').value;
+      const btn = e.target.querySelector('button');
+      btn.disabled = true;
+      btn.textContent = 'Joining…';
+      try {
+        const res = await fetch('/api/waitlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+        if (data.ok || res.ok) {
+          document.getElementById('ctaForm').style.display = 'none';
+          document.getElementById('ctaSuccess').style.display = 'block';
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Join waitlist →';
+          alert(data.error || 'Something went wrong. Try again.');
+        }
+      } catch {
+        btn.disabled = false;
+        btn.textContent = 'Join waitlist →';
+      }
+    }
+  </script>
+
+  <%- analyticsSnippet %>
+</body>
+</html>

@@ -1,0 +1,221 @@
+<style>
+  /* ── Tool card grid ──────────────────────────────────────────────────── */
+  .tools-category-section { margin-bottom: 2.5rem; }
+  .tools-category-heading {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--fg-muted);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.6rem;
+    margin-bottom: 1rem;
+  }
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 0.875rem;
+  }
+  .tool-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: border-color 0.15s;
+  }
+  .tool-card:hover { border-color: rgba(201,168,76,0.35); }
+  .tool-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .tool-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--fg);
+    line-height: 1.3;
+  }
+  .tool-tags {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .tool-tag {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+  }
+  .tag-au    { background: rgba(45,107,82,0.25); color: #7ED4A6; border: 1px solid rgba(45,107,82,0.4); }
+  .tag-uk    { background: rgba(80,100,220,0.18); color: #9AADF0; border: 1px solid rgba(80,100,220,0.3); }
+  .tag-global{ background: rgba(201,168,76,0.12); color: var(--accent); border: 1px solid rgba(201,168,76,0.25); }
+  .tag-halal { background: rgba(126,212,166,0.12); color: #7ED4A6; border: 1px solid rgba(126,212,166,0.3); }
+  .tag-screening { background: rgba(201,168,76,0.18); color: var(--accent); border: 1px solid rgba(201,168,76,0.35); }
+  .tool-desc {
+    font-size: 0.825rem;
+    color: var(--fg-muted);
+    line-height: 1.55;
+  }
+  .tool-why {
+    font-size: 0.78rem;
+    color: var(--fg);
+    background: rgba(201,168,76,0.06);
+    border-left: 2px solid rgba(201,168,76,0.4);
+    padding: 0.4rem 0.65rem;
+    border-radius: 0 6px 6px 0;
+    line-height: 1.5;
+  }
+  .tool-why-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 0.2rem;
+    display: block;
+  }
+  .tool-footer {
+    margin-top: auto;
+    padding-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .tool-visit {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: opacity 0.15s;
+  }
+  .tool-visit:hover { opacity: 0.75; text-decoration: none; }
+  /* Tier gate banner */
+  .tier-gate-banner {
+    background: rgba(201,168,76,0.07);
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 2rem;
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .tier-gate-banner strong { color: var(--fg); }
+  /* Editorial disclaimer */
+  .disclaimer-card {
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    font-size: 0.775rem;
+    color: var(--fg-muted);
+    line-height: 1.6;
+    margin-bottom: 2rem;
+  }
+  .disclaimer-card strong { color: var(--fg); }
+  @media (max-width: 600px) {
+    .tools-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="page-header">
+  <h1>Recommended Tools</h1>
+  <p>Curated platforms to complement your Mizan score — matched to your profile and tier.</p>
+</div>
+
+<%
+  // Tier display label
+  const tierLabel = tier === 'elite' ? 'Elite' : tier === 'pro' ? 'Pro' : 'Basic';
+  const tierTools = {
+    basic:  'screening tools + popular AU platforms',
+    pro:    'full AU & international library',
+    elite:  'complete library including SMSF, sukuk, and alternative investments',
+  };
+%>
+
+<div class="disclaimer-card">
+  <strong>Editorial only.</strong>
+  These are hand-picked recommendations. Mizan's algorithm selects tools based on your profile — we have no affiliate relationship with any listed platform and earn no commissions. All links are direct.
+</div>
+
+<% if (tier === 'basic') { %>
+<div class="tier-gate-banner">
+  <span style="font-size:1.1rem;color:var(--accent)">◈</span>
+  <span>You're on <strong>Basic</strong>. Upgrade to <strong>Pro</strong> to unlock the full library — <%= tierTools.pro %>.</span>
+</div>
+<% } else if (tier === 'pro') { %>
+<div class="tier-gate-banner">
+  <span style="font-size:1.1rem;color:var(--accent)">◈</span>
+  <span>You're on <strong>Pro</strong>. Upgrade to <strong>Elite</strong> to access <%= tierTools.elite %>.</span>
+</div>
+<% } %>
+
+<%
+  const CATEGORY_ICONS = {
+    'Screening':       '🔍',
+    'Equities':        '📈',
+    'Sukuk':           '📜',
+    'Precious Metals': '🥇',
+    'Commodities':     '⛽',
+    'Alternatives':    '🏛️',
+    'Startups':        '🚀',
+  };
+%>
+
+<% if (tools.length === 0) { %>
+<div class="empty-state">
+  <div class="icon">◈</div>
+  <h3>No tools available yet</h3>
+  <p>Complete your profile to get personalised tool recommendations.</p>
+  <a href="/onboarding" class="btn-primary">Complete profile</a>
+</div>
+<% } else { %>
+
+<% categories.forEach(function(cat) { %>
+<% if (grouped[cat] && grouped[cat].length > 0) { %>
+<div class="tools-category-section">
+  <div class="tools-category-heading"><%= CATEGORY_ICONS[cat] || '' %> <%= cat %></div>
+  <div class="tools-grid">
+    <% grouped[cat].forEach(function(tool) { %>
+    <div class="tool-card">
+      <div class="tool-card-top">
+        <div class="tool-name"><%= tool.name %></div>
+        <div class="tool-tags">
+          <span class="tool-tag tag-<%= tool.region.toLowerCase() %>"><%= tool.region %></span>
+          <% if (tool.halal_relevant) { %><span class="tool-tag tag-halal">Halal</span><% } %>
+          <% if (tool.always_show) { %><span class="tool-tag tag-screening">Free</span><% } %>
+        </div>
+      </div>
+
+      <div class="tool-desc"><%= tool.description %></div>
+
+      <div class="tool-why">
+        <span class="tool-why-label">Why for you</span>
+        <%= tool.why_recommended %>
+      </div>
+
+      <div class="tool-footer">
+        <a href="<%= tool.url %>" target="_blank" rel="noopener noreferrer" class="tool-visit">
+          Visit →
+        </a>
+        <span style="font-size:0.7rem;color:var(--fg-muted);opacity:0.5;">No affiliation</span>
+      </div>
+    </div>
+    <% }); %>
+  </div>
+</div>
+<% } %>
+<% }); %>
+
+<% } %>

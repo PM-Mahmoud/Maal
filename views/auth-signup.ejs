@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create account — Mizan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/theme.css">
+  <style>
+    body { background: var(--bg); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
+    .auth-wrap { width: 100%; max-width: 420px; }
+    .auth-logo { text-align: center; margin-bottom: 2.5rem; }
+    .auth-logo a { text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; }
+    .auth-card { background: var(--green-deep); border: 1px solid var(--border); border-radius: 16px; padding: 2.5rem; }
+    .auth-card h1 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; color: var(--fg); margin: 0 0 0.35rem; }
+    .auth-card .subtitle { font-size: 0.875rem; color: var(--fg-muted); margin: 0 0 2rem; line-height: 1.55; }
+    .form-group { margin-bottom: 1.1rem; }
+    .form-group label { display: block; font-size: 0.75rem; font-weight: 500; color: var(--fg-muted); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.07em; }
+    .form-group input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; padding: 0.7rem 0.9rem; color: var(--fg); font-size: 0.9rem; font-family: var(--font-body); outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+    .form-group input:focus { border-color: rgba(201,168,76,0.5); }
+    .form-group input::placeholder { color: var(--fg-muted); opacity: 0.5; }
+    .btn-primary { width: 100%; background: var(--accent); color: var(--bg); font-weight: 600; font-size: 0.9rem; padding: 0.8rem 1.5rem; border: none; border-radius: 8px; cursor: pointer; font-family: var(--font-body); transition: opacity 0.2s; }
+    .btn-primary:hover { opacity: 0.85; }
+    .alert { padding: 0.75rem 0.9rem; border-radius: 8px; font-size: 0.825rem; margin-bottom: 1.1rem; line-height: 1.5; }
+    .alert-error { background: rgba(224,112,112,0.12); border: 1px solid rgba(224,112,112,0.3); color: #E07070; }
+    .terms-note { font-size: 0.75rem; color: var(--fg-muted); line-height: 1.5; margin-top: 0.75rem; text-align: center; }
+    .terms-note a { color: var(--accent); text-decoration: none; }
+    .auth-footer { text-align: center; margin-top: 1.5rem; font-size: 0.825rem; color: var(--fg-muted); }
+    .auth-footer a { color: var(--accent); text-decoration: none; }
+    .back-link { display: block; text-align: center; margin-top: 1.5rem; font-size: 0.825rem; color: var(--fg-muted); text-decoration: none; }
+    @media (max-width: 480px) { .auth-card { padding: 1.75rem 1.25rem; } }
+  </style>
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-logo">
+      <a href="/">
+        <span style="font-size:1.8rem;color:var(--accent);">◈</span>
+        <span style="font-family:var(--font-display);font-size:1.3rem;font-weight:600;color:var(--fg);">Mizan</span>
+      </a>
+    </div>
+    <div class="auth-card">
+      <h1>Create your account</h1>
+      <p class="subtitle">Get your Financial Health Score in minutes.</p>
+
+      <% if (error) { %>
+        <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <form action="/signup" method="POST">
+        <div class="form-group">
+          <label for="name">Full name</label>
+          <input type="text" id="name" name="name" placeholder="Dr Sarah Chen" required value="<%= name %>">
+        </div>
+        <div class="form-group">
+          <label for="email">Email address</label>
+          <input type="email" id="email" name="email" placeholder="you@example.com" required value="<%= email %>">
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="At least 8 characters" required minlength="8">
+        </div>
+        <button type="submit" class="btn-primary">Create account</button>
+        <p class="terms-note">By creating an account you agree to our Terms of Service.</p>
+      </form>
+    </div>
+    <div class="auth-footer">
+      Already have an account? <a href="/login">Sign in</a>
+    </div>
+    <a href="/" class="back-link">← Back to Mizan</a>
+  </div>
+</body>
+</html>

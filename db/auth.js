@@ -1,0 +1,27 @@
+// db/auth.js
+// Pool singleton + Postgres session store. Uses connect-pg-simple for persistent
+// 30-day sessions across server restarts.
+
+const { Pool } = require('pg');
+
+if (!global.__authPool) {
+  global.__authPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+  });
+}
+
+const pool = global.__authPool;
+
+// ─── Session store (Postgres-backed) ─────────────────────────────────────
+
+const session = require('express-session');
+const PgSessionStore = require('connect-pg-simple')(session);
+
+const sessionStore = new PgSessionStore({
+  pool,
+  tableName: 'session',
+  createTableIfMissing: false,
+});
+
+module.exports = { pool, sessionStore };

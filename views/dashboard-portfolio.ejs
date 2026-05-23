@@ -1,0 +1,552 @@
+<style>
+  /* ── Page layout ─────────────────────────────────────────────────────── */
+  .portfolio-hero { text-align: center; margin-bottom: 2.5rem; }
+  .portfolio-hero h1 { font-family: var(--font-display); font-size: 1.8rem; font-weight: 600; margin: 0 0 0.5rem; }
+  .portfolio-hero p  { font-size: 0.875rem; color: var(--fg-muted); margin: 0; }
+
+  /* ── Intake form (Step 1) ────────────────────────────────────────────── */
+  .form-section {
+    background: var(--green-deep);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .form-section-title {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0 0 1.25rem;
+    color: var(--fg);
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .toggle-group { display: flex; gap: 0; margin-bottom: 0.5rem; }
+  .toggle-btn {
+    flex: 1;
+    padding: 0.7rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    font-family: var(--font-body);
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .toggle-btn:first-child { border-radius: 8px 0 0 8px; }
+  .toggle-btn:last-child  { border-radius: 0 8px 8px 0; border-left: none; }
+  .toggle-btn.active { background: rgba(201,168,76,0.12); color: var(--accent); border-color: rgba(201,168,76,0.5); }
+  .toggle-btn:hover:not(.active) { background: rgba(255,255,255,0.07); }
+  .toggle-input { display: none; }
+
+  /* ── Step indicator ──────────────────────────────────────────────────── */
+  .step-bar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 2rem;
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .step-item {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+    font-weight: 500;
+  }
+  .step-num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .step-item.active { color: var(--accent); }
+  .step-item.active .step-num { background: rgba(201,168,76,0.15); border-color: var(--accent); color: var(--accent); }
+  .step-item.done .step-num { background: rgba(126,212,166,0.15); border-color: #7ED4A6; color: #7ED4A6; }
+  .step-line { flex: 1; height: 1px; background: var(--border); margin: 0 0.5rem; }
+
+  /* ── Result section ──────────────────────────────────────────────────── */
+  .result-wrap { }
+  .result-header { text-align: center; margin-bottom: 2rem; }
+  .result-profile-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    background: rgba(201,168,76,0.12);
+    color: var(--accent);
+    border: 1px solid rgba(201,168,76,0.3);
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    margin-bottom: 0.75rem;
+  }
+  .result-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; margin: 0 0 0.5rem; }
+  .result-subtitle { font-size: 0.875rem; color: var(--fg-muted); margin: 0; }
+
+  /* ── SVG Donut ───────────────────────────────────────────────────────── */
+  .donut-section { margin-bottom: 2rem; }
+  .donut-wrap { display: flex; align-items: center; gap: 2rem; }
+  .donut-svg-wrap { flex-shrink: 0; }
+  .donut-legend { flex: 1; display: flex; flex-direction: column; gap: 0.75rem; }
+  .legend-row { display: flex; align-items: center; gap: 0.75rem; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .legend-label { font-size: 0.825rem; color: var(--fg-muted); flex: 1; }
+  .legend-pct { font-size: 0.9rem; font-weight: 700; color: var(--fg); min-width: 40px; text-align: right; }
+
+  /* ── Fund tables ────────────────────────────────────────────────────── */
+  .alloc-section { margin-bottom: 1.5rem; }
+  .alloc-section-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--fg-muted);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .fund-table { width: 100%; border-collapse: collapse; }
+  .fund-table th {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--fg-muted);
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .fund-table td {
+    font-size: 0.825rem;
+    color: var(--fg);
+    padding: 0.7rem 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle;
+  }
+  .fund-table tr:last-child td { border-bottom: none; }
+  .fund-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .ticker-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: rgba(201,168,76,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(201,168,76,0.25);
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-family: monospace;
+  }
+  .alloc-pct-cell { font-weight: 700; color: var(--accent); }
+  .alloc-bar-wrap { width: 60px; height: 4px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; }
+  .alloc-bar { height: 100%; border-radius: 999px; background: var(--accent); }
+
+  /* ── Why box ─────────────────────────────────────────────────────────── */
+  .why-card {
+    background: rgba(201,168,76,0.05);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 10px 10px 0;
+    padding: 1rem 1.25rem;
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    line-height: 1.65;
+    margin-top: 1.5rem;
+  }
+  .why-card strong { color: var(--accent); }
+
+  /* ── Reset button ────────────────────────────────────────────────────── */
+  .reset-row { text-align: center; margin-top: 2rem; }
+  .btn-ghost {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--fg-muted);
+    font-size: 0.8rem;
+    font-weight: 500;
+    font-family: var(--font-body);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,0.06); color: var(--fg); }
+
+  /* ── Investor type label ─────────────────────────────────────────────── */
+  .investor-type-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+    margin-left: 0.5rem;
+  }
+  .investor-halal { background: rgba(126,212,166,0.15); color: #7ED4A6; }
+  .investor-ethical { background: rgba(80,100,220,0.18); color: #9AADF0; }
+
+  @media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; }
+    .donut-wrap { flex-direction: column; }
+  }
+</style>
+
+<%
+  function donutPaths(alloc) {
+    const r = 70, cx = 90, cy = 90;
+    const total = 100;
+    // Colors: equities=#C9A84C, fixed=#3D6B52, metals=#B87333
+    const slices = [
+      { pct: alloc.equities, color: '#C9A84C' },
+      { pct: alloc.fixed,    color: '#3D6B52' },
+      { pct: alloc.metals,   color: '#B87333' },
+    ];
+    const out = [];
+    let start = 0;
+    slices.forEach(s => {
+      if (s.pct <= 0) return;
+      const angle = (s.pct / total) * 360;
+      const startAngle = (start / total) * 360 - 90; // start at top (-90deg)
+      const endAngle   = startAngle + angle;
+      const x1 = cx + r * Math.cos((startAngle * Math.PI) / 180);
+      const y1 = cy + r * Math.sin((startAngle * Math.PI) / 180);
+      const x2 = cx + r * Math.cos((endAngle * Math.PI) / 180);
+      const y2 = cy + r * Math.sin((endAngle * Math.PI) / 180);
+      const large = angle > 180 ? 1 : 0;
+      out.push({ d: `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`, color: s.color });
+      start += s.pct;
+    });
+    return out;
+  }
+
+  const LEGEND = [
+    { label: 'Equities',    color: '#C9A84C', key: 'equities' },
+    { label: 'Fixed Income',color: '#3D6B52', key: 'fixed'    },
+    { label: 'Precious Metals', color: '#B87333', key: 'metals' },
+  ];
+%>
+
+<div class="page-header">
+  <h1>Portfolio Builder</h1>
+  <p>Get a personalised allocation based on your financial profile and goals.</p>
+</div>
+
+<% if (!result) { %>
+
+<!-- ── INTAKE FORM ─────────────────────────────────────────────────── -->
+
+<div class="form-section">
+  <form id="portfolio-form" method="POST" action="/dashboard/portfolio" novalidate>
+
+    <!-- Step indicator -->
+    <div class="step-bar">
+      <div class="step-item active"><div class="step-num">1</div><span>Profile</span></div>
+      <div class="step-line"></div>
+      <div class="step-item"><div class="step-num">2</div><span>Goals</span></div>
+      <div class="step-line"></div>
+      <div class="step-item"><div class="step-num">3</div><span>Result</span></div>
+    </div>
+
+    <!-- Investor type toggle -->
+    <div class="form-group" style="margin-bottom:1.5rem;">
+      <label>Investor type</label>
+      <div class="toggle-group">
+        <label class="toggle-btn <%= (prefill && prefill.investorType === 'Halal') || (!prefill) ? 'active' : '' %>">
+          <input type="radio" name="investorType" value="Halal" class="toggle-input"
+            <%= (prefill && prefill.investorType === 'Halal') || (!prefill) ? 'checked' : '' %>> Halal (Shariah)
+        </label>
+        <label class="toggle-btn <%= prefill && prefill.investorType === 'Ethical' ? 'active' : '' %>">
+          <input type="radio" name="investorType" value="Ethical" class="toggle-input"
+            <%= prefill && prefill.investorType === 'Ethical' ? 'checked' : '' %>> Ethical (ESG)
+        </label>
+      </div>
+      <p style="font-size:0.75rem;color:var(--fg-muted);margin:0.25rem 0 0;">
+        Halal uses Shariah-screened funds. Ethical uses ESG-screened funds.
+      </p>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="age">Age</label>
+        <input type="number" id="age" name="age" min="18" max="80"
+          placeholder="e.g. 34" value="<%= prefill && prefill.age || '' %>" required>
+      </div>
+      <div class="form-group">
+        <label for="income">Annual income</label>
+        <select id="income" name="income">
+          <option value="low"     <%= prefill && prefill.income === 'low' ? 'selected' : '' %>>Below $80,000</option>
+          <option value="medium"  <%= (!prefill || (prefill && prefill.income === 'medium')) ? 'selected' : '' %>>$80,000 – $150,000</option>
+          <option value="high"    <%= prefill && prefill.income === 'high' ? 'selected' : '' %>>$150,000+</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="debtStatus">Debt status</label>
+        <select id="debtStatus" name="debtStatus">
+          <option value="none">None</option>
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="superBalance">Super balance vs target</label>
+        <select id="superBalance" name="superBalance">
+          <option value="below"   <%= prefill && prefill.superBalance === 'below' ? 'selected' : '' %>>Below target</option>
+          <option value="at"     <%= (!prefill || (prefill && prefill.superBalance === 'at')) ? 'selected' : '' %>>At target</option>
+          <option value="above"   <%= prefill && prefill.superBalance === 'above' ? 'selected' : '' %>>Above target</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:1.5rem;">
+      <label for="goal">Primary investment goal</label>
+      <select id="goal" name="goal">
+        <option value="retirement"    <%= (!prefill || (prefill && prefill.goal !== 'wealth' && prefill.goal !== 'specific')) ? 'selected' : '' %>>Retirement</option>
+        <option value="wealth"        <%= prefill && prefill.goal === 'wealth' ? 'selected' : '' %>>Wealth building</option>
+        <option value="specific"      <%= prefill && prefill.goal === 'specific' ? 'selected' : '' %>>Specific milestone</option>
+      </select>
+    </div>
+
+    <!-- Risk tolerance -->
+    <div class="form-group">
+      <label>Risk tolerance</label>
+      <div class="toggle-group" id="risk-toggle">
+        <label class="toggle-btn" id="rt-conservative">
+          <input type="radio" name="riskTolerance" value="conservative" class="toggle-input"> Conservative
+        </label>
+        <label class="toggle-btn active" id="rt-moderate">
+          <input type="radio" name="riskTolerance" value="moderate" class="toggle-input" checked> Moderate
+        </label>
+        <label class="toggle-btn" id="rt-aggressive">
+          <input type="radio" name="riskTolerance" value="aggressive" class="toggle-input"> Aggressive
+        </label>
+      </div>
+      <p style="font-size:0.75rem;color:var(--fg-muted);margin:0.25rem 0 0;">
+        Conservative = capital preservation. Aggressive = maximum growth.
+      </p>
+    </div>
+
+    <button type="submit" class="btn-primary" style="width:100%;padding:0.8rem;font-size:0.9rem;">
+      Build my portfolio →
+    </button>
+
+  </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Toggle active class on radio change
+  document.querySelectorAll('#risk-toggle .toggle-btn').forEach(function(label) {
+    label.addEventListener('click', function() {
+      document.querySelectorAll('#risk-toggle .toggle-btn').forEach(function(l) { l.classList.remove('active'); });
+      document.querySelectorAll('#risk-toggle input').forEach(function(r) { r.checked = false; });
+      this.classList.add('active');
+      this.querySelector('input').checked = true;
+    });
+  });
+
+  // Investor type toggle
+  document.querySelectorAll('input[name="investorType"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      document.querySelectorAll('input[name="investorType"]').forEach(function(r) {
+        r.closest('.toggle-btn').classList.toggle('active', r.checked);
+      });
+    });
+  });
+
+  // Form validation
+  document.getElementById('portfolio-form').addEventListener('submit', function(e) {
+    const age = document.getElementById('age').value.trim();
+    if (!age || isNaN(parseInt(age)) || parseInt(age) < 18 || parseInt(age) > 80) {
+      e.preventDefault();
+      document.getElementById('age').focus();
+      document.getElementById('age').style.borderColor = 'rgba(224,112,112,0.6)';
+      setTimeout(function() { document.getElementById('age').style.borderColor = ''; }, 2000);
+    }
+  });
+});
+</script>
+
+<% } else { %>
+
+<!-- ── RESULTS ─────────────────────────────────────────────────────── -->
+
+<div class="result-wrap">
+
+  <div class="result-header">
+    <div class="result-profile-badge"><%= result.allocProfile %> profile</div>
+    <h2 class="result-title">
+      Your personalised allocation
+      <span class="investor-type-badge <%= result.investorType === 'Halal' ? 'investor-halal' : 'investor-ethical' %>">
+        <%= result.investorType %>
+      </span>
+    </h2>
+    <p class="result-subtitle">For a <%= result.age %>-year-old, <%= result.riskTolerance %> risk tolerance</p>
+  </div>
+
+  <!-- Donut chart -->
+  <div class="donut-section">
+    <div class="card" style="padding:1.5rem 2rem;">
+      <div class="donut-wrap">
+        <div class="donut-svg-wrap">
+          <svg viewBox="0 0 180 180" width="180" height="180" style="overflow:visible;">
+            <circle cx="90" cy="90" r="70" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="24"/>
+            <% donutPaths(result.alloc).forEach(function(slice) { %>
+              <path d="<%= slice.d %>" fill="<%= slice.color %>"/>
+            <% }); %>
+            <!-- Centre label -->
+            <text x="90" y="83" text-anchor="middle" font-family="var(--font-display)" font-size="22" font-weight="700" fill="#C9A84C">
+              <%= result.alloc.equities %>%
+            </text>
+            <text x="90" y="100" text-anchor="middle" font-family="var(--font-body)" font-size="9" fill="rgba(255,255,255,0.4)" text-transform="uppercase" letter-spacing="1">
+              EQUITIES
+            </text>
+          </svg>
+        </div>
+        <div class="donut-legend">
+          <% LEGEND.forEach(function(item) { %>
+            <div class="legend-row">
+              <div class="legend-dot" style="background:<%= item.color %>"></div>
+              <span class="legend-label"><%= item.label %></span>
+              <span class="legend-pct"><%= result.alloc[item.key] %>%</span>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fund allocation tables -->
+  <%
+    const equityFunds = result.fundPicks.filter(f =>
+      f.alloc === 'Equities' || f.alloc === 'AU Equities' || f.alloc === 'Intl Equities'
+    );
+    const fixedFunds  = result.fundPicks.filter(f =>
+      f.alloc === 'Sukuk' || f.alloc === 'Fixed Income'
+    );
+    const metalFunds  = result.fundPicks.filter(f =>
+      f.alloc === 'Precious Metals'
+    );
+  %>
+
+  <% if (equityFunds.length > 0) { %>
+  <div class="alloc-section">
+    <div class="alloc-section-title">◈ Equities (<%= result.alloc.equities %>%)</div>
+    <div class="card" style="padding:0 0 0.5rem;overflow:hidden;">
+      <table class="fund-table">
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Fund name</th>
+            <th style="text-align:right;">Allocation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% equityFunds.forEach(function(f) { %>
+          <tr>
+            <td><span class="ticker-badge"><%= f.ticker %></span></td>
+            <td><%= f.name %></td>
+            <td style="text-align:right;">
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:0.5rem;">
+                <div class="alloc-bar-wrap"><div class="alloc-bar" style="width:<%= f.pct %>%"></div></div>
+                <span class="alloc-pct-cell"><%= f.pct %>%</span>
+              </div>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% } %>
+
+  <% if (fixedFunds.length > 0) { %>
+  <div class="alloc-section">
+    <div class="alloc-section-title">◈ Fixed Income / Sukuk (<%= result.alloc.fixed %>%)</div>
+    <div class="card" style="padding:0 0 0.5rem;overflow:hidden;">
+      <table class="fund-table">
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Fund name</th>
+            <th style="text-align:right;">Allocation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% fixedFunds.forEach(function(f) { %>
+          <tr>
+            <td><span class="ticker-badge"><%= f.ticker %></span></td>
+            <td><%= f.name %></td>
+            <td style="text-align:right;">
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:0.5rem;">
+                <div class="alloc-bar-wrap"><div class="alloc-bar" style="width:<%= f.pct %>%"></div></div>
+                <span class="alloc-pct-cell"><%= f.pct %>%</span>
+              </div>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% } %>
+
+  <% if (metalFunds.length > 0) { %>
+  <div class="alloc-section">
+    <div class="alloc-section-title">◈ Precious Metals (<%= result.alloc.metals %>%)</div>
+    <div class="card" style="padding:0 0 0.5rem;overflow:hidden;">
+      <table class="fund-table">
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Fund name</th>
+            <th style="text-align:right;">Allocation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% metalFunds.forEach(function(f) { %>
+          <tr>
+            <td><span class="ticker-badge"><%= f.ticker %></span></td>
+            <td><%= f.name %></td>
+            <td style="text-align:right;">
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:0.5rem;">
+                <div class="alloc-bar-wrap"><div class="alloc-bar" style="width:<%= f.pct %>%"></div></div>
+                <span class="alloc-pct-cell"><%= f.pct %>%</span>
+              </div>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Why this portfolio -->
+  <div class="why-card">
+    <strong>Why this portfolio?</strong> <%= result.why %>
+  </div>
+
+  <!-- Reset -->
+  <div class="reset-row">
+    <a href="/dashboard/portfolio" class="btn-ghost">← Adjust inputs</a>
+  </div>
+
+</div>
+
+<% } %>

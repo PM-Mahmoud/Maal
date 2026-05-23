@@ -1,0 +1,109 @@
+<div class="page-header">
+  <h1>Your Scores</h1>
+  <p>Detailed breakdown of your financial health metrics.</p>
+</div>
+
+<% if (!profile || !profile.completed_onboarding) { %>
+<div class="empty-state">
+  <div class="icon">◈</div>
+  <h3>Complete onboarding to see your scores</h3>
+  <p>Answer a few questions about your finances to get your personalised scores.</p>
+  <a href="/onboarding" class="btn-primary">Start onboarding</a>
+</div>
+<% } else { %>
+
+<div class="score-cards" style="margin-bottom:1.5rem;">
+  <div class="score-card" style="text-align:center;">
+    <div class="score-card-label">Financial Health Score</div>
+    <div class="score-card-big"><%= financialScore ? financialScore.score_value : '—' %><span class="score-card-max">/100</span></div>
+    <% if (financialScore) { %><span class="grade-pill <%= financialScore.grade ? financialScore.grade.toLowerCase().replace(' ','-') : '' %>"><%= financialScore.grade || '' %></span><% } %>
+  </div>
+  <div class="score-card" style="text-align:center;">
+    <div class="score-card-label">Halal / ESG Score</div>
+    <div class="score-card-big"><%= ethicalScore ? ethicalScore.score_value : '—' %><span class="score-card-max">/100</span></div>
+    <span style="font-size:0.8rem;color:var(--fg-muted)">Portfolio compliance</span>
+  </div>
+  <div class="score-card" style="text-align:center;">
+    <div class="score-card-label">Super Health Score</div>
+    <div class="score-card-big"><%= superScore ? superScore.score_value : '—' %><span class="score-card-max">/100</span></div>
+    <span style="font-size:0.8rem;color:var(--fg-muted)">Fund adequacy</span>
+  </div>
+</div>
+
+<div style="margin-bottom:1.5rem;">
+  <form action="/dashboard/scores/recalculate" method="POST" style="display:inline;">
+    <button type="submit" class="btn-primary">Recalculate Scores</button>
+  </form>
+</div>
+
+<% if (financialScore && financialScore.score_breakdown) { %>
+<div class="card">
+  <div class="card-title">Financial Health Score breakdown</div>
+  <% const breakdown = financialScore.score_breakdown; const maxes = {debtRatio:20,savingsRate:15,emergencyFund:15,superAdequacy:20,insuranceCoverage:10,investmentDiversity:10,retirementReadiness:10}; const descriptions = {debtRatio:'Ratio of HECS + consumer debt to annual income',savingsRate:'Monthly savings as % of gross income',emergencyFund:'Liquid savings vs monthly expenses',superAdequacy:'Current super vs ASFA comfortable benchmark',insuranceCoverage:'Life + income protection + professional indemnity',investmentDiversity:'Non-super portfolio concentration',retirementReadiness:'Projected super at target retirement age'}; %>
+  <% Object.entries(breakdown).forEach(function([key, val]) { %>
+    <% const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, function(s) { return s.toUpperCase(); }); const max = maxes[key] || 10; const pct = Math.round(val/max*100); %>
+    <div class="breakdown-row">
+      <div>
+        <span class="breakdown-label"><%= label %></span>
+        <div style="font-size:0.725rem;color:var(--fg-muted);opacity:0.7;margin-top:0.15rem;"><%= descriptions[key] || '' %></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-left:1rem;">
+        <div style="width:100px;height:4px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;"><div style="height:100%;width:<%= pct %>%;background:linear-gradient(90deg,var(--green-light),var(--accent));border-radius:999px;"></div></div>
+        <span class="breakdown-val"><%= val %>/<%= max %></span>
+      </div>
+    </div>
+  <% }); %>
+</div>
+<% } %>
+
+<% if (ethicalScore && ethicalScore.score_value) { %>
+<div class="card">
+  <div class="card-title">Halal / ESG Compliance</div>
+  <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:1rem;">
+    <div style="font-family:var(--font-display);font-size:3rem;font-weight:700;color:var(--accent);line-height:1;"><%= ethicalScore.score_value %><span style="font-size:1.5rem;color:var(--fg-muted);font-weight:300;">/100</span></div>
+    <div>
+      <div class="score-bar-wrap" style="width:160px;height:8px;"><div class="score-bar-fill" style="width:<%= ethicalScore.score_value %>%;"></div></div>
+      <p style="font-size:0.8rem;color:var(--fg-muted);margin:0.35rem 0 0;"><%= ethicalScore.score_value >= 80 ? 'Strong compliance' : ethicalScore.score_value >= 50 ? 'Partial compliance' : 'Needs attention' %></p>
+    </div>
+  </div>
+  <p style="font-size:0.85rem;color:var(--fg-muted);margin:0;line-height:1.6;">
+    <% if (ethicalScore.score_value >= 80) { %>
+      Your portfolio is predominantly halal/ESG compliant. Most of your investments align with Islamic principles or ethical screening standards.
+    <% } else if (ethicalScore.score_value >= 50) { %>
+      Your portfolio has a mix of compliant and non-compliant holdings. Review the non-compliant positions to improve your score.
+    <% } else { %>
+      Significant changes needed to bring your portfolio into compliance. Consider switching to halal-screened funds or ethical ETFs.
+    <% } %>
+  </p>
+</div>
+<% } %>
+
+<% if (fhsHistory && fhsHistory.length > 1) { %>
+<div class="card">
+  <div class="card-title">Score history (last <%= fhsHistory.length %> calculations)</div>
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:0.825rem;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);">
+          <th style="text-align:left;padding:0.5rem 0.5rem 0.5rem;color:var(--fg-muted);font-weight:500;">Date</th>
+          <th style="text-align:right;padding:0.5rem;color:var(--fg-muted);font-weight:500;">Financial Health</th>
+          <th style="text-align:right;padding:0.5rem;color:var(--fg-muted);font-weight:500;">Grade</th>
+          <th style="text-align:right;padding:0.5rem;color:var(--fg-muted);font-weight:500;">Halal/ESG</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% fhsHistory.forEach(function(s) { %>
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+            <td style="padding:0.55rem 0.5rem;color:var(--fg-muted);"><%= new Date(s.calculated_at).toLocaleDateString('en-AU', {day:'numeric',month:'short',year:'numeric'}) %></td>
+            <td style="text-align:right;padding:0.55rem;color:var(--fg);font-weight:600;"><%= s.score_value %>/100</td>
+            <td style="text-align:right;padding:0.55rem;"><span class="grade-pill <%= (s.grade||'').toLowerCase().replace(' ','-') %>" style="font-size:0.65rem;"><%= s.grade || '' %></span></td>
+            <td style="text-align:right;padding:0.55rem;color:var(--fg-muted);"><%= s.halal_compliance_score || '—' %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>
+
+<% } %>

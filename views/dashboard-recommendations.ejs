@@ -1,0 +1,41 @@
+<div class="page-header">
+  <h1>Recommendations</h1>
+  <p>Your personalised action plan, ranked by impact.</p>
+</div>
+
+<div class="filter-tabs">
+  <a href="/dashboard/recommendations?filter=all" class="filter-tab <%= filter === 'all' ? 'active' : '' %>">All</a>
+  <a href="/dashboard/recommendations?filter=pending" class="filter-tab <%= filter === 'pending' ? 'active' : '' %>">Pending</a>
+  <a href="/dashboard/recommendations?filter=accepted" class="filter-tab <%= filter === 'accepted' ? 'active' : '' %>">Accepted</a>
+  <a href="/dashboard/recommendations?filter=dismissed" class="filter-tab <%= filter === 'dismissed' ? 'active' : '' %>">Dismissed</a>
+</div>
+
+<% if (recommendations && recommendations.length) { %>
+
+<% recommendations.forEach(function(rec) { %>
+  <div class="rec-item">
+    <div class="rec-header">
+      <div>
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
+          <span class="priority-badge priority-<%= rec.priority %>"><%= rec.priority %></span>
+          <span style="font-size:0.775rem;color:var(--fg-muted);"><%= rec.category %></span>
+        </div>
+        <div class="rec-title"><%= rec.title %></div>
+      </div>
+    </div>
+    <div class="rec-desc"><%= rec.description %></div>
+    <div class="rec-actions">
+      <button class="rec-action rec-accept" data-id="<%= rec.id %>" <%= rec.status !== 'pending' ? 'disabled' : '' %>>Accept</button>
+      <button class="rec-action rec-dismiss" data-id="<%= rec.id %>" <%= rec.status !== 'pending' ? 'disabled' : '' %>>Dismiss</button>
+    </div>
+  </div>
+<% }); %>
+
+<% } else { %>
+<div class="empty-state">
+  <div class="icon">◈</div>
+  <h3>No recommendations yet</h3>
+  <p>Complete your onboarding and we'll generate personalised recommendations based on your financial profile.</p>
+  <a href="/onboarding" class="btn-primary">Start onboarding</a>
+</div>
+<% } %>

@@ -1,0 +1,611 @@
+<div class="page-header">
+  <h1>Linked Accounts</h1>
+  <p>Connect your financial institutions for a complete picture of your finances.</p>
+</div>
+
+<!-- Connect Your Accounts -->
+<div class="accounts-connect-section">
+  <div class="connect-section-left">
+    <div class="connect-section-icon">⬡</div>
+    <div>
+      <h2>Connect with Basiq</h2>
+      <p>Securely connect your bank accounts, super funds, and investment accounts via open banking. No re-entry of statements needed.</p>
+    </div>
+  </div>
+  <button id="basiq-connect-btn" class="btn-primary">Connect account</button>
+</div>
+
+<div class="accounts-subheading">
+  <h3>Or add accounts manually</h3>
+  <button id="add-account-btn" class="btn-secondary">+ Add manually</button>
+</div>
+
+<!-- Connected Accounts List -->
+<% if (accounts && accounts.length) { %>
+<div class="card">
+  <div class="card-title">Connected Accounts (<%= accounts.length %>)</div>
+  <% accounts.forEach(function(acc) { %>
+    <div class="account-item" id="account-<%= acc.id %>">
+      <div class="account-icon-wrap">
+        <div class="account-type-icon"><%= acc.institution_type === 'super_fund' ? '◈' : acc.institution_type === 'broker' ? '◈' : '◈' %></div>
+      </div>
+      <div class="account-info">
+        <div class="account-name"><%= acc.institution_name %>
+          <% if (acc.account_reference) { %><span class="account-ref">•• <%= acc.account_reference %></span><% } %>
+        </div>
+        <div class="account-meta">
+          <span class="account-type-label"><%= acc.institution_type === 'super_fund' ? 'Super Fund' : acc.institution_type === 'broker' ? 'Broker / Investment' : acc.institution_type === 'bank' ? 'Bank Account' : acc.institution_type || 'Account' %></span>
+          <% if (acc.balance) { %> · <%= '$' + acc.balance.toLocaleString('en-AU') %><% } %>
+          <% if (acc.last_synced_at) { %> · Synced <%= new Date(acc.last_synced_at).toLocaleDateString('en-AU', {day:'numeric',month:'short'}) %><% } %>
+        </div>
+      </div>
+      <div class="account-actions">
+        <span class="status-badge status-<%= acc.connection_status || 'connected' %>"><%= acc.connection_status === 'active' ? 'Connected' : acc.connection_status === 'reconnect_needed' ? 'Reconnect needed' : acc.connection_status === 'error' ? 'Error' : 'Connected' %></span>
+        <button class="btn-icon sync-account" data-id="<%= acc.id %>" title="Sync now">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        </button>
+        <button class="btn-icon reconnect-account" data-id="<%= acc.id %>" title="Reconnect">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
+        </button>
+        <button class="btn-icon-danger delete-account" data-id="<%= acc.id %>" title="Remove">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+  <% }); %>
+</div>
+<% } else { %>
+<div class="empty-state">
+  <div class="icon">◈</div>
+  <h3>No accounts linked yet</h3>
+  <p>Link your bank accounts, super funds, and investment accounts to get a complete picture of your finances.</p>
+</div>
+<% } %>
+
+
+<!-- ─── Basiq Connection Modal ───────────────────────────────────── -->
+<div id="basiq-modal" class="modal-overlay">
+  <div class="modal basiq-modal">
+
+    <!-- Step 1: Institution Search -->
+    <div id="basiq-step-search" class="basiq-step">
+      <div class="modal-header">
+        <h2>Connect your financial institution</h2>
+        <p>Search for your bank, super fund, or broker to get started.</p>
+      </div>
+      <div class="basiq-search-wrap">
+        <svg class="basiq-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="basiq-search-input" placeholder="Search institutions... (e.g. CBA, NAB, Australian Super)" autocomplete="off">
+      </div>
+      <div class="basiq-institution-list" id="basiq-institution-list">
+        <!-- Populated by JS -->
+      </div>
+      <div class="modal-footer-note">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        Your credentials are sent directly to Basiq — we never see them.
+      </div>
+    </div>
+
+    <!-- Step 2: Connecting (Loading) -->
+    <div id="basiq-step-loading" class="basiq-step" style="display:none;">
+      <div class="basiq-connecting">
+        <div class="basiq-spinner"></div>
+        <h3 id="basiq-loading-title">Connecting to...</h3>
+        <p id="basiq-loading-sub">Establishing secure connection</p>
+      </div>
+    </div>
+
+    <!-- Step 3: Success -->
+    <div id="basiq-step-success" class="basiq-step" style="display:none;">
+      <div class="basiq-result basiq-result-success">
+        <div class="result-icon result-icon-success">✓</div>
+        <h3>Account connected successfully!</h3>
+        <p id="basiq-success-name"></p>
+      </div>
+      <button id="basiq-success-done" class="btn-primary" style="width:100%;">Done</button>
+    </div>
+
+    <!-- Step 4: Error -->
+    <div id="basiq-step-error" class="basiq-step" style="display:none;">
+      <div class="basiq-result basiq-result-error">
+        <div class="result-icon result-icon-error">✕</div>
+        <h3>Connection failed</h3>
+        <p id="basiq-error-message">Something went wrong. Please try again.</p>
+      </div>
+      <button id="basiq-error-retry" class="btn-primary" style="width:100%;">Try again</button>
+      <button id="basiq-error-cancel" class="btn-secondary" style="width:100%;margin-top:0.5rem;">Cancel</button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ─── Manual Account Entry Modal ───────────────────────────────── -->
+<div id="add-account-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Add account manually</h2>
+      <p>Enter your institution details. You can update the balance anytime.</p>
+    </div>
+    <form id="manual-account-form">
+      <div class="form-group">
+        <label for="institution_name">Institution name</label>
+        <input type="text" id="institution_name" name="institution_name" placeholder="e.g. Commonwealth Bank" required>
+      </div>
+      <div class="form-group">
+        <label for="institution_type">Account type</label>
+        <select id="institution_type" name="institution_type">
+          <option value="bank">Bank account</option>
+          <option value="super_fund">Super fund</option>
+          <option value="broker">Broker / investment</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="account_reference">Account reference (last 4 digits)</label>
+        <input type="text" id="account_reference" name="account_reference" placeholder="1234" maxlength="4">
+      </div>
+      <div class="form-group">
+        <label for="balance">Approximate balance ($)</label>
+        <input type="number" id="balance" name="balance" placeholder="0" min="0" step="100">
+      </div>
+    </form>
+    <div class="modal-actions">
+      <button class="btn-secondary modal-cancel">Cancel</button>
+      <button class="btn-primary modal-submit" id="manual-account-submit">Add account</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ─── Delete Confirmation Modal ───────────────────────────────── -->
+<div id="delete-modal" class="modal-overlay">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <h2>Remove account</h2>
+      <p>Are you sure you want to remove this account? This cannot be undone.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary modal-cancel">Cancel</button>
+      <button class="btn-danger" id="delete-confirm-btn">Remove</button>
+    </div>
+  </div>
+</div>
+
+
+<style>
+.accounts-connect-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  background: var(--green-deep);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.connect-section-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex: 1;
+}
+.connect-section-icon {
+  font-size: 1.8rem;
+  color: var(--accent);
+  flex-shrink: 0;
+  line-height: 1;
+  margin-top: 0.1rem;
+}
+.connect-section-left h2 {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--fg);
+  margin: 0 0 0.25rem;
+}
+.connect-section-left p {
+  font-size: 0.825rem;
+  color: var(--fg-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+.accounts-subheading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.accounts-subheading h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+.account-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.95rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.account-item:last-child { border-bottom: none; }
+.account-icon-wrap { flex-shrink: 0; }
+.account-type-icon {
+  width: 36px;
+  height: 36px;
+  background: rgba(201,168,76,0.1);
+  border: 1px solid rgba(201,168,76,0.25);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+.account-info { flex: 1; min-width: 0; }
+.account-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+.account-ref {
+  font-size: 0.775rem;
+  color: var(--fg-muted);
+  font-weight: 400;
+}
+.account-meta {
+  font-size: 0.775rem;
+  color: var(--fg-muted);
+  margin-top: 0.15rem;
+}
+.account-type-label {
+  text-transform: capitalize;
+}
+.account-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.status-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.status-connected { background: rgba(126,212,166,0.15); color: #7ED4A6; border: 1px solid rgba(126,212,166,0.3); }
+.status-reconnect_needed { background: rgba(201,168,76,0.15); color: var(--accent); border: 1px solid rgba(201,168,76,0.3); }
+.status-error { background: rgba(224,112,112,0.15); color: #E07070; border: 1px solid rgba(224,112,112,0.3); }
+.status-disconnected { background: rgba(255,255,255,0.06); color: var(--fg-muted); border: 1px solid rgba(255,255,255,0.1); }
+.btn-icon {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--fg-muted);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.btn-icon:hover { background: rgba(255,255,255,0.12); color: var(--fg); }
+.btn-icon-danger { background: rgba(224,112,112,0.1); border: 1px solid rgba(224,112,112,0.25); border-radius: 7px; color: var(--fg-muted); cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+.btn-icon-danger:hover { background: rgba(224,112,112,0.2); color: #E07070; }
+
+/* Basiq modal */
+.basiq-modal { max-width: 520px; }
+.modal-header { margin-bottom: 1.25rem; }
+.modal-header h2 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; color: var(--fg); margin: 0 0 0.35rem; }
+.modal-header p { font-size: 0.85rem; color: var(--fg-muted); margin: 0; }
+.modal-footer-note { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--fg-muted); margin-top: 1rem; opacity: 0.7; }
+.basiq-search-wrap {
+  position: relative;
+  margin-bottom: 0.85rem;
+}
+.basiq-search-icon { position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); color: var(--fg-muted); pointer-events: none; }
+#basiq-search-input {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem 0.7rem 2.4rem;
+  color: var(--fg);
+  font-size: 0.9rem;
+  font-family: var(--font-body);
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+#basiq-search-input:focus { border-color: rgba(201,168,76,0.5); }
+#basiq-search-input::placeholder { color: var(--fg-muted); opacity: 0.5; }
+.basiq-institution-list { max-height: 320px; overflow-y: auto; }
+.basiq-institution-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  cursor: pointer;
+  transition: background 0.15s;
+  border-radius: 6px;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 2px;
+}
+.basiq-institution-item:hover { background: rgba(255,255,255,0.04); }
+.basiq-institution-info { display: flex; align-items: center; gap: 0.85rem; }
+.basiq-institution-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: rgba(201,168,76,0.1);
+  border: 1px solid rgba(201,168,76,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.basiq-institution-name { font-size: 0.9rem; font-weight: 500; color: var(--fg); }
+.basiq-institution-type { font-size: 0.75rem; color: var(--fg-muted); }
+.basiq-institution-connect {
+  background: rgba(201,168,76,0.1);
+  border: 1px solid rgba(201,168,76,0.3);
+  color: var(--accent);
+  font-size: 0.775rem;
+  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: all 0.15s;
+}
+.basiq-institution-connect:hover { background: rgba(201,168,76,0.2); }
+.basiq-connecting { text-align: center; padding: 1.5rem 0; }
+.basiq-spinner {
+  width: 44px;
+  height: 44px;
+  border: 3px solid rgba(201,168,76,0.15);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 1.25rem;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.basiq-connecting h3 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; color: var(--fg); margin: 0 0 0.35rem; }
+.basiq-connecting p { font-size: 0.85rem; color: var(--fg-muted); margin: 0; }
+.basiq-result { text-align: center; padding: 1rem 0; }
+.result-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+.result-icon-success { color: #7ED4A6; }
+.result-icon-error { color: #E07070; }
+.basiq-result h3 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; color: var(--fg); margin: 0 0 0.35rem; }
+.basiq-result p { font-size: 0.85rem; color: var(--fg-muted); margin: 0; }
+@media (max-width: 600px) {
+  .accounts-connect-section { flex-direction: column; align-items: flex-start; }
+  .account-actions .status-badge { display: none; }
+  .account-item { flex-wrap: wrap; }
+}
+</style>
+
+<script>
+// ─── Institution data (mock) ────────────────────────────────────────────────
+// TODO: Replace mock Basiq flow with actual Basiq SDK integration.
+// See: https://docs.basiq.io/docs/affordability-get-consent
+// Basiq provides an embeddable consent UI; replace the mock steps below.
+const INSTITUTIONS = [
+  { id: 'cba', name: 'Commonwealth Bank', short: 'CBA', type: 'Bank', category: 'bank' },
+  { id: 'nab', name: 'National Australia Bank', short: 'NAB', type: 'Bank', category: 'bank' },
+  { id: 'anz', name: 'ANZ', short: 'ANZ', type: 'Bank', category: 'bank' },
+  { id: 'westpac', name: 'Westpac', short: 'WBC', type: 'Bank', category: 'bank' },
+  { id: 'boq', name: 'Bank of Queensland', short: 'BOQ', type: 'Bank', category: 'bank' },
+  { id: 'suncorp', name: 'Suncorp Bank', short: 'SUNC', type: 'Bank', category: 'bank' },
+  { id: 'macquarie', name: 'Macquarie Bank', short: 'MQG', type: 'Bank', category: 'bank' },
+  { id: 'ing', name: 'ING', short: 'ING', type: 'Bank', category: 'bank' },
+  { id: 'ubank', name: 'UBank', short: 'UBK', type: 'Bank', category: 'bank' },
+  { id: 'bankaus', name: 'Bank of Australia', short: 'BFL', type: 'Bank', category: 'bank' },
+  { id: 'hostplus', name: 'Hostplus', short: 'HST', type: 'Super Fund', category: 'super_fund' },
+  { id: 'australianSuper', name: 'AustralianSuper', short: 'AUS', type: 'Super Fund', category: 'super_fund' },
+  { id: 'rest', name: 'REST Super', short: 'RST', type: 'Super Fund', category: 'super_fund' },
+  { id: 'unisuper', name: 'UniSuper', short: 'UNI', type: 'Super Fund', category: 'super_fund' },
+  { id: 'amp', name: 'AMP', short: 'AMP', type: 'Super Fund', category: 'super_fund' },
+  { id: 'cmc', name: 'CMC Markets', short: 'CMC', type: 'Broker', category: 'broker' },
+  { id: 'ig', name: 'IG Markets', short: 'IG', type: 'Broker', category: 'broker' },
+  { id: 'commsec', name: 'CommSec', short: 'CSEC', type: 'Broker', category: 'broker' },
+];
+
+// ─── Render institution list ─────────────────────────────────────────────────
+function renderInstitutions(query) {
+  const list = document.getElementById('basiq-institution-list');
+  const q = query.toLowerCase().trim();
+  const filtered = q ? INSTITUTIONS.filter(i => i.name.toLowerCase().includes(q) || i.short.toLowerCase().includes(q) || i.type.toLowerCase().includes(q)) : INSTITUTIONS;
+
+  if (!filtered.length) {
+    list.innerHTML = '<p style="text-align:center;color:var(--fg-muted);padding:1rem;font-size:0.85rem;">No institutions found.</p>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(inst => `
+    <div class="basiq-institution-item" data-id="${inst.id}" data-name="${inst.name}" data-type="${inst.category}">
+      <div class="basiq-institution-info">
+        <div class="basiq-institution-logo">${inst.short}</div>
+        <div>
+          <div class="basiq-institution-name">${inst.name}</div>
+          <div class="basiq-institution-type">${inst.type}</div>
+        </div>
+      </div>
+      <button class="basiq-institution-connect">Connect</button>
+    </div>
+  `).join('');
+
+  // Click on row or button to start connection
+  list.querySelectorAll('.basiq-institution-item').forEach(row => {
+    row.addEventListener('click', (e) => {
+      // Skip if clicking the connect button is handled separately
+      startMockConnection(row.dataset.id, row.dataset.name, row.dataset.type);
+    });
+  });
+}
+
+renderInstitutions('');
+
+// ─── Search filter ────────────────────────────────────────────────────────────
+document.getElementById('basiq-search-input').addEventListener('input', (e) => {
+  renderInstitutions(e.target.value);
+});
+
+// ─── Mock Basiq connection flow ───────────────────────────────────────────────
+let pendingDeleteAccountId = null;
+
+function showStep(step) {
+  ['search', 'loading', 'success', 'error'].forEach(s => {
+    document.getElementById('basiq-step-' + s).style.display = s === step ? 'block' : 'none';
+  });
+}
+
+function startMockConnection(instId, instName, instType) {
+  // TODO: Replace with actual Basiq SDK call.
+  // Mock: show loading → fake 2.5s delay → success (90%) or error (10%)
+  document.getElementById('basiq-loading-title').textContent = 'Connecting to ' + instName + '...';
+  document.getElementById('basiq-loading-sub').textContent = 'Establishing secure connection via Basiq';
+  showStep('loading');
+
+  setTimeout(() => {
+    const isError = Math.random() < 0.1; // 10% mock error rate for demo
+    if (isError) {
+      document.getElementById('basiq-error-message').textContent = 'Could not connect to ' + instName + '. Please check your credentials and try again.';
+      showStep('error');
+    } else {
+      document.getElementById('basiq-success-name').textContent = instName + ' has been successfully linked to your account.';
+      showStep('success');
+    }
+  }, 2500);
+}
+
+// Save on success
+document.getElementById('basiq-success-done').addEventListener('click', async () => {
+  // Read the last connected institution from the loading step text
+  const title = document.getElementById('basiq-loading-title').textContent;
+  const name = title.replace('Connecting to ', '');
+  // Find institution details from our data
+  const inst = INSTITUTIONS.find(i => i.name === name) || { category: 'bank', short: name.substring(0,3).toUpperCase() };
+
+  try {
+    await fetch('/dashboard/accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ institution_name: name, institution_type: inst.category })
+    });
+    closeBasiqModal();
+    location.reload();
+  } catch(e) { console.error(e); closeBasiqModal(); }
+});
+
+// Error retry → back to search
+document.getElementById('basiq-error-retry').addEventListener('click', () => showStep('search'));
+document.getElementById('basiq-error-cancel').addEventListener('click', () => closeBasiqModal());
+
+// Basiq modal open/close
+function closeBasiqModal() {
+  document.getElementById('basiq-modal').style.display = 'none';
+  showStep('search');
+}
+
+document.getElementById('basiq-connect-btn').addEventListener('click', () => {
+  document.getElementById('basiq-modal').style.display = 'flex';
+  showStep('search');
+  document.getElementById('basiq-search-input').value = '';
+  renderInstitutions('');
+});
+
+// Close modal on overlay click
+document.getElementById('basiq-modal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeBasiqModal();
+});
+
+// ─── Manual account add ───────────────────────────────────────────────────────
+var addModal = document.getElementById('add-account-modal');
+document.getElementById('add-account-btn').addEventListener('click', () => {
+  addModal.style.display = 'flex';
+});
+addModal.querySelector('.modal-cancel').addEventListener('click', () => { addModal.style.display = 'none'; });
+addModal.addEventListener('click', (e) => { if (e.target === addModal) addModal.style.display = 'none'; });
+
+document.getElementById('manual-account-submit').addEventListener('click', async () => {
+  var form = document.getElementById('manual-account-form');
+  var data = new FormData(form);
+  var obj = {};
+  data.forEach((v, k) => { obj[k] = v; });
+  if (!obj.institution_name) return;
+
+  var submitBtn = document.getElementById('manual-account-submit');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Adding...';
+
+  try {
+    var res = await fetch('/dashboard/accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(obj)
+    });
+    if (res.ok) {
+      addModal.style.display = 'none';
+      form.reset();
+      location.reload();
+    }
+  } catch(e) { console.error(e); }
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Add account';
+});
+
+// ─── Delete account ───────────────────────────────────────────────────────────
+var deleteModal = document.getElementById('delete-modal');
+deleteModal.querySelector('.modal-cancel').addEventListener('click', () => { deleteModal.style.display = 'none'; pendingDeleteAccountId = null; });
+deleteModal.addEventListener('click', (e) => { if (e.target === deleteModal) { deleteModal.style.display = 'none'; pendingDeleteAccountId = null; } });
+document.getElementById('delete-confirm-btn').addEventListener('click', async () => {
+  if (!pendingDeleteAccountId) return;
+  try {
+    var res = await fetch('/dashboard/accounts/' + pendingDeleteAccountId, { method: 'DELETE' });
+    if (res.ok) {
+      var item = document.getElementById('account-' + pendingDeleteAccountId);
+      if (item) item.remove();
+    }
+  } catch(e) { console.error(e); }
+  deleteModal.style.display = 'none';
+  pendingDeleteAccountId = null;
+});
+
+document.querySelectorAll('.delete-account').forEach(btn => {
+  btn.addEventListener('click', () => {
+    pendingDeleteAccountId = btn.getAttribute('data-id');
+    deleteModal.style.display = 'flex';
+  });
+});
+
+// ─── Sync account ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.sync-account').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    var id = btn.getAttribute('data-id');
+    var icon = btn.querySelector('svg');
+    icon.style.animation = 'spin 1s linear infinite';
+    btn.disabled = true;
+    try {
+      await fetch('/dashboard/accounts/' + id + '/sync', { method: 'POST' });
+      location.reload();
+    } catch(e) { console.error(e); icon.style.animation = ''; btn.disabled = false; }
+  });
+});
+
+// ─── Reconnect account ────────────────────────────────────────────────────────
+document.querySelectorAll('.reconnect-account').forEach(btn => {
+  btn.addEventListener('click', () => {
+    // Open Basiq modal to "reconnect" — same flow as new connect
+    document.getElementById('basiq-modal').style.display = 'flex';
+    showStep('search');
+  });
+});
+</script>

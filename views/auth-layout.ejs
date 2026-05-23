@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title + ' — Mizan' : 'Mizan' %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/theme.css">
+  <style>
+    body { background: var(--bg); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
+    .auth-wrap { width: 100%; max-width: 440px; }
+    .auth-logo { text-align: center; margin-bottom: 2.5rem; }
+    .auth-logo a { text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; }
+    .auth-logo .logo-mark { font-size: 1.8rem; color: var(--accent); }
+    .auth-logo .logo-text { font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; color: var(--fg); }
+    .auth-card { background: var(--green-deep); border: 1px solid var(--border); border-radius: 16px; padding: 2.5rem; }
+    .auth-card h1 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; color: var(--fg); margin-bottom: 0.5rem; }
+    .auth-card .subtitle { font-size: 0.9rem; color: var(--fg-muted); margin-bottom: 2rem; line-height: 1.5; }
+    .form-group { margin-bottom: 1.25rem; }
+    .form-group label { display: block; font-size: 0.8rem; font-weight: 500; color: var(--fg-muted); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    .form-group input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem; color: var(--fg); font-size: 0.95rem; font-family: var(--font-body); outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+    .form-group input:focus { border-color: rgba(201,168,76,0.5); }
+    .form-group input::placeholder { color: var(--fg-muted); opacity: 0.6; }
+    .btn-primary { width: 100%; background: var(--accent); color: var(--bg); font-weight: 600; font-size: 0.95rem; padding: 0.85rem 1.5rem; border: none; border-radius: 8px; cursor: pointer; font-family: var(--font-body); transition: opacity 0.2s; }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .alert { padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.875rem; margin-bottom: 1.25rem; line-height: 1.5; }
+    .alert-error { background: rgba(224,112,112,0.1); border: 1px solid rgba(224,112,112,0.3); color: #E07070; }
+    .alert-success { background: rgba(126,212,166,0.1); border: 1px solid rgba(126,212,166,0.3); color: #7ED4A6; }
+    .divider { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .divider span { font-size: 0.8rem; color: var(--fg-muted); white-space: nowrap; }
+    .auth-footer { text-align: center; margin-top: 1.5rem; font-size: 0.85rem; color: var(--fg-muted); }
+    .auth-footer a { color: var(--accent); text-decoration: none; }
+    .auth-footer a:hover { text-decoration: underline; }
+    .back-link { display: block; text-align: center; margin-top: 1.5rem; font-size: 0.85rem; color: var(--fg-muted); text-decoration: none; }
+    .back-link:hover { color: var(--fg); }
+    @media (max-width: 480px) { .auth-card { padding: 1.5rem; } }
+  </style>
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-logo">
+      <a href="/">
+        <span class="logo-mark">◈</span>
+        <span class="logo-text">Mizan</span>
+      </a>
+    </div>
+    <div class="auth-card">
+      <%- body %>
+    </div>
+  </div>
+</body>
+</html>

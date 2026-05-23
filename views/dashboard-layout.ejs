@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= pageTitle %> — Mizan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); min-height: 100vh; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .dash-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 50; height: 60px; background: rgba(10,15,13,0.9); border-bottom: 1px solid var(--border); backdrop-filter: blur(12px); display: flex; align-items: center; padding: 0 1.5rem; }
+    .dash-nav-logo { display: flex; align-items: center; gap: 0.4rem; font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; color: var(--fg); text-decoration: none; }
+    .dash-nav-logo:hover { text-decoration: none; }
+    .dash-nav-right { margin-left: auto; display: flex; align-items: center; gap: 1rem; }
+    .dash-nav-user { font-size: 0.85rem; color: var(--fg-muted); }
+    .dash-nav-cta { background: var(--accent); color: var(--bg); font-weight: 600; font-size: 0.8rem; padding: 0.4rem 0.9rem; border-radius: 6px; transition: opacity 0.2s; display: inline-block; }
+    .dash-nav-cta:hover { opacity: 0.85; text-decoration: none; }
+    .dash-nav-btn { font-size: 0.8rem; color: var(--fg-muted); cursor: pointer; background: none; border: none; font-family: var(--font-body); transition: color 0.2s; }
+    .dash-nav-btn:hover { color: var(--fg); }
+    .dash-body { display: flex; padding-top: 60px; min-height: 100vh; }
+    .dash-sidebar { width: 220px; flex-shrink: 0; border-right: 1px solid var(--border); padding: 1.5rem 0; position: fixed; top: 60px; left: 0; bottom: 0; overflow-y: auto; background: rgba(10,15,13,0.6); }
+    .dash-sidebar-section { margin-bottom: 1.5rem; }
+    .dash-sidebar-label { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fg-muted); padding: 0 1.25rem; margin-bottom: 0.4rem; display: block; }
+    .dash-nav-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 1.25rem; font-size: 0.875rem; color: var(--fg-muted); text-decoration: none; border-left: 2px solid transparent; transition: all 0.15s; }
+    .dash-nav-item:hover { color: var(--fg); background: rgba(255,255,255,0.03); text-decoration: none; }
+    .dash-nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(201,168,76,0.05); }
+    .dash-nav-icon { font-size: 1rem; width: 20px; text-align: center; flex-shrink: 0; }
+    .dash-main { flex: 1; margin-left: 220px; padding: 2rem 2.5rem; max-width: 900px; }
+    .page-header { margin-bottom: 2rem; }
+    .page-header h1 { font-family: var(--font-display); font-size: 1.6rem; font-weight: 600; color: var(--fg); margin: 0 0 0.25rem; }
+    .page-header p { font-size: 0.875rem; color: var(--fg-muted); margin: 0; }
+    .card { background: var(--green-deep); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; }
+    .card-title { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted); margin-bottom: 1rem; }
+    .score-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
+    .score-card { background: var(--green-deep); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+    .score-card-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted); margin-bottom: 0.5rem; }
+    .score-card-big { font-family: var(--font-display); font-size: 2.2rem; font-weight: 700; color: var(--accent); line-height: 1; }
+    .score-card-max { font-size: 1rem; color: var(--fg-muted); font-weight: 300; }
+    .grade-pill { font-size: 0.7rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 999px; }
+    .grade-pill.excellent { background: rgba(126,212,166,0.15); color: #7ED4A6; border: 1px solid rgba(126,212,166,0.3); }
+    .grade-pill.good { background: rgba(201,168,76,0.15); color: var(--accent); border: 1px solid rgba(201,168,76,0.3); }
+    .grade-pill.fair { background: rgba(200,150,50,0.15); color: #C9963C; border: 1px solid rgba(200,150,50,0.3); }
+    .grade-pill.needs-work { background: rgba(224,112,112,0.15); color: #E07070; border: 1px solid rgba(224,112,112,0.3); }
+    .grade-pill.critical { background: rgba(224,112,112,0.25); color: #E07070; border: 1px solid rgba(224,112,112,0.4); }
+    .btn-primary { background: var(--accent); color: var(--bg); font-weight: 600; font-size: 0.875rem; padding: 0.6rem 1.25rem; border: none; border-radius: 8px; cursor: pointer; font-family: var(--font-body); transition: opacity 0.2s; display: inline-block; }
+    .btn-primary:hover { opacity: 0.85; text-decoration: none; }
+    .btn-secondary { background: rgba(255,255,255,0.06); color: var(--fg); font-weight: 500; font-size: 0.875rem; padding: 0.6rem 1.25rem; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-family: var(--font-body); transition: all 0.2s; display: inline-block; }
+    .btn-secondary:hover { background: rgba(255,255,255,0.1); text-decoration: none; color: var(--fg); }
+    .btn-danger { background: rgba(224,112,112,0.12); color: #E07070; border: 1px solid rgba(224,112,112,0.3); font-weight: 500; font-size: 0.8rem; padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-family: var(--font-body); transition: all 0.2s; display: inline-block; }
+    .alert { padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.875rem; margin-bottom: 1.25rem; }
+    .alert-success { background: rgba(126,212,166,0.1); border: 1px solid rgba(126,212,166,0.3); color: #7ED4A6; }
+    .alert-error { background: rgba(224,112,112,0.1); border: 1px solid rgba(224,112,112,0.3); color: #E07070; }
+    .rec-item { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem 1.25rem; margin-bottom: 0.75rem; }
+    .rec-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 0.5rem; }
+    .rec-title { font-size: 0.95rem; font-weight: 600; color: var(--fg); }
+    .rec-desc { font-size: 0.825rem; color: var(--fg-muted); line-height: 1.6; margin-bottom: 0.75rem; }
+    .rec-actions { display: flex; gap: 0.5rem; }
+    .rec-action { font-size: 0.775rem; font-weight: 600; padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer; border: none; font-family: var(--font-body); }
+    .rec-accept { background: rgba(45,107,82,0.3); color: #7ED4A6; }
+    .rec-dismiss { background: rgba(255,255,255,0.06); color: var(--fg-muted); }
+    .priority-badge { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.2rem 0.5rem; border-radius: 4px; }
+    .priority-high { background: rgba(224,112,112,0.2); color: #E07070; }
+    .priority-medium { background: rgba(201,168,76,0.2); color: var(--accent); }
+    .priority-low { background: rgba(255,255,255,0.06); color: var(--fg-muted); }
+    .form-group { margin-bottom: 1.1rem; }
+    .form-group label { display: block; font-size: 0.775rem; font-weight: 500; color: var(--fg-muted); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    .form-group input, .form-group select { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.9rem; color: var(--fg); font-size: 0.9rem; font-family: var(--font-body); outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+    .form-group input:focus { border-color: rgba(201,168,76,0.5); }
+    .form-group input::placeholder { color: var(--fg-muted); opacity: 0.5; }
+    .form-group select option { background: var(--green-deep); }
+    .account-item { display: flex; align-items: center; justify-content: space-between; padding: 0.9rem 0; border-bottom: 1px solid var(--border); }
+    .account-item:last-child { border-bottom: none; }
+    .account-name { font-size: 0.9rem; font-weight: 500; color: var(--fg); }
+    .account-meta { font-size: 0.775rem; color: var(--fg-muted); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .status-dot.active { background: #7ED4A6; }
+    .status-dot.error { background: #E07070; }
+    .status-dot.disconnected { background: var(--fg-muted); }
+    .timeline { border-left: 2px solid var(--border); padding-left: 1.5rem; margin-left: 0.5rem; }
+    .timeline-item { position: relative; margin-bottom: 1.5rem; }
+    .timeline-item::before { content: ''; position: absolute; left: -1.625rem; top: 0.4rem; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); }
+    .timeline-date { font-size: 0.75rem; color: var(--fg-muted); margin-bottom: 0.25rem; }
+    .timeline-title { font-size: 0.9rem; font-weight: 600; color: var(--fg); margin-bottom: 0.25rem; }
+    .timeline-desc { font-size: 0.8rem; color: var(--fg-muted); line-height: 1.5; }
+    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--fg-muted); }
+    .empty-state .icon { font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.4; }
+    .empty-state h3 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; color: var(--fg); margin-bottom: 0.5rem; }
+    .empty-state p { font-size: 0.875rem; line-height: 1.6; max-width: 340px; margin: 0 auto 1.5rem; }
+    .filter-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .filter-tab { font-size: 0.8rem; font-weight: 500; padding: 0.4rem 0.9rem; border-radius: 6px; border: 1px solid var(--border); background: none; color: var(--fg-muted); cursor: pointer; font-family: var(--font-body); transition: all 0.2s; display: inline-block; }
+    .filter-tab:hover, .filter-tab.active { background: rgba(201,168,76,0.1); color: var(--accent); border-color: rgba(201,168,76,0.3); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: none; align-items: center; justify-content: center; padding: 1rem; }
+    .modal { background: var(--green-deep); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; width: 100%; max-width: 480px; }
+    .modal h2 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; color: var(--fg); margin: 0 0 0.5rem; }
+    .modal p { font-size: 0.875rem; color: var(--fg-muted); margin: 0 0 1.5rem; }
+    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+    .breakdown-row { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .breakdown-row:last-child { border-bottom: none; }
+    .breakdown-label { font-size: 0.85rem; color: var(--fg-muted); }
+    .breakdown-bar-wrap { flex: 1; height: 4px; background: rgba(255,255,255,0.08); border-radius: 999px; margin: 0 0.75rem; overflow: hidden; max-width: 100px; }
+    .breakdown-bar { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--green-light), var(--accent)); }
+    .breakdown-val { font-size: 0.85rem; font-weight: 600; color: var(--fg); min-width: 36px; text-align: right; }
+    @media (max-width: 768px) { .dash-sidebar { display: none; } .dash-main { margin-left: 0; padding: 1.5rem 1rem; padding-top: 70px; } .score-cards { grid-template-columns: 1fr; } .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+    @media (max-width: 480px) { .dash-nav { padding: 0 1rem; } .dash-nav-user { display: none; } }
+  </style>
+</head>
+<body>
+  <nav class="dash-nav">
+    <a href="/" class="dash-nav-logo"><span style="font-size:1.3rem;color:var(--accent);">◈</span> <span>Mizan</span></a>
+    <div class="dash-nav-right">
+      <span class="dash-nav-user"><%= session.name || session.email %></span>
+      <a href="/dashboard" class="dash-nav-cta">Dashboard</a>
+      <form action="/logout" method="POST" style="display:inline;"><button type="submit" class="dash-nav-btn">Sign out</button></form>
+    </div>
+  </nav>
+  <div class="dash-body">
+    <aside class="dash-sidebar">
+      <div class="dash-sidebar-section">
+        <span class="dash-sidebar-label">Overview</span>
+        <a href="/dashboard" class="dash-nav-item <%= pageTitle === 'Dashboard' ? 'active' : '' %>"><span class="dash-nav-icon">◈</span> Dashboard</a>
+      </div>
+      <div class="dash-sidebar-section">
+        <span class="dash-sidebar-label">Financial Health</span>
+        <a href="/dashboard/scores" class="dash-nav-item <%= pageTitle === 'Scores' ? 'active' : '' %>"><span class="dash-nav-icon">◈</span> Scores</a>
+        <a href="/dashboard/recommendations" class="dash-nav-item <%= pageTitle === 'Recommendations' ? 'active' : '' %>"><span class="dash-nav-icon">◈</span> Recommendations</a>
+        <a href="/dashboard/portfolio" class="dash-nav-item <%= pageTitle === 'Portfolio' ? 'active' : '' %>"><span class="dash-nav-icon">◈</span> Portfolio</a>
+        <a href="/dashboard/tools" class="dash-nav-item <%= pageTitle === 'Recommended Tools' ? 'active' : '' %>"><span class="dash-nav-icon">◈</span> Tools</a>
+      </div>
+      <div class="dash-sidebar-section">
+        <span class="dash-sidebar-label">Account</span>
+        <a href="/dashboard/accounts" class="dash-nav-item <%= pageTitle === 'Linked Accounts' ? 'active' : '' %>"><span class="dash-nav-icon">◈</span> Linked Accounts</a>
+        <a href="/dashboard/history" class="dash-nav-item <%= pageTitle === 'History' ? 'active' : '' %>"><span class="dash-nav-icon">◈</span> History</a>
+        <a href="/dashboard/profile" class="dash-nav-item <%= pageTitle === 'Profile' ? 'active' : '' %>"><span class="dash-nav-icon">◈</span> Profile</a>
+      </div>
+    </aside>
+    <main class="dash-main">
+      <%- body %>
+    </main>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('.rec-accept, .rec-dismiss').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+          var recId = btn.getAttribute('data-id');
+          var status = btn.classList.contains('rec-accept') ? 'accepted' : 'dismissed';
+          try {
+            var res = await fetch('/dashboard/recommendations/' + recId + '/status', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: status })
+            });
+            if (res.ok) {
+              var item = btn.closest('.rec-item');
+              item.style.opacity = '0.5';
+              item.style.pointerEvents = 'none';
+            }
+          } catch(e) { console.error(e); }
+        });
+      });
+      document.querySelectorAll('.delete-account').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+          if (!confirm('Remove this linked account?')) return;
+          var id = btn.getAttribute('data-id');
+          try {
+            var res = await fetch('/dashboard/accounts/' + id, { method: 'DELETE' });
+            if (res.ok) btn.closest('.account-item').remove();
+          } catch(e) { console.error(e); }
+        });
+      });
+      var addBtn = document.getElementById('add-account-btn');
+      var modal = document.getElementById('add-account-modal');
+      if (addBtn && modal) {
+        addBtn.addEventListener('click', function() { modal.style.display = 'flex'; });
+        modal.querySelector('.modal-cancel').addEventListener('click', function() { modal.style.display = 'none'; });
+        modal.querySelector('.modal-submit').addEventListener('click', async function() {
+          var form = modal.querySelector('form');
+          var data = new FormData(form);
+          var obj = {};
+          data.forEach(function(v, k) { obj[k] = v; });
+          var res = await fetch('/dashboard/accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
+          if (res.ok) { modal.style.display = 'none'; form.reset(); location.reload(); }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

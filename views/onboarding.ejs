@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Get Your Free Score — Mizan</title>
+  <link rel="stylesheet" href="/css/theme.css" />
+  <style>
+    /* ── Onboarding overrides ─────────────────────────────── */
+    :root {
+      --wizard-bg: #080C09;
+      --step-transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body { background: var(--wizard-bg); }
+
+    .wizard-wrap {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 4rem 1.5rem 6rem;
+    }
+
+    .wizard-header { text-align: center; margin-bottom: 3rem; width: 100%; max-width: 600px; }
+    .wizard-logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; margin-bottom: 2rem; color: var(--fg); }
+    .wizard-logo-mark { font-size: 1.4rem; color: var(--accent); }
+    .wizard-logo-text { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; }
+
+    .step-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .wizard-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 600;
+      color: var(--fg);
+      line-height: 1.2;
+      margin-bottom: 0.75rem;
+    }
+
+    .wizard-sub { font-size: 0.9rem; color: var(--fg-muted); line-height: 1.6; }
+
+    /* Progress bar */
+    .progress-wrap { width: 100%; max-width: 600px; margin-bottom: 3rem; }
+    .progress-label-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+    .progress-step-count { font-size: 0.75rem; color: var(--fg-muted); font-weight: 500; }
+    .progress-pct { font-size: 0.75rem; color: var(--accent); font-weight: 600; }
+    .progress-track { height: 3px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--green-light), var(--accent)); border-radius: 999px; transition: width var(--step-transition); }
+    .progress-fill.complete { background: #7ED4A6; }
+
+    /* Step dots */
+    .step-dots { display: flex; gap: 0.4rem; justify-content: center; margin-top: 0.75rem; }
+    .step-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.12); transition: background 0.3s; }
+    .step-dot.active { background: var(--accent); }
+    .step-dot.done { background: #7ED4A6; }
+
+    /* Card */
+    .step-card {
+      background: rgba(15, 46, 36, 0.35);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 600px;
+      animation: stepIn 0.4s ease;
+    }
+
+    @keyframes stepIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .step-section-tag {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      opacity: 0.8;
+    }
+
+    .step-card h2 {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--fg);
+      margin-bottom: 0.35rem;
+    }
+
+    .step-card > p { font-size: 0.85rem; color: var(--fg-muted); line-height: 1.6; margin-bottom: 2rem; }
+
+    /* Form elements */
+    .field-group { margin-bottom: 1.5rem; }
+    .field-group:last-child { margin-bottom: 0; }
+
+    .field-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--fg);
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.01em;
+    }
+
+    .field-label .optional { font-weight: 400; color: var(--fg-muted); margin-left: 0.35rem; font-size: 0.75rem; }
+    .field-label .tooltip-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--accent);
+      font-size: 0.75rem;
+      margin-left: 0.3rem;
+      padding: 0;
+      opacity: 0.7;
+      position: relative;
+    }
+    .field-label .tooltip-btn:hover { opacity: 1; }
+
+    .tooltip-pop {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--green-deep);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.78rem;
+      color: var(--fg-muted);
+      line-height: 1.5;
+      z-index: 50;
+      width: 240px;
+      text-align: left;
+      font-weight: 400;
+    }
+
+    .tooltip-pop.show { display: block; }
+
+    .field-input, .field-select, .field-textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      color: var(--fg);
+      font-size: 0.9rem;
+      font-family: var(--font-body);
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+      -webkit-appearance: none;
+    }
+
+    .field-input:focus, .field-select:focus, .field-textarea:focus {
+      border-color: rgba(201,168,76,0.5);
+      background: rgba(255,255,255,0.06);
+    }
+
+    .field-select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238A8D83' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 1rem center; padding-right: 2.5rem; }
+
+    .field-textarea { resize: vertical; min-height: 90px; }
+
+    .field-input.error, .field-select.error { border-color: #E07070; }
+    .field-error { font-size: 0.75rem; color: #E07070; margin-top: 0.35rem; display: none; }
+    .field-error.show { display: block; }
+
+    .field-input::placeholder, .field-textarea::placeholder { color: var(--fg-muted); opacity: 0.6; }
+
+    /* Radio/checkbox groups */
+    .radio-group { display: flex; flex-direction: column; gap: 0.6rem; }
+    .radio-item, .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      padding: 0.85rem 1rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .radio-item:hover, .checkbox-item:hover { background: rgba(255,255,255,0.06); border-color: rgba(201,168,76,0.25); }
+    .radio-item.selected, .checkbox-item.selected { border-color: var(--accent); background: rgba(201,168,76,0.07); }
+
+    .radio-item input, .checkbox-item input {
+      accent-color: var(--accent);
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    .radio-text { font-size: 0.875rem; color: var(--fg); }
+    .radio-sub { font-size: 0.75rem; color: var(--fg-muted); margin-top: 0.1rem; }
+
+    /* Two-col */
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 480px) { .field-row { grid-template-columns: 1fr; } }
+
+    /* Inline checklist */
+    .inline-checkboxes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .inline-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: var(--fg-muted);
+      background: rgba(255,255,255,0.03);
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .inline-check:hover { border-color: rgba(201,168,76,0.3); color: var(--fg); }
+    .inline-check.selected { border-color: var(--accent); background: rgba(201,168,76,0.1); color: var(--accent); font-weight: 600; }
+    .inline-check input { display: none; }
+
+    /* Dynamic list rows */
+    .dynamic-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .list-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 0.75rem;
+      align-items: start;
+    }
+    .list-row-3 { grid-template-columns: 1fr 1fr 1fr auto; }
+    @media (max-width: 540px) { .list-row, .list-row-3 { grid-template-columns: 1fr; } }
+
+    .btn-add-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+      color: var(--accent);
+      background: none;
+      border: 1px dashed rgba(201,168,76,0.4);
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      font-family: var(--font-body);
+      margin-top: 0.5rem;
+      transition: border-color 0.2s, background 0.2s;
+      width: 100%;
+      justify-content: center;
+    }
+    .btn-add-row:hover { border-color: var(--accent); background: rgba(201,168,76,0.05); }
+
+    .btn-remove {
+      background: none;
+      border: none;
+      color: #E07070;
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 0.5rem;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+    .btn-remove:hover { opacity: 1; }
+
+    /* Navigation */
+    .step-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.85rem;
+      color: var(--fg-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-body);
+      padding: 0.5rem 0;
+      transition: color 0.2s;
+    }
+    .btn-back:hover { color: var(--fg); }
+
+    .btn-next {
+      background: var(--accent);
+      color: var(--bg);
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 0.85rem 2rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: var(--font-body);
+      transition: opacity 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .btn-next:hover { opacity: 0.85; }
+    .btn-next:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Step 7 completion */
+    .step-completion { text-align: center; padding: 1rem 0; }
+    .step-completion .big-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .step-completion h2 { font-family: var(--font-display); font-size: 1.5rem; color: var(--fg); margin-bottom: 0.75rem; }
+    .step-completion p { font-size: 0.9rem; color: var(--fg-muted); line-height: 1.7; margin-bottom: 2rem; }
+    .completion-actions { display: flex; flex-direction: column; gap: 0.75rem; align-items: center; }
+    .btn-primary-lg {
+      background: var(--accent);
+      color: var(--bg);
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 1rem 2.5rem;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: var(--font-body);
+      transition: opacity 0.2s;
+      width: 100%;
+      max-width: 360px;
+    }
+    .btn-primary-lg:hover { opacity: 0.85; }
+    .save-later-link { font-size: 0.8rem; color: var(--fg-muted); text-decoration: none; margin-top: 0.5rem; display: inline-block; }
+    .save-later-link:hover { color: var(--fg); }
+
+    /* Mobile nav fix */
+    @media (max-width: 480px) { .step-card { padding: 1.75rem 1.25rem; } .wizard-wrap { padding: 3rem 1rem 5rem; } }
+  </style>
+</head>
+<body>
+
+<div class="wizard-wrap">
+  <!-- Header -->
+  <div class="wizard-header">
+    <a href="/" class="wizard-logo">
+      <span class="wizard-logo-mark">✦</span>
+      <span class="wizard-logo-text">Mizan</span>
+    </a>
+    <div class="step-label" id="stepLabel">Step 1 of 7</div>
+    <h1 class="wizard-title" id="stepTitle">About You</h1>
+    <p class="wizard-sub" id="stepSub">Tell us a bit about yourself so we can tailor your score.</p>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-wrap">
+    <div class="progress-label-row">
+      <span class="progress-step-count" id="progressCount">About You</span>
+      <span class="progress-pct" id="progressPct">14%</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill" style="width: 14%"></div>
+    </div>
+    <div class="step-dots" id="stepDots"></div>
+  </div>
+
+  <!-- Card -->
+  <div class="step-card" id="stepCard">
+
+    <!-- Step 1: About You -->
+    <div class="step-section-tag">Section 1 of 7</div>
+    <h2>About You</h2>
+    <p>Help us understand your professional background and financial situation.</p>
+
+    <div class="field-group">
+      <label class="field-label">
+        What best describes your role?
+        <button class="tooltip-btn" type="button" onclick="toggleTooltip(this)">?
+          <span class="tooltip-pop">Australian health professionals including specialists, GPs, nurses, pharmacists, and dentists.</span>
+        </button>
+      </label>
+      <select class="field-select" id="role" onchange="validateField('role')">
+        <option value="">Select your role…</option>
+        <option value="specialist">Specialist</option>
+        <option value="gp">GP / General Practitioner</option>
+        <option value="dentist">Dentist</option>
+        <option value="pharmacist">Pharmacist</option>
+        <option value="nurse">Nurse / Nurse Practitioner</option>
+        <option value="allied_health">Allied Health (Physio, OT, Psych)</option>
+        <option value="other">Other Health Professional</option>
+      </select>
+      <div class="field-error" id="roleError">Please select your role</div>
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">Years in practice</label>
+        <input class="field-input" type="number" id="yearsInPractice" min="0" max="50" placeholder="e.g. 8" onchange="validateField('yearsInPractice')" />
+        <div class="field-error" id="yearsInPracticeError">Please enter a valid number</div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">City / State</label>
+        <input class="field-input" type="text" id="location" placeholder="e.g. Sydney, NSW" onchange="validateField('location')" />
+        <div class="field-error" id="locationError">Please enter your location</div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Approximate annual income</label>
+      <div class="radio-group" id="incomeRange">
+        <label class="radio-item" onclick="selectRadio('incomeRange', this, '$80k–$120k')">
+          <input type="radio" name="income_range" value="$80k–$120k" />
+          <div><div class="radio-text">$80k – $120k</div><div class="radio-sub">Early career or part-time</div></div>
+        </label>
+        <label class="radio-item" onclick="selectRadio('incomeRange', this, '$120k–$200k')">
+          <input type="radio" name="income_range" value="$120k–$200k" />
+          <div><div class="radio-text">$120k – $200k</div><div class="radio-sub">Established professional</div></div>
+        </label>
+        <label class="radio-item" onclick="selectRadio('incomeRange', this, '$200k–$350k')">
+          <input type="radio" name="income_range" value="$200k–$350k" />
+          <div><div class="radio-text">$200k – $350k</div><div class="radio-sub">Senior or high-volume practice</div></div>
+        </label>
+        <label class="radio-item" onclick="selectRadio('incomeRange', this, '$350k+')">
+          <input type="radio" name="income_range" value="$350k+" />
+          <div><div class="radio-text">$350k+</div><div class="radio-sub">Principal or specialist partner</div></div>
+        </label>
+      </div>
+      <div class="field-error" id="incomeRangeError">Please select your income range</div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Primary investment goal</label>
+      <div class="radio-group" id="investmentGoal">
+        <label class="radio-item" onclick="selectRadio('investmentGoal', this, 'retirement')">
+          <input type="radio" name="investment_goal" value="retirement" />
+          <div><div class="radio-text">Retirement planning</div><div class="radio-sub">Long-term wealth and superannuation growth</div></div>
+        </label>
+        <label class="radio-item" onclick="selectRadio('investmentGoal', this, 'property')">
+          <input type="radio" name="investment_goal" value="property" />
+          <div><div class="radio-text">Buying property</div><div class="radio-sub">Building deposit or investment property</div></div>
+        </label>
+        <label class="radio-item" onclick="selectRadio('investmentGoal', this, 'wealth_building')">
+          <input type="radio" name="investment_goal" value="wealth_building" />
+          <div><div class="radio-text">Wealth building</div><div class="radio-sub">Portfolio growth and financial independence</div></div>
+        </label>
+        <label class="radio-item" onclick="selectRadio('investmentGoal', this, 'practice_setup')">
+          <input type="radio" name="investment_goal" value="practice_setup" />
+          <div><div class="radio-text">Practice setup</div><div class="radio-sub">Owning or expanding your clinic</div></div>
+        </label>
+      </div>
+      <div class="field-error" id="investmentGoalError">Please select an investment goal</div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <div class="step-nav" id="stepNav" style="max-width: 600px; width: 100%;">
+    <button class="btn-back" id="btnBack" onclick="prevStep()" style="visibility: hidden;">
+      ← Back
+    </button>
+    <button class="btn-next" id="btnNext" onclick="nextStep()">
+      Continue <span id="btnNextLabel">→</span>
+    </button>
+  </div>
+</div>
+
+<script>
+  // ── State ────────────────────────────────────────────────────────────────────
+  let currentStep = 1;
+  const TOTAL_STEPS = 7;
+  let sessionId = null;
+  let savedData = {};
+
+  const STEPS = [
+    { title: 'About You', sub: 'Tell us a bit about yourself so we can tailor your score.', section: '1 of 7' },
+    { title: 'Income & Tax', sub: 'Understand your employment structure and tax position.', section: '2 of 7' },
+    { title: 'Superannuation', sub: 'Your super fund is often your largest financial asset.', section: '3 of 7' },
+    { title: 'Debt & Liabilities', sub: 'Knowing your liabilities is essential for an accurate score.', section: '4 of 7' },
+    { title: 'Assets & Investments', sub: 'What are you currently invested in?', section: '5 of 7' },
+    { title: 'Your Goals', sub: 'Where are you trying to get to?', section: '6 of 7' },
+    { title: 'Halal or Ethical?', sub: 'Configure your investment preferences.', section: '7 of 7' },
+  ];
+
+  const STORAGE_KEY = 'mizan_onboarding';
+
+  // ── Init ──────────────────────────────────────────────────────────────────────
+  async function init() {
+    loadFromStorage();
+    buildDots();
+    await initSession();
+    renderStep(currentStep);
+    if (currentStep > 1) document.getElementById('btnBack').style.visibility = 'visible';
+    updateProgress();
+  }
+
+  async function initSession() {
+    const res = await fetch('/api/onboarding/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    sessionId = data.session_id;
+    if (data.current_step > 1 && !savedData.step) {
+      // resume from saved
+    }
+  }
+
+  // ── Dots ──────────────────────────────────────────────────────────────────────
+  function buildDots() {
+    const container = document.getElementById('stepDots');
+    container.innerHTML = '';
+    for (let i = 1; i <= TOTAL_STEPS; i++) {
+      const d = document.createElement('div');
+      d.className = 'step-dot';
+      d.id = `dot-${i}`;
+      container.appendChild(d);
+    }
+  }
+
+  function updateDots() {
+    for (let i = 1; i <= TOTAL_STEPS; i++) {
+      const d = document.getElementById(`dot-${i}`);
+      d.className = 'step-dot' + (i < currentStep ? ' done' : i === currentStep ? ' active' : '');
+    }
+  }
+
+  // ── Progress ──────────────────────────────────────────────────────────────────
+  function updateProgress() {
+    const pct = Math.round((currentStep / TOTAL_STEPS) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressPct').textContent = pct + '%';
+    const s = STEPS[currentStep - 1];
+    document.getElementById('progressCount').textContent = s.title;
+    document.getElementById('stepLabel').textContent = s.section;
+    document.getElementById('stepTitle').textContent = s.title;
+    document.getElementById('stepSub').textContent = s.sub;
+    updateDots();
+  }
+
+  // ── Step content renderers ────────────────────────────────────────────────────
+  const STEP_CONTENT = {};
+
+  // Step 1 (inline in HTML above)
+  STEP_CONTENT[1] = null; // rendered via static HTML
+
+  // Step 2: Income & Tax
+  STEP_CONTENT[2] = `
+    <div class="step-section-tag">Section 2 of 7</div>
+    <h2>Income & Tax</h2>
+    <p>Help us understand your employment structure and tax position.</p>
+
+    <div class="field-group">
+      <label class="field-label">Employment type</label>
+      <div class="radio-group" id="employmentType">
+        <label class="radio-item" onclick="selectRadio('employmentType', this, 'employee')">
+          <input type="radio" name="employment_type" value="employee" />
+          <div><div class="radio-text">Employee</div><div class="radio-sub">Salaried position in a clinic or hospital</div></div>
+        </label>
+        <label class="radio-item" onclick="selectRadio('employmentType', this, 'contractor')">
+          <input type="radio" name="employment_type" value="contractor" />
+          <div><div class="radio-text">Contractor</div><div class="radio-sub">Billable hours, ABN-based work</div></div>
+        </label>
+        <label class="radio-item" onclick="selectRadio('employmentType', this, 'practice_owner')">
+          <input type="radio" name="employment_type" value="practice_owner" />
+          <div><div class="radio-text">Practice owner / Partner</div><div class="radio-sub">Own or co-own a clinic</div></div>
+        </label>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">
+          HECS/HELP balance
+          <button class="tooltip-btn" type="button" onclick="toggleTooltip(this)">?
+            <span class="tooltip-pop">Higher Education Loan Program. Australian students who studied medicine or dentistry typically have a HELP debt. It is repaid via the tax system when your income exceeds ~$55k/year.</span>
+          </button>
+          <span class="optional">(optional)</span>
+        </label>
+        <input class="field-input" type="number" id="hecsBalance" min="0" placeholder="e.g. 45000" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">TFN lodgement status</label>
+        <div class="radio-group" id="tfnLodged">
+          <label class="radio-item" onclick="selectRadio('tfnLodged', this, 'yes')">
+            <input type="radio" name="tfn_lodged" value="yes" />
+            <div><div class="radio-text">Yes, lodged</div></div>
+          </label>
+          <label class="radio-item" onclick="selectRadio('tfnLodged', this, 'no')">
+            <input type="radio" name="tfn_lodged" value="no" />
+            <div><div class="radio-text">Not yet lodged</div></div>
+          </label>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Step 3: Super
+  STEP_CONTENT[3] = `
+    <div class="step-section-tag">Section 3 of 7</div>
+    <h2>Superannuation</h2>
+    <p>Your super fund is often your largest financial asset. Getting this right matters.</p>
+
+    <div class="field-group">
+      <label class="field-label">Super fund name <span class="optional">(optional)</span></label>
+      <input class="field-input" type="text" id="superFundName" placeholder="e.g. Australian Super, Hostplus, HESTA" />
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">Approximate balance</label>
+        <input class="field-input" type="number" id="superBalance" min="0" placeholder="e.g. 180000" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">
+          Fund type
+          <button class="tooltip-btn" type="button" onclick="toggleTooltip(this)">?
+            <span class="tooltip-pop">Industry funds are non-profit and typically lower fees. Retail funds are run by banks/AMP. SMSF is a self-managed fund you run yourself with more control but more responsibility.</span>
+          </button>
+        </label>
+        <select class="field-select" id="superFundType">
+          <option value="">Select type…</option>
+          <option value="industry">Industry Fund</option>
+          <option value="retail">Retail Fund</option>
+          <option value="smsf">SMSF (Self-Managed)</option>
+          <option value="public_offer">Public Offer / Corporate</option>
+          <option value="not_sure">Not sure</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Contribution type</label>
+      <div class="radio-group" id="superContribution">
+        <label class="radio-item" onclick="selectRadio('superContribution', this, 'salary_sacrifice')">
+          <input type="radio" name="super_contribution" value="salary_sacrifice" />
+          <div><div class="radio-text">Salary sacrifice</div><div class="radio-sub">Regular pre-tax contributions from your employer</div></div>
+        </label>
+        <label class="radio-item" onclick="selectRadio('superContribution', this, 'lump_sum')">
+          <input type="radio" name="super_contribution" value="lump_sum" />
+          <div><div class="radio-text">Lump sum contributions</div><div class="radio-sub">Occasional ad-hoc contributions</div></div>
+        </label>
+        <label class="radio-item" onclick="selectRadio('superContribution', this, 'employer_only')">
+          <input type="radio" name="super_contribution" value="employer_only" />
+          <div><div class="radio-text">Employer SG only</div><div class="radio-sub">Only the 11.5% super guarantee from my employer</div></div>
+        </label>
+        <label class="radio-item" onclick="selectRadio('superContribution', this, 'not_contributing')">
+          <input type="radio" name="super_contribution" value="not_contributing" />
+          <div><div class="radio-text">Not currently contributing</div></div>
+        </label>
+      </div>
+    </div>
+  `;
+
+  // Step 4: Debt
+  STEP_CONTENT[4] = `
+    <div class="step-section-tag">Section 4 of 7</div>
+    <h2>Debt & Liabilities</h2>
+    <p>Understanding your liabilities is essential for an accurate Financial Health Score.</p>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">
+          HECS/HELP remaining
+          <button class="tooltip-btn" type="button" onclick="toggleTooltip(this)">?
+            <span class="tooltip-pop">This is the same as your HECS balance above. Repaying through tax is not a "debt" in the traditional sense — it's automatically deducted, not a bank loan.</span>
+          </button>
+          <span class="optional">(optional)</span>
+        </label>
+        <input class="field-input" type="number" id="hecsRemaining" min="0" placeholder="e.g. 50000" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Investment property debt <span class="optional">(optional)</span></label>
+        <input class="field-input" type="number" id="investmentPropertyDebt" min="0" placeholder="e.g. 400000" />
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Home mortgage</label>
+      <div class="field-row">
+        <input class="field-input" type="number" id="mortgageBalance" min="0" placeholder="Remaining balance (e.g. 520000)" />
+        <input class="field-input" type="number" id="mortgageLvr" min="0" step="0.1" max="100" placeholder="LVR % (e.g. 65)" />
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Other personal debt <span class="optional">(car, personal loan, etc.)</span></label>
+      <input class="field-input" type="number" id="otherPersonalDebt" min="0" placeholder="e.g. 25000" />
+    </div>
+  `;
+
+  // Step 5: Assets
+  STEP_CONTENT[5] = `
+    <div class="step-section-tag">Section 5 of 7</div>
+    <h2>Assets & Investments</h2>
+    <p>What are you currently invested in? We only need broad figures — no account numbers.</p>
+
+    <div class="field-group">
+      <label class="field-label">Brokerage / Trading accounts <span class="optional">(optional)</span></label>
+      <p style="font-size:0.78rem;color:var(--fg-muted);margin-bottom:0.75rem;">Add each account you hold.</p>
+      <div class="dynamic-list" id="brokerageList">
+        <div class="list-row" data-row="0">
+          <select class="field-select" style="font-size:0.85rem;">
+            <option value="">Select provider…</option>
+            <option value="commsec">CommSec</option>
+            <option value="nabtrade">NabTrade</option>
+            <option value="selfwealth">SelfWealth</option>
+            <option value=" CMC">CMC Markets</option>
+            <option value="平台平台">Interactive Brokers</option>
+            <option value="other">Other</option>
+          </select>
+          <input class="field-input" type="number" min="0" placeholder="Approx. balance ($)" style="font-size:0.85rem;" />
+          <button class="btn-remove" onclick="removeRow(this)" title="Remove">×</button>
+        </div>
+      </div>
+      <button class="btn-add-row" type="button" onclick="addBrokerageRow()">+ Add another account</button>
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">Direct shares / ETFs value <span class="optional">(optional)</span></label>
+        <input class="field-input" type="number" id="directShares" min="0" placeholder="e.g. 95000" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Crypto holdings <span class="optional">(optional)</span></label>
+        <input class="field-input" type="number" id="cryptoHoldings" min="0" placeholder="e.g. 5000" />
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Other assets <span class="optional">(optional)</span></label>
+      <input class="field-input" type="text" id="otherAssets" placeholder="e.g. Business equity, art, etc." />
+    </div>
+  `;
+
+  // Step 6: Goals
+  STEP_CONTENT[6] = `
+    <div class="step-section-tag">Section 6 of 7</div>
+    <h2>Your Goals</h2>
+    <p>Where are you trying to get to? These numbers help us calibrate your score.</p>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">Target retirement age</label>
+        <input class="field-input" type="number" id="targetRetirementAge" min="40" max="80" placeholder="e.g. 60" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Target nest egg</label>
+        <input class="field-input" type="number" id="targetNestEgg" min="0" placeholder="e.g. 2500000" />
+        <p style="font-size:0.72rem;color:var(--fg-muted);margin-top:0.25rem;">Total super + investments you want at retirement</p>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Specific goals <span class="optional">(optional)</span></label>
+      <textarea class="field-textarea" id="specificGoals" placeholder="e.g. I want to buy an investment property in the next 3 years, or I want to retire by 55 and travel"></textarea>
+    </div>
+  `;
+
+  // Step 7: Halal/Ethical Preferences
+  STEP_CONTENT[7] = `
+    <div class="step-section-tag">Section 7 of 7</div>
+    <h2>Investment Preferences</h2>
+    <p>This is what sets Ethical apart. Tell us what matters to you.</p>
+
+    <div class="field-group">
+      <label class="field-label">Do you identify as Muslim?</label>
+      <div class="radio-group" id="isMuslim">
+        <label class="radio-item" onclick="selectRadio('isMuslim', this, 'yes'); showHalalSection()">
+          <input type="radio" name="is_muslim" value="yes" />
+          <div><div class="radio-text">Yes</div><div class="radio-sub">I want a fully halal-compliant portfolio</div></div>
+        </label>
+        <label class="radio-item" onclick="selectRadio('isMuslim', this, 'no'); showEthicalSection()">
+          <input type="radio" name="is_muslim" value="no" />
+          <div><div class="radio-text">No</div><div class="radio-sub">I'm interested in ethical / ESG investing</div></div>
+        </label>
+      </div>
+    </div>
+
+    <div id="halalSection" style="display:none;">
+      <div class="field-group">
+        <label class="field-label">Halal preference</label>
+        <div class="radio-group" id="halalPreference">
+          <label class="radio-item" onclick="selectRadio('halalPreference', this, 'strict')">
+            <input type="radio" name="halal_preference" value="strict" />
+            <div><div class="radio-text">Strict Halal only</div><div class="radio-sub">Sharia-compliant: no gambling, alcohol, pork, weapons, banking interest</div></div>
+          </label>
+          <label class="radio-item" onclick="selectRadio('halalPreference', this, 'halal_plus')">
+            <input type="radio" name="halal_preference" value="halal_plus" />
+            <div><div class="radio-text">Halal + avoid specific sectors</div><div class="radio-sub">Halal-compliant plus any additional exclusions I choose</div></div>
+          </label>
+        </div>
+      </div>
+
+      <div class="field-group" id="halalSectorsGroup" style="display:none;">
+        <label class="field-label">Also avoid <span class="optional">(select all that apply)</span></label>
+        <div class="inline-checkboxes" id="halalSectors">
+          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="gambling" />Gambling</span>
+          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="alcohol" />Alcohol</span>
+          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="tobacco" />Tobacco</span>
+          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="weapons" />Weapons</span>
+          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="gaming" />Gaming</span>
+          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="interest_banking" />Interest-based banking</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="ethicalSection" style="display:none;">
+      <div class="field-group">
+        <label class="field-label">Ethical exclusions <span class="optional">(select all that apply)</span></label>
+        <div class="inline-checkboxes" id="ethicalExclusions">
+          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="fossil_fuels" />Fossil fuels</span>
+          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="weapons" />Weapons</span>
+          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="animal_testing" />Animal testing</span>
+          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="tobacco" />Tobacco</span>
+          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="gambling" />Gambling</span>
+          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="nuclear" />Nuclear</span>
+          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="human_rights" />Human rights violations</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // ── Step rendering ───────────────────────────────────────────────────────────
+  function renderStep(n) {
+    const card = document.getElementById('stepCard');
+
+    if (n === 1) {
+      card.innerHTML = document.getElementById('step1Content') ? document.getElementById('step1Content').innerHTML : getStep1HTML();
+    } else {
+      card.innerHTML = STEP_CONTENT[n] || '<p>Step not configured.</p>';
+    }
+
+    restoreSavedData(n);
+    updateNavButtons(n);
+  }
+
+  function getStep1HTML() {
+    return `
+      <div class="step-section-tag">Section 1 of 7</div>
+      <h2>About You</h2>
+      <p>Help us understand your professional background and financial situation.</p>
+
+      <div class="field-group">
+        <label class="field-label">
+          What best describes your role?
+          <button class="tooltip-btn" type="button" onclick="toggleTooltip(this)">?
+            <span class="tooltip-pop">Australian health professionals including specialists, GPs, nurses, pharmacists, and dentists.</span>
+          </button>
+        </label>
+        <select class="field-select" id="role" onchange="validateField('role')">
+          <option value="">Select your role…</option>
+          <option value="specialist">Specialist</option>
+          <option value="gp">GP / General Practitioner</option>
+          <option value="dentist">Dentist</option>
+          <option value="pharmacist">Pharmacist</option>
+          <option value="nurse">Nurse / Nurse Practitioner</option>
+          <option value="allied_health">Allied Health (Physio, OT, Psych)</option>
+          <option value="other">Other Health Professional</option>
+        </select>
+        <div class="field-error" id="roleError">Please select your role</div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label">Years in practice</label>
+          <input class="field-input" type="number" id="yearsInPractice" min="0" max="50" placeholder="e.g. 8" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">City / State</label>
+          <input class="field-input" type="text" id="location" placeholder="e.g. Sydney, NSW" />
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Approximate annual income</label>
+        <div class="radio-group" id="incomeRange">
+          <label class="radio-item" onclick="selectRadio('incomeRange', this, '$80k–$120k')">
+            <input type="radio" name="income_range" value="$80k–$120k" />
+            <div><div class="radio-text">$80k – $120k</div><div class="radio-sub">Early career or part-time</div></div>
+          </label>
+          <label class="radio-item" onclick="selectRadio('incomeRange', this, '$120k–$200k')">
+            <input type="radio" name="income_range" value="$120k–$200k" />
+            <div><div class="radio-text">$120k – $200k</div><div class="radio-sub">Established professional</div></div>
+          </label>
+          <label class="radio-item" onclick="selectRadio('incomeRange', this, '$200k–$350k')">
+            <input type="radio" name="income_range" value="$200k–$350k" />
+            <div><div class="radio-text">$200k – $350k</div><div class="radio-sub">Senior or high-volume practice</div></div>
+          </label>
+          <label class="radio-item" onclick="selectRadio('incomeRange', this, '$350k+')">
+            <input type="radio" name="income_range" value="$350k+" />
+            <div><div class="radio-text">$350k+</div><div class="radio-sub">Principal or specialist partner</div></div>
+          </label>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Primary investment goal</label>
+        <div class="radio-group" id="investmentGoal">
+          <label class="radio-item" onclick="selectRadio('investmentGoal', this, 'retirement')">
+            <input type="radio" name="investment_goal" value="retirement" />
+            <div><div class="radio-text">Retirement planning</div><div class="radio-sub">Long-term wealth and superannuation growth</div></div>
+          </label>
+          <label class="radio-item" onclick="selectRadio('investmentGoal', this, 'property')">
+            <input type="radio" name="investment_goal" value="property" />
+            <div><div class="radio-text">Buying property</div><div class="radio-sub">Building deposit or investment property</div></div>
+          </label>
+          <label class="radio-item" onclick="selectRadio('investmentGoal', this, 'wealth_building')">
+            <input type="radio" name="investment_goal" value="wealth_building" />
+            <div><div class="radio-text">Wealth building</div><div class="radio-sub">Portfolio growth and financial independence</div></div>
+          </label>
+          <label class="radio-item" onclick="selectRadio('investmentGoal', this, 'practice_setup')">
+            <input type="radio" name="investment_goal" value="practice_setup" />
+            <div><div class="radio-text">Practice setup</div><div class="radio-sub">Owning or expanding your clinic</div></div>
+          </label>
+        </div>
+      </div>
+    `;
+  }
+
+  // ── Step navigation ──────────────────────────────────────────────────────────
+  function nextStep() {
+    if (!validateStep(currentStep)) return;
+
+    saveCurrentStep(currentStep);
+
+    if (currentStep < TOTAL_STEPS) {
+      currentStep++;
+      renderStep(currentStep);
+      updateProgress();
+      updateNavButtons(currentStep);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      submitOnboarding();
+    }
+  }
+
+  function prevStep() {
+    if (currentStep > 1) {
+      saveCurrentStep(currentStep);
+      currentStep--;
+      renderStep(currentStep);
+      updateProgress();
+      updateNavButtons(currentStep);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  function updateNavButtons(n) {
+    const back = document.getElementById('btnBack');
+    back.style.visibility = n > 1 ? 'visible' : 'hidden';
+    const next = document.getElementById('btnNext');
+    next.innerHTML = n === TOTAL_STEPS ? 'Get My Score →' : 'Continue →';
+  }
+
+  // ── Validation ────────────────────────────────────────────────────────────────
+  function validateStep(n) {
+    switch (n) {
+      case 1: {
+        const role = document.getElementById('role');
+        const loc = document.getElementById('location');
+        let ok = true;
+        if (!role.value) { document.getElementById('roleError').classList.add('show'); role.classList.add('error'); ok = false; }
+        if (!loc.value.trim()) { document.getElementById('locationError')?.classList.add('show'); loc?.classList.add('error'); ok = false; }
+        const incomeChecked = document.querySelector('#incomeRange input:checked');
+        if (!incomeChecked) { document.getElementById('incomeRangeError')?.classList.add('show'); ok = false; }
+        const goalChecked = document.querySelector('#investmentGoal input:checked');
+        if (!goalChecked) { document.getElementById('investmentGoalError')?.classList.add('show'); ok = false; }
+        return ok;
+      }
+      default: return true;
+    }
+  }
+
+  function validateField(id) {
+    const el = document.getElementById(id);
+    if (!el) return true;
+    const err = document.getElementById(id + 'Error');
+    if (!el.value.trim()) {
+      el.classList.add('error');
+      err?.classList.add('show');
+      return false;
+    }
+    el.classList.remove('error');
+    err?.classList.remove('show');
+    return true;
+  }
+
+  // ── Radio / checkbox helpers ─────────────────────────────────────────────────
+  function selectRadio(groupId, label, value) {
+    const items = document.querySelectorAll(`#${groupId} .radio-item`);
+    items.forEach(i => i.classList.remove('selected'));
+    label.classList.add('selected');
+    label.querySelector('input').checked = true;
+    const err = document.getElementById(groupId + 'Error');
+    err?.classList.remove('show');
+  }
+
+  function toggleInlineCheck(el) {
+    el.classList.toggle('selected');
+    el.querySelector('input').checked = el.classList.contains('selected');
+  }
+
+  function toggleTooltip(btn) {
+    const pop = btn.querySelector('.tooltip-pop');
+    if (!pop) return;
+    document.querySelectorAll('.tooltip-pop').forEach(p => { if (p !== pop) p.classList.remove('show'); });
+    pop.classList.toggle('show');
+  }
+
+  // ── Dynamic list rows ─────────────────────────────────────────────────────────
+  function addBrokerageRow() {
+    const list = document.getElementById('brokerageList');
+    const row = document.createElement('div');
+    row.className = 'list-row';
+    row.setAttribute('data-row', list.children.length);
+    row.innerHTML = `
+      <select class="field-select" style="font-size:0.85rem;">
+        <option value="">Select provider…</option>
+        <option value="commsec">CommSec</option>
+        <option value="nabtrade">NabTrade</option>
+        <option value="selfwealth">SelfWealth</option>
+        <option value="cmc">CMC Markets</option>
+        <option value="ib">Interactive Brokers</option>
+        <option value="other">Other</option>
+      </select>
+      <input class="field-input" type="number" min="0" placeholder="Approx. balance ($)" style="font-size:0.85rem;" />
+      <button class="btn-remove" onclick="removeRow(this)" title="Remove">×</button>
+    `;
+    list.appendChild(row);
+  }
+
+  function removeRow(btn) {
+    const row = btn.closest('[data-row]');
+    if (document.querySelectorAll('[data-row]').length > 1) {
+      row.remove();
+    }
+  }
+
+  // ── Halal/Ethical sections ─────────────────────────────────────────────────────
+  function showHalalSection() {
+    document.getElementById('halalSection').style.display = 'block';
+    document.getElementById('ethicalSection').style.display = 'none';
+  }
+
+  function showEthicalSection() {
+    document.getElementById('halalSection').style.display = 'none';
+    document.getElementById('ethicalSection').style.display = 'block';
+  }
+
+  // ── Save / load ───────────────────────────────────────────────────────────────
+  function saveCurrentStep(step) {
+    const data = collectFormData();
+    savedData[step] = data;
+    savedData['currentStep'] = step;
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(savedData)); } catch(e) {}
+    if (sessionId) {
+      fetch(`/api/onboarding/step/${step}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, ...data })
+      }).catch(console.error);
+    }
+  }
+
+  function collectFormData() {
+    const data = {};
+
+    // Text / number inputs
+    ['role', 'yearsInPractice', 'location', 'superFundName', 'superBalance', 'superFundType',
+     'hecsBalance', 'hecsRemaining', 'mortgageBalance', 'mortgageLvr',
+     'investmentPropertyDebt', 'otherPersonalDebt', 'directShares',
+     'cryptoHoldings', 'otherAssets', 'targetRetirementAge', 'targetNestEgg', 'specificGoals'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) data[id] = el.value;
+    });
+
+    // Radio groups
+    const radios = document.querySelectorAll('input[type="radio"]:checked');
+    radios.forEach(r => { data[r.name] = r.value; });
+
+    // Brokerage list
+    const rows = document.querySelectorAll('#brokerageList [data-row]');
+    data.brokerageAccounts = Array.from(rows).map(row => ({
+      provider: row.querySelector('select')?.value || '',
+      balance: row.querySelector('input[type="number"]')?.value || ''
+    })).filter(r => r.provider);
+
+    // Inline checkboxes
+    const selectedSectors = Array.from(document.querySelectorAll('#halalSectors input:checked')).map(i => i.value);
+    if (selectedSectors.length) data.sectorExclusions = selectedSectors;
+
+    const selectedEthics = Array.from(document.querySelectorAll('#ethicalExclusions input:checked')).map(i => i.value);
+    if (selectedEthics.length) data.ethicalExclusions = selectedEthics;
+
+    return data;
+  }
+
+  function loadFromStorage() {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) savedData = JSON.parse(stored);
+    } catch(e) {}
+  }
+
+  function restoreSavedData(step) {
+    const stepData = savedData[step] || savedData;
+    if (!stepData || Object.keys(stepData).length === 0) return;
+
+    // Restore text/number fields
+    Object.keys(stepData).forEach(key => {
+      const el = document.getElementById(key);
+      if (el && el.type !== 'radio' && el.type !== 'checkbox') {
+        el.value = stepData[key];
+      }
+    });
+
+    // Restore radios
+    if (stepData.income_range) {
+      const item = document.querySelector(`#incomeRange .radio-item input[value="${stepData.income_range}"]`);
+      if (item) { item.checked = true; item.closest('.radio-item').classList.add('selected'); }
+    }
+    if (stepData.investment_goal) {
+      const item = document.querySelector(`#investmentGoal .radio-item input[value="${stepData.investment_goal}"]`);
+      if (item) { item.checked = true; item.closest('.radio-item').classList.add('selected'); }
+    }
+    if (stepData.employment_type) {
+      const item = document.querySelector(`#employmentType .radio-item input[value="${stepData.employment_type}"]`);
+      if (item) { item.checked = true; item.closest('.radio-item').classList.add('selected'); }
+    }
+    if (stepData.tfn_lodged) {
+      const item = document.querySelector(`#tfnLodged .radio-item input[value="${stepData.tfn_lodged}"]`);
+      if (item) { item.checked = true; item.closest('.radio-item').classList.add('selected'); }
+    }
+    if (stepData.super_contribution) {
+      const item = document.querySelector(`#superContribution .radio-item input[value="${stepData.super_contribution}"]`);
+      if (item) { item.checked = true; item.closest('.radio-item').classList.add('selected'); }
+    }
+    if (stepData.is_muslim) {
+      const item = document.querySelector(`#isMuslim .radio-item input[value="${stepData.is_muslim}"]`);
+      if (item) { item.checked = true; item.closest('.radio-item').classList.add('selected'); }
+      if (stepData.is_muslim === 'yes') showHalalSection();
+      else showEthicalSection();
+    }
+    if (stepData.halal_preference) {
+      const item = document.querySelector(`#halalPreference .radio-item input[value="${stepData.halal_preference}"]`);
+      if (item) { item.checked = true; item.closest('.radio-item').classList.add('selected'); }
+      if (stepData.halal_preference === 'halal_plus') document.getElementById('halalSectorsGroup').style.display = 'block';
+    }
+
+    // Restore inline checkboxes
+    if (stepData.sectorExclusions) {
+      stepData.sectorExclusions.forEach(v => {
+        const el = document.querySelector(`#halalSectors input[value="${v}"]`);
+        if (el) { el.checked = true; el.closest('.inline-check').classList.add('selected'); }
+      });
+    }
+    if (stepData.ethicalExclusions) {
+      stepData.ethicalExclusions.forEach(v => {
+        const el = document.querySelector(`#ethicalExclusions input[value="${v}"]`);
+        if (el) { el.checked = true; el.closest('.inline-check').classList.add('selected'); }
+      });
+    }
+
+    // Restore brokerage rows
+    if (stepData.brokerageAccounts && stepData.brokerageAccounts.length > 0) {
+      const list = document.getElementById('brokerageList');
+      if (list) {
+        list.innerHTML = '';
+        stepData.brokerageAccounts.forEach((acc, i) => {
+          const row = document.createElement('div');
+          row.className = 'list-row';
+          row.setAttribute('data-row', i);
+          row.innerHTML = `
+            <select class="field-select" style="font-size:0.85rem;">
+              <option value="">Select provider…</option>
+              <option value="commsec" ${acc.provider==='commsec'?'selected':''}>CommSec</option>
+              <option value="nabtrade" ${acc.provider==='nabtrade'?'selected':''}>NabTrade</option>
+              <option value="selfwealth" ${acc.provider==='selfwealth'?'selected':''}>SelfWealth</option>
+              <option value="cmc" ${acc.provider==='cmc'?'selected':''}>CMC Markets</option>
+              <option value="ib" ${acc.provider==='ib'?'selected':''}>Interactive Brokers</option>
+              <option value="other" ${acc.provider==='other'?'selected':''}>Other</option>
+            </select>
+            <input class="field-input" type="number" min="0" placeholder="Approx. balance ($)" style="font-size:0.85rem;" value="${acc.balance || ''}" />
+            <button class="btn-remove" onclick="removeRow(this)" title="Remove">×</button>
+          `;
+          list.appendChild(row);
+        });
+      }
+    }
+  }
+
+  // ── Submit ────────────────────────────────────────────────────────────────────
+  async function submitOnboarding() {
+    saveCurrentStep(TOTAL_STEPS);
+
+    let resultData = null;
+    if (sessionId) {
+      try {
+        const res = await fetch('/api/onboarding/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId })
+        });
+        if (res.ok) {
+          resultData = await res.json();
+        }
+      } catch(e) {
+        console.error('Completion fetch error:', e);
+      }
+    }
+
+    // Show completion screen with live scores
+    const card = document.getElementById('stepCard');
+    const gradeColor = { 'Excellent': '#7ED4A6', 'Good': '#C9A84C', 'Fair': '#C9963C', 'Needs Work': '#E07070', 'Critical': '#E07070' };
+    const gc = gradeColor[resultData?.grade] || '#C9A84C';
+
+    let scoreHTML = '';
+    if (resultData && resultData.ok) {
+      scoreHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin:1.5rem 0;">
+          <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:1.1rem;text-align:center;border:1px solid var(--border);">
+            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:#8A8D83;margin-bottom:0.5rem;">Financial Health Score</div>
+            <div style="font-size:2rem;font-weight:700;color:${gc};">${resultData.score}<span style="font-size:1rem;color:#8A8D83;">/100</span></div>
+            <div style="font-size:0.75rem;color:#7ED4A6;margin-top:0.3rem;">${resultData.grade}</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:1.1rem;text-align:center;border:1px solid var(--border);">
+            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:#8A8D83;margin-bottom:0.5rem;">Ethical Score</div>
+            <div style="font-size:2rem;font-weight:700;color:#C9A84C;">${resultData.halalScore}<span style="font-size:1rem;color:#8A8D83;">/100</span></div>
+            <div style="font-size:0.75rem;color:#7ED4A6;margin-top:0.3rem;">Compliance</div>
+          </div>
+        </div>
+        <p style="font-size:0.85rem;color:#8A8D83;margin-bottom:0.75rem;text-align:center;">Your scores are saved to your dashboard and the full breakdown is in your inbox.</p>
+      `;
+    }
+
+    card.innerHTML = `
+      <div class="step-completion">
+        <div class="big-icon">✦</div>
+        <h2>${resultData && resultData.ok ? "You're all set — " + resultData.grade : "You're all set!"}</h2>
+        <p>${resultData && resultData.ok ? "Your financial health profile is complete and your scores have been calculated and saved." : "Your financial health profile is complete. Your results will be emailed to you shortly."}</p>
+        ${scoreHTML}
+        <div class="completion-actions">
+          <button class="btn-primary-lg" onclick="window.location.href='/dashboard'">View My Dashboard →</button>
+          <a class="save-later-link" href="/">Back to home</a>
+        </div>
+      </div>
+    `;
+    document.getElementById('stepNav').style.display = 'none';
+    document.getElementById('progressFill').classList.add('complete');
+    document.getElementById('progressFill').style.width = '100%';
+    document.getElementById('progressPct').textContent = '100%';
+    document.getElementById('stepLabel').textContent = 'Complete';
+    document.getElementById('stepTitle').textContent = 'All Done!';
+    document.getElementById('stepSub').textContent = resultData?.ok ? 'Scores calculated and saved.' : 'Your scores are on the way.';
+    updateDots();
+
+    // Clear storage
+    try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+  }
+
+  // ── Close tooltips on outside click ──────────────────────────────────────────
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.tooltip-btn')) {
+      document.querySelectorAll('.tooltip-pop').forEach(p => p.classList.remove('show'));
+    }
+  });
+
+  init();
+</script>
+</body>
+</html>

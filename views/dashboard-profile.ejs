@@ -1,0 +1,100 @@
+<div class="page-header">
+  <h1>Your Profile</h1>
+  <p>Manage your account settings and preferences.</p>
+</div>
+
+<% if (success) { %>
+<div class="alert alert-success"><%= success %></div>
+<% } %>
+<% if (error) { %>
+<div class="alert alert-error"><%= error %></div>
+<% } %>
+
+<div class="card">
+  <div class="card-title">Account details</div>
+  <form action="/dashboard/profile" method="POST">
+    <div class="form-group">
+      <label for="name">Full name</label>
+      <input type="text" id="name" name="name" value="<%= user.name || '' %>" required>
+    </div>
+    <div class="form-group">
+      <label for="email">Email address</label>
+      <input type="email" id="email" value="<%= user.email %>" disabled style="opacity:0.6;cursor:not-allowed;">
+      <div style="font-size:0.75rem;color:var(--fg-muted);margin-top:0.3rem;">Email cannot be changed for OAuth accounts.</div>
+    </div>
+    <button type="submit" class="btn-primary">Save changes</button>
+  </form>
+</div>
+
+<% if (profile) { %>
+<div class="card">
+  <div class="card-title">Financial preferences</div>
+  <div style="margin-bottom:1.25rem;">
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">Halal investment preference</div>
+        <div class="toggle-sub">Exclude riba-based and non-Shariah-compliant assets</div>
+      </div>
+      <button class="toggle <%= profile.prefers_halal ? 'on' : '' %>" id="toggle-halal" data-field="prefers_halal" data-value="<%= !profile.prefers_halal %>"></button>
+    </div>
+    <div class="toggle-row" style="border-bottom:none;">
+      <div>
+        <div class="toggle-label">ESG / ethical investment preference</div>
+        <div class="toggle-sub">Prioritise environmentally and socially responsible investments</div>
+      </div>
+      <button class="toggle <%= profile.prefers_esg ? 'on' : '' %>" id="toggle-esg" data-field="prefers_esg" data-value="<%= !profile.prefers_esg %>"></button>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Professional info</div>
+  <div class="grid-2">
+    <div>
+      <div style="font-size:0.775rem;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;">Profession</div>
+      <div style="font-size:0.9rem;color:var(--fg);"><%= profile.profession || 'Not set' %></div>
+    </div>
+    <div>
+      <div style="font-size:0.775rem;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;">Years in practice</div>
+      <div style="font-size:0.9rem;color:var(--fg);"><%= profile.years_in_practice ? profile.years_in_practice + ' years' : 'Not set' %></div>
+    </div>
+    <div>
+      <div style="font-size:0.775rem;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;">Annual income</div>
+      <div style="font-size:0.9rem;color:var(--fg);"><%= profile.annual_income ? '$' + profile.annual_income.toLocaleString('en-AU') : 'Not set' %></div>
+    </div>
+    <div>
+      <div style="font-size:0.775rem;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;">Super balance</div>
+      <div style="font-size:0.9rem;color:var(--fg);"><%= profile.super_balance ? '$' + profile.super_balance.toLocaleString('en-AU') : 'Not set' %></div>
+    </div>
+  </div>
+  <div style="margin-top:1.25rem;">
+    <a href="/onboarding" class="btn-secondary">Edit onboarding data</a>
+  </div>
+</div>
+<% } %>
+
+<div class="card">
+  <div class="card-title">Provider</div>
+  <div style="font-size:0.875rem;color:var(--fg-muted);margin-bottom:0.5rem;">
+    Signed in via <strong style="color:var(--fg);"><%= user.provider === 'credentials' ? 'Email + Password' : user.provider %></strong>
+  </div>
+  <% if (user.provider === 'credentials') { %>
+  <a href="/forgot-password" class="btn-secondary">Change password</a>
+  <% } %>
+</div>
+
+<div class="card" style="border-color:rgba(224,112,112,0.3);">
+  <div class="card-title" style="color:#E07070;">Danger zone</div>
+  <p style="font-size:0.825rem;color:var(--fg-muted);margin:0 0 1rem;line-height:1.6;">Deleting your account will permanently remove all your data, scores, and recommendations. This cannot be undone.</p>
+  <button class="btn-danger" id="delete-account-btn">Delete my account</button>
+</div>
+
+<script>
+  document.getElementById('delete-account-btn') && document.getElementById('delete-account-btn').addEventListener('click', function() {
+    if (confirm('Are you sure you want to delete your account? This is irreversible.')) {
+      if (confirm('Really delete? All your data will be permanently removed.')) {
+        fetch('/api/account/delete', { method: 'POST' }).then(function() { window.location.href = '/'; });
+      }
+    }
+  });
+</script>
