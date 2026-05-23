@@ -283,15 +283,15 @@ router.post('/api/complete', requireAuth, async (req, res) => {
   </table>
 </body></html>`;
 
-      await sendEmail({
+      sendEmail({
         to: req.session.email,
         from: 'noreply@mizan-2.polsia.app',
         subject: 'Your Financial Health Score is ready — Mizan',
         html,
         text: `Your Financial Health Score is ${result.score}/100 (${result.grade}). View your dashboard: ${baseUrl}/dashboard`
-      });
+      }).catch(emailErr => console.error('Completion email failed:', emailErr.message));
     } catch(emailErr) {
-      console.error('Completion email failed:', emailErr.message);
+      console.error('Completion email setup failed:', emailErr.message);
     }
 
     res.json({

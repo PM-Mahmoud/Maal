@@ -132,15 +132,15 @@ router.post('/signup',
   </table>
 </body></html>`;
 
-      await sendEmail({
+      sendEmail({
         to: email,
         from: 'noreply@mizan-2.polsia.app',
         subject: 'Verify your Mizan account',
         html,
         text: `Welcome to Mizan, ${name}. Click to verify: ${verifyUrl}`
-      });
+      }).catch(err => console.error('Verification email failed:', err.message));
     } catch (err) {
-      console.error('Verification email failed:', err.message);
+      console.error('Signup email setup failed:', err.message);
     }
 
     // Log in immediately (unverified) — they can verify later
@@ -199,15 +199,15 @@ router.post('/forgot-password',
   </table>
 </body></html>`;
 
-        await sendEmail({
+        sendEmail({
           to: email,
           from: 'noreply@mizan-2.polsia.app',
           subject: 'Reset your Mizan password',
           html,
           text: `Reset your Mizan password: ${resetUrl}`
-        });
+        }).catch(err => console.error('Reset email failed:', err.message));
       } catch (err) {
-        console.error('Reset email failed:', err.message);
+        console.error('Reset email setup failed:', err.message);
       }
     }
 
