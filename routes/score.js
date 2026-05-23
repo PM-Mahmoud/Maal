@@ -11,7 +11,7 @@ const { buildAnalyticsSnippet, buildThemeCSS } = require('../lib/landing-context
 // GET /score — render the multi-step calculator
 router.get('/', (req, res) => {
   const slug = process.env.POLSIA_ANALYTICS_SLUG || '';
-  res.render('score', {
+  res.render('score', { layout: false,
     themeCSS: buildThemeCSS(),
     analyticsSnippet: buildAnalyticsSnippet(slug),
     result: null,
@@ -38,7 +38,7 @@ router.post('/calculate', async (req, res) => {
   const incomeMissing = (annualIncome === undefined || annualIncome === null || annualIncome === '');
   const ageMissing = (age === undefined || age === null || age === '');
   if (incomeMissing || ageMissing) {
-    return res.render('score', {
+    return res.render('score', { layout: false,
       themeCSS: buildThemeCSS(),
       analyticsSnippet: buildAnalyticsSnippet(slug),
       result: null,
@@ -72,7 +72,7 @@ router.post('/calculate', async (req, res) => {
     console.error('[score] Submission save error:', err.message);
   });
 
-  res.render('score', {
+  res.render('score', { layout: false,
     themeCSS: buildThemeCSS(),
     analyticsSnippet: buildAnalyticsSnippet(slug),
     result,

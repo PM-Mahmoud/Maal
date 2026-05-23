@@ -51,7 +51,6 @@ app.set('views', path.join(__dirname, 'views'));
 
 // Layout engine — dashboard pages use dashboard-layout.ejs as wrapper
 app.use(expressLayouts);
-app.set('layout', false); // default: no layout (auth + landing pages are standalone HTML)
 
 // ─── Health (no DB) ───────────────────────────────────────────────────────
 
@@ -76,7 +75,7 @@ app.use('/dashboard/portfolio', require('./routes/portfolio'));
 
 // Landing page must come AFTER auth routes (which redirect logged-in users)
 app.get('/', (_req, res) => {
-  res.render('layout', buildLandingContext());
+  res.render('layout', { layout: false, ...buildLandingContext() });
 });
 
 // ─── Start ─────────────────────────────────────────────────────────────────

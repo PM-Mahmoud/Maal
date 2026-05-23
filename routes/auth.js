@@ -23,7 +23,7 @@ const RESET_TOKEN_TTL = 3600 * 1000; // 1 hour
 
 router.get('/login', (req, res) => {
   if (req.session.userId) return res.redirect('/dashboard');
-  res.render('auth-login', { error: null, email: '' });
+  res.render('auth-login', { layout: false, error: null, email: '' });
 });
 
 router.post('/login',
@@ -32,7 +32,7 @@ router.post('/login',
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.render('auth-login', {
+      return res.render('auth-login', { layout: false,
         error: 'Please enter a valid email and password.',
         email: req.body.email
       });
@@ -42,7 +42,7 @@ router.post('/login',
     const user = await findUserByEmail(email);
 
     if (!user || !user.password_hash) {
-      return res.render('auth-login', {
+      return res.render('auth-login', { layout: false,
         error: 'No account found with that email. Try signing up.',
         email
       });
@@ -50,7 +50,7 @@ router.post('/login',
 
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
-      return res.render('auth-login', {
+      return res.render('auth-login', { layout: false,
         error: 'Incorrect password. Try again or reset it.',
         email
       });
@@ -72,7 +72,7 @@ router.post('/login',
 
 router.get('/signup', (req, res) => {
   if (req.session.userId) return res.redirect('/dashboard');
-  res.render('auth-signup', { error: null, email: '', name: '' });
+  res.render('auth-signup', { layout: false, error: null, email: '', name: '' });
 });
 
 router.post('/signup',
@@ -82,7 +82,7 @@ router.post('/signup',
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.render('auth-signup', {
+      return res.render('auth-signup', { layout: false,
         error: 'Please fill in all fields. Password must be at least 8 characters.',
         email: req.body.email, name: req.body.name
       });
@@ -91,7 +91,7 @@ router.post('/signup',
     const { name, email, password } = req.body;
     const existing = await findUserByEmail(email);
     if (existing) {
-      return res.render('auth-signup', {
+      return res.render('auth-signup', { layout: false,
         error: 'An account with this email already exists. Sign in instead.',
         email, name
       });
@@ -161,7 +161,7 @@ router.post('/signup',
 
 router.get('/forgot-password', (req, res) => {
   if (req.session.userId) return res.redirect('/dashboard');
-  res.render('auth-forgot-password', { error: null, success: null });
+  res.render('auth-forgot-password', { layout: false, error: null, success: null });
 });
 
 router.post('/forgot-password',
@@ -214,7 +214,7 @@ router.post('/forgot-password',
     }
 
     // Always show success to prevent email enumeration
-    res.render('auth-forgot-password', {
+    res.render('auth-forgot-password', { layout: false,
       error: null,
       success: 'If that email is in our system, we sent a reset link. Check your inbox.'
     });
@@ -225,11 +225,11 @@ router.post('/forgot-password',
 
 router.get('/verify-email', async (req, res) => {
   const { token } = req.query;
-  if (!token) return res.render('auth-verify-email', { success: false, error: 'Missing token.' });
+  if (!token) return res.render('auth-verify-email', { layout: false, success: false, error: 'Missing token.' });
 
   const user = await findUserByVerifyToken(token);
   if (!user) {
-    return res.render('auth-verify-email', {
+    return res.render('auth-verify-email', { layout: false,
       success: false,
       error: 'This link is invalid or expired. Request a new one below.'
     });
@@ -240,7 +240,7 @@ router.get('/verify-email', async (req, res) => {
     req.session.emailVerified = true;
   }
 
-  res.render('auth-verify-email', {
+  res.render('auth-verify-email', { layout: false,
     success: true,
     error: null
   });

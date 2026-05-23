@@ -43,7 +43,7 @@ router.use(attachUserSession);
 // ─── Page: /onboarding ─────────────────────────────────────────────────────────
 
 router.get('/', requireAuth, (req, res) => {
-  res.render('onboarding');
+  res.render('onboarding', { layout: false });
 });
 
 // ─── API: init session (auth-aware) ─────────────────────────────────────────
