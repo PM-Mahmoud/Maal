@@ -61,7 +61,8 @@ router.post('/login',
     req.session.name = user.name;
     req.session.provider = user.provider;
     req.session.emailVerified = user.email_verified;
-    req.session.save(() => {
+    req.session.save((err) => {
+      if (err) console.error('[login] Session save error:', err.message);
       res.redirect('/dashboard');
     });
   }
@@ -149,7 +150,8 @@ router.post('/signup',
     req.session.name = user.name;
     req.session.provider = 'credentials';
     req.session.emailVerified = false;
-    req.session.save(() => {
+    req.session.save((err) => {
+      if (err) console.error('[signup] Session save error:', err.message);
       res.redirect('/onboarding');
     });
   }

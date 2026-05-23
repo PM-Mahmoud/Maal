@@ -21,7 +21,7 @@ const PgSessionStore = require('connect-pg-simple')(session);
 const sessionStore = new PgSessionStore({
   pool,
   tableName: 'session',
-  createTableIfMissing: false,
+  createTableIfMissing: true,
 });
 
 module.exports = { pool, sessionStore };
