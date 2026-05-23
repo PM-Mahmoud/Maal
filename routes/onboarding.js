@@ -48,7 +48,7 @@ router.get('/', requireAuth, (req, res) => {
 
 // ─── API: init session (auth-aware) ─────────────────────────────────────────
 
-router.post('/api/session', requireAuth, async (req, res) => {
+router.post('/session', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
     let session = await getSessionByUserId(userId);
@@ -71,7 +71,7 @@ router.post('/api/session', requireAuth, async (req, res) => {
 
 // ─── API: get step data ────────────────────────────────────────────────────────
 
-router.get('/api/session/:sessionId/step/:step', async (req, res) => {
+router.get('/session/:sessionId/step/:step', async (req, res) => {
   try {
     const { sessionId, step } = req.params;
     const data = await getResponseByStep(sessionId, parseInt(step, 10));
@@ -84,7 +84,7 @@ router.get('/api/session/:sessionId/step/:step', async (req, res) => {
 
 // ─── API: save step ─────────────────────────────────────────────────────────────
 
-router.post('/api/step/:step', requireAuth, async (req, res) => {
+router.post('/step/:step', requireAuth, async (req, res) => {
   try {
     const step = parseInt(req.params.step, 10);
     const { session_id } = req.body;
@@ -111,7 +111,7 @@ router.post('/api/step/:step', requireAuth, async (req, res) => {
 // ─── API: complete onboarding ──────────────────────────────────────────────────
 // On completion: sync data to user_profiles, run scoring engine, save scores.
 
-router.post('/api/complete', requireAuth, async (req, res) => {
+router.post('/complete', requireAuth, async (req, res) => {
   try {
     const { session_id } = req.body;
     if (!session_id) return res.status(400).json({ error: 'session_id required' });
@@ -309,7 +309,7 @@ router.post('/api/complete', requireAuth, async (req, res) => {
 
 // ─── API: get all responses (for scores calculation) ─────────────────────────────
 
-router.get('/api/profile/:userId', requireAuth, async (req, res) => {
+router.get('/profile/:userId', requireAuth, async (req, res) => {
   try {
     const { userId } = req.params;
     if (parseInt(userId, 10) !== req.session.userId) {
