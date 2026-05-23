@@ -19,6 +19,9 @@ function requireAuth(req, res, next) {
 
 router.use(requireAuth);
 
+// Set dashboard-layout for all pages in this router
+router.use(function(req, res, next) { res.locals.layout = 'dashboard-layout'; next(); });
+
 // ── GET /dashboard/tools ──────────────────────────────────────────────────────
 
 router.get('/', async (req, res) => {

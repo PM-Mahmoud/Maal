@@ -16,6 +16,9 @@ function requireAuth(req, res, next) {
 
 router.use(requireAuth);
 
+// Set dashboard-layout for all pages in this router
+router.use(function(req, res, next) { res.locals.layout = 'dashboard-layout'; next(); });
+
 // ── Fund library (Shariah-compliant / ESG) ─────────────────────────────────────
 // Halal: pure-play Shariah funds. Ethical: ESG-screened.
 

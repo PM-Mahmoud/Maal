@@ -24,6 +24,9 @@ function requireAuth(req, res, next) {
 
 router.use(requireAuth);
 
+// Set dashboard-layout as the EJS layout for all dashboard pages
+router.use(function(req, res, next) { res.locals.layout = 'dashboard-layout'; next(); });
+
 // ─── Shared context helper ─────────────────────────────────────────────────
 
 async function dashboardContext(req) {

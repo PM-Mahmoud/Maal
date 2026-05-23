@@ -2,6 +2,7 @@
 // Application entry point. Wires middleware, mounts route groups, starts server.
 
 const express = require('express');
+const expressLayouts = require('express-ejs-layouts');
 const path = require('path');
 const { buildLandingContext } = require('./lib/landing-context');
 const { sessionStore } = require('./db/auth');
@@ -44,6 +45,10 @@ app.use((req, res, next) => {
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
+// Layout engine — dashboard pages use dashboard-layout.ejs as wrapper
+app.use(expressLayouts);
+app.set('layout', false); // default: no layout (auth + landing pages are standalone HTML)
 
 // ─── Health (no DB) ───────────────────────────────────────────────────────
 
