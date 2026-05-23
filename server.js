@@ -10,6 +10,9 @@ const { sessionStore } = require('./db/auth');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Trust Render's reverse proxy so req.secure is correct (needed for secure cookies)
+app.set('trust proxy', 1);
+
 if (!process.env.DATABASE_URL) {
   console.error('ERROR: DATABASE_URL environment variable is required');
   process.exit(1);
