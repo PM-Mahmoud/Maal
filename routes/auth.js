@@ -11,10 +11,11 @@ const {
   setResetToken, findUserByResetToken, setPasswordHash,
   setOtp, findUserByOtp, clearOtp,
   incrementFailedAttempts, lockUser, resetFailedAttempts, recordLogin,
-  markEmailVerified,
+  markEmailVerified, setPhone,
 } = require('../db/users');
 
 const { sendEmail } = require('../services/email');
+const { sendOtpSms } = require('../services/sms');
 
 const RESET_TOKEN_TTL  = 3600 * 1000;       // 1 hour
 const OTP_TTL          = 10 * 60 * 1000;    // 10 minutes
@@ -159,7 +160,14 @@ router.post('/signup',
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
+    const { phone } = req.body;
     const user = await createUser({ email, name, passwordHash, provider: 'credentials' });
+
+    // Save phone if provided
+    if (phone && phone.trim()) {
+      await setPhone(user.id, phone.trim());
+      req.session.pendingPhone = phone.trim();
+    }
 
     // Generate and send OTP
     const otp = generateOtp();
@@ -225,6 +233,30 @@ router.post('/resend-otp', async (req, res) => {
   await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
   await sendOtpEmail(email, user.name, otp);
   res.json({ ok: true });
+});
+
+
+// ─── API: /resend-otp-sms ─────────────────────────────────────────────────────
+
+router.post('/resend-otp-sms', async (req, res) => {
+  const email = req.body.email || req.session.pendingEmail;
+  const phone = req.session.pendingPhone;
+  if (!email) return res.status(400).json({ error: 'No email' });
+  if (!phone) return res.status(400).json({ error: 'No phone number on file for this account.' });
+
+  const user = await findUserByEmail(email);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (user.email_verified) return res.json({ ok: true });
+
+  const otp = generateOtp();
+  await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
+  try {
+    await sendOtpSms(phone, otp);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[auth] SMS send failed:', err.message);
+    res.status(500).json({ error: 'Failed to send SMS. Try email instead.' });
+  }
 });
 
 // ─── Page: /forgot-password ────────────────────────────────────────────────────

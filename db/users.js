@@ -202,3 +202,17 @@ module.exports = {
   incrementFailedAttempts, lockUser, resetFailedAttempts, recordLogin,
   getAllUsers,
 };
+
+// ─── Phone ───────────────────────────────────────────────────────────────────
+
+async function setPhone(userId, phone) {
+  await pool.query(
+    `UPDATE users SET phone = $2, updated_at = NOW() WHERE id = $1`,
+    [userId, phone]
+  );
+}
+
+module.exports = {
+  ...module.exports,
+  setPhone,
+};

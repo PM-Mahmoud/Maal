@@ -211,6 +211,23 @@ body {
 
 .hero-cta:hover { opacity: 0.85; }
 
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.hero-cta-secondary {
+  color: var(--fg-muted);
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.hero-cta-secondary:hover { color: var(--fg); }
+
 /* Score Card */
 .hero-score-preview {
   display: flex;

@@ -34,6 +34,15 @@
       cursor: pointer; font-family: var(--font-body); font-size: 0.825rem; padding: 0; }
     .resend-row a:hover, .resend-row button:hover { text-decoration: underline; }
     #resendTimer { color: var(--fg-muted); }
+    .divider { display: flex; align-items: center; gap: 0.75rem; margin: 1.25rem 0; color: var(--fg-muted); font-size: 0.8rem; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .btn-sms { width: 100%; background: transparent; border: 1px solid var(--border); color: var(--fg);
+      font-size: 0.875rem; font-weight: 500; padding: 0.75rem; border-radius: 10px; cursor: pointer;
+      font-family: var(--font-body); transition: border-color 0.2s, background 0.2s; display: flex;
+      align-items: center; justify-content: center; gap: 0.5rem; }
+    .btn-sms:hover { border-color: rgba(201,168,76,0.4); background: rgba(255,255,255,0.04); }
+    .btn-sms:disabled { opacity: 0.5; cursor: not-allowed; }
+    #smsStatus { text-align: center; font-size: 0.8rem; margin-top: 0.5rem; min-height: 1.2em; }
   </style>
 </head>
 <body>
@@ -64,8 +73,16 @@
 
     <div class="resend-row">
       <span id="resendTimer">Resend code in <span id="countdown">60</span>s</span>
-      <button id="btnResend" style="display:none" onclick="resendCode()">Resend code</button>
+      <button id="btnResend" style="display:none" onclick="resendEmail()">Resend to email</button>
     </div>
+
+    <div class="divider">or</div>
+
+    <button class="btn-sms" id="btnSms" onclick="resendSms()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.09 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"></path></svg>
+      Send code via SMS instead
+    </button>
+    <div id="smsStatus"></div>
   </div>
 
   <script>
@@ -118,7 +135,7 @@
       }
     }, 1000);
 
-    async function resendCode() {
+    async function resendEmail() {
       resendBtn.disabled = true;
       resendBtn.textContent = 'Sending…';
       try {
@@ -128,16 +145,41 @@
           body: JSON.stringify({ email: '<%= email %>' })
         });
         const data = await res.json();
-        if (data.ok) {
-          resendBtn.textContent = 'Sent!';
-          setTimeout(() => { resendBtn.textContent = 'Resend code'; resendBtn.disabled = false; }, 3000);
-        } else {
-          resendBtn.textContent = 'Try again';
-          resendBtn.disabled = false;
-        }
+        resendBtn.textContent = data.ok ? 'Sent!' : 'Try again';
+        if (data.ok) setTimeout(() => { resendBtn.textContent = 'Resend to email'; resendBtn.disabled = false; }, 3000);
+        else resendBtn.disabled = false;
       } catch(e) {
         resendBtn.textContent = 'Try again';
         resendBtn.disabled = false;
+      }
+    }
+
+    async function resendSms() {
+      const smsBtn = document.getElementById('btnSms');
+      const smsStatus = document.getElementById('smsStatus');
+      smsBtn.disabled = true;
+      smsStatus.style.color = 'var(--fg-muted)';
+      smsStatus.textContent = 'Sending SMS…';
+      try {
+        const res = await fetch('/resend-otp-sms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: '<%= email %>' })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          smsStatus.style.color = '#7ED4A6';
+          smsStatus.textContent = 'Code sent to your phone!';
+          setTimeout(() => { smsBtn.disabled = false; smsStatus.textContent = ''; }, 30000);
+        } else {
+          smsStatus.style.color = '#E07070';
+          smsStatus.textContent = data.error || 'Failed to send SMS.';
+          smsBtn.disabled = false;
+        }
+      } catch(e) {
+        smsStatus.style.color = '#E07070';
+        smsStatus.textContent = 'Something went wrong.';
+        smsBtn.disabled = false;
       }
     }
 
