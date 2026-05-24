@@ -8,3 +8,6 @@ npm-debug.log*
 .idea/
 .vscode/
 *.sqlite
+*.json
+!package.json
+!package-lock.json
