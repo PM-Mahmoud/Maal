@@ -1,6 +1,4 @@
 // routes/auth.js
-// Serves /login, /signup, /forgot-password, /verify-email pages and API endpoints.
-// Does NOT own Pool — all DB work goes through db/users.js.
 
 const express = require('express');
 const router = express.Router();
@@ -10,14 +8,59 @@ const { body, validationResult } = require('express-validator');
 
 const {
   createUser, findUserByEmail, findUserById,
-  setVerifyToken, markEmailVerified, findUserByVerifyToken,
-  setResetToken, findUserByResetToken, setPasswordHash
+  setResetToken, findUserByResetToken, setPasswordHash,
+  setOtp, findUserByOtp, clearOtp,
+  incrementFailedAttempts, lockUser, resetFailedAttempts, recordLogin,
+  markEmailVerified,
 } = require('../db/users');
 
 const { sendEmail } = require('../services/email');
 
-const VERIFY_TOKEN_TTL = 24 * 3600 * 1000; // 24 hours
-const RESET_TOKEN_TTL = 3600 * 1000; // 1 hour
+const RESET_TOKEN_TTL  = 3600 * 1000;       // 1 hour
+const OTP_TTL          = 10 * 60 * 1000;    // 10 minutes
+const MAX_ATTEMPTS     = 5;
+const LOCK_DURATION    = 15 * 60 * 1000;    // 15 minutes
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function generateOtp() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function getIp(req) {
+  return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+}
+
+function passwordStrengthError(password) {
+  if (password.length < 8) return 'Password must be at least 8 characters.';
+  if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter.';
+  if (!/[0-9]/.test(password)) return 'Password must contain at least one number.';
+  return null;
+}
+
+async function sendOtpEmail(email, name, otp) {
+  const firstName = (name || '').split(' ')[0] || 'there';
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#0A0F0D;font-family:'DM Sans',system-ui,sans-serif;color:#F0EFE9;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0F0D;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#0F2E24;border:1px solid rgba(201,168,76,0.15);border-radius:16px;max-width:560px;width:100%;">
+        <tr><td style="padding:40px;">
+          <p style="margin:0 0 24px;font-size:1.4rem;font-weight:600;color:#C9A84C;">◈ Mizan</p>
+          <h1 style="margin:0 0 12px;font-size:1.4rem;font-weight:600;">Your verification code</h1>
+          <p style="margin:0 0 28px;font-size:0.9rem;color:#8A8D83;line-height:1.6;">Hi ${firstName}, enter this code to verify your email address. It expires in 10 minutes.</p>
+          <div style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.25);border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
+            <span style="font-size:2.4rem;font-weight:700;letter-spacing:0.3em;color:#C9A84C;">${otp}</span>
+          </div>
+          <p style="margin:0;font-size:0.78rem;color:#8A8D83;">If you didn't create a Mizan account, you can ignore this email.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+  sendEmail({ to: email, subject: 'Your Mizan verification code', html, text: `Your Mizan verification code: ${otp}\nExpires in 10 minutes.` })
+    .catch(err => console.error('[auth] OTP email failed:', err.message));
+}
 
 // ─── Page: /login ─────────────────────────────────────────────────────────────
 
@@ -32,38 +75,55 @@ router.post('/login',
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.render('auth-login', { layout: false,
-        error: 'Please enter a valid email and password.',
-        email: req.body.email
-      });
+      return res.render('auth-login', { layout: false, error: 'Please enter a valid email and password.', email: req.body.email });
     }
 
     const { email, password } = req.body;
     const user = await findUserByEmail(email);
 
     if (!user || !user.password_hash) {
-      return res.render('auth-login', { layout: false,
-        error: 'No account found with that email. Try signing up.',
-        email
-      });
+      return res.render('auth-login', { layout: false, error: 'No account found with that email. Try signing up.', email });
+    }
+
+    // Check lockout
+    if (user.locked_until && new Date(user.locked_until) > new Date()) {
+      const mins = Math.ceil((new Date(user.locked_until) - Date.now()) / 60000);
+      return res.render('auth-login', { layout: false, error: `Account locked after too many failed attempts. Try again in ${mins} minute${mins === 1 ? '' : 's'}.`, email });
     }
 
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
-      return res.render('auth-login', { layout: false,
-        error: 'Incorrect password. Try again or reset it.',
-        email
-      });
+      const attempts = await incrementFailedAttempts(user.id);
+      if (attempts >= MAX_ATTEMPTS) {
+        await lockUser(user.id, new Date(Date.now() + LOCK_DURATION));
+        return res.render('auth-login', { layout: false, error: `Too many failed attempts. Account locked for 15 minutes.`, email });
+      }
+      const remaining = MAX_ATTEMPTS - attempts;
+      return res.render('auth-login', { layout: false, error: `Incorrect password. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining before lockout.`, email });
     }
+
+    // Check email verified
+    if (!user.email_verified) {
+      // Resend OTP and send to verify page
+      const otp = generateOtp();
+      await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
+      await sendOtpEmail(user.email, user.name, otp);
+      req.session.pendingEmail = user.email;
+      return req.session.save(() => res.redirect('/verify-email'));
+    }
+
+    await resetFailedAttempts(user.id);
+    await recordLogin(user.id, getIp(req));
 
     req.session.userId = user.id;
     req.session.email = user.email;
     req.session.name = user.name;
     req.session.provider = user.provider;
-    req.session.emailVerified = user.email_verified;
+    req.session.emailVerified = true;
     req.session.save((err) => {
       if (err) console.error('[login] Session save error:', err.message);
-      res.redirect('/dashboard');
+      const redirect = req.query.redirect || '/dashboard';
+      res.redirect(redirect);
     });
   }
 );
@@ -82,85 +142,94 @@ router.post('/signup',
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.render('auth-signup', { layout: false,
-        error: 'Please fill in all fields. Password must be at least 8 characters.',
-        email: req.body.email, name: req.body.name
-      });
+      return res.render('auth-signup', { layout: false, error: 'Please fill in all fields. Password must be at least 8 characters.', email: req.body.email, name: req.body.name });
     }
 
     const { name, email, password } = req.body;
+
+    // Password strength
+    const strengthError = passwordStrengthError(password);
+    if (strengthError) {
+      return res.render('auth-signup', { layout: false, error: strengthError, email, name });
+    }
+
     const existing = await findUserByEmail(email);
     if (existing) {
-      return res.render('auth-signup', { layout: false,
-        error: 'An account with this email already exists. Sign in instead.',
-        email, name
-      });
+      return res.render('auth-signup', { layout: false, error: 'An account with this email already exists. Sign in instead.', email, name });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const verifyToken = crypto.randomBytes(32).toString('hex');
-    const user = await createUser({
-      email, name, passwordHash, provider: 'credentials'
-    });
-    await setVerifyToken(user.id, verifyToken, new Date(Date.now() + VERIFY_TOKEN_TTL));
+    const user = await createUser({ email, name, passwordHash, provider: 'credentials' });
 
-    // Send verification email
-    try {
-      const verifyUrl = `${process.env.BASE_URL || 'https://mizan-2.polsia.app'}/verify-email?token=${verifyToken}`;
-      const html = `
-<!DOCTYPE html><html><head><meta charset="UTF-8">
-<title>Verify your Mizan account</title></head>
-<body style="margin:0;padding:0;background:#0A0F0D;font-family:'DM Sans',system-ui,sans-serif;color:#F0EFE9;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0F0D;padding:40px 20px;">
-    <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#0F2E24;border:1px solid rgba(201,168,76,0.15);border-radius:16px;overflow:hidden;max-width:560px;width:100%;">
-        <tr><td style="padding:40px;">
-          <p style="margin:0 0 24px;font-size:1.5rem;font-weight:600;color:#C9A84C;">◈ Mizan</p>
-          <h1 style="margin:0 0 16px;font-size:1.5rem;font-weight:600;">Welcome to Mizan, ${name.split(' ')[0]}.</h1>
-          <p style="margin:0 0 20px;font-size:0.95rem;color:#8A8D83;line-height:1.7;">
-            Click the button below to verify your email address and access your financial health dashboard.
-          </p>
-          <p style="margin:20px 0;">
-            <a href="${verifyUrl}" style="display:inline-block;background:#C9A84C;color:#0A0F0D;font-weight:600;padding:0.85rem 2rem;border-radius:8px;text-decoration:none;font-size:0.95rem;">Verify Email Address</a>
-          </p>
-          <p style="margin:0;font-size:0.8rem;color:#8A8D83;line-height:1.5;">
-            Or copy and paste: ${verifyUrl}<br>
-            This link expires in 24 hours.
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
+    // Generate and send OTP
+    const otp = generateOtp();
+    await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
+    await sendOtpEmail(email, name, otp);
 
-      sendEmail({
-        to: email,
-        from: 'noreply@mizan-2.polsia.app',
-        subject: 'Verify your Mizan account',
-        html,
-        text: `Welcome to Mizan, ${name}. Click to verify: ${verifyUrl}`
-      }).catch(err => console.error('Verification email failed:', err.message));
-    } catch (err) {
-      console.error('Signup email setup failed:', err.message);
-    }
-
-    // Log in immediately (unverified) — they can verify later
-    req.session.userId = user.id;
-    req.session.email = user.email;
-    req.session.name = user.name;
-    req.session.provider = 'credentials';
-    req.session.emailVerified = false;
+    // Store pending email in session for the verify page
+    req.session.pendingEmail = email;
     req.session.save((err) => {
       if (err) console.error('[signup] Session save error:', err.message);
-      res.redirect('/onboarding');
+      res.redirect('/verify-email');
     });
   }
 );
 
+// ─── Page: /verify-email (OTP entry) ─────────────────────────────────────────
+
+router.get('/verify-email', (req, res) => {
+  const email = req.session.pendingEmail || req.query.email || '';
+  if (!email) return res.redirect('/signup');
+  res.render('auth-verify-otp', { layout: false, email, error: null });
+});
+
+router.post('/verify-email', async (req, res) => {
+  const { email, code } = req.body;
+  if (!email || !code) {
+    return res.render('auth-verify-otp', { layout: false, email: email || '', error: 'Please enter the 6-digit code.' });
+  }
+
+  const user = await findUserByOtp(email, code.trim());
+  if (!user) {
+    return res.render('auth-verify-otp', { layout: false, email, error: 'Invalid or expired code. Check your email or request a new code.' });
+  }
+
+  await markEmailVerified(user.id);
+  await clearOtp(user.id);
+  await recordLogin(user.id, getIp(req));
+
+  req.session.pendingEmail = null;
+  req.session.userId = user.id;
+  req.session.email = user.email;
+  req.session.name = user.name;
+  req.session.provider = 'credentials';
+  req.session.emailVerified = true;
+  req.session.save((err) => {
+    if (err) console.error('[verify-otp] Session save error:', err.message);
+    res.redirect('/onboarding');
+  });
+});
+
+// ─── API: /resend-otp ─────────────────────────────────────────────────────────
+
+router.post('/resend-otp', async (req, res) => {
+  const email = req.body.email || req.session.pendingEmail;
+  if (!email) return res.status(400).json({ error: 'No email' });
+
+  const user = await findUserByEmail(email);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  if (user.email_verified) return res.json({ ok: true }); // already verified
+
+  const otp = generateOtp();
+  await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
+  await sendOtpEmail(email, user.name, otp);
+  res.json({ ok: true });
+});
+
 // ─── Page: /forgot-password ────────────────────────────────────────────────────
 
 router.get('/forgot-password', (req, res) => {
-  if (req.session.userId) return res.redirect('/dashboard');
   res.render('auth-forgot-password', { layout: false, error: null, success: null });
 });
 
@@ -173,91 +242,33 @@ router.post('/forgot-password',
     if (user) {
       const resetToken = crypto.randomBytes(32).toString('hex');
       await setResetToken(user.id, resetToken, new Date(Date.now() + RESET_TOKEN_TTL));
-
-      try {
-        const resetUrl = `${process.env.BASE_URL || 'https://mizan-2.polsia.app'}/reset-password?token=${resetToken}`;
-        const html = `
-<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reset your Mizan password</title></head>
+      const resetUrl = `${process.env.BASE_URL || 'https://mizan-ufgq.onrender.com'}/reset-password?token=${resetToken}`;
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background:#0A0F0D;font-family:'DM Sans',system-ui,sans-serif;color:#F0EFE9;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0F0D;padding:40px 20px;">
     <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#0F2E24;border:1px solid rgba(201,168,76,0.15);border-radius:16px;overflow:hidden;max-width:560px;width:100%;">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#0F2E24;border:1px solid rgba(201,168,76,0.15);border-radius:16px;max-width:560px;width:100%;">
         <tr><td style="padding:40px;">
-          <p style="margin:0 0 24px;font-size:1.5rem;font-weight:600;color:#C9A84C;">◈ Mizan</p>
-          <h1 style="margin:0 0 16px;font-size:1.4rem;font-weight:600;">Reset your password</h1>
-          <p style="margin:0 0 20px;font-size:0.95rem;color:#8A8D83;line-height:1.7;">
-            Click below to set a new password. This link expires in 1 hour.
-          </p>
-          <p style="margin:20px 0;">
-            <a href="${resetUrl}" style="display:inline-block;background:#C9A84C;color:#0A0F0D;font-weight:600;padding:0.85rem 2rem;border-radius:8px;text-decoration:none;font-size:0.95rem;">Reset Password</a>
-          </p>
-          <p style="margin:0;font-size:0.8rem;color:#8A8D83;line-height:1.5;">
-            Or copy and paste: ${resetUrl}<br>
-            If you didn't request this, ignore this email.
-          </p>
+          <p style="margin:0 0 24px;font-size:1.4rem;font-weight:600;color:#C9A84C;">◈ Mizan</p>
+          <h1 style="margin:0 0 12px;font-size:1.4rem;font-weight:600;">Reset your password</h1>
+          <p style="margin:0 0 24px;font-size:0.9rem;color:#8A8D83;line-height:1.6;">Click below to set a new password. This link expires in 1 hour.</p>
+          <a href="${resetUrl}" style="display:inline-block;background:#C9A84C;color:#0A0F0D;font-weight:600;padding:0.85rem 2rem;border-radius:8px;text-decoration:none;">Reset Password</a>
         </td></tr>
       </table>
     </td></tr>
   </table>
 </body></html>`;
-
-        sendEmail({
-          to: email,
-          from: 'noreply@mizan-2.polsia.app',
-          subject: 'Reset your Mizan password',
-          html,
-          text: `Reset your Mizan password: ${resetUrl}`
-        }).catch(err => console.error('Reset email failed:', err.message));
-      } catch (err) {
-        console.error('Reset email setup failed:', err.message);
-      }
+      sendEmail({ to: email, subject: 'Reset your Mizan password', html, text: `Reset your password: ${resetUrl}` })
+        .catch(err => console.error('[auth] Reset email failed:', err.message));
     }
 
-    // Always show success to prevent email enumeration
-    res.render('auth-forgot-password', { layout: false,
-      error: null,
-      success: 'If that email is in our system, we sent a reset link. Check your inbox.'
-    });
+    res.render('auth-forgot-password', { layout: false, error: null, success: 'If that email is registered, a reset link is on its way.' });
   }
 );
 
-// ─── Page: /verify-email ───────────────────────────────────────────────────────
-
-router.get('/verify-email', async (req, res) => {
-  const { token } = req.query;
-  if (!token) return res.render('auth-verify-email', { layout: false, success: false, error: 'Missing token.' });
-
-  const user = await findUserByVerifyToken(token);
-  if (!user) {
-    return res.render('auth-verify-email', { layout: false,
-      success: false,
-      error: 'This link is invalid or expired. Request a new one below.'
-    });
-  }
-
-  await markEmailVerified(user.id);
-  if (req.session.userId === user.id) {
-    req.session.emailVerified = true;
-  }
-
-  res.render('auth-verify-email', { layout: false,
-    success: true,
-    error: null
-  });
-});
-
 // ─── API: logout ───────────────────────────────────────────────────────────────
 
-router.post('/logout', (req, res) => {
-  req.session.destroy((err) => {
-    res.redirect('/');
-  });
-});
-
-router.get('/logout', (req, res) => {
-  req.session.destroy((err) => {
-    res.redirect('/');
-  });
-});
+router.post('/logout', (req, res) => { req.session.destroy(() => res.redirect('/')); });
+router.get('/logout',  (req, res) => { req.session.destroy(() => res.redirect('/')); });
 
 module.exports = router;

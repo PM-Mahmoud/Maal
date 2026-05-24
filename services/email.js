@@ -1,44 +1,58 @@
 /**
- * Email service — uses Nodemailer with Gmail SMTP.
+ * Email service — uses Resend for reliable transactional delivery.
  *
- * Required environment variables:
- *   GMAIL_USER      — your Gmail address (e.g. you@gmail.com)
- *   GMAIL_APP_PASS  — Gmail App Password (16 chars, no spaces)
- *                     Generate at: https://myaccount.google.com/apppasswords
- *                     (Requires 2-Step Verification to be enabled on your Google account)
+ * Required environment variable:
+ *   RESEND_API_KEY  — get one free at https://resend.com (100 emails/day free)
  *
- * If either variable is missing, emails are skipped silently (app still works).
+ * Setup:
+ *   1. Sign up at resend.com
+ *   2. Create an API key (Sending access)
+ *   3. Add RESEND_API_KEY to your Render environment variables
+ *   4. Optional: verify your domain in Resend for custom from address
+ *
+ * If RESEND_API_KEY is missing, emails are skipped silently (app still works).
  */
-const nodemailer = require('nodemailer');
 
-function getTransporter() {
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASS;
-  if (!user || !pass) return null;
+const https = require('https');
 
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user, pass },
-    connectionTimeout: 5000,
-    greetingTimeout: 5000,
-    socketTimeout: 10000,
-  });
-}
-
-async function sendEmail({ to, from, subject, html, text }) {
-  const transporter = getTransporter();
-  if (!transporter) {
-    console.warn('[email] GMAIL_USER or GMAIL_APP_PASS not set — skipping email to', to);
+async function sendEmail({ to, subject, html, text }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn('[email] RESEND_API_KEY not set — skipping email to', to);
     return;
   }
 
-  const fromAddress = process.env.GMAIL_USER;
-  await transporter.sendMail({
-    from: `Mizan <${fromAddress}>`,
-    to,
-    subject,
-    html,
-    text,
+  const fromAddress = process.env.EMAIL_FROM || 'Mizan <onboarding@resend.dev>';
+
+  const payload = JSON.stringify({ from: fromAddress, to, subject, html, text });
+
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'api.resend.com',
+      path: '/emails',
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+      },
+    }, (res) => {
+      let body = '';
+      res.on('data', chunk => body += chunk);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(JSON.parse(body));
+        } else {
+          const err = new Error(`Resend API error ${res.statusCode}: ${body}`);
+          console.error('[email] Send failed:', err.message);
+          reject(err);
+        }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(10000, () => { req.destroy(new Error('Request timeout')); });
+    req.write(payload);
+    req.end();
   });
 }
 
@@ -54,29 +68,20 @@ async function sendWaitlistConfirmation(email) {
       <table width="560" cellpadding="0" cellspacing="0" style="background:#0F2E24;border:1px solid rgba(201,168,76,0.15);border-radius:16px;overflow:hidden;max-width:560px;width:100%;">
         <tr><td style="padding:40px 40px 32px;">
           <p style="margin:0 0 24px;font-size:1.5rem;font-weight:600;color:#C9A84C;">◈ Mizan</p>
-          <h1 style="margin:0 0 16px;font-size:1.5rem;font-weight:600;color:#F0EFE9;line-height:1.3;">You're on the Mizan waitlist.</h1>
-          <p style="margin:0 0 20px;font-size:0.95rem;color:#8A8D83;line-height:1.7;">
-            Early access is coming for Australian health professionals — doctors, pharmacists, dentists, and nurses who want a CFO-level view of their finances with halal or ESG compliance built in.
-          </p>
-          <p style="margin:0 0 20px;font-size:0.95rem;color:#8A8D83;line-height:1.7;">
-            When your spot is ready, you'll be the first to know. No spam, no noise — just the launch notification.
-          </p>
-          <p style="margin:0;font-size:0.85rem;color:rgba(138,141,131,0.6);line-height:1.5;">
-            Mizan is for informational purposes only and does not constitute personal financial advice. Always seek advice from a qualified financial adviser.
-          </p>
+          <h1 style="margin:0 0 16px;font-size:1.5rem;font-weight:600;color:#F0EFE9;">You're on the Mizan waitlist.</h1>
+          <p style="margin:0 0 20px;font-size:0.95rem;color:#8A8D83;line-height:1.7;">Early access is coming for Australian health professionals. When your spot is ready, you'll be the first to know.</p>
+          <p style="margin:0;font-size:0.85rem;color:rgba(138,141,131,0.6);line-height:1.5;">Mizan is for informational purposes only and does not constitute personal financial advice.</p>
         </td></tr>
       </table>
     </td></tr>
   </table>
 </body></html>`.trim();
 
-  const text = `You're on the Mizan waitlist.\n\nEarly access is coming for Australian health professionals. When your spot is ready, you'll be the first to know.\n\nMizan — mizan-ufgq.onrender.com`;
-
   return sendEmail({
     to: email,
     subject: "You're on the Mizan waitlist",
     html,
-    text,
+    text: `You're on the Mizan waitlist.\n\nEarly access is coming for Australian health professionals. When your spot is ready, you'll be the first to know.`,
   });
 }
 

@@ -65,6 +65,8 @@ app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 // ─── Route mounts ──────────────────────────────────────────────────────────
 
 app.use(require('./routes/auth'));
+app.use(require('./routes/oauth'));
+app.use(require('./routes/admin'));
 app.use(require('./routes/reset'));
 app.use('/dashboard', require('./routes/dashboard'));
 app.use('/onboarding', require('./routes/onboarding'));

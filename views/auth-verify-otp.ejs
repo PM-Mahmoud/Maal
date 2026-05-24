@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify your email — Mizan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/theme.css">
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1rem; }
+    .auth-card { background: var(--green-deep); border: 1px solid var(--border); border-radius: 16px; padding: 2.5rem; width: 100%; max-width: 420px; }
+    .auth-logo { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; color: var(--accent); margin-bottom: 2rem; }
+    .auth-card h1 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem; }
+    .auth-card p { font-size: 0.875rem; color: var(--fg-muted); margin: 0 0 2rem; line-height: 1.6; }
+    .otp-inputs { display: flex; gap: 0.6rem; justify-content: center; margin-bottom: 1.75rem; }
+    .otp-inputs input {
+      width: 52px; height: 60px; text-align: center; font-size: 1.5rem; font-weight: 600;
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 10px;
+      color: var(--fg); font-family: var(--font-body); outline: none;
+      transition: border-color 0.2s, background 0.2s; caret-color: var(--accent);
+    }
+    .otp-inputs input:focus { border-color: var(--accent); background: rgba(201,168,76,0.06); }
+    .otp-inputs input.filled { border-color: rgba(201,168,76,0.4); }
+    .btn-primary { width: 100%; background: var(--accent); color: var(--bg); font-weight: 600;
+      font-size: 0.95rem; padding: 0.85rem; border: none; border-radius: 10px;
+      cursor: pointer; font-family: var(--font-body); transition: opacity 0.2s; }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .alert-error { background: rgba(224,112,112,0.1); border: 1px solid rgba(224,112,112,0.3);
+      color: #E07070; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.875rem; margin-bottom: 1.25rem; }
+    .resend-row { text-align: center; margin-top: 1.25rem; font-size: 0.825rem; color: var(--fg-muted); }
+    .resend-row a, .resend-row button { color: var(--accent); background: none; border: none;
+      cursor: pointer; font-family: var(--font-body); font-size: 0.825rem; padding: 0; }
+    .resend-row a:hover, .resend-row button:hover { text-decoration: underline; }
+    #resendTimer { color: var(--fg-muted); }
+  </style>
+</head>
+<body>
+  <div class="auth-card">
+    <div class="auth-logo">◈ Mizan</div>
+    <h1>Check your email</h1>
+    <p>We sent a 6-digit code to <strong style="color:var(--fg)"><%= email %></strong>. Enter it below to verify your account.</p>
+
+    <% if (error) { %>
+      <div class="alert-error"><%= error %></div>
+    <% } %>
+
+    <form method="POST" action="/verify-email" id="otpForm">
+      <input type="hidden" name="email" value="<%= email %>">
+      <input type="hidden" name="code" id="codeHidden">
+
+      <div class="otp-inputs" id="otpInputs">
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="off">
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="off">
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="off">
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="off">
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="off">
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="off">
+      </div>
+
+      <button type="submit" class="btn-primary" id="btnVerify" disabled>Verify email</button>
+    </form>
+
+    <div class="resend-row">
+      <span id="resendTimer">Resend code in <span id="countdown">60</span>s</span>
+      <button id="btnResend" style="display:none" onclick="resendCode()">Resend code</button>
+    </div>
+  </div>
+
+  <script>
+    const digits = document.querySelectorAll('.otp-digit');
+    const hidden = document.getElementById('codeHidden');
+    const btn = document.getElementById('btnVerify');
+
+    digits.forEach((d, i) => {
+      d.addEventListener('input', e => {
+        const val = e.target.value.replace(/\D/g, '');
+        e.target.value = val;
+        if (val && i < 5) digits[i + 1].focus();
+        syncCode();
+      });
+      d.addEventListener('keydown', e => {
+        if (e.key === 'Backspace' && !e.target.value && i > 0) {
+          digits[i - 1].focus();
+          digits[i - 1].value = '';
+          syncCode();
+        }
+      });
+      d.addEventListener('paste', e => {
+        e.preventDefault();
+        const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+        paste.split('').forEach((ch, j) => { if (digits[j]) digits[j].value = ch; });
+        if (paste.length > 0) digits[Math.min(paste.length, 5)].focus();
+        syncCode();
+      });
+    });
+
+    function syncCode() {
+      const code = Array.from(digits).map(d => d.value).join('');
+      hidden.value = code;
+      btn.disabled = code.length < 6;
+      digits.forEach(d => d.classList.toggle('filled', d.value !== ''));
+    }
+
+    // Countdown timer for resend
+    let seconds = 60;
+    const countdownEl = document.getElementById('countdown');
+    const timerEl = document.getElementById('resendTimer');
+    const resendBtn = document.getElementById('btnResend');
+    const timer = setInterval(() => {
+      seconds--;
+      countdownEl.textContent = seconds;
+      if (seconds <= 0) {
+        clearInterval(timer);
+        timerEl.style.display = 'none';
+        resendBtn.style.display = 'inline';
+      }
+    }, 1000);
+
+    async function resendCode() {
+      resendBtn.disabled = true;
+      resendBtn.textContent = 'Sending…';
+      try {
+        const res = await fetch('/resend-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: '<%= email %>' })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          resendBtn.textContent = 'Sent!';
+          setTimeout(() => { resendBtn.textContent = 'Resend code'; resendBtn.disabled = false; }, 3000);
+        } else {
+          resendBtn.textContent = 'Try again';
+          resendBtn.disabled = false;
+        }
+      } catch(e) {
+        resendBtn.textContent = 'Try again';
+        resendBtn.disabled = false;
+      }
+    }
+
+    digits[0].focus();
+  </script>
+</body>
+</html>
