@@ -2,79 +2,12 @@
   <div class="waitlist-inner">
     <div class="waitlist-copy">
       <span class="section-tag">Early Access</span>
-      <h2 class="section-title">Be first in line.</h2>
-      <p>Ethical is in final development. Early access is limited to Australian health professionals. Drop your email — we'll reach out when your spot is ready.</p>
+      <h2 class="section-title">Get your Financial Health Score.</h2>
+      <p>Sign up free and get a personalised Financial Health Score, Portfolio Compliance Score, and action plan — built for Australian health professionals.</p>
     </div>
-    <div class="waitlist-form-wrap">
-      <form class="waitlist-form" id="waitlistForm">
-        <div class="form-row">
-          <input
-            type="email"
-            id="waitlistEmail"
-            name="email"
-            placeholder="your@email.com.au"
-            required
-            autocomplete="email"
-          />
-          <button type="submit" class="btn-primary" id="waitlistBtn">
-            <span class="btn-text">Join the waitlist</span>
-            <span class="btn-loading" style="display:none">Joining...</span>
-          </button>
-        </div>
-        <p class="form-note">No spam. No sales calls. Just early access when it's ready.</p>
-      </form>
-      <div class="waitlist-success" id="waitlistSuccess" style="display:none">
-        <div class="success-icon">✓</div>
-        <h3>You're on the list.</h3>
-        <p>Check your inbox — a confirmation is on its way. Early access is coming soon.</p>
-      </div>
-      <div class="waitlist-error" id="waitlistError" style="display:none">
-        <p>Something went wrong. Please try again.</p>
-      </div>
+    <div class="waitlist-cta-wrap">
+      <a href="/signup" class="hero-cta" style="font-size:1rem;padding:1rem 2.5rem;">Create your free account</a>
+      <p class="form-note" style="margin-top:1rem;">Already have an account? <a href="/login" style="color:var(--accent);text-decoration:none;">Log in →</a></p>
     </div>
   </div>
 </section>
-
-<script>
-(function() {
-  var form = document.getElementById('waitlistForm');
-  var btn = document.getElementById('waitlistBtn');
-  var success = document.getElementById('waitlistSuccess');
-  var errorDiv = document.getElementById('waitlistError');
-
-  if (\!form) return;
-
-  form.addEventListener('submit', function(e) {
-    e.preventDefault();
-    var email = document.getElementById('waitlistEmail').value.trim();
-    if (\!email) return;
-
-    btn.querySelector('.btn-text').style.display = 'none';
-    btn.querySelector('.btn-loading').style.display = 'inline';
-    btn.disabled = true;
-    errorDiv.style.display = 'none';
-
-    fetch('/api/waitlist', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.ok) {
-        form.style.display = 'none';
-        success.style.display = 'block';
-      } else {
-        throw new Error(data.error || 'Unknown error');
-      }
-    })
-    .catch(function(err) {
-      btn.querySelector('.btn-text').style.display = 'inline';
-      btn.querySelector('.btn-loading').style.display = 'none';
-      btn.disabled = false;
-      errorDiv.style.display = 'block';
-      errorDiv.querySelector('p').textContent = err.message || 'Something went wrong. Please try again.';
-    });
-  });
-})();
-</script>
