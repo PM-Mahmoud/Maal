@@ -3,10 +3,10 @@
     <h1>Goals</h1>
     <div class="sub">Set targets and let Mizan keep score.</div>
   </div>
-  <button class="btn btn-accent">+ Add Goal</button>
+  <button class="btn btn-accent" data-new-goal>+ Add Goal</button>
 </div>
 
-<div class="tabs" style="margin-bottom:1.2rem;">
+<div class="tabs" id="goal-tabs" style="margin-bottom:1.2rem;">
   <button class="tab active">All Goals</button>
   <button class="tab">Grow</button>
   <button class="tab">Save</button>
@@ -14,11 +14,13 @@
   <button class="tab">Invest</button>
 </div>
 
-<div class="panel" style="margin-bottom:1rem;">
-  <div class="empty" style="padding:3rem 1rem;">
-    <h3>No goals found</h3>
-    <p>You haven't created any financial goals yet. Set goals — an emergency fund, a home deposit, paying down HECS, a super target — and track your progress.</p>
-    <button class="btn btn-accent btn-sm">Create your first goal</button>
+<div id="goals-list">
+  <div class="panel" id="goals-empty" style="margin-bottom:1rem;">
+    <div class="empty" style="padding:3rem 1rem;">
+      <h3>No goals found</h3>
+      <p>You haven't created any financial goals yet. Set goals — an emergency fund, a home deposit, paying down HECS, a super target — and track your progress.</p>
+      <button class="btn btn-accent btn-sm" data-new-goal>Create your first goal</button>
+    </div>
   </div>
 </div>
 

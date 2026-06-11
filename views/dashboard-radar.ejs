@@ -8,32 +8,33 @@
 <div class="widget-grid">
   <div class="col-8">
 
-    <p style="font-size:0.74rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--fg-faint); margin:0 0 0.6rem;">Quick start</p>
+    <div class="panel" style="margin-bottom:1rem;">
+      <div class="panel-title">Your radars</div>
+      <div id="radar-list"></div>
+    </div>
+
+    <p style="font-size:0.74rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--fg-faint); margin:0 0 0.6rem;">Quick start — click to use a template</p>
 
     <div class="panel" style="padding:0.4rem 1.2rem; margin-bottom:1rem;">
-      <div class="row-item">
+      <div class="row-item" data-radar-template="Watch my portfolio for trends and blind spots — flag anything unusual.">
         <div><div class="row-main">Portfolio Insights</div><div class="row-sub">Spot trends and blind spots you'd otherwise miss</div></div>
         <span class="row-val">›</span>
       </div>
-      <div class="row-item">
+      <div class="row-item" data-radar-template="Before EOFY, alert me about tax moves: deductions, super contributions, franking credits.">
         <div><div class="row-main">Tax Strategy</div><div class="row-sub">EOFY moves, deductions and franking credits to keep more of what you earn</div></div>
         <span class="row-val">›</span>
       </div>
-      <div class="row-item">
+      <div class="row-item" data-radar-template="Track RBA rate decisions and tell me how each one affects my property and loans.">
         <div><div class="row-main">Property &amp; Rates</div><div class="row-sub">Track your property, equity, and RBA rate opportunities</div></div>
         <span class="row-val">›</span>
       </div>
-      <div class="row-item">
+      <div class="row-item" data-radar-template="If my monthly spending goes 20% over my average, alert me with the categories driving it.">
         <div><div class="row-main">Cash Flow</div><div class="row-sub">Stay ahead of cash crunches and spending shifts</div></div>
         <span class="row-val">›</span>
       </div>
-      <div class="row-item">
+      <div class="row-item" data-radar-template="If any of my holdings moves more than 10% in a day, tell me what caused it.">
         <div><div class="row-main">Market News</div><div class="row-sub">Know when ASX or global moves affect your holdings</div></div>
         <span class="row-val">›</span>
-      </div>
-      <div class="row-item">
-        <div><div class="row-main">Create your own</div><div class="row-sub">Define a custom radar with your own criteria</div></div>
-        <span class="row-val">+</span>
       </div>
     </div>
 
@@ -55,24 +56,24 @@
       <div class="panel-title">New Radar</div>
       <div class="field">
         <label>What should I analyse?</label>
-        <textarea rows="4" placeholder='e.g. "If my spending on eating out goes 20% over my monthly average, alert me."'></textarea>
+        <textarea rows="4" id="radar-text" placeholder='e.g. "If my spending on eating out goes 20% over my monthly average, alert me."'></textarea>
       </div>
       <div class="field">
         <label>Notify me</label>
         <div style="display:flex; gap:1.2rem; font-size:0.84rem; color:var(--fg-muted);">
-          <label style="display:flex; gap:0.4rem; align-items:center; font-weight:400;"><input type="checkbox" checked style="width:auto;"> Email</label>
-          <label style="display:flex; gap:0.4rem; align-items:center; font-weight:400;"><input type="checkbox" style="width:auto;"> SMS</label>
+          <label style="display:flex; gap:0.4rem; align-items:center; font-weight:400;"><input type="checkbox" id="radar-email" checked style="width:auto;"> Email</label>
+          <label style="display:flex; gap:0.4rem; align-items:center; font-weight:400;"><input type="checkbox" id="radar-sms" style="width:auto;"> SMS</label>
         </div>
       </div>
       <div class="field">
         <label>Frequency</label>
-        <div class="tabs"><button class="tab active">Daily</button><button class="tab">Weekly</button><button class="tab">Monthly</button></div>
+        <div class="tabs" id="radar-freq"><button class="tab active">Daily</button><button class="tab">Weekly</button><button class="tab">Monthly</button></div>
       </div>
       <div class="field">
         <label>Time (AEST)</label>
-        <input type="time" value="09:00">
+        <input type="time" id="radar-time" value="09:00">
       </div>
-      <button class="btn btn-accent" style="width:100%; justify-content:center;">Create Radar</button>
+      <button class="btn btn-accent" id="radar-create" style="width:100%; justify-content:center;">Create Radar</button>
     </div>
   </div>
 </div>

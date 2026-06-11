@@ -475,6 +475,27 @@ body.app-body {
 .breakdown-bar { height: 100%; border-radius: 999px; background: var(--accent); }
 .breakdown-val { font-size: 0.85rem; font-weight: 600; min-width: 36px; text-align: right; }
 
+/* ─── Toast ─────────────────────────────────────────────── */
+#mz-toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 16px);
+  z-index: 400;
+  background: var(--fg); color: var(--bg);
+  font-size: 0.84rem; font-weight: 500;
+  padding: 0.65rem 1.2rem; border-radius: 999px;
+  box-shadow: var(--shadow-lg);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  max-width: calc(100vw - 40px);
+}
+#mz-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* connected institution tile */
+.inst.connected { border-color: var(--accent); position: relative; }
+.inst.connected::after {
+  content: '✓'; position: absolute; top: 6px; right: 8px;
+  color: var(--accent-strong); font-weight: 800; font-size: 0.8rem;
+}
+
 /* ─── Floating chat widget ──────────────────────────────── */
 .chat-fab {
   position: fixed; right: 22px; bottom: 22px; z-index: 300;

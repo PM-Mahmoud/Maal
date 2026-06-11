@@ -34,7 +34,7 @@
     <div style="text-align:center; margin:0.9rem 0;">
       <span style="font-size:0.78rem; color:var(--fg-faint);">or</span>
     </div>
-    <button class="btn btn-ghost" style="width:100%; justify-content:center;">Add a manual account or credit card</button>
+    <button class="btn btn-ghost" style="width:100%; justify-content:center;" data-add-asset="investment_portfolio">Add a manual account or credit card</button>
     <p style="font-size:0.72rem; color:var(--fg-faint); margin:1rem 0 0; line-height:1.6;">
       🔒 Your data is secure. Mizan connects read-only via Basiq under the Consumer Data Right. It cannot make
       transactions on your behalf or change your banking. Revoke access anytime — credentials are never stored,
@@ -44,11 +44,12 @@
 
   <div class="panel col-5">
     <div class="panel-title">Import manually</div>
-    <div class="dropzone" style="padding:2.2rem 1rem;">
+    <div class="dropzone" data-dropzone="statements" style="padding:2.2rem 1rem;">
       <div style="font-size:1.4rem; margin-bottom:0.4rem;">⇪</div>
       <strong>Upload CSV or PDF</strong>
-      <p style="margin:0.4rem 0 0; font-size:0.76rem;">Drag a bank statement here</p>
+      <p style="margin:0.4rem 0 0; font-size:0.76rem;">Drag a bank statement here or click to browse</p>
     </div>
+    <div data-uploads="statements"></div>
     <div style="margin-top:1rem; font-size:0.78rem; color:var(--fg-muted); line-height:1.8;">
       <strong style="color:var(--fg);">Supported formats</strong><br>
       CSV — Date, Description, Amount<br>

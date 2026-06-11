@@ -28,8 +28,8 @@
       <% } else { %>
         <div class="empty">
           <h3>No super fund added</h3>
-          <p>Add your super — AustralianSuper, HESTA, Hostplus, Aware, UniSup­er or any fund — to track Australia's biggest retirement asset.</p>
-          <button class="btn btn-accent btn-sm">+ Add Super Fund</button>
+          <p>Add your super — AustralianSuper, HESTA, Hostplus, Aware, UniSuper or any fund — to track Australia's biggest retirement asset.</p>
+          <button class="btn btn-accent btn-sm" data-add-asset="super_balance">+ Add Super Fund</button>
         </div>
       <% } %>
     </div>
@@ -53,7 +53,7 @@
         <div class="empty">
           <h3>No assets yet</h3>
           <p>Add cash, shares, ETFs, property, crypto or anything else you own.</p>
-          <button class="btn btn-accent btn-sm">+ Add Asset</button>
+          <button class="btn btn-accent btn-sm" data-add-asset="investment_portfolio">+ Add Asset</button>
         </div>
       <% } %>
     </div>
@@ -77,7 +77,7 @@
         <div class="empty">
           <h3>No liabilities</h3>
           <p>Track HECS-HELP, mortgage, car loans and credit cards.</p>
-          <button class="btn btn-danger-soft btn-sm">+ Add Liability</button>
+          <button class="btn btn-danger-soft btn-sm" data-add-asset="hecs_balance">+ Add Liability</button>
         </div>
       <% } %>
     </div>
@@ -87,11 +87,11 @@
   <div class="col-4">
     <div class="panel" style="margin-bottom:1rem;">
       <div class="panel-title">Add an Asset <span class="tabs"><button class="tab active">Assets</button><button class="tab">Liabilities</button></span></div>
-      <div class="row-item"><div><div class="row-main">Banks &amp; Brokerages</div><div class="row-sub">Bank and brokerage accounts</div></div><span class="row-val">🏦</span></div>
-      <div class="row-item"><div><div class="row-main">Superannuation</div><div class="row-sub">Your super fund balance &amp; option</div></div><span class="row-val">🌿</span></div>
-      <div class="row-item"><div><div class="row-main">Real Estate</div><div class="row-sub">Residential and investment property</div></div><span class="row-val">🏠</span></div>
-      <div class="row-item"><div><div class="row-main">Public Holdings</div><div class="row-sub">ASX &amp; global shares, ETFs</div></div><span class="row-val">📈</span></div>
-      <div class="row-item"><div><div class="row-main">Crypto Holdings</div><div class="row-sub">Wallets and exchanges</div></div><span class="row-val">🪙</span></div>
+      <div class="row-item" data-add-asset="investment_portfolio"><div><div class="row-main">Banks &amp; Brokerages</div><div class="row-sub">Bank and brokerage accounts</div></div><span class="row-val">🏦</span></div>
+      <div class="row-item" data-add-asset="super_balance"><div><div class="row-main">Superannuation</div><div class="row-sub">Your super fund balance &amp; option</div></div><span class="row-val">🌿</span></div>
+      <div class="row-item" data-add-asset="property_value"><div><div class="row-main">Real Estate</div><div class="row-sub">Residential and investment property</div></div><span class="row-val">🏠</span></div>
+      <div class="row-item" data-add-asset="investment_portfolio"><div><div class="row-main">Public Holdings</div><div class="row-sub">ASX &amp; global shares, ETFs</div></div><span class="row-val">📈</span></div>
+      <div class="row-item" data-add-asset="investment_portfolio"><div><div class="row-main">Crypto Holdings</div><div class="row-sub">Wallets and exchanges</div></div><span class="row-val">🪙</span></div>
     </div>
 
     <div class="panel">

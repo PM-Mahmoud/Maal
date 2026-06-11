@@ -9,21 +9,21 @@
   <div class="col-8">
 
     <div class="composer">
-      <textarea placeholder="What happens if interest rates rise 1%?"></textarea>
+      <textarea id="research-input" placeholder="What happens if interest rates rise 1%?"></textarea>
       <div class="composer-bar">
         <span style="font-size:0.75rem; color:var(--fg-faint);">Runs a full scenario model over your data</span>
-        <button class="send-btn" title="Run">↑</button>
+        <button class="send-btn" id="research-run" title="Run">↑</button>
       </div>
     </div>
 
     <p style="text-align:center; font-size:0.8rem; color:var(--fg-muted); margin:1.4rem 0 0.7rem;">Try research like…</p>
     <div class="suggest-grid">
-      <button class="suggest">What if the ASX drops 20% next quarter? Analyse the impact</button>
-      <button class="suggest">Run a Monte Carlo simulation for my retirement at 60</button>
-      <button class="suggest">Stress test my portfolio against a property downturn</button>
-      <button class="suggest">Compare salary sacrifice vs. extra mortgage repayments</button>
-      <button class="suggest">What are my biggest financial risks right now?</button>
-      <button class="suggest">Project my net worth if I save an extra $500/month</button>
+      <button class="suggest" data-research-suggest>What if the ASX drops 20% next quarter? Analyse the impact</button>
+      <button class="suggest" data-research-suggest>Run a Monte Carlo simulation for my retirement at 60</button>
+      <button class="suggest" data-research-suggest>Stress test my portfolio against a property downturn</button>
+      <button class="suggest" data-research-suggest>Compare salary sacrifice vs. extra mortgage repayments</button>
+      <button class="suggest" data-research-suggest>What are my biggest financial risks right now?</button>
+      <button class="suggest" data-research-suggest>Project my net worth if I save an extra $500/month</button>
     </div>
 
     <div class="banner banner-danger">
@@ -51,9 +51,7 @@
   <div class="col-4">
     <div class="panel" style="margin-bottom:1rem;">
       <div class="panel-title">Research History</div>
-      <div class="empty" style="padding:1.2rem 0.5rem;">
-        <p>No research yet. Your completed reports will appear here.</p>
-      </div>
+      <div id="research-history"></div>
     </div>
     <div class="panel">
       <div class="panel-title">Suggested Research</div>

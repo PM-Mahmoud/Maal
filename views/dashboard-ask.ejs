@@ -5,21 +5,23 @@
 <div style="max-width: 720px; margin: 0 auto;">
 
   <div class="composer">
-    <textarea placeholder="What are my biggest spending categories?"></textarea>
+    <textarea id="ask-input" placeholder="What are my biggest spending categories?"></textarea>
     <div class="composer-bar">
       <span style="font-size:0.75rem; color:var(--fg-faint);">Educational guidance only — not financial advice</span>
-      <button class="send-btn" title="Send">↑</button>
+      <button class="send-btn" id="ask-send" title="Send">↑</button>
     </div>
   </div>
 
+  <div id="ask-thread" style="display:none; flex-direction:column; gap:0.6rem; margin-top:1rem;"></div>
+
   <p style="text-align:center; font-size:0.8rem; color:var(--fg-muted); margin:1.4rem 0 0.7rem;">Ask Mizan questions like…</p>
   <div class="suggest-grid">
-    <button class="suggest">Am I taking on too much risk in my portfolio?</button>
-    <button class="suggest">How did my net worth change this month?</button>
-    <button class="suggest">What were my top 3 biggest expenses this month?</button>
-    <button class="suggest">Is my super fund's growth option right for my age?</button>
-    <button class="suggest">Should I pay extra off my HECS before indexation?</button>
-    <button class="suggest">How is the market affecting my portfolio?</button>
+    <button class="suggest" data-ask-suggest>Am I taking on too much risk in my portfolio?</button>
+    <button class="suggest" data-ask-suggest>How did my net worth change this month?</button>
+    <button class="suggest" data-ask-suggest>What were my top 3 biggest expenses this month?</button>
+    <button class="suggest" data-ask-suggest>Is my super fund's growth option right for my age?</button>
+    <button class="suggest" data-ask-suggest>Should I pay extra off my HECS before indexation?</button>
+    <button class="suggest" data-ask-suggest>How is the market affecting my portfolio?</button>
   </div>
 
   <div class="banner banner-danger">

@@ -132,6 +132,27 @@ router.get('/goals', async (req, res) => {
   }
 });
 
+// ─── API: update a single asset/liability field on the profile ───────────────
+
+const ASSET_FIELDS = ['super_balance', 'investment_portfolio', 'property_value', 'hecs_balance', 'total_debt'];
+
+router.post('/assets/update', async (req, res) => {
+  try {
+    const { field, amount } = req.body;
+    if (!ASSET_FIELDS.includes(field)) return res.status(400).json({ error: 'Unknown field.' });
+    const value = parseInt(amount, 10);
+    if (isNaN(value) || value < 0) return res.status(400).json({ error: 'Invalid amount.' });
+
+    const existing = (await getProfileByUserId(req.session.userId)) || {};
+    const merged = { ...existing, [field]: value };
+    await updateProfile(req.session.userId, merged);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('assets/update error:', err.message);
+    res.status(500).json({ error: 'Failed to save.' });
+  }
+});
+
 // ─── Page: /dashboard/settings ───────────────────────────────────────────────
 
 router.get('/settings', async (req, res) => {
