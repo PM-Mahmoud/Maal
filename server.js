@@ -69,6 +69,7 @@ app.use(require('./routes/oauth'));
 app.use(require('./routes/admin'));
 app.use(require('./routes/reset'));
 app.use('/dashboard', require('./routes/dashboard'));
+app.use('/billing', require('./routes/billing'));
 app.use('/onboarding', require('./routes/onboarding'));
 app.use('/api/onboarding', require('./routes/onboarding'));
 app.use('/score', require('./routes/score'));

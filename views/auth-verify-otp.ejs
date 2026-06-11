@@ -9,26 +9,26 @@
   <link rel="stylesheet" href="/css/theme.css">
   <style>
     body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1rem; }
-    .auth-card { background: var(--green-deep); border: 1px solid var(--border); border-radius: 16px; padding: 2.5rem; width: 100%; max-width: 420px; }
+    .auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow-lg); padding: 2.5rem; width: 100%; max-width: 420px; }
     .auth-logo { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; color: var(--accent); margin-bottom: 2rem; }
     .auth-card h1 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem; }
     .auth-card p { font-size: 0.875rem; color: var(--fg-muted); margin: 0 0 2rem; line-height: 1.6; }
     .otp-inputs { display: flex; gap: 0.6rem; justify-content: center; margin-bottom: 1.75rem; }
     .otp-inputs input {
       width: 52px; height: 60px; text-align: center; font-size: 1.5rem; font-weight: 600;
-      background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 10px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
       color: var(--fg); font-family: var(--font-body); outline: none;
       transition: border-color 0.2s, background 0.2s; caret-color: var(--accent);
     }
     .otp-inputs input:focus { border-color: var(--accent); background: rgba(201,168,76,0.06); }
     .otp-inputs input.filled { border-color: rgba(201,168,76,0.4); }
-    .btn-primary { width: 100%; background: var(--accent); color: var(--bg); font-weight: 600;
+    .btn-primary { width: 100%; background: var(--accent); color: #fff; font-weight: 600;
       font-size: 0.95rem; padding: 0.85rem; border: none; border-radius: 10px;
       cursor: pointer; font-family: var(--font-body); transition: opacity 0.2s; }
     .btn-primary:hover { opacity: 0.88; }
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .alert-error { background: rgba(224,112,112,0.1); border: 1px solid rgba(224,112,112,0.3);
-      color: #E07070; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.875rem; margin-bottom: 1.25rem; }
+    .alert-error { background: var(--danger-soft); border: 1px solid rgba(224,112,112,0.3);
+      color: var(--danger); padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.875rem; margin-bottom: 1.25rem; }
     .resend-row { text-align: center; margin-top: 1.25rem; font-size: 0.825rem; color: var(--fg-muted); }
     .resend-row a, .resend-row button { color: var(--accent); background: none; border: none;
       cursor: pointer; font-family: var(--font-body); font-size: 0.825rem; padding: 0; }
@@ -40,7 +40,7 @@
       font-size: 0.875rem; font-weight: 500; padding: 0.75rem; border-radius: 10px; cursor: pointer;
       font-family: var(--font-body); transition: border-color 0.2s, background 0.2s; display: flex;
       align-items: center; justify-content: center; gap: 0.5rem; }
-    .btn-sms:hover { border-color: rgba(201,168,76,0.4); background: rgba(255,255,255,0.04); }
+    .btn-sms:hover { border-color: var(--accent); background: var(--surface-2); }
     .btn-sms:disabled { opacity: 0.5; cursor: not-allowed; }
     #smsStatus { text-align: center; font-size: 0.8rem; margin-top: 0.5rem; min-height: 1.2em; }
   </style>

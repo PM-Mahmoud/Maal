@@ -137,7 +137,13 @@ router.get('/goals', async (req, res) => {
 router.get('/settings', async (req, res) => {
   try {
     const ctx = await dashboardContext(req);
-    res.render('dashboard-settings', { ...ctx, pageTitle: 'Settings' });
+    const planNames = { pro: 'Mizan Pro ($20/mo)', max: 'Mizan Max ($200/mo)' };
+    res.render('dashboard-settings', {
+      ...ctx,
+      pageTitle: 'Settings',
+      billingStatus: req.query.billing || null,
+      billingPlanName: planNames[req.query.plan] || '',
+    });
   } catch (err) {
     console.error('/settings error:', err.message);
     res.status(500).render('error', { message: 'Failed to load Settings.' });

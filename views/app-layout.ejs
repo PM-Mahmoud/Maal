@@ -84,8 +84,66 @@
     </main>
   </div>
 
+  <!-- Floating Mizan chat -->
+  <div class="chat-panel" id="chat-panel">
+    <div class="chat-head">
+      <div class="avatar" style="width:34px;height:34px;font-size:0.85rem;">M</div>
+      <div>
+        <div style="font-size:0.88rem;font-weight:600;">Chat with Mizan</div>
+        <div class="status">● Online</div>
+      </div>
+      <button class="icon-btn chat-close" id="chat-close" title="Close">✕</button>
+    </div>
+    <div class="chat-body" id="chat-body">
+      <div class="chat-msg bot">Hey <%= (session.name || 'there').split(' ')[0] %>, how can I help you today? I can help you understand your portfolio, track expenses, and explain what's going on in your finances.</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" id="chat-input" placeholder="Ask me anything about your finances">
+      <button class="chat-send" id="chat-send" title="Send">↑</button>
+    </div>
+    <div class="chat-disclaimer">Educational guidance only — not financial advice.</div>
+  </div>
+  <button class="chat-fab" id="chat-fab" title="Chat with Mizan">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-8 8H5l-2 2V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8z"/></svg>
+  </button>
+
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      // Floating chat
+      var fab = document.getElementById('chat-fab');
+      var panel = document.getElementById('chat-panel');
+      var chatClose = document.getElementById('chat-close');
+      var chatInput = document.getElementById('chat-input');
+      var chatSend = document.getElementById('chat-send');
+      var chatBody = document.getElementById('chat-body');
+      if (fab && panel) {
+        fab.addEventListener('click', function() { panel.classList.toggle('open'); if (panel.classList.contains('open')) chatInput.focus(); });
+        chatClose.addEventListener('click', function() { panel.classList.remove('open'); });
+        function sendChat() {
+          var text = chatInput.value.trim();
+          if (!text) return;
+          var me = document.createElement('div');
+          me.className = 'chat-msg me';
+          me.textContent = text;
+          chatBody.appendChild(me);
+          chatInput.value = '';
+          chatBody.scrollTop = chatBody.scrollHeight;
+          setTimeout(function() {
+            var bot = document.createElement('div');
+            bot.className = 'chat-msg bot';
+            bot.textContent = "Good question. I'm still in preview here — for a full answer over your data, open Ask Mizan and I'll walk you through it.";
+            var link = document.createElement('a');
+            link.href = '/dashboard/ask';
+            link.textContent = ' Open Ask Mizan →';
+            bot.appendChild(link);
+            chatBody.appendChild(bot);
+            chatBody.scrollTop = chatBody.scrollHeight;
+          }, 600);
+        }
+        chatSend.addEventListener('click', sendChat);
+        chatInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') sendChat(); });
+      }
+
       // Theme toggle
       var toggle = document.getElementById('theme-toggle');
       if (toggle) {

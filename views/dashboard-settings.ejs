@@ -5,6 +5,18 @@
   </div>
 </div>
 
+<% var billing = typeof billingStatus !== 'undefined' ? billingStatus : null; %>
+<% var billingPlan = typeof billingPlanName !== 'undefined' ? billingPlanName : ''; %>
+<% if (billing === 'success') { %>
+<div class="alert alert-success">🎉 You're subscribed to <%= billingPlan %>. Welcome aboard — your advisor just got sharper.</div>
+<% } else if (billing === 'demo') { %>
+<div class="alert alert-success">✓ Demo checkout complete for <%= billingPlan %>. This was a simulation — add your Stripe test key (STRIPE_SECRET_KEY) on Render to run a real test payment.</div>
+<% } else if (billing === 'cancel') { %>
+<div class="alert alert-error">Checkout cancelled — no charge was made. You can upgrade any time.</div>
+<% } else if (billing === 'error') { %>
+<div class="alert alert-error">Something went wrong starting checkout. Please try again.</div>
+<% } %>
+
 <div class="widget-grid">
   <div class="col-6">
 
@@ -83,7 +95,10 @@
             <li>Radar alerts (email &amp; SMS)</li>
             <li>Statement reading via Vault</li>
           </ul>
-          <button class="btn btn-accent btn-sm" style="justify-content:center;">Upgrade to Pro</button>
+          <form action="/billing/checkout" method="POST" style="display:contents;">
+            <input type="hidden" name="plan" value="pro">
+            <button type="submit" class="btn btn-accent btn-sm" style="width:100%;justify-content:center;">Upgrade to Pro</button>
+          </form>
         </div>
         <div class="panel plan">
           <div class="plan-name">Max</div>
@@ -96,7 +111,10 @@
             <li>Priority processing</li>
             <li>Early access to new features</li>
           </ul>
-          <button class="btn btn-ghost btn-sm" style="justify-content:center;">Upgrade to Max</button>
+          <form action="/billing/checkout" method="POST" style="display:contents;">
+            <input type="hidden" name="plan" value="max">
+            <button type="submit" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;">Upgrade to Max</button>
+          </form>
         </div>
       </div>
       <p style="font-size:0.74rem; color:var(--fg-faint); margin:0.9rem 0 0; line-height:1.6;">
