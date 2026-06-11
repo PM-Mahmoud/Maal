@@ -1,0 +1,118 @@
+<%
+  function aud(n) { n = Number(n) || 0; return '$' + n.toLocaleString('en-AU', { maximumFractionDigits: 0 }); }
+  var superBal  = (profile && profile.super_balance) || 0;
+  var investBal = (profile && profile.investment_portfolio) || 0;
+  var propertyV = (profile && profile.property_value) || 0;
+  var hecs      = (profile && profile.hecs_balance) || 0;
+  var otherDebt = (profile && profile.total_debt) || 0;
+%>
+
+<div class="page-head">
+  <div>
+    <h1>My Portfolio</h1>
+    <div class="sub">Everything you own and owe, in one place.</div>
+  </div>
+  <div class="tabs"><button class="tab active">Cards</button><button class="tab">List</button></div>
+</div>
+
+<div class="widget-grid">
+  <div class="col-8">
+
+    <div class="panel" style="margin-bottom:1rem;">
+      <div class="panel-title">Superannuation <span class="chip chip-accent">AU</span></div>
+      <% if (superBal > 0) { %>
+        <div class="row-item">
+          <div><div class="row-main">Super fund balance</div><div class="row-sub">Manual · update anytime</div></div>
+          <div class="row-val"><%= aud(superBal) %></div>
+        </div>
+      <% } else { %>
+        <div class="empty">
+          <h3>No super fund added</h3>
+          <p>Add your super — AustralianSuper, HESTA, Hostplus, Aware, UniSup­er or any fund — to track Australia's biggest retirement asset.</p>
+          <button class="btn btn-accent btn-sm">+ Add Super Fund</button>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="panel" style="margin-bottom:1rem;">
+      <div class="panel-title">Assets</div>
+      <% if (investBal > 0 || propertyV > 0) { %>
+        <% if (investBal > 0) { %>
+        <div class="row-item">
+          <div><div class="row-main">Investment portfolio</div><div class="row-sub">Shares, ETFs &amp; funds</div></div>
+          <div class="row-val"><%= aud(investBal) %></div>
+        </div>
+        <% } %>
+        <% if (propertyV > 0) { %>
+        <div class="row-item">
+          <div><div class="row-main">Property</div><div class="row-sub">Estimated value</div></div>
+          <div class="row-val"><%= aud(propertyV) %></div>
+        </div>
+        <% } %>
+      <% } else { %>
+        <div class="empty">
+          <h3>No assets yet</h3>
+          <p>Add cash, shares, ETFs, property, crypto or anything else you own.</p>
+          <button class="btn btn-accent btn-sm">+ Add Asset</button>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Liabilities</div>
+      <% if (hecs > 0 || otherDebt > 0) { %>
+        <% if (hecs > 0) { %>
+        <div class="row-item">
+          <div><div class="row-main">HECS-HELP</div><div class="row-sub">Indexed each 1 June</div></div>
+          <div class="row-val"><%= aud(hecs) %></div>
+        </div>
+        <% } %>
+        <% if (otherDebt > 0) { %>
+        <div class="row-item">
+          <div><div class="row-main">Other debt</div><div class="row-sub">Loans &amp; cards</div></div>
+          <div class="row-val"><%= aud(otherDebt) %></div>
+        </div>
+        <% } %>
+      <% } else { %>
+        <div class="empty">
+          <h3>No liabilities</h3>
+          <p>Track HECS-HELP, mortgage, car loans and credit cards.</p>
+          <button class="btn btn-danger-soft btn-sm">+ Add Liability</button>
+        </div>
+      <% } %>
+    </div>
+
+  </div>
+
+  <div class="col-4">
+    <div class="panel" style="margin-bottom:1rem;">
+      <div class="panel-title">Add an Asset <span class="tabs"><button class="tab active">Assets</button><button class="tab">Liabilities</button></span></div>
+      <div class="row-item"><div><div class="row-main">Banks &amp; Brokerages</div><div class="row-sub">Bank and brokerage accounts</div></div><span class="row-val">🏦</span></div>
+      <div class="row-item"><div><div class="row-main">Superannuation</div><div class="row-sub">Your super fund balance &amp; option</div></div><span class="row-val">🌿</span></div>
+      <div class="row-item"><div><div class="row-main">Real Estate</div><div class="row-sub">Residential and investment property</div></div><span class="row-val">🏠</span></div>
+      <div class="row-item"><div><div class="row-main">Public Holdings</div><div class="row-sub">ASX &amp; global shares, ETFs</div></div><span class="row-val">📈</span></div>
+      <div class="row-item"><div><div class="row-main">Crypto Holdings</div><div class="row-sub">Wallets and exchanges</div></div><span class="row-val">🪙</span></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Connect Accounts <span class="chip chip-accent">via Basiq</span></div>
+      <div class="field"><input type="search" placeholder="Search 100+ Australian institutions…"></div>
+      <div class="inst-grid">
+        <div class="inst"><span class="inst-logo" style="background:#FFCC00; color:#000;">CBA</span><span class="inst-name">CommBank</span></div>
+        <div class="inst"><span class="inst-logo" style="background:#DA1710;">W</span><span class="inst-name">Westpac</span></div>
+        <div class="inst"><span class="inst-logo" style="background:#C20000;">NAB</span><span class="inst-name">NAB</span></div>
+        <div class="inst"><span class="inst-logo" style="background:#007DBA;">ANZ</span><span class="inst-name">ANZ</span></div>
+        <div class="inst"><span class="inst-logo" style="background:#1D252C;">MQ</span><span class="inst-name">Macquarie</span></div>
+        <div class="inst"><span class="inst-logo" style="background:#FF6200;">ING</span><span class="inst-name">ING</span></div>
+        <div class="inst"><span class="inst-logo" style="background:#FF7A64;">Up</span><span class="inst-name">Up</span></div>
+        <div class="inst"><span class="inst-logo" style="background:#0EBB5F;">UB</span><span class="inst-name">UBank</span></div>
+        <div class="inst"><span class="inst-logo" style="background:#A8003D;">BEN</span><span class="inst-name">Bendigo</span></div>
+      </div>
+      <p style="font-size:0.72rem; color:var(--fg-faint); margin:0.9rem 0 0; line-height:1.6;">
+        🔒 Your data is secure. Connections are made through Basiq under Australia's Consumer Data Right (open banking).
+        Mizan is read-only — it cannot move money or make changes to your accounts. Revoke access anytime.
+        We never store banking credentials and your data is never sold.
+      </p>
+    </div>
+  </div>
+</div>

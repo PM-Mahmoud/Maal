@@ -1,0 +1,126 @@
+<div class="page-head">
+  <div>
+    <h1>Settings</h1>
+    <div class="sub">Account, notifications and subscription.</div>
+  </div>
+</div>
+
+<div class="widget-grid">
+  <div class="col-6">
+
+    <div class="panel" style="margin-bottom:1rem;">
+      <div class="panel-title">Email notifications</div>
+      <div class="row-item">
+        <div><div class="row-main">Portfolio summary <span class="chip chip-muted">Daily</span></div><div class="row-sub">Net worth, portfolio value, cash, debts and recent transactions.</div></div>
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="row-item">
+        <div><div class="row-main">Market alerts <span class="chip chip-muted">Daily</span></div><div class="row-sub">When ASX or global price moves affect your net worth by 0.5%+.</div></div>
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="row-item">
+        <div><div class="row-main">Research reports <span class="chip chip-muted">On completion</span></div><div class="row-sub">An email when your deep research reports are ready.</div></div>
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="row-item">
+        <div><div class="row-main">Spending alerts <span class="chip chip-muted">Every Monday</span></div><div class="row-sub">Unusual spending spikes detected across connected accounts.</div></div>
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="row-item">
+        <div><div class="row-main">Score changes <span class="chip chip-accent">Mizan</span></div><div class="row-sub">When your credit, debt or financial wellbeing score moves.</div></div>
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="row-item">
+        <div><div class="row-main">Product updates <span class="chip chip-muted">Marketing</span></div><div class="row-sub">New features and improvements to Mizan.</div></div>
+        <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:1rem;">
+      <div class="panel-title">Account info</div>
+      <div class="field-row">
+        <div class="field"><label>Name</label><input type="text" value="<%= session.name || '' %>"></div>
+        <div class="field"><label>Phone</label><input type="tel" placeholder="+61 4xx xxx xxx"></div>
+      </div>
+      <div class="field"><label>Email</label><input type="email" value="<%= session.email %>" disabled style="opacity:0.6;"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Security</div>
+      <div class="row-item">
+        <div><div class="row-main">Two-factor authentication <span class="chip chip-accent">Recommended</span></div><div class="row-sub">Extra layer of security with SMS or an authenticator app.</div></div>
+        <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="col-6">
+
+    <div class="panel" style="margin-bottom:1rem;">
+      <div class="panel-title">Subscription</div>
+      <div class="plans">
+        <div class="panel plan">
+          <div class="plan-name">Free</div>
+          <div class="plan-price">$0 <span class="per">/mo</span></div>
+          <div class="plan-blurb">Get your bearings.</div>
+          <ul>
+            <li>Financial Wellbeing Score</li>
+            <li>Manual assets &amp; liabilities</li>
+            <li>Limited Ask Mizan chat</li>
+            <li>1 connected account</li>
+          </ul>
+          <button class="btn btn-ghost btn-sm" style="justify-content:center;">Current plan</button>
+        </div>
+        <div class="panel plan featured">
+          <div class="plan-name">Pro <span class="chip chip-accent">Popular</span></div>
+          <div class="plan-price">$20 <span class="per">/mo</span></div>
+          <div class="plan-blurb">The full advisor experience.</div>
+          <ul>
+            <li>Unlimited Ask Mizan chat</li>
+            <li>All three scores + history</li>
+            <li>Bank connections via Basiq</li>
+            <li>Radar alerts (email &amp; SMS)</li>
+            <li>Statement reading via Vault</li>
+          </ul>
+          <button class="btn btn-accent btn-sm" style="justify-content:center;">Upgrade to Pro</button>
+        </div>
+        <div class="panel plan">
+          <div class="plan-name">Max</div>
+          <div class="plan-price">$200 <span class="per">/mo</span></div>
+          <div class="plan-blurb">For complex finances.</div>
+          <ul>
+            <li>Everything in Pro</li>
+            <li>Unlimited deep research</li>
+            <li>Unlimited radars &amp; accounts</li>
+            <li>Priority processing</li>
+            <li>Early access to new features</li>
+          </ul>
+          <button class="btn btn-ghost btn-sm" style="justify-content:center;">Upgrade to Max</button>
+        </div>
+      </div>
+      <p style="font-size:0.74rem; color:var(--fg-faint); margin:0.9rem 0 0; line-height:1.6;">
+        Your subscription funds Mizan — the advisor behind chat, radar, deep research, and its core job:
+        reading your financial statements, bank accounts and transactions so you can understand your financial
+        situation. Usage refreshes on the 1st of each month. Bank connections pause after 30 days of inactivity.
+      </p>
+    </div>
+
+    <div class="panel" style="margin-bottom:1rem;">
+      <div class="panel-title">Invite friends</div>
+      <p style="font-size:0.82rem; color:var(--fg-muted); margin:0 0 0.7rem;">Share Mizan and track your referrals.</p>
+      <div class="field"><input type="text" value="https://mizan.au/?ref=<%= (session.name || 'you').replace(/\s+/g, '').toLowerCase() %>" readonly></div>
+      <div class="grid-2">
+        <div class="panel" style="text-align:center; padding:0.9rem;"><div style="font-size:1.3rem; font-weight:800;">0</div><div class="row-sub">Total signups</div></div>
+        <div class="panel" style="text-align:center; padding:0.9rem;"><div style="font-size:1.3rem; font-weight:800;">0</div><div class="row-sub">Connected accounts</div></div>
+      </div>
+    </div>
+
+    <div class="panel" style="border-color:rgba(214,84,74,0.35);">
+      <div class="panel-title" style="color:var(--danger);">Delete account</div>
+      <p style="font-size:0.8rem; color:var(--fg-muted); margin:0 0 0.9rem;">Permanently delete your account and all associated data. This action cannot be undone.</p>
+      <button class="btn btn-danger-soft btn-sm">Delete account</button>
+    </div>
+
+  </div>
+</div>

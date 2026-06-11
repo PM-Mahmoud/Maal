@@ -1,0 +1,58 @@
+<div class="page-head">
+  <div>
+    <h1>Transactions</h1>
+    <div class="sub">Connect your bank and Mizan reads your transactions and subscriptions in near real-time.</div>
+  </div>
+</div>
+
+<div class="assistant-card" style="margin-bottom:1.2rem;">
+  <div class="avatar">M</div>
+  <div>
+    <div style="font-weight:600; font-size:0.95rem;">How transactions work</div>
+    <p style="font-size:0.85rem; color:var(--fg-muted); margin:0.4rem 0 0; line-height:1.6;">
+      Connect your bank through Basiq — Australia's Consumer Data Right (open banking) platform — and your
+      transactions flow in automatically. Takes a few minutes. Prefer manual? Upload statements below.
+    </p>
+  </div>
+</div>
+
+<div class="widget-grid">
+  <div class="panel col-7">
+    <div class="panel-title">Connect an account <span class="chip chip-accent">Powered by Basiq</span></div>
+    <div class="field"><input type="search" placeholder="Search 100+ Australian institutions…"></div>
+    <div class="inst-grid">
+      <div class="inst"><span class="inst-logo" style="background:#FFCC00; color:#000;">CBA</span><span class="inst-name">CommBank</span></div>
+      <div class="inst"><span class="inst-logo" style="background:#DA1710;">W</span><span class="inst-name">Westpac</span></div>
+      <div class="inst"><span class="inst-logo" style="background:#C20000;">NAB</span><span class="inst-name">NAB</span></div>
+      <div class="inst"><span class="inst-logo" style="background:#007DBA;">ANZ</span><span class="inst-name">ANZ</span></div>
+      <div class="inst"><span class="inst-logo" style="background:#1D252C;">MQ</span><span class="inst-name">Macquarie</span></div>
+      <div class="inst"><span class="inst-logo" style="background:#FF6200;">ING</span><span class="inst-name">ING</span></div>
+      <div class="inst"><span class="inst-logo" style="background:#FF7A64;">Up</span><span class="inst-name">Up</span></div>
+      <div class="inst"><span class="inst-logo" style="background:#0EBB5F;">UB</span><span class="inst-name">UBank</span></div>
+      <div class="inst"><span class="inst-logo" style="background:#FFC72C; color:#000;">SUN</span><span class="inst-name">Suncorp</span></div>
+    </div>
+    <div style="text-align:center; margin:0.9rem 0;">
+      <span style="font-size:0.78rem; color:var(--fg-faint);">or</span>
+    </div>
+    <button class="btn btn-ghost" style="width:100%; justify-content:center;">Add a manual account or credit card</button>
+    <p style="font-size:0.72rem; color:var(--fg-faint); margin:1rem 0 0; line-height:1.6;">
+      🔒 Your data is secure. Mizan connects read-only via Basiq under the Consumer Data Right. It cannot make
+      transactions on your behalf or change your banking. Revoke access anytime — credentials are never stored,
+      and your data is never sold.
+    </p>
+  </div>
+
+  <div class="panel col-5">
+    <div class="panel-title">Import manually</div>
+    <div class="dropzone" style="padding:2.2rem 1rem;">
+      <div style="font-size:1.4rem; margin-bottom:0.4rem;">⇪</div>
+      <strong>Upload CSV or PDF</strong>
+      <p style="margin:0.4rem 0 0; font-size:0.76rem;">Drag a bank statement here</p>
+    </div>
+    <div style="margin-top:1rem; font-size:0.78rem; color:var(--fg-muted); line-height:1.8;">
+      <strong style="color:var(--fg);">Supported formats</strong><br>
+      CSV — Date, Description, Amount<br>
+      PDF — bank statements (auto-parsed)
+    </div>
+  </div>
+</div>

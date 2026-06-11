@@ -24,8 +24,8 @@ function requireAuth(req, res, next) {
 
 router.use(requireAuth);
 
-// Set dashboard-layout as the EJS layout for all dashboard pages
-router.use(function(req, res, next) { res.locals.layout = 'dashboard-layout'; next(); });
+// Set app-layout as the EJS layout for all dashboard pages
+router.use(function(req, res, next) { res.locals.layout = 'app-layout'; next(); });
 
 // ─── Shared context helper ─────────────────────────────────────────────────
 
@@ -55,6 +55,92 @@ router.get('/', async (req, res) => {
   } catch (err) {
     console.error('Dashboard error:', err.message);
     res.status(500).render('error', { message: 'Failed to load dashboard.' });
+  }
+});
+
+// ─── Pages: advisor suite (Ask Mizan, Research, Radar) ───────────────────────
+
+router.get('/ask', async (req, res) => {
+  try {
+    const ctx = await dashboardContext(req);
+    res.render('dashboard-ask', { ...ctx, pageTitle: 'Ask Mizan' });
+  } catch (err) {
+    console.error('/ask error:', err.message);
+    res.status(500).render('error', { message: 'Failed to load Ask Mizan.' });
+  }
+});
+
+router.get('/research', async (req, res) => {
+  try {
+    const ctx = await dashboardContext(req);
+    res.render('dashboard-research', { ...ctx, pageTitle: 'Research' });
+  } catch (err) {
+    console.error('/research error:', err.message);
+    res.status(500).render('error', { message: 'Failed to load Research.' });
+  }
+});
+
+router.get('/radar', async (req, res) => {
+  try {
+    const ctx = await dashboardContext(req);
+    res.render('dashboard-radar', { ...ctx, pageTitle: 'Radar' });
+  } catch (err) {
+    console.error('/radar error:', err.message);
+    res.status(500).render('error', { message: 'Failed to load Radar.' });
+  }
+});
+
+// ─── Pages: portfolio suite (Assets, Vault, Transactions, Goals) ─────────────
+
+router.get('/assets', async (req, res) => {
+  try {
+    const ctx = await dashboardContext(req);
+    res.render('dashboard-assets', { ...ctx, pageTitle: 'Assets & Liabilities' });
+  } catch (err) {
+    console.error('/assets error:', err.message);
+    res.status(500).render('error', { message: 'Failed to load Assets & Liabilities.' });
+  }
+});
+
+router.get('/vault', async (req, res) => {
+  try {
+    const ctx = await dashboardContext(req);
+    res.render('dashboard-vault', { ...ctx, pageTitle: 'Vault' });
+  } catch (err) {
+    console.error('/vault error:', err.message);
+    res.status(500).render('error', { message: 'Failed to load Vault.' });
+  }
+});
+
+router.get('/transactions', async (req, res) => {
+  try {
+    const ctx = await dashboardContext(req);
+    res.render('dashboard-transactions', { ...ctx, pageTitle: 'Transactions' });
+  } catch (err) {
+    console.error('/transactions error:', err.message);
+    res.status(500).render('error', { message: 'Failed to load Transactions.' });
+  }
+});
+
+router.get('/goals', async (req, res) => {
+  try {
+    const ctx = await dashboardContext(req);
+    res.render('dashboard-goals', { ...ctx, pageTitle: 'Goals' });
+  } catch (err) {
+    console.error('/goals error:', err.message);
+    res.status(500).render('error', { message: 'Failed to load Goals.' });
+  }
+});
+
+// ─── Page: /dashboard/settings ───────────────────────────────────────────────
+
+router.get('/settings', async (req, res) => {
+  try {
+    const ctx = await dashboardContext(req);
+    res.render('dashboard-settings', { ...ctx, pageTitle: 'Settings' });
+  } catch (err) {
+    console.error('/settings error:', err.message);
+    res.status(500).render('error', { message: 'Failed to load Settings.' });
   }
 });
 

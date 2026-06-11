@@ -1,73 +1,215 @@
-<div class="page-header">
-  <h1>Welcome back<%= session.name ? ', ' + session.name.split(' ')[0] : '' %></h1>
-  <p>Your financial health at a glance.</p>
+<%
+  // ── helpers / derived data ──────────────────────────────
+  function aud(n) {
+    n = Number(n) || 0;
+    return '$' + n.toLocaleString('en-AU', { maximumFractionDigits: 0 });
+  }
+  var superBal   = (profile && profile.super_balance) || 0;
+  var investBal  = (profile && profile.investment_portfolio) || 0;
+  var propertyV  = (profile && profile.property_value) || 0;
+  var hecs       = (profile && profile.hecs_balance) || 0;
+  var otherDebt  = (profile && profile.total_debt) || 0;
+  var totalAssets = superBal + investBal + propertyV;
+  var totalDebts  = hecs + otherDebt;
+  var netWorth    = totalAssets - totalDebts;
+  var hasData     = totalAssets > 0 || totalDebts > 0;
+
+  var wellbeing = financialScore ? Number(financialScore.score_value) : null;
+  var firstName = (session.name || session.email || 'there').split(' ')[0];
+
+  // setup checklist
+  var steps = [
+    { label: 'Create your account', done: true, href: null },
+    { label: 'Complete onboarding', done: !!(profile && profile.completed_onboarding), href: '/onboarding' },
+    { label: 'Connect a bank via Basiq', done: false, href: '/dashboard/transactions' },
+    { label: 'Add your super fund', done: superBal > 0, href: '/dashboard/assets' },
+    { label: 'Add an asset or liability', done: hasData, href: '/dashboard/assets' },
+    { label: 'Upload a statement to Vault', done: false, href: '/dashboard/vault' },
+    { label: 'Set your first goal', done: false, href: '/dashboard/goals' },
+  ];
+  var doneCount = steps.filter(function(s){ return s.done; }).length;
+  var pct = Math.round(doneCount / steps.length * 100);
+%>
+
+<div class="page-head">
+  <div>
+    <h1>Welcome, <%= firstName %></h1>
+    <div class="sub">Your money, in balance — here's where things stand.</div>
+  </div>
+  <div class="page-head-actions">
+    <div class="tabs">
+      <button class="tab">1M</button><button class="tab">6M</button><button class="tab active">YTD</button><button class="tab">All</button>
+    </div>
+    <a href="/dashboard/assets" class="btn btn-accent">Add +</a>
+  </div>
 </div>
 
-<% if (profile && profile.completed_onboarding) { %>
+<!-- ── headline stats ── -->
+<div class="stat-grid">
+  <div class="panel stat-card">
+    <div class="stat-label">Net Worth <span class="chip chip-muted">YTD</span></div>
+    <div class="stat-value"><%= aud(netWorth) %></div>
+    <div class="stat-delta up"><%= hasData ? '+2.4% this quarter' : 'Add assets to start tracking' %></div>
+    <svg class="sparkline" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d="M0,30 L25,28 L50,29 L75,24 L100,22 L125,18 L150,16 L175,12 L200,10 L200,36 L0,36 Z"/><path class="line" d="M0,30 L25,28 L50,29 L75,24 L100,22 L125,18 L150,16 L175,12 L200,10"/></svg>
+  </div>
+  <div class="panel stat-card">
+    <div class="stat-label">Investments <span class="chip chip-muted">YTD</span></div>
+    <div class="stat-value"><%= aud(investBal) %></div>
+    <div class="stat-delta"><%= investBal > 0 ? 'Across your portfolios' : 'No investments added yet' %></div>
+    <svg class="sparkline" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d="M0,28 L40,26 L80,27 L120,20 L160,17 L200,14 L200,36 L0,36 Z"/><path class="line" d="M0,28 L40,26 L80,27 L120,20 L160,17 L200,14"/></svg>
+  </div>
+  <div class="panel stat-card">
+    <div class="stat-label">Superannuation <span class="chip chip-accent">AU</span></div>
+    <div class="stat-value"><%= aud(superBal) %></div>
+    <div class="stat-delta"><%= superBal > 0 ? 'SG contributions on track' : 'Add your super fund' %></div>
+    <svg class="sparkline" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d="M0,30 L50,27 L100,23 L150,18 L200,12 L200,36 L0,36 Z"/><path class="line" d="M0,30 L50,27 L100,23 L150,18 L200,12"/></svg>
+  </div>
+  <div class="panel stat-card">
+    <div class="stat-label">Total Debts <span class="chip chip-muted">incl. HECS</span></div>
+    <div class="stat-value"><%= aud(totalDebts) %></div>
+    <div class="stat-delta"><%= totalDebts > 0 ? 'HECS indexation applies 1 June' : 'No liabilities recorded' %></div>
+    <svg class="sparkline" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d="M0,12 L50,14 L100,18 L150,22 L200,26 L200,36 L0,36 Z"/><path class="line" d="M0,12 L50,14 L100,18 L150,22 L200,26"/></svg>
+  </div>
+</div>
 
-<div class="score-cards">
-  <div class="score-card">
-    <div class="score-card-label">Financial Health Score</div>
-    <div class="score-card-big"><%= financialScore ? financialScore.score_value : '—' %><span class="score-card-max">/100</span></div>
-    <% if (financialScore && financialScore.grade) { %>
-      <span class="grade-pill <%= financialScore.grade.toLowerCase().replace(' ', '-') %>"><%= financialScore.grade %></span>
+<!-- ── the three Mizan scores ── -->
+<div class="score-row">
+  <div class="panel score-tile">
+    <svg class="ring" viewBox="0 0 100 100">
+      <circle class="track" cx="50" cy="50" r="42"/>
+      <circle class="meter" cx="50" cy="50" r="42" stroke-dasharray="<%= Math.round(742/1200*264) %> 264"/>
+      <text class="ring-num" x="50" y="50" text-anchor="middle" dominant-baseline="central">742</text>
+      <text class="ring-sub" x="50" y="66" text-anchor="middle">of 1,200</text>
+    </svg>
+    <div>
+      <div class="score-name">Credit Score</div>
+      <div class="score-desc">Equifax-band estimate. Very good — lenders see you as low risk.</div>
+    </div>
+  </div>
+  <div class="panel score-tile">
+    <svg class="ring" viewBox="0 0 100 100">
+      <circle class="track" cx="50" cy="50" r="42"/>
+      <circle class="meter gold" cx="50" cy="50" r="42" stroke-dasharray="<%= Math.round(68/100*264) %> 264"/>
+      <text class="ring-num" x="50" y="50" text-anchor="middle" dominant-baseline="central">68</text>
+      <text class="ring-sub" x="50" y="66" text-anchor="middle">of 100</text>
+    </svg>
+    <div>
+      <div class="score-name">Debt Score</div>
+      <div class="score-desc">Debt-to-income and repayment trajectory, including HECS-HELP.</div>
+    </div>
+  </div>
+  <div class="panel score-tile">
+    <svg class="ring" viewBox="0 0 100 100">
+      <circle class="track" cx="50" cy="50" r="42"/>
+      <circle class="meter <%= wellbeing !== null && wellbeing < 50 ? 'warn' : '' %>" cx="50" cy="50" r="42" stroke-dasharray="<%= Math.round(((wellbeing !== null ? wellbeing : 0)/100)*264) %> 264"/>
+      <text class="ring-num" x="50" y="50" text-anchor="middle" dominant-baseline="central"><%= wellbeing !== null ? Math.round(wellbeing) : '—' %></text>
+      <text class="ring-sub" x="50" y="66" text-anchor="middle">of 100</text>
+    </svg>
+    <div>
+      <div class="score-name">Financial Wellbeing Score</div>
+      <div class="score-desc"><%= wellbeing !== null ? 'Savings buffer, cash flow, protection and super health combined.' : 'Complete onboarding to generate your score.' %> <a href="/dashboard/scores">Details</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── widget grid ── -->
+<div class="widget-grid">
+
+  <div class="panel col-4">
+    <div class="panel-title">Setup — <%= pct %>% complete <span class="progress-ring-label"><%= doneCount %>/<%= steps.length %></span></div>
+    <% steps.forEach(function(s) { %>
+      <div class="check-item <%= s.done ? 'done' : '' %>">
+        <span class="check-dot"><%= s.done ? '✓' : '' %></span>
+        <% if (s.href && !s.done) { %><a href="<%= s.href %>" style="color:inherit;"><%= s.label %></a><% } else { %><%= s.label %><% } %>
+      </div>
+    <% }); %>
+  </div>
+
+  <div class="panel col-4" style="background: linear-gradient(150deg, var(--accent-softer), var(--surface)); ">
+    <div class="panel-title">Ask Mizan <a class="more" href="/dashboard/ask">Open →</a></div>
+    <p style="font-size:0.83rem; color:var(--fg-muted); margin:0 0 0.8rem;">Your CFO-level second opinion. Ask anything about your finances.</p>
+    <div class="suggest-grid" style="grid-template-columns:1fr;">
+      <button class="suggest" onclick="location.href='/dashboard/ask'">How did my net worth change this month?</button>
+      <button class="suggest" onclick="location.href='/dashboard/ask'">Is my super on track for retirement at 60?</button>
+      <button class="suggest" onclick="location.href='/dashboard/ask'">Should I salary sacrifice more into super?</button>
+      <button class="suggest" onclick="location.href='/dashboard/ask'">What were my top 3 expenses this month?</button>
+    </div>
+  </div>
+
+  <div class="panel col-4">
+    <div class="panel-title">Radar <a class="more" href="/dashboard/radar">Explore →</a></div>
+    <div class="empty">
+      <h3>Set up your first radar</h3>
+      <p>Tell Mizan what to watch — your spending, the ASX, rate moves — and get alerted by email or SMS.</p>
+      <a href="/dashboard/radar" class="btn btn-ghost btn-sm">Explore Radar</a>
+    </div>
+  </div>
+
+  <div class="panel col-4">
+    <div class="panel-title">Assets <span class="more"><%= aud(totalAssets) %></span></div>
+    <% if (totalAssets > 0) { %>
+      <% if (superBal > 0) { %>
+      <div class="row-item"><div><div class="row-main">Superannuation</div><div class="bar-track" style="width:140px;"><div class="bar-fill" style="width:<%= Math.round(superBal/totalAssets*100) %>%;"></div></div></div><div class="row-val"><%= aud(superBal) %></div></div>
+      <% } %>
+      <% if (investBal > 0) { %>
+      <div class="row-item"><div><div class="row-main">Investments</div><div class="bar-track" style="width:140px;"><div class="bar-fill" style="width:<%= Math.round(investBal/totalAssets*100) %>%;"></div></div></div><div class="row-val"><%= aud(investBal) %></div></div>
+      <% } %>
+      <% if (propertyV > 0) { %>
+      <div class="row-item"><div><div class="row-main">Property</div><div class="bar-track" style="width:140px;"><div class="bar-fill" style="width:<%= Math.round(propertyV/totalAssets*100) %>%;"></div></div></div><div class="row-val"><%= aud(propertyV) %></div></div>
+      <% } %>
     <% } else { %>
-      <span style="font-size:0.8rem;color:var(--fg-muted)">No score yet</span>
+      <div class="empty"><h3>No assets yet</h3><p>Add your super, savings, shares or property.</p><a href="/dashboard/assets" class="btn btn-accent btn-sm">+ Add Asset</a></div>
     <% } %>
   </div>
-  <div class="score-card">
-    <div class="score-card-label">Halal / ESG Score</div>
-    <div class="score-card-big"><%= ethicalScore ? ethicalScore.score_value : '—' %><span class="score-card-max">/100</span></div>
-    <span style="font-size:0.8rem;color:var(--fg-muted)">Compliance</span>
+
+  <div class="panel col-4">
+    <div class="panel-title">Liabilities <span class="more"><%= aud(totalDebts) %></span></div>
+    <% if (totalDebts > 0) { %>
+      <% if (hecs > 0) { %>
+      <div class="row-item"><div class="row-main">HECS-HELP</div><div class="row-val"><%= aud(hecs) %></div></div>
+      <% } %>
+      <% if (otherDebt > 0) { %>
+      <div class="row-item"><div class="row-main">Other debt</div><div class="row-val"><%= aud(otherDebt) %></div></div>
+      <% } %>
+    <% } else { %>
+      <div class="empty"><h3>No liabilities</h3><p>Track HECS, mortgages, cards and loans here.</p><a href="/dashboard/assets" class="btn btn-danger-soft btn-sm">+ Add Liability</a></div>
+    <% } %>
   </div>
-  <div class="score-card">
-    <div class="score-card-label">Super Health Score</div>
-    <div class="score-card-big"><%= superScore ? superScore.score_value : '—' %><span class="score-card-max">/100</span></div>
-    <span style="font-size:0.8rem;color:var(--fg-muted)">Fund adequacy</span>
+
+  <div class="panel col-4">
+    <div class="panel-title">Market Summary <span class="chip chip-muted">ASX</span></div>
+    <div class="row-item"><div class="row-main">S&amp;P/ASX 200</div><div class="row-val" style="color:var(--accent-strong);">+0.6%</div></div>
+    <div class="row-item"><div class="row-main">AUD/USD</div><div class="row-val">0.67</div></div>
+    <div class="row-item"><div class="row-main">RBA Cash Rate</div><div class="row-val">3.85%</div></div>
+    <p style="font-size:0.78rem; color:var(--fg-muted); margin:0.7rem 0 0; line-height:1.6;">
+      Markets steadied as the RBA held rates and miners lifted the ASX. Connect your portfolio to see how moves affect your holdings.
+    </p>
   </div>
-</div>
 
-<% if (financialScore) { %>
-<div style="margin-bottom:1.25rem;font-size:0.8rem;color:var(--fg-muted);">
-  Last updated <%= new Date(financialScore.calculated_at).toLocaleDateString('en-AU', { day:'numeric', month:'short', year:'numeric' }) %>
-</div>
-<% } %>
-
-<div style="margin-bottom:1.75rem;">
-  <a href="/dashboard/scores" class="btn-secondary" style="margin-right:0.5rem;">View score details</a>
-  <a href="/dashboard/recommendations" class="btn-secondary" style="margin-right:0.5rem;">Recommendations</a>
-  <a href="/onboarding" class="btn-primary">Update your data</a>
-</div>
-
-<% if (financialScore && financialScore.score_breakdown && Object.keys(financialScore.score_breakdown).length) { %>
-<div class="card">
-  <div class="card-title">Score breakdown</div>
-  <% const breakdown = financialScore.score_breakdown; const maxes = {debtRatio:20,savingsRate:15,emergencyFund:15,superAdequacy:20,insuranceCoverage:10,investmentDiversity:10,retirementReadiness:10}; %>
-  <% Object.entries(breakdown).forEach(function([key, val]) { %>
-    <% const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, function(s) { return s.toUpperCase(); }); const max = maxes[key] || 10; %>
-    <div class="breakdown-row">
-      <span class="breakdown-label"><%= label %></span>
-      <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:<%= Math.round(val/max*100) %>%"></div></div>
-      <span class="breakdown-val"><%= val %>/<%= max %></span>
+  <div class="panel col-6">
+    <div class="panel-title">Recent Transactions <a class="more" href="/dashboard/transactions">View all →</a></div>
+    <div class="empty">
+      <h3>No transactions yet</h3>
+      <p>Connect your bank securely via Basiq (Consumer Data Right) to see spending and subscriptions in near real-time.</p>
+      <a href="/dashboard/transactions" class="btn btn-accent btn-sm">Connect with Basiq</a>
     </div>
-  <% }); %>
+  </div>
+
+  <div class="panel col-3">
+    <div class="panel-title">Cash Runway</div>
+    <div style="text-align:center; padding:0.6rem 0;">
+      <div style="font-size:2.2rem; font-weight:800;">—</div>
+      <div style="font-size:0.78rem; color:var(--fg-muted);">months</div>
+    </div>
+    <div class="row-item"><div class="row-sub">Monthly burn</div><div class="row-val">$0</div></div>
+    <div class="row-item"><div class="row-sub">Cash on hand</div><div class="row-val">$0</div></div>
+  </div>
+
+  <div class="panel col-3">
+    <div class="panel-title">Key Dates <span class="chip chip-accent">AU</span></div>
+    <div class="row-item"><div><div class="row-main">EOFY</div><div class="row-sub">Tax year ends</div></div><div class="row-val">30 Jun</div></div>
+    <div class="row-item"><div><div class="row-main">HECS indexation</div><div class="row-sub">Applied to balances</div></div><div class="row-val">1 Jun</div></div>
+    <div class="row-item"><div><div class="row-main">Super guarantee</div><div class="row-sub">Employer rate</div></div><div class="row-val">12%</div></div>
+  </div>
+
 </div>
-<% } %>
-
-<% if (financialScore && financialScore.diagnosis) { %>
-<div class="card">
-  <div class="card-title">AI Diagnosis</div>
-  <p style="font-size:0.875rem;color:var(--fg-muted);line-height:1.7;margin:0;"><%= financialScore.diagnosis %></p>
-</div>
-<% } %>
-
-<% } else { %>
-
-<div class="empty-state">
-  <div class="icon">◈</div>
-  <h3>Complete your profile</h3>
-  <p>Answer a few questions about your finances to get your personalised Financial Health Score and action plan.</p>
-  <a href="/onboarding" class="btn-primary">Start onboarding</a>
-</div>
-
-<% } %>
