@@ -51,7 +51,7 @@ const cases = {
   'dashboard-settings': { ...base, billingStatus: 'success', billingPlanName: 'Mizan Pro ($20/mo)' },
   'dashboard-scores': { ...base, financialScore: score, superScore: score, ethicalScore: score, fhsHistory: [score], shsHistory: [], ehsHistory: [] },
   'dashboard-recommendations': { ...base, recommendations: [], filter: 'all' },
-  'dashboard-accounts': { ...base, accounts: [] },
+  'dashboard-accounts': { ...base, accounts: [], basiqEnabled: true },
   'dashboard-profile': { ...base, accounts: [], success: null, error: null },
   'dashboard-history': { ...base, scores: [score], recommendations: [] },
   'auth-login': { error: null, email: '' },

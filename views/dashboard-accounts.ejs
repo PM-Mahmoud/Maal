@@ -3,6 +3,7 @@
   <p>Connect your financial institutions for a complete picture of your finances.</p>
 </div>
 
+<% var bqLive = typeof basiqEnabled !== 'undefined' && basiqEnabled; %>
 <!-- Connect Your Accounts -->
 <div class="accounts-connect-section">
   <div class="connect-section-left">
@@ -12,12 +13,17 @@
       <p>Securely connect your bank accounts, super funds, and investment accounts via open banking. No re-entry of statements needed.</p>
     </div>
   </div>
-  <button id="basiq-connect-btn" class="btn-primary">Connect account</button>
+  <button id="basiq-connect-btn" class="btn-primary" data-basiq-live="<%= bqLive ? '1' : '' %>">Connect account</button>
 </div>
 
 <div class="accounts-subheading">
   <h3>Or add accounts manually</h3>
-  <button id="add-account-btn" class="btn-secondary">+ Add manually</button>
+  <div style="display:flex; gap:0.5rem;">
+    <% if (bqLive && user && user.basiq_user_id) { %>
+    <a href="/basiq/sync" class="btn-secondary">↻ Sync from Basiq</a>
+    <% } %>
+    <button id="add-account-btn" class="btn-secondary">+ Add manually</button>
+  </div>
 </div>
 
 <!-- Connected Accounts List -->
@@ -515,7 +521,12 @@ function closeBasiqModal() {
   showStep('search');
 }
 
+// Live mode (BASIQ_API_KEY configured): go straight to the real hosted
+// consent flow. The mock wizard below only runs when Basiq isn't set up.
+var BASIQ_LIVE = document.getElementById('basiq-connect-btn').dataset.basiqLive === '1';
+
 document.getElementById('basiq-connect-btn').addEventListener('click', () => {
+  if (BASIQ_LIVE) { location.href = '/basiq/connect'; return; }
   document.getElementById('basiq-modal').style.display = 'flex';
   showStep('search');
   document.getElementById('basiq-search-input').value = '';
@@ -603,7 +614,8 @@ document.querySelectorAll('.sync-account').forEach(btn => {
 // ─── Reconnect account ────────────────────────────────────────────────────────
 document.querySelectorAll('.reconnect-account').forEach(btn => {
   btn.addEventListener('click', () => {
-    // Open Basiq modal to "reconnect" — same flow as new connect
+    if (BASIQ_LIVE) { location.href = '/basiq/connect'; return; }
+    // Open mock modal to "reconnect" — same flow as new connect
     document.getElementById('basiq-modal').style.display = 'flex';
     showStep('search');
   });

@@ -82,6 +82,15 @@ app.get('/settings', (_req, res, next) => {
     ...base, pageTitle: 'Settings', billingStatus: null, billingPlanName: '',
   }).then(html => res.send(html)).catch(next);
 });
+app.get('/accounts', (_req, res, next) => {
+  renderInLayout('dashboard-accounts', {
+    ...base, pageTitle: 'Linked Accounts', basiqEnabled: true,
+    accounts: [
+      { id: 1, institution_name: 'Hooli Bank', institution_type: 'bank', account_reference: 'basiq:abc1', balance: 4250, connection_status: 'active', last_synced_at: new Date() },
+      { id: 2, institution_name: 'AustralianSuper', institution_type: 'super_fund', account_reference: '8821', balance: 38000, connection_status: 'connected', last_synced_at: null },
+    ],
+  }).then(html => res.send(html)).catch(next);
+});
 app.get('/transactions', (_req, res, next) => {
   renderInLayout('dashboard-transactions', {
     ...base, pageTitle: 'Transactions', basiqEnabled: true, basiqStatus: null,

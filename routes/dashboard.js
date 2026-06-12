@@ -388,6 +388,7 @@ router.get('/accounts', async (req, res) => {
     const accounts = await getAccountsByUserId(req.session.userId);
     res.render('dashboard-accounts', {
       user, profile, session, accounts,
+      basiqEnabled: basiqService.hasBasiq(),
       pageTitle: 'Linked Accounts'
     });
   } catch (err) {
