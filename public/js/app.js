@@ -506,7 +506,10 @@
     if (del) del.addEventListener('click', function () {
       if (confirm('Are you sure you want to delete your account? This is irreversible.') &&
           confirm('Really delete? All your data will be permanently removed.')) {
-        fetch('/api/account/delete', { method: 'POST' }).then(function () { window.location.href = '/'; });
+        fetch('/api/account/delete', { method: 'POST' }).then(function (r) {
+          if (r.ok) { window.location.href = '/'; }
+          else { toast('Could not delete your account — please contact support.'); }
+        }).catch(function () { toast('Could not delete your account — are you online?'); });
       }
     });
   }

@@ -55,7 +55,7 @@ router.get('/', async (req, res) => {
     });
   } catch (err) {
     console.error('/dashboard/tools error:', err.message);
-    res.status(500).render('error', { message: 'Failed to load tools.' });
+    res.status(500).render('error', { layout: false, message: 'Failed to load tools.' });
   }
 });
 

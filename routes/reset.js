@@ -12,7 +12,7 @@ router.get('/reset-password', async (req, res) => {
   const { token } = req.query;
   if (!token) return res.redirect('/forgot-password');
   const user = await findUserByResetToken(token);
-  res.render('auth-reset-password', { layout: false, error: null, token: user ? token : '' });
+  res.render('auth-reset-password', { layout: false, error: null, success: null, token: user ? token : '' });
 });
 
 router.post('/reset-password',
@@ -23,6 +23,7 @@ router.post('/reset-password',
     if (!errors.isEmpty() || !token) {
       return res.render('auth-reset-password', { layout: false,
         error: 'Password must be at least 8 characters.',
+        success: null,
         token
       });
     }
@@ -31,6 +32,7 @@ router.post('/reset-password',
     if (!user) {
       return res.render('auth-reset-password', { layout: false,
         error: 'This link is invalid or expired.',
+        success: null,
         token: ''
       });
     }
@@ -40,7 +42,8 @@ router.post('/reset-password',
 
     res.render('auth-reset-password', { layout: false,
       error: null,
-      success: true
+      success: true,
+      token: ''
     });
   }
 );

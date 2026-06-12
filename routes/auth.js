@@ -298,6 +298,20 @@ router.post('/forgot-password',
   }
 );
 
+// ─── API: delete account (called from Settings) ───────────────────────────────
+
+router.post('/api/account/delete', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not signed in.' });
+  try {
+    const { deleteUser } = require('../db/users');
+    await deleteUser(req.session.userId);
+    req.session.destroy(() => res.json({ ok: true }));
+  } catch (err) {
+    console.error('Delete account error:', err.message);
+    res.status(500).json({ error: 'Failed to delete account.' });
+  }
+});
+
 // ─── API: logout ───────────────────────────────────────────────────────────────
 
 router.post('/logout', (req, res) => { req.session.destroy(() => res.redirect('/')); });

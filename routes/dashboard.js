@@ -84,7 +84,7 @@ router.get('/', async (req, res) => {
     });
   } catch (err) {
     console.error('Dashboard error:', err.message);
-    res.status(500).render('error', { message: 'Failed to load dashboard.' });
+    res.status(500).render('error', { layout: false, message: 'Failed to load dashboard.' });
   }
 });
 
@@ -118,7 +118,7 @@ router.get('/ask', async (req, res) => {
     res.render('dashboard-ask', { ...ctx, pageTitle: 'Ask Mizan' });
   } catch (err) {
     console.error('/ask error:', err.message);
-    res.status(500).render('error', { message: 'Failed to load Ask Mizan.' });
+    res.status(500).render('error', { layout: false, message: 'Failed to load Ask Mizan.' });
   }
 });
 
@@ -128,7 +128,7 @@ router.get('/research', async (req, res) => {
     res.render('dashboard-research', { ...ctx, pageTitle: 'Research' });
   } catch (err) {
     console.error('/research error:', err.message);
-    res.status(500).render('error', { message: 'Failed to load Research.' });
+    res.status(500).render('error', { layout: false, message: 'Failed to load Research.' });
   }
 });
 
@@ -138,7 +138,7 @@ router.get('/radar', async (req, res) => {
     res.render('dashboard-radar', { ...ctx, pageTitle: 'Radar' });
   } catch (err) {
     console.error('/radar error:', err.message);
-    res.status(500).render('error', { message: 'Failed to load Radar.' });
+    res.status(500).render('error', { layout: false, message: 'Failed to load Radar.' });
   }
 });
 
@@ -150,7 +150,7 @@ router.get('/assets', async (req, res) => {
     res.render('dashboard-assets', { ...ctx, pageTitle: 'Assets & Liabilities', basiqEnabled: basiqService.hasBasiq() });
   } catch (err) {
     console.error('/assets error:', err.message);
-    res.status(500).render('error', { message: 'Failed to load Assets & Liabilities.' });
+    res.status(500).render('error', { layout: false, message: 'Failed to load Assets & Liabilities.' });
   }
 });
 
@@ -160,7 +160,7 @@ router.get('/vault', async (req, res) => {
     res.render('dashboard-vault', { ...ctx, pageTitle: 'Vault' });
   } catch (err) {
     console.error('/vault error:', err.message);
-    res.status(500).render('error', { message: 'Failed to load Vault.' });
+    res.status(500).render('error', { layout: false, message: 'Failed to load Vault.' });
   }
 });
 
@@ -191,7 +191,7 @@ router.get('/transactions', async (req, res) => {
     });
   } catch (err) {
     console.error('/transactions error:', err.message);
-    res.status(500).render('error', { message: 'Failed to load Transactions.' });
+    res.status(500).render('error', { layout: false, message: 'Failed to load Transactions.' });
   }
 });
 
@@ -201,7 +201,7 @@ router.get('/goals', async (req, res) => {
     res.render('dashboard-goals', { ...ctx, pageTitle: 'Goals' });
   } catch (err) {
     console.error('/goals error:', err.message);
-    res.status(500).render('error', { message: 'Failed to load Goals.' });
+    res.status(500).render('error', { layout: false, message: 'Failed to load Goals.' });
   }
 });
 
@@ -240,7 +240,7 @@ router.get('/settings', async (req, res) => {
     });
   } catch (err) {
     console.error('/settings error:', err.message);
-    res.status(500).render('error', { message: 'Failed to load Settings.' });
+    res.status(500).render('error', { layout: false, message: 'Failed to load Settings.' });
   }
 });
 
@@ -267,7 +267,7 @@ router.get('/scores', async (req, res) => {
     });
   } catch (err) {
     console.error('/scores error:', err.message);
-    res.status(500).render('error', { message: 'Failed to load scores.' });
+    res.status(500).render('error', { layout: false, message: 'Failed to load scores.' });
   }
 });
 
@@ -346,7 +346,7 @@ router.get('/recommendations', async (req, res) => {
     });
   } catch (err) {
     console.error('/recommendations error:', err.message);
-    res.status(500).render('error', { message: 'Failed to load recommendations.' });
+    res.status(500).render('error', { layout: false, message: 'Failed to load recommendations.' });
   }
 });
 
@@ -375,7 +375,7 @@ router.get('/accounts', async (req, res) => {
     });
   } catch (err) {
     console.error('/accounts error:', err.message);
-    res.status(500).render('error', { message: 'Failed to load accounts.' });
+    res.status(500).render('error', { layout: false, message: 'Failed to load accounts.' });
   }
 });
 
@@ -432,7 +432,7 @@ router.get('/profile', async (req, res) => {
     });
   } catch (err) {
     console.error('/profile error:', err.message);
-    res.status(500).render('error', { message: 'Failed to load profile.' });
+    res.status(500).render('error', { layout: false, message: 'Failed to load profile.' });
   }
 });
 
@@ -445,8 +445,9 @@ router.post('/profile',
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         const ctx = await dashboardContext(req);
+        const accounts = await getAccountsByUserId(req.session.userId);
         return res.render('dashboard-profile', {
-          ...ctx, error: 'Name is required.', success: null
+          ...ctx, accounts, pageTitle: 'Profile', error: 'Name is required.', success: null
         });
       }
       const { updateName } = require('../db/users');
@@ -464,8 +465,9 @@ router.post('/profile',
     } catch (err) {
       console.error('Update profile error:', err.message);
       const ctx = await dashboardContext(req);
+      const accounts = await getAccountsByUserId(req.session.userId).catch(() => []);
       res.render('dashboard-profile', {
-        ...ctx, error: 'Failed to update profile.', success: null
+        ...ctx, accounts, pageTitle: 'Profile', error: 'Failed to update profile.', success: null
       });
     }
   }
@@ -484,7 +486,7 @@ router.get('/history', async (req, res) => {
     });
   } catch (err) {
     console.error('/history error:', err.message);
-    res.status(500).render('error', { message: 'Failed to load history.' });
+    res.status(500).render('error', { layout: false, message: 'Failed to load history.' });
   }
 });
 

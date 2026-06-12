@@ -28,7 +28,8 @@ async function findUserByEmail(email) {
 
 async function findUserById(id) {
   const result = await pool.query(
-    `SELECT id, email, name, provider, email_verified, created_at
+    `SELECT id, email, name, provider, email_verified, created_at,
+            plan, basiq_user_id, phone
      FROM users WHERE id = $1`,
     [id]
   );
