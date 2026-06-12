@@ -141,9 +141,11 @@
 
   /* ─── 3. Add asset / liability (persists to profile) ──── */
   var ASSET_FIELDS = {
+    cash_savings:         'Cash & savings',
     super_balance:        'Superannuation',
-    investment_portfolio: 'Investments (shares, ETFs, crypto, cash)',
+    investment_portfolio: 'Investments (shares, ETFs, crypto)',
     property_value:       'Property',
+    monthly_expenses:     'Monthly spending (for runway)',
     hecs_balance:         'HECS-HELP balance',
     total_debt:           'Other debt (loans, cards)'
   };
@@ -494,6 +496,7 @@
   /* ─── 10. Settings: switches persist + delete account ─── */
   if (location.pathname.indexOf('/dashboard/settings') === 0) {
     $all('.switch input').forEach(function (sw, i) {
+      if (sw.id === 'tfa-switch') return; // server-backed, handled below
       var key = 'mizan-pref-' + i;
       var saved = store(key);
       if (saved !== null) sw.checked = saved;
@@ -530,7 +533,89 @@
     });
   }
 
-  /* ─── 12. Misc demo buttons ───────────────────────────── */
+  /* ─── 12. Feedback modal (sidebar) ────────────────────── */
+  var feedbackOpen = $('#feedback-open');
+  if (feedbackOpen) {
+    feedbackOpen.addEventListener('click', function (e) {
+      e.preventDefault();
+      openModal(
+        'Share feedback',
+        '<p style="font-size:0.83rem;color:var(--fg-muted);margin:0 0 0.8rem;">What\'s working? What\'s missing? Every note lands directly with the team.</p>' +
+        '<div class="field"><textarea id="mz-feedback-msg" rows="5" maxlength="4000" placeholder="Tell us what you think…"></textarea></div>',
+        function (overlay) {
+          var msg = $('#mz-feedback-msg', overlay).value.trim();
+          if (!msg) { toast('Tell us a little more first'); return false; }
+          fetch('/feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: msg, page: location.pathname })
+          }).then(function (r) { return r.json(); }).then(function (j) {
+            toast(j.ok ? 'Thank you — feedback received 🙏' : (j.error || 'Could not send feedback'));
+          }).catch(function () { toast('Could not send feedback — are you online?'); });
+        },
+        'Send feedback'
+      );
+    });
+  }
+
+  /* ─── 13. Roadmap: submit + voting ────────────────────── */
+  var roadmapSubmit = $('#roadmap-submit');
+  if (roadmapSubmit) {
+    roadmapSubmit.addEventListener('click', function () {
+      var title = $('#roadmap-title').value.trim();
+      if (!title) { toast('Give your request a short title'); $('#roadmap-title').focus(); return; }
+      fetch('/dashboard/roadmap/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title, details: $('#roadmap-details').value.trim() })
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        if (j.ok) { toast('Request submitted 🚀'); setTimeout(function () { location.reload(); }, 600); }
+        else toast(j.error || 'Could not submit');
+      }).catch(function () { toast('Could not submit — are you online?'); });
+    });
+  }
+
+  $all('[data-roadmap-item]').forEach(function (row) {
+    var itemId = row.getAttribute('data-roadmap-item');
+    $all('.vote-btn', row).forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        fetch('/dashboard/roadmap/vote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemId: itemId, vote: parseInt(btn.getAttribute('data-vote'), 10) })
+        }).then(function (r) { return r.json(); }).then(function (j) {
+          if (!j.ok) { toast(j.error || 'Could not vote'); return; }
+          // Update score + button states in place
+          var score = $('[data-vote-score]', row);
+          var up = $('.vote-btn[data-vote="1"]', row);
+          var down = $('.vote-btn[data-vote="-1"]', row);
+          var prev = up.classList.contains('voted') ? 1 : down.classList.contains('voted') ? -1 : 0;
+          var next = j.vote === null ? 0 : j.vote;
+          score.textContent = parseInt(score.textContent, 10) - prev + next;
+          up.classList.toggle('voted', next === 1);
+          down.classList.toggle('voted', next === -1);
+          down.classList.toggle('down', next === -1);
+        }).catch(function () { toast('Could not vote — are you online?'); });
+      });
+    });
+  });
+
+  /* ─── 14. Two-factor toggle (Settings → Security) ─────── */
+  var tfa = $('#tfa-switch');
+  if (tfa) {
+    tfa.addEventListener('change', function () {
+      fetch('/dashboard/settings/2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: tfa.checked })
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        if (j.ok) toast(j.enabled ? '2FA on — we\'ll email you a code at sign-in 🔐' : 'Two-factor authentication off');
+        else { tfa.checked = !tfa.checked; toast(j.error || 'Could not update 2FA'); }
+      }).catch(function () { tfa.checked = !tfa.checked; toast('Could not update 2FA'); });
+    });
+  }
+
+  /* ─── 15. Misc demo buttons ───────────────────────────── */
   $all('[data-demo-soon]').forEach(function (b) {
     b.addEventListener('click', function (e) {
       e.preventDefault();

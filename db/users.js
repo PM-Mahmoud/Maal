@@ -19,7 +19,8 @@ async function createUser({ email, name, passwordHash, provider, providerId }) {
 async function findUserByEmail(email) {
   const result = await pool.query(
     `SELECT id, email, name, password_hash, provider, provider_id,
-            email_verified, verify_token, verify_token_exp, created_at
+            email_verified, verify_token, verify_token_exp, created_at,
+            locked_until, two_factor_enabled
      FROM users WHERE email = $1`,
     [email]
   );
@@ -29,7 +30,7 @@ async function findUserByEmail(email) {
 async function findUserById(id) {
   const result = await pool.query(
     `SELECT id, email, name, provider, email_verified, created_at,
-            plan, basiq_user_id, phone
+            plan, basiq_user_id, phone, two_factor_enabled
      FROM users WHERE id = $1`,
     [id]
   );
@@ -228,8 +229,13 @@ async function setBasiqUserId(userId, basiqUserId) {
   await pool.query(`UPDATE users SET basiq_user_id = $2 WHERE id = $1`, [userId, basiqUserId]);
 }
 
+async function setTwoFactor(userId, enabled) {
+  await pool.query(`UPDATE users SET two_factor_enabled = $2 WHERE id = $1`, [userId, !!enabled]);
+}
+
 module.exports = {
   ...module.exports,
   setUserPlan,
   setBasiqUserId,
+  setTwoFactor,
 };

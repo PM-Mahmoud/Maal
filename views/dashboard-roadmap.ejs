@@ -1,0 +1,46 @@
+<%
+  var list = typeof items !== 'undefined' && items ? items : [];
+  var statusChip = { open: 'chip-muted', planned: 'chip-gold', in_progress: 'chip-accent', shipped: 'chip-accent' };
+  var statusLabel = { open: 'Open', planned: 'Planned', in_progress: 'In progress', shipped: 'Shipped' };
+%>
+<div class="page-head">
+  <div>
+    <h1>Roadmap</h1>
+    <div class="sub">Tell us what to build next — vote on requests or add your own.</div>
+  </div>
+</div>
+
+<div class="widget-grid">
+  <div class="panel col-7">
+    <div class="panel-title">Feature requests <span class="chip chip-muted"><%= list.length %></span></div>
+    <% if (!list.length) { %>
+    <div class="empty"><h3>Nothing here yet</h3><p>Be the first to suggest a feature.</p></div>
+    <% } %>
+    <% list.forEach(function(it) { %>
+    <div class="row-item" data-roadmap-item="<%= it.id %>">
+      <div class="vote-box">
+        <button class="vote-btn <%= it.my_vote === 1 ? 'voted' : '' %>" data-vote="1" title="Upvote">▲</button>
+        <div class="vote-score" data-vote-score><%= it.score %></div>
+        <button class="vote-btn <%= it.my_vote === -1 ? 'voted down' : '' %>" data-vote="-1" title="Downvote">▼</button>
+      </div>
+      <div style="flex:1; min-width:0;">
+        <div class="row-main"><%= it.title %> <span class="chip <%= statusChip[it.status] || 'chip-muted' %>"><%= statusLabel[it.status] || it.status %></span></div>
+        <% if (it.details) { %><div class="row-sub" style="white-space:normal;"><%= it.details %></div><% } %>
+      </div>
+    </div>
+    <% }); %>
+  </div>
+
+  <div class="panel col-5">
+    <div class="panel-title">Request a feature</div>
+    <p style="font-size:0.83rem; color:var(--fg-muted); margin:0 0 0.8rem;">
+      What would make Mizan indispensable for you? Short and specific wins votes.
+    </p>
+    <div class="field"><label>Title</label><input type="text" id="roadmap-title" maxlength="140" placeholder="e.g. Track my SMSF separately"></div>
+    <div class="field"><label>Details (optional)</label><textarea id="roadmap-details" rows="4" maxlength="2000" placeholder="What problem would this solve for you?"></textarea></div>
+    <button class="btn btn-accent" id="roadmap-submit" style="width:100%; justify-content:center;">Submit request</button>
+    <p style="font-size:0.72rem; color:var(--fg-faint); margin:0.8rem 0 0; line-height:1.6;">
+      Submissions are public to other Mizan users. One vote per person per request — vote again to undo.
+    </p>
+  </div>
+</div>

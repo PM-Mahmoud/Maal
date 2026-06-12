@@ -12,11 +12,28 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/theme.css">
   <style>
-    body { background: var(--bg); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
-    .auth-wrap { width: 100%; max-width: 420px; }
+    body {
+      background:
+        radial-gradient(900px 480px at 80% -10%, rgba(14,155,108,0.08), transparent 60%),
+        radial-gradient(700px 420px at -5% 105%, rgba(184,146,61,0.10), transparent 65%),
+        var(--bg);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem;
+    }
+    .auth-split { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; width: 100%; max-width: 980px; }
+    .auth-brand { max-width: 440px; }
+    .auth-brand .eyebrow { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); margin-bottom: 1rem; }
+    .auth-brand h2 { font-family: var(--font-display); font-size: 2rem; font-weight: 600; line-height: 1.25; color: var(--fg); margin: 0 0 1rem; letter-spacing: -0.01em; }
+    .auth-brand p { font-size: 0.92rem; color: var(--fg-muted); line-height: 1.75; margin: 0 0 1.4rem; }
+    .auth-brand .pillars { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+    .auth-brand .pillars span { font-size: 0.72rem; font-weight: 600; color: var(--fg-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 0.3rem 0.75rem; }
+    .auth-wrap { width: 100%; max-width: 420px; justify-self: center; }
     .auth-logo { text-align: center; margin-bottom: 2.5rem; }
     .auth-logo a { text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; }
     .auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow-lg); padding: 2.5rem; }
+    @media (max-width: 880px) {
+      .auth-split { grid-template-columns: 1fr; gap: 2rem; max-width: 420px; }
+      .auth-brand { display: none; }
+    }
     .auth-card h1 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; color: var(--fg); margin: 0 0 0.35rem; }
     .auth-card .subtitle { font-size: 0.875rem; color: var(--fg-muted); margin: 0 0 2rem; line-height: 1.55; }
     .form-group { margin-bottom: 1.1rem; }
@@ -37,6 +54,23 @@
   </style>
 </head>
 <body>
+  <div class="auth-split">
+    <div class="auth-brand">
+      <div class="eyebrow">Mizan — Private Financial Intelligence</div>
+      <h2>Institutional-grade clarity for your personal balance sheet.</h2>
+      <p>
+        Mizan consolidates your assets, liabilities and cash flows into a single
+        source of truth — then briefs you the way a CFO would: net worth trajectory,
+        capital allocation, tax exposure and the next best action. Ethically screened,
+        always in your interest.
+      </p>
+      <div class="pillars">
+        <span>Net worth intelligence</span>
+        <span>Capital allocation</span>
+        <span>Tax posture</span>
+        <span>Ethical screening</span>
+      </div>
+    </div>
   <div class="auth-wrap">
     <div class="auth-logo">
       <a href="/">
@@ -46,7 +80,7 @@
     </div>
     <div class="auth-card">
       <h1>Welcome back</h1>
-      <p class="subtitle">Sign in to access your financial health dashboard.</p>
+      <p class="subtitle">Sign in to resume your financial briefing.</p>
 
       <% if (error) { %>
         <div class="alert alert-error"><%= error %></div>
@@ -77,6 +111,7 @@
       Don't have an account? <a href="/signup">Create one free</a>
     </div>
     <a href="/" class="back-link">← Back to Mizan</a>
+  </div>
   </div>
 </body>
 </html>

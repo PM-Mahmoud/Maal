@@ -76,6 +76,8 @@ app.use(require('./routes/auth'));
 app.use(require('./routes/oauth'));
 app.use(require('./routes/admin'));
 app.use(require('./routes/reset'));
+app.use(require('./routes/feedback'));
+app.use('/dashboard/roadmap', require('./routes/roadmap'));
 app.use('/dashboard', require('./routes/dashboard'));
 app.use('/billing', require('./routes/billing'));
 app.use('/basiq', require('./routes/basiq'));

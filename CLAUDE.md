@@ -60,7 +60,17 @@ Mizan is "the all-in-one for ethical investing" — a CFO-level advisor (AI neve
 ## Env vars (Render)
 DATABASE_URL, SESSION_SECRET, BASE_URL, RESEND_API_KEY/EMAIL_FROM, ADMIN_PASSWORD, GOOGLE_CLIENT_ID/SECRET, TWILIO_*, plus integrations: BASIQ_API_KEY, GROQ_API_KEY (or AI_API_KEY/AI_BASE_URL/AI_MODEL), STRIPE_SECRET_KEY
 
+## Key architecture (2026-06-12 additions)
+- **Tax Impact**: `lib/tax.js` — FY25-26 resident brackets + 2% Medicare + new marginal HECS (15c $67k–$125k, 17c above). Widget on overview; indicative only
+- **Roadmap voting**: `routes/roadmap.js` at /dashboard/roadmap + `db/roadmap.js` — roadmap_items/roadmap_votes tables, one ±1 vote per user (same vote toggles off), seeded with 4 items
+- **Feedback**: sidebar modal → POST /feedback → feedback table (`db/feedback.js`)
+- **Privacy mode**: eye button in sidebar bottom bar → `html[data-privacy="on"]` blurs .stat-value/.row-val/.sparkline (localStorage `mizan-privacy`)
+- **2FA**: Settings toggle → users.two_factor_enabled → login emails a 6-digit code via existing OTP/verify-email machinery
+- **Cash & runway**: user_profiles.cash_savings + monthly_expenses (migration 1749710000000); Total Cash hero stat, live Cash Runway widget; both editable via the asset modal whitelist (ASSET_FIELDS)
+- **Testing**: `node scripts/render-test.js` renders every EJS view with mock locals (no DB needed) — run before committing view/route changes. Local node lives at `~/.local/node/bin/node` (not on PATH)
+
 ## Recent changes
+- 2026-06-12: Bug sweep (Basiq findUserById columns, reset-password locals, missing error view, missing /api/account/delete, login lockout column) + spec features (tax impact, movers placeholder, roadmap voting, feedback, privacy mode, email 2FA, cash/runway) + UI polish layer + CFO-language login page
 - 2026-06-11: Full Silvia-inspired redesign (app shell + landing + auth), Mizan Score engine, real net-worth charts, provider-agnostic advisor chat (Groq default), Basiq sandbox flow, Stripe checkout + persisted plans, mobile nav, favicon/OG images, all-buttons-functional pass
 - 2026-05-23: Portfolio recommendation engine at /dashboard/portfolio — 7-field intake form, allocation engine (age/risk/debt/super decision tree), SVG donut chart, fund tables with HLAL/SPUS/VESG/ETHI tickers, "Why this portfolio" explanation; routes/portfolio.js, views/dashboard-portfolio.ejs
 - 2026-05-23: Recommended Tools feature — /dashboard/tools, recommended_tools table (30 tools), tier+profile-aware filtering, editorial disclaimer; routes/tools.js, db/recommended-tools.js, views/dashboard-tools.ejs, migration 1748004000000

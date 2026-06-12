@@ -18,6 +18,9 @@
       try {
         var t = localStorage.getItem('mizan-theme') || 'light';
         document.documentElement.setAttribute('data-theme', t);
+        if (localStorage.getItem('mizan-privacy') === 'on') {
+          document.documentElement.setAttribute('data-privacy', 'on');
+        }
       } catch (e) {}
     })();
   </script>
@@ -68,14 +71,17 @@
       <a href="/dashboard/tools" class="side-item side-sub <%= pageTitle === 'Recommended Tools' ? 'active' : '' %>">Tools</a>
 
       <div class="side-divider"></div>
-      <a href="mailto:feedback@mizan.au" class="side-item">Share Feedback</a>
-      <a href="#" class="side-item" data-demo-soon="Roadmap is coming soon 🛠️">Roadmap</a>
+      <a href="#" class="side-item" id="feedback-open">Share Feedback</a>
+      <a href="/dashboard/roadmap" class="side-item <%= pageTitle === 'Roadmap' ? 'active' : '' %>">Roadmap</a>
       <a href="mailto:support@mizan.au" class="side-item">Support</a>
       <a href="#" class="side-item" data-demo-soon="Community is coming soon 👋">Community</a>
 
       <div class="sidebar-bottom">
         <button type="button" class="icon-btn" id="theme-toggle" title="Toggle light/dark">
           <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+        <button type="button" class="icon-btn" id="privacy-toggle" title="Privacy mode — blur balances">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
         <a href="/dashboard/settings" class="icon-btn" title="Settings">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
@@ -158,6 +164,17 @@
           var next = cur === 'light' ? 'dark' : 'light';
           document.documentElement.setAttribute('data-theme', next);
           try { localStorage.setItem('mizan-theme', next); } catch (e) {}
+        });
+      }
+
+      // Privacy mode — blur every balance on screen
+      var privacy = document.getElementById('privacy-toggle');
+      if (privacy) {
+        privacy.addEventListener('click', function() {
+          var on = document.documentElement.getAttribute('data-privacy') === 'on';
+          if (on) document.documentElement.removeAttribute('data-privacy');
+          else document.documentElement.setAttribute('data-privacy', 'on');
+          try { localStorage.setItem('mizan-privacy', on ? 'off' : 'on'); } catch (e) {}
         });
       }
 

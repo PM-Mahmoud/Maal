@@ -113,6 +113,16 @@ router.post('/login',
       return req.session.save(() => res.redirect('/verify-email'));
     }
 
+    // Two-factor authentication — verified password, now require an email code.
+    // Reuses the OTP machinery: /verify-email completes the sign-in.
+    if (user.two_factor_enabled) {
+      const otp = generateOtp();
+      await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
+      await sendOtpEmail(user.email, user.name, otp);
+      req.session.pendingEmail = user.email;
+      return req.session.save(() => res.redirect('/verify-email'));
+    }
+
     await resetFailedAttempts(user.id);
     await recordLogin(user.id, getIp(req));
 

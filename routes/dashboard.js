@@ -14,6 +14,7 @@ const { getAccountsByUserId, addAccount, deleteAccount, syncAccount } = require(
 const { computeScore } = require('../lib/score-engine');
 const { computeMizanScore } = require('../lib/mizan-score');
 const { recordSnapshot, getSnapshots } = require('../db/snapshots');
+const { estimateTax } = require('../lib/tax');
 const advisor = require('../services/advisor');
 const basiqService = require('../services/basiq');
 
@@ -57,8 +58,9 @@ router.get('/', async (req, res) => {
     const superBal  = Number(p.super_balance) || 0;
     const investBal = Number(p.investment_portfolio) || 0;
     const propertyV = Number(p.property_value) || 0;
+    const cashBal   = Number(p.cash_savings) || 0;
     const debts     = (Number(p.hecs_balance) || 0) + (Number(p.total_debt) || 0);
-    const assets    = superBal + investBal + propertyV;
+    const assets    = superBal + investBal + propertyV + cashBal;
     let snapshots = [];
     try {
       await recordSnapshot(req.session.userId, {
@@ -80,6 +82,7 @@ router.get('/', async (req, res) => {
       ethicalScore: ehs,
       mizanScore,
       snapshots,
+      taxImpact: estimateTax(profile),
       pageTitle: 'Dashboard'
     });
   } catch (err) {
@@ -207,7 +210,7 @@ router.get('/goals', async (req, res) => {
 
 // ─── API: update a single asset/liability field on the profile ───────────────
 
-const ASSET_FIELDS = ['super_balance', 'investment_portfolio', 'property_value', 'hecs_balance', 'total_debt'];
+const ASSET_FIELDS = ['super_balance', 'investment_portfolio', 'property_value', 'cash_savings', 'monthly_expenses', 'hecs_balance', 'total_debt'];
 
 router.post('/assets/update', async (req, res) => {
   try {
@@ -223,6 +226,20 @@ router.post('/assets/update', async (req, res) => {
   } catch (err) {
     console.error('assets/update error:', err.message);
     res.status(500).json({ error: 'Failed to save.' });
+  }
+});
+
+// ─── API: toggle two-factor authentication ───────────────────────────────────
+
+router.post('/settings/2fa', async (req, res) => {
+  try {
+    const { setTwoFactor } = require('../db/users');
+    const enabled = !!req.body.enabled;
+    await setTwoFactor(req.session.userId, enabled);
+    res.json({ ok: true, enabled });
+  } catch (err) {
+    console.error('settings/2fa error:', err.message);
+    res.status(500).json({ error: 'Failed to update two-factor authentication.' });
   }
 });
 

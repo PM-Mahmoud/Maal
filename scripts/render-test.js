@@ -12,6 +12,7 @@ const session = { userId: 1, name: 'Mahmoud Sair', email: 'test@example.com' };
 const user = {
   id: 1, email: 'test@example.com', name: 'Mahmoud Sair', provider: 'credentials',
   email_verified: true, created_at: new Date(), plan: 'free', basiq_user_id: null, phone: null,
+  two_factor_enabled: false,
 };
 const profile = {
   user_id: 1, profession: 'Doctor', specialty: 'GP', years_in_practice: 3,
@@ -29,12 +30,17 @@ const score = {
 };
 const { computeMizanScore } = require('../lib/mizan-score');
 const mizanScore = computeMizanScore(profile);
+const { estimateTax } = require('../lib/tax');
 
 const base = { session, user, profile, pageTitle: 'Test' };
 
 // Per-view locals mirroring what each route passes (routes/*.js)
 const cases = {
-  'dashboard-overview': { ...base, financialScore: score, superScore: score, ethicalScore: score, mizanScore, snapshots: [] },
+  'dashboard-overview': { ...base, financialScore: score, superScore: score, ethicalScore: score, mizanScore, snapshots: [], taxImpact: estimateTax(profile) },
+  'dashboard-roadmap': { ...base, items: [
+    { id: 1, title: 'Test item', details: 'Some details', status: 'planned', score: 3, upvotes: 4, downvotes: 1, my_vote: 1 },
+    { id: 2, title: 'Another', details: null, status: 'open', score: 0, upvotes: 0, downvotes: 0, my_vote: null },
+  ] },
   'dashboard-ask': base,
   'dashboard-research': base,
   'dashboard-radar': base,

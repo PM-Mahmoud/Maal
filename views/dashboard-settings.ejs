@@ -64,8 +64,8 @@
     <div class="panel">
       <div class="panel-title">Security</div>
       <div class="row-item">
-        <div><div class="row-main">Two-factor authentication <span class="chip chip-accent">Recommended</span></div><div class="row-sub">Extra layer of security with SMS or an authenticator app.</div></div>
-        <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+        <div><div class="row-main">Two-factor authentication <span class="chip chip-accent">Recommended</span></div><div class="row-sub">When enabled, signing in requires a 6-digit code sent to your email.</div></div>
+        <label class="switch"><input type="checkbox" id="tfa-switch" <%= user && user.two_factor_enabled ? 'checked' : '' %>><span class="slider"></span></label>
       </div>
     </div>
 

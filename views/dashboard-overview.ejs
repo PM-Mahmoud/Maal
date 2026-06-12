@@ -9,10 +9,13 @@
   var superBal   = Number(profile && profile.super_balance) || 0;
   var investBal  = Number(profile && profile.investment_portfolio) || 0;
   var propertyV  = Number(profile && profile.property_value) || 0;
+  var cashBal    = Number(profile && profile.cash_savings) || 0;
+  var monthlyExp = Number(profile && profile.monthly_expenses) || 0;
   var hecs       = Number(profile && profile.hecs_balance) || 0;
   var otherDebt  = Number(profile && profile.total_debt) || 0;
-  var totalAssets = superBal + investBal + propertyV;
+  var totalAssets = superBal + investBal + propertyV + cashBal;
   var totalDebts  = hecs + otherDebt;
+  var runwayMonths = (cashBal > 0 && monthlyExp > 0) ? Math.round(cashBal / monthlyExp * 10) / 10 : null;
   var netWorth    = totalAssets - totalDebts;
   var hasData     = totalAssets > 0 || totalDebts > 0;
 
@@ -23,7 +26,7 @@
   var steps = [
     { label: 'Create your account', done: true, href: null },
     { label: 'Complete onboarding', done: !!(profile && profile.completed_onboarding), href: '/onboarding' },
-    { label: 'Connect a bank via Basiq', done: false, href: '/dashboard/transactions' },
+    { label: 'Connect a bank via Basiq', done: !!(user && user.basiq_user_id), href: '/dashboard/transactions' },
     { label: 'Add your super fund', done: superBal > 0, href: '/dashboard/assets' },
     { label: 'Add an asset or liability', done: hasData, href: '/dashboard/assets' },
     { label: 'Upload a statement to Vault', done: false, href: '/dashboard/vault' },
@@ -68,9 +71,9 @@
     <svg class="sparkline" id="spark-invest" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
   </div>
   <div class="panel stat-card">
-    <div class="stat-label">Superannuation <span class="chip chip-accent">AU</span></div>
-    <div class="stat-value"><%= aud(superBal) %></div>
-    <div class="stat-delta"><%= superBal > 0 ? 'SG contributions on track' : 'Add your super fund' %></div>
+    <div class="stat-label">Total Cash <span class="chip chip-accent">Liquidity</span></div>
+    <div class="stat-value"><%= aud(cashBal) %></div>
+    <div class="stat-delta"><%= cashBal > 0 ? (runwayMonths ? runwayMonths + ' months of runway' : 'Set monthly spend for runway') : 'Add cash & savings' %></div>
     <svg class="sparkline" id="spark-super" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
   </div>
   <div class="panel stat-card">
@@ -198,6 +201,43 @@
     </p>
   </div>
 
+  <%
+    var tax = (typeof taxImpact !== 'undefined' && taxImpact) ? taxImpact : { hasData: false };
+  %>
+  <div class="panel col-6">
+    <div class="panel-title">Tax Impact <span class="chip chip-muted">FY25–26 estimate</span></div>
+    <% if (tax.hasData) { %>
+    <div class="row-item"><div class="row-main">Income tax</div><div class="row-val"><%= aud(tax.incomeTax) %></div></div>
+    <div class="row-item"><div class="row-main">Medicare levy</div><div class="row-val"><%= aud(tax.medicare) %></div></div>
+    <% if (tax.hecs > 0) { %>
+    <div class="row-item"><div class="row-main">HECS repayment</div><div class="row-val"><%= aud(tax.hecs) %></div></div>
+    <% } %>
+    <div class="row-item"><div><div class="row-main">Take-home pay</div><div class="row-sub"><%= tax.effectiveRate %>% effective · <%= tax.marginalRate %>% marginal</div></div><div class="row-val" style="color:var(--accent-strong);"><%= aud(tax.takeHomeMonthly) %>/mo</div></div>
+    <p style="font-size:0.72rem; color:var(--fg-faint); margin:0.7rem 0 0; line-height:1.6;">
+      Indicative only — excludes deductions, offsets and salary packaging. Ask Mizan to explore strategies.
+    </p>
+    <% } else { %>
+    <div class="empty"><h3>Add your income</h3><p>Set your annual income and Mizan estimates tax, Medicare and HECS withholding instantly.</p><a href="/dashboard/profile" class="btn btn-ghost btn-sm">Complete profile</a></div>
+    <% } %>
+  </div>
+
+  <div class="panel col-6">
+    <div class="panel-title">Top &amp; Bottom Movers <span class="chip chip-muted">Your holdings</span></div>
+    <% if (investBal > 0) { %>
+    <div class="empty">
+      <h3>Holdings sync coming soon</h3>
+      <p>Live market pricing for your individual holdings is on the roadmap. For now your total portfolio is tracked daily in the net-worth chart.</p>
+      <a href="/dashboard/roadmap" class="btn btn-ghost btn-sm">Vote on the roadmap</a>
+    </div>
+    <% } else { %>
+    <div class="empty">
+      <h3>No investments yet</h3>
+      <p>Add your portfolio and Mizan will surface the holdings moving your net worth the most.</p>
+      <button class="btn btn-accent btn-sm" data-add-asset="investment_portfolio">+ Add investments</button>
+    </div>
+    <% } %>
+  </div>
+
   <div class="panel col-6">
     <div class="panel-title">Recent Transactions <a class="more" href="/dashboard/transactions">View all →</a></div>
     <div class="empty">
@@ -210,11 +250,11 @@
   <div class="panel col-3">
     <div class="panel-title">Cash Runway</div>
     <div style="text-align:center; padding:0.6rem 0;">
-      <div style="font-size:2.2rem; font-weight:800;">—</div>
+      <div style="font-size:2.2rem; font-weight:800;"><%= runwayMonths !== null ? runwayMonths : '—' %></div>
       <div style="font-size:0.78rem; color:var(--fg-muted);">months</div>
     </div>
-    <div class="row-item"><div class="row-sub">Monthly burn</div><div class="row-val">$0</div></div>
-    <div class="row-item"><div class="row-sub">Cash on hand</div><div class="row-val">$0</div></div>
+    <div class="row-item"><div class="row-sub">Monthly burn</div><div class="row-val" data-add-asset="monthly_expenses" title="Click to set"><%= monthlyExp > 0 ? aud(monthlyExp) : 'Set' %></div></div>
+    <div class="row-item"><div class="row-sub">Cash on hand</div><div class="row-val" data-add-asset="cash_savings" title="Click to set"><%= cashBal > 0 ? aud(cashBal) : 'Set' %></div></div>
   </div>
 
   <div class="panel col-3">

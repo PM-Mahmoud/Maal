@@ -583,3 +583,85 @@ body.app-body {
   .chat-fab { right: 14px; bottom: 14px; }
   .chat-panel { right: 14px; bottom: 78px; }
 }
+
+/* ============================================================
+   2026-06 polish pass — sleeker depth, motion, privacy, voting
+   ============================================================ */
+
+:root {
+  --radius: 16px;
+  --shadow: 0 1px 2px rgba(16, 24, 22, 0.04), 0 6px 24px rgba(16, 24, 22, 0.06);
+  --shadow-lg: 0 12px 44px rgba(16, 24, 22, 0.13);
+}
+[data-theme="dark"] {
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 28px rgba(0, 0, 0, 0.30);
+  --shadow-lg: 0 16px 52px rgba(0, 0, 0, 0.5);
+}
+
+/* Soft ambient wash behind the whole app */
+body.app-body {
+  background:
+    radial-gradient(1100px 520px at 85% -10%, var(--accent-softer), transparent 60%),
+    radial-gradient(900px 460px at -10% 100%, var(--gold-soft), transparent 65%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* Panels: finer borders, gentle lift on the headline stats */
+.panel { transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s; }
+.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--border-strong); }
+.stat-value { font-size: 1.85rem; letter-spacing: -0.03em; }
+
+/* Sidebar: quiet glass, gradient active state */
+.sidebar {
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.side-item { position: relative; }
+.side-item.active {
+  background: linear-gradient(120deg, var(--accent), var(--accent-strong));
+  box-shadow: 0 4px 14px rgba(14, 155, 108, 0.25);
+}
+[data-theme="dark"] .side-item.active {
+  background: var(--accent-soft);
+  box-shadow: none;
+}
+
+/* Focus visibility everywhere */
+.btn:focus-visible, .icon-btn:focus-visible, .tab:focus-visible,
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Buttons: subtle press feedback */
+.btn { transition: transform 0.12s, background 0.15s, box-shadow 0.15s, border-color 0.15s; }
+.btn:active { transform: scale(0.97); }
+.btn-accent { box-shadow: 0 4px 14px rgba(14, 155, 108, 0.28); }
+.btn-accent:hover { box-shadow: 0 6px 20px rgba(14, 155, 108, 0.36); }
+
+/* ─── Privacy mode — blur every balance ─────────────────── */
+.stat-value, .row-val, .sparkline { transition: filter 0.25s; }
+[data-privacy="on"] .stat-value,
+[data-privacy="on"] .row-val,
+[data-privacy="on"] .sparkline,
+[data-privacy="on"] .score-card-big { filter: blur(9px); }
+[data-privacy="on"] #privacy-toggle { background: var(--accent-soft); color: var(--accent-strong); }
+
+/* ─── Roadmap voting ────────────────────────────────────── */
+.vote-box {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.1rem; flex-shrink: 0; width: 38px;
+}
+.vote-btn {
+  border: none; background: none; cursor: pointer;
+  font-size: 0.72rem; line-height: 1; padding: 0.25rem 0.45rem;
+  border-radius: 7px; color: var(--fg-faint);
+  transition: background 0.15s, color 0.15s, transform 0.12s;
+}
+.vote-btn:hover { background: var(--surface-2); color: var(--fg); }
+.vote-btn:active { transform: scale(0.9); }
+.vote-btn.voted { color: var(--accent-strong); background: var(--accent-soft); }
+.vote-btn.voted.down { color: var(--danger); background: var(--danger-soft); }
+.vote-score { font-size: 0.92rem; font-weight: 700; }
