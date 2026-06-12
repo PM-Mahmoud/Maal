@@ -1,28 +1,71 @@
 // services/advisor.js
-// The Mizan advisor brain — chat completions via DeepSeek (OpenAI-compatible).
+// The Mizan advisor brain — chat completions via any OpenAI-compatible API.
 //
-// HOW TO SET UP (~2 minutes, very cheap):
-//   1. Sign up at https://platform.deepseek.com
-//   2. Top up a small amount (a few dollars goes a long way — input is
-//      ~US$0.27 per million tokens)
-//   3. Create an API key
-//   4. On Render: Environment → add DEEPSEEK_API_KEY = <key>
-//   5. Redeploy. Ask Mizan and the chat widget now answer for real.
+// DEFAULT PROVIDER: Groq (https://groq.com) — a US company running open-weight
+// models (Meta's Llama) on US servers. No data routed to China, which keeps
+// things simple for Australian privacy/regulatory peace of mind (Privacy Act
+// APP 8 cross-border disclosure is much easier to reason about with US/EU
+// processors). Very cheap (~US$0.59/M input tokens for Llama 3.3 70B) and has
+// a free tier for testing.
 //
-// Swapping models later: change baseURL + model below (the OpenAI SDK works
-// with OpenAI, DeepSeek, Together, Groq, etc. — they share the same API shape).
+// HOW TO SET UP (~2 minutes):
+//   1. Sign up at https://console.groq.com (free)
+//   2. Create an API key
+//   3. On Render: Environment → add GROQ_API_KEY = <key>
+//   4. Redeploy. Ask Mizan and the chat widget now answer for real.
+//
+// SWAPPING PROVIDERS (no code change needed) — set all three env vars:
+//   AI_API_KEY, AI_BASE_URL, AI_MODEL
+// Examples:
+//   Together AI: AI_BASE_URL=https://api.together.xyz/v1   AI_MODEL=meta-llama/Llama-3.3-70B-Instruct-Turbo
+//   Fireworks:   AI_BASE_URL=https://api.fireworks.ai/inference/v1
+//   Mistral(EU): AI_BASE_URL=https://api.mistral.ai/v1     AI_MODEL=mistral-small-latest
+//   DeepSeek:    AI_BASE_URL=https://api.deepseek.com      AI_MODEL=deepseek-chat
+//   HuggingFace: AI_BASE_URL=https://router.huggingface.co/v1
+//                AI_MODEL=meta-llama/Llama-3.3-70B-Instruct  (HF routes to
+//                partner providers at pass-through prices; pin your allowed
+//                providers in HF settings if data routing matters to you)
+//   (DEEPSEEK_API_KEY alone also still works, for backwards compatibility.)
+// For full Australian data residency later: AWS Bedrock in ap-southeast-2
+// (Sydney) hosts Llama/Mistral onshore — bigger setup, revisit when it matters.
 
 const OpenAI = require('openai');
 
+function providerConfig() {
+  // 1. Fully custom provider
+  if (process.env.AI_API_KEY && process.env.AI_BASE_URL) {
+    return {
+      apiKey: process.env.AI_API_KEY,
+      baseURL: process.env.AI_BASE_URL,
+      model: process.env.AI_MODEL || 'llama-3.3-70b-versatile',
+    };
+  }
+  // 2. Groq (recommended default — US servers, open models, free tier)
+  if (process.env.GROQ_API_KEY) {
+    return {
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: 'https://api.groq.com/openai/v1',
+      model: process.env.AI_MODEL || 'llama-3.3-70b-versatile',
+    };
+  }
+  // 3. DeepSeek (backwards compatibility)
+  if (process.env.DEEPSEEK_API_KEY) {
+    return {
+      apiKey: process.env.DEEPSEEK_API_KEY,
+      baseURL: 'https://api.deepseek.com',
+      model: 'deepseek-chat',
+    };
+  }
+  return null;
+}
+
 function hasAdvisor() {
-  return !!process.env.DEEPSEEK_API_KEY;
+  return !!providerConfig();
 }
 
 function getClient() {
-  return new OpenAI({
-    baseURL: 'https://api.deepseek.com',
-    apiKey: process.env.DEEPSEEK_API_KEY,
-  });
+  const cfg = providerConfig();
+  return { client: new OpenAI({ baseURL: cfg.baseURL, apiKey: cfg.apiKey }), model: cfg.model };
 }
 
 function aud(n) {
@@ -63,7 +106,7 @@ function buildSystemPrompt(user, profile, mizan) {
 
 const FALLBACK_REPLY =
   "I'm not fully switched on yet — the team hasn't connected my brain (an AI API key) in this environment. " +
-  'Once a DEEPSEEK_API_KEY is added on the server, I can answer this properly using your real data. ' +
+  'Once a GROQ_API_KEY is added on the server, I can answer this properly using your real data. ' +
   'In the meantime, try adding your assets and liabilities so your dashboard and Mizan Score stay accurate.';
 
 /**
@@ -71,9 +114,9 @@ const FALLBACK_REPLY =
  */
 async function chat(user, profile, mizan, messages) {
   if (!hasAdvisor()) return FALLBACK_REPLY;
-  const client = getClient();
+  const { client, model } = getClient();
   const completion = await client.chat.completions.create({
-    model: 'deepseek-chat',
+    model: model,
     max_tokens: 600,
     temperature: 0.6,
     messages: [
