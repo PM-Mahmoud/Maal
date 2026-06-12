@@ -37,7 +37,31 @@ Node.js + Express + EJS templates + PostgreSQL (Neon) + Tailwind-style custom CS
 - All `/dashboard/*` routes require authenticated session (redirect to `/login`)
 - Dashboard at `/dashboard` with sub-pages: scores, recommendations, accounts, profile, history
 
+## Positioning
+Mizan is "the all-in-one for ethical investing" — a CFO-level advisor (AI never overemphasised in UI copy) that reads statements, bank accounts and transactions so users understand their financial situation. Pricing: Free $0 / Pro $20/mo / Max $200/mo (AUD). Mandatory disclaimer on every page: "Mizan does not provide financial advice. Any information provided by Mizan is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money."
+
+## Design system
+- Light theme default, dark via `html[data-theme="dark"]` (localStorage key `mizan-theme`)
+- `public/css/app.css` — dashboard design system + legacy class compatibility; `public/css/theme.css` — landing/auth (same tokens). Emerald accent #0E9B6C, gold #B8923D, Playfair Display headlines + Inter body
+- App shell: `views/app-layout.ejs` (sidebar, mobile hamburger topbar, floating chat widget, theme toggle, disclaimer footer). Landing partials in `views/partials/`. All dashboard routers set `res.locals.layout = 'app-layout'`
+- `public/js/app.js` — all client interactivity: generic `.tabs` toggling, modal/toast factories (`data-add-asset`, `data-demo-soon` attrs), sparkline drawing from `window.MIZAN_SNAPSHOTS`, advisor chat sessions, goals/radars/research/uploads (localStorage), Basiq tile handling (`data-basiq-live` → /basiq/connect, else demo modal)
+
+## Key architecture (2026-06)
+- **Mizan Score**: `lib/mizan-score.js` — single 0–100 composite (5 pillars: savings 25%, debt 25% w/ HECS at 30% weight, super-vs-ASFA-curve 20%, wealth trajectory 15%, protection 15%). Computed in /dashboard route, shown as hero ring + pillar bars
+- **Net worth charts**: `net_worth_snapshots` table (daily upsert per user on dashboard load, `db/snapshots.js`), client draws sparklines + 1M/6M/YTD/All filtering
+- **Advisor chat**: `services/advisor.js` — provider-agnostic OpenAI SDK. Precedence: AI_API_KEY+AI_BASE_URL+AI_MODEL > GROQ_API_KEY (default: Groq, llama-3.3-70b-versatile, US servers — chosen to avoid China routing for AU regulatory comfort) > DEEPSEEK_API_KEY. Endpoint: POST /dashboard/ask/message. Education-only guardrails + profile + Mizan Score in system prompt
+- **Basiq (CDR open banking)**: `services/basiq.js` (v3 API, server/client tokens, hosted consent UI) + `routes/basiq.js` at /basiq (connect/callback/sync). BASIQ_API_KEY env (free sandbox: dashboard.basiq.io, test bank "Hooli Bank"). Note: consent UI does NOT redirect back — users must press "Sync now" on /dashboard/transactions. users.basiq_user_id column links accounts
+- **Billing**: `routes/billing.js` at /billing — Stripe Checkout (test mode, AUD subscriptions) with STRIPE_SECRET_KEY; demo mode without key. Plan persisted to users.plan (free/pro/max), shown in Settings with upgrade/downgrade
+- **Diagnostics**: GET /health returns boolean integration flags (basiq/advisor/stripe) — first stop when an env var "isn't working"
+- **Gotcha**: Postgres BIGINT columns return as strings — always `Number()` profile money fields before arithmetic (string concat bug bit us once)
+- New dashboard pages: /dashboard/{ask,research,radar,assets,vault,transactions,goals,settings} + legacy {scores,recommendations,accounts,profile,history,portfolio,tools}
+- Migration `1749600000000_snapshots_plan_basiq.js` adds snapshots table + users.plan + users.basiq_user_id
+
+## Env vars (Render)
+DATABASE_URL, SESSION_SECRET, BASE_URL, RESEND_API_KEY/EMAIL_FROM, ADMIN_PASSWORD, GOOGLE_CLIENT_ID/SECRET, TWILIO_*, plus integrations: BASIQ_API_KEY, GROQ_API_KEY (or AI_API_KEY/AI_BASE_URL/AI_MODEL), STRIPE_SECRET_KEY
+
 ## Recent changes
+- 2026-06-11: Full Silvia-inspired redesign (app shell + landing + auth), Mizan Score engine, real net-worth charts, provider-agnostic advisor chat (Groq default), Basiq sandbox flow, Stripe checkout + persisted plans, mobile nav, favicon/OG images, all-buttons-functional pass
 - 2026-05-23: Portfolio recommendation engine at /dashboard/portfolio — 7-field intake form, allocation engine (age/risk/debt/super decision tree), SVG donut chart, fund tables with HLAL/SPUS/VESG/ETHI tickers, "Why this portfolio" explanation; routes/portfolio.js, views/dashboard-portfolio.ejs
 - 2026-05-23: Recommended Tools feature — /dashboard/tools, recommended_tools table (30 tools), tier+profile-aware filtering, editorial disclaimer; routes/tools.js, db/recommended-tools.js, views/dashboard-tools.ejs, migration 1748004000000
 - 2026-05-23: Full auth system — login/signup/forgot-password/reset/verify, bcrypt passwords, Postgres sessions, protected dashboard with 5 sub-pages
