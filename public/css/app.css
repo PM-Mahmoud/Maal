@@ -2,58 +2,60 @@
    Mizan App — design system (light default, dark via data-theme)
    ============================================================ */
 
+/* Minimal flat system inspired by tokorocapital.com — one light grotesk,
+   monochrome green family, hairline borders, no shadows. */
 :root {
-  --bg: #F6F8F7;
+  --bg: #FAFAF8;
   --surface: #FFFFFF;
-  --surface-2: #F0F3F1;
-  --surface-3: #E9EEEB;
-  --fg: #101816;
-  --fg-muted: #5E6B66;
-  --fg-faint: #93A09A;
-  --border: #E3E9E5;
-  --border-strong: #D2DBD6;
-  --accent: #0E9B6C;
-  --accent-strong: #0B7F58;
-  --accent-soft: rgba(14, 155, 108, 0.10);
-  --accent-softer: rgba(14, 155, 108, 0.06);
-  --gold: #B8923D;
-  --gold-soft: rgba(184, 146, 61, 0.12);
-  --danger: #D6544A;
-  --danger-soft: rgba(214, 84, 74, 0.10);
-  --warn: #C98A2E;
-  --warn-soft: rgba(201, 138, 46, 0.12);
-  --info-soft: rgba(35, 110, 165, 0.08);
-  --shadow: 0 1px 2px rgba(16, 24, 22, 0.04), 0 4px 16px rgba(16, 24, 22, 0.05);
-  --shadow-lg: 0 8px 32px rgba(16, 24, 22, 0.10);
-  --font-display: 'Playfair Display', Georgia, serif;
-  --font-body: 'Inter', 'DM Sans', system-ui, sans-serif;
-  --radius: 14px;
-  --radius-sm: 9px;
+  --surface-2: #F3F3F1;
+  --surface-3: #E9EAE5;
+  --fg: #1F2722;
+  --fg-muted: #5C6660;
+  --fg-faint: #98A29B;
+  --border: #E6E8E3;
+  --border-strong: #D5D8D1;
+  --accent: #115832;
+  --accent-strong: #0C4127;
+  --accent-soft: #E3F0E8;
+  --accent-softer: #F1F8F3;
+  --gold: #A18A4C;
+  --gold-soft: #F2EDE0;
+  --danger: #C2554C;
+  --danger-soft: #F7E9E7;
+  --warn: #B08230;
+  --warn-soft: #F5EEDF;
+  --info-soft: #E8EFF4;
+  --shadow: none;
+  --shadow-lg: 0 16px 48px rgba(20, 30, 24, 0.12);
+  --font-display: 'Hanken Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  --font-body: 'Hanken Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  --radius: 12px;
+  --radius-sm: 8px;
 }
 
 [data-theme="dark"] {
-  --bg: #0A100E;
-  --surface: #111917;
-  --surface-2: #17221F;
-  --surface-3: #1E2B27;
-  --fg: #EDF3F0;
-  --fg-muted: #92A39C;
-  --fg-faint: #66776F;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-strong: rgba(255, 255, 255, 0.14);
-  --accent: #1FBE8A;
-  --accent-strong: #36D6A0;
-  --accent-soft: rgba(31, 190, 138, 0.13);
-  --accent-softer: rgba(31, 190, 138, 0.07);
-  --gold: #C9A84C;
-  --gold-soft: rgba(201, 168, 76, 0.13);
-  --danger: #E0706F;
-  --danger-soft: rgba(224, 112, 111, 0.13);
-  --warn: #DCA84E;
-  --warn-soft: rgba(220, 168, 78, 0.13);
-  --info-soft: rgba(96, 165, 220, 0.10);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.25);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.45);
+  --bg: #101411;
+  --surface: #151A16;
+  --surface-2: #1B211C;
+  --surface-3: #232B25;
+  --fg: #E8ECE7;
+  --fg-muted: #9AA59D;
+  --fg-faint: #6C7670;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --accent: #AED4AF;
+  --accent-strong: #C6E4C7;
+  --accent-soft: rgba(174, 212, 175, 0.14);
+  --accent-softer: rgba(174, 212, 175, 0.07);
+  --gold: #C0A968;
+  --gold-soft: rgba(192, 169, 104, 0.14);
+  --danger: #DA8078;
+  --danger-soft: rgba(218, 128, 120, 0.14);
+  --warn: #CFA45A;
+  --warn-soft: rgba(207, 164, 90, 0.14);
+  --info-soft: rgba(120, 160, 190, 0.12);
+  --shadow: none;
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -585,61 +587,80 @@ body.app-body {
 }
 
 /* ============================================================
-   2026-06 polish pass — sleeker depth, motion, privacy, voting
+   Tokoro minimal pass — flat, airy, hairline, one light grotesk
    ============================================================ */
 
-:root {
-  --radius: 16px;
-  --shadow: 0 1px 2px rgba(16, 24, 22, 0.04), 0 6px 24px rgba(16, 24, 22, 0.06);
-  --shadow-lg: 0 12px 44px rgba(16, 24, 22, 0.13);
-}
-[data-theme="dark"] {
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 28px rgba(0, 0, 0, 0.30);
-  --shadow-lg: 0 16px 52px rgba(0, 0, 0, 0.5);
-}
+/* Flat canvas — no ambient washes */
+body.app-body { background: var(--bg); }
 
-/* Soft ambient wash behind the whole app */
-body.app-body {
-  background:
-    radial-gradient(1100px 520px at 85% -10%, var(--accent-softer), transparent 60%),
-    radial-gradient(900px 460px at -10% 100%, var(--gold-soft), transparent 65%),
-    var(--bg);
-  background-attachment: fixed;
-}
+/* Editorial typography: big and light */
+.page-head h1 { font-size: 1.9rem; font-weight: 300; letter-spacing: -0.015em; }
+.page-head .sub { font-weight: 400; }
+.stat-value { font-size: 2.1rem; font-weight: 300; letter-spacing: -0.02em; }
+.score-card-big { font-weight: 300; }
+.ring-num { font-weight: 400; }
+.modal h2 { font-weight: 400; letter-spacing: -0.01em; }
+.empty h3 { font-weight: 500; }
+.plan-price, .price-tag { font-weight: 300; letter-spacing: -0.02em; }
 
-/* Panels: finer borders, gentle lift on the headline stats */
-.panel { transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s; }
-.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--border-strong); }
-.stat-value { font-size: 1.85rem; letter-spacing: -0.03em; }
-
-/* Sidebar: quiet glass, gradient active state */
-.sidebar {
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+/* Panel titles become quiet uppercase micro-labels */
+.panel-title {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
 }
-.side-item { position: relative; }
+.panel-title .chip { letter-spacing: 0.02em; text-transform: none; }
+.panel-title .more { letter-spacing: 0.02em; text-transform: none; font-size: 0.74rem; }
+
+/* Hairline flatness everywhere */
+.panel { box-shadow: none; transition: border-color 0.2s; }
+.panel:hover { border-color: var(--border-strong); }
+.stat-card:hover { border-color: var(--accent); }
+.tab.active { box-shadow: none; border: 1px solid var(--border-strong); }
+.tabs { background: transparent; border: 1px solid var(--border); }
+
+/* Sidebar: quiet, flat, smaller type */
+.sidebar { background: var(--surface); }
+.side-item { font-weight: 400; }
 .side-item.active {
-  background: linear-gradient(120deg, var(--accent), var(--accent-strong));
-  box-shadow: 0 4px 14px rgba(14, 155, 108, 0.25);
-}
-[data-theme="dark"] .side-item.active {
   background: var(--accent-soft);
+  color: var(--accent);
   box-shadow: none;
 }
+[data-theme="dark"] .side-item.active { color: var(--accent-strong); }
+.sidebar-logo { font-weight: 400; letter-spacing: 0.01em; }
+.side-group { font-weight: 500; letter-spacing: 0.14em; }
 
-/* Focus visibility everywhere */
+/* Buttons: flat pills, no glow */
+.btn { border-radius: 999px; box-shadow: none; transition: background 0.15s, border-color 0.15s, color 0.15s; }
+.btn:active { transform: none; }
+.btn-accent { background: var(--accent); box-shadow: none; }
+.btn-accent:hover { background: var(--accent-strong); box-shadow: none; }
+[data-theme="dark"] .btn-accent { color: #101411; }
+[data-theme="dark"] .app-body a.btn-accent, [data-theme="dark"] .app-body .btn-accent { color: #101411; }
+.btn-primary, .btn-secondary { border-radius: 999px; }
+.chat-fab { box-shadow: none; }
+.chat-fab:hover { transform: none; background: var(--accent-strong); }
+[data-theme="dark"] .chat-fab { color: #101411; }
+[data-theme="dark"] .chat-msg.me { color: #101411; }
+[data-theme="dark"] .side-item.active { background: var(--accent-soft); }
+
+/* Focus visibility */
 .btn:focus-visible, .icon-btn:focus-visible, .tab:focus-visible,
 .field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 1.5px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* Buttons: subtle press feedback */
-.btn { transition: transform 0.12s, background 0.15s, box-shadow 0.15s, border-color 0.15s; }
-.btn:active { transform: scale(0.97); }
-.btn-accent { box-shadow: 0 4px 14px rgba(14, 155, 108, 0.28); }
-.btn-accent:hover { box-shadow: 0 6px 20px rgba(14, 155, 108, 0.36); }
+/* Charts: thinner, calmer */
+.sparkline path.line { stroke-width: 1.5; }
+.ring .track, .ring .meter { stroke-width: 6; }
+
+/* Avatar: flat forest, no gradient */
+.avatar { background: var(--accent); font-family: var(--font-body); font-weight: 500; }
+[data-theme="dark"] .avatar { color: #101411; }
 
 /* ─── Privacy mode — blur every balance ─────────────────── */
 .stat-value, .row-val, .sparkline { transition: filter 0.25s; }
@@ -647,7 +668,7 @@ body.app-body {
 [data-privacy="on"] .row-val,
 [data-privacy="on"] .sparkline,
 [data-privacy="on"] .score-card-big { filter: blur(9px); }
-[data-privacy="on"] #privacy-toggle { background: var(--accent-soft); color: var(--accent-strong); }
+[data-privacy="on"] #privacy-toggle { background: var(--accent-soft); color: var(--accent); }
 
 /* ─── Roadmap voting ────────────────────────────────────── */
 .vote-box {
@@ -657,11 +678,10 @@ body.app-body {
 .vote-btn {
   border: none; background: none; cursor: pointer;
   font-size: 0.72rem; line-height: 1; padding: 0.25rem 0.45rem;
-  border-radius: 7px; color: var(--fg-faint);
-  transition: background 0.15s, color 0.15s, transform 0.12s;
+  border-radius: 6px; color: var(--fg-faint);
+  transition: background 0.15s, color 0.15s;
 }
 .vote-btn:hover { background: var(--surface-2); color: var(--fg); }
-.vote-btn:active { transform: scale(0.9); }
-.vote-btn.voted { color: var(--accent-strong); background: var(--accent-soft); }
+.vote-btn.voted { color: var(--accent); background: var(--accent-soft); }
 .vote-btn.voted.down { color: var(--danger); background: var(--danger-soft); }
-.vote-score { font-size: 0.92rem; font-weight: 700; }
+.vote-score { font-size: 0.92rem; font-weight: 600; }

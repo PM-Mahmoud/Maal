@@ -42,7 +42,9 @@ Mizan is "the all-in-one for ethical investing" — a CFO-level advisor (AI neve
 
 ## Design system
 - Light theme default, dark via `html[data-theme="dark"]` (localStorage key `mizan-theme`)
-- `public/css/app.css` — dashboard design system + legacy class compatibility; `public/css/theme.css` — landing/auth (same tokens). Emerald accent #0E9B6C, gold #B8923D, Playfair Display headlines + Inter body
+- `public/css/app.css` — dashboard design system + legacy class compatibility; `public/css/theme.css` — landing/auth (same tokens)
+- **Minimal flat language (2026-06, tokorocapital.com-inspired)**: single font Hanken Grotesk (300–700; big headlines at weight 300), flat monochrome green palette — forest accent #115832, racing-green text #1F2722, cool-grey surfaces #F3F3F1, pale-green tints #E3F0E8/#F1F8F3; dark theme = racing-green black #101411 with park-green accent #AED4AF. Hairline 1px borders, NO shadows (--shadow:none; --shadow-lg only for modals), pill buttons, uppercase letter-spaced micro-labels (.panel-title, nav links, .side-group). Both stylesheets: tokens at top + "Tokoro minimal pass" override layer at bottom — put new visual overrides in that layer
+- `scripts/preview-static.js` (+ root `.claude/launch.json` "mizan-preview", port 4173) serves key pages with mock data and NO database — use for visual review
 - App shell: `views/app-layout.ejs` (sidebar, mobile hamburger topbar, floating chat widget, theme toggle, disclaimer footer). Landing partials in `views/partials/`. All dashboard routers set `res.locals.layout = 'app-layout'`
 - `public/js/app.js` — all client interactivity: generic `.tabs` toggling, modal/toast factories (`data-add-asset`, `data-demo-soon` attrs), sparkline drawing from `window.MIZAN_SNAPSHOTS`, advisor chat sessions, goals/radars/research/uploads (localStorage), Basiq tile handling (`data-basiq-live` → /basiq/connect, else demo modal)
 

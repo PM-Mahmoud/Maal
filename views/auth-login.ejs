@@ -9,40 +9,37 @@
   <title>Sign in — Mizan</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/theme.css">
   <style>
     body {
-      background:
-        radial-gradient(900px 480px at 80% -10%, rgba(14,155,108,0.08), transparent 60%),
-        radial-gradient(700px 420px at -5% 105%, rgba(184,146,61,0.10), transparent 65%),
-        var(--bg);
+      background: var(--bg);
       min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem;
     }
     .auth-split { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; width: 100%; max-width: 980px; }
     .auth-brand { max-width: 440px; }
-    .auth-brand .eyebrow { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); margin-bottom: 1rem; }
-    .auth-brand h2 { font-family: var(--font-display); font-size: 2rem; font-weight: 600; line-height: 1.25; color: var(--fg); margin: 0 0 1rem; letter-spacing: -0.01em; }
+    .auth-brand .eyebrow { font-size: 0.68rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 1rem; }
+    .auth-brand h2 { font-family: var(--font-display); font-size: 2.3rem; font-weight: 300; line-height: 1.18; color: var(--fg); margin: 0 0 1rem; letter-spacing: -0.02em; }
     .auth-brand p { font-size: 0.92rem; color: var(--fg-muted); line-height: 1.75; margin: 0 0 1.4rem; }
     .auth-brand .pillars { display: flex; flex-wrap: wrap; gap: 0.45rem; }
     .auth-brand .pillars span { font-size: 0.72rem; font-weight: 600; color: var(--fg-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 0.3rem 0.75rem; }
     .auth-wrap { width: 100%; max-width: 420px; justify-self: center; }
     .auth-logo { text-align: center; margin-bottom: 2.5rem; }
     .auth-logo a { text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; }
-    .auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow-lg); padding: 2.5rem; }
+    .auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: none; padding: 2.5rem; }
     @media (max-width: 880px) {
       .auth-split { grid-template-columns: 1fr; gap: 2rem; max-width: 420px; }
       .auth-brand { display: none; }
     }
-    .auth-card h1 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; color: var(--fg); margin: 0 0 0.35rem; }
+    .auth-card h1 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 400; color: var(--fg); margin: 0 0 0.35rem; letter-spacing: -0.01em; }
     .auth-card .subtitle { font-size: 0.875rem; color: var(--fg-muted); margin: 0 0 2rem; line-height: 1.55; }
     .form-group { margin-bottom: 1.1rem; }
     .form-group label { display: block; font-size: 0.75rem; font-weight: 500; color: var(--fg-muted); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.07em; }
     .form-group input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.7rem 0.9rem; color: var(--fg); font-size: 0.9rem; font-family: var(--font-body); outline: none; transition: border-color 0.2s; box-sizing: border-box; }
     .form-group input:focus { border-color: var(--accent); }
     .form-group input::placeholder { color: var(--fg-muted); opacity: 0.5; }
-    .btn-primary { width: 100%; background: var(--accent); color: #fff; font-weight: 600; font-size: 0.9rem; padding: 0.8rem 1.5rem; border: none; border-radius: 8px; cursor: pointer; font-family: var(--font-body); transition: opacity 0.2s; }
-    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary { width: 100%; background: var(--accent); color: #fff; font-weight: 500; font-size: 0.9rem; padding: 0.8rem 1.5rem; border: none; border-radius: 999px; cursor: pointer; font-family: var(--font-body); transition: background 0.2s; }
+    .btn-primary:hover { background: var(--accent-strong); }
     .alert { padding: 0.75rem 0.9rem; border-radius: 8px; font-size: 0.825rem; margin-bottom: 1.1rem; line-height: 1.5; }
     .alert-error { background: var(--danger-soft); border: 1px solid rgba(224,112,112,0.3); color: var(--danger); }
     .auth-footer { text-align: center; margin-top: 1.5rem; font-size: 0.825rem; color: var(--fg-muted); }
