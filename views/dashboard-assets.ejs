@@ -1,10 +1,11 @@
 <%
   function aud(n) { n = Number(n) || 0; return '$' + n.toLocaleString('en-AU', { maximumFractionDigits: 0 }); }
-  var superBal  = (profile && profile.super_balance) || 0;
-  var investBal = (profile && profile.investment_portfolio) || 0;
-  var propertyV = (profile && profile.property_value) || 0;
-  var hecs      = (profile && profile.hecs_balance) || 0;
-  var otherDebt = (profile && profile.total_debt) || 0;
+  // Number() — Postgres returns BIGINT as strings; avoid string concatenation
+  var superBal  = Number(profile && profile.super_balance) || 0;
+  var investBal = Number(profile && profile.investment_portfolio) || 0;
+  var propertyV = Number(profile && profile.property_value) || 0;
+  var hecs      = Number(profile && profile.hecs_balance) || 0;
+  var otherDebt = Number(profile && profile.total_debt) || 0;
 %>
 
 <div class="page-head">

@@ -1,9 +1,45 @@
+<%
+  var bqEnabled = typeof basiqEnabled !== 'undefined' && basiqEnabled;
+  var bqStatus = typeof basiqStatus !== 'undefined' ? basiqStatus : null;
+  var liveTx = typeof liveTransactions !== 'undefined' ? liveTransactions : [];
+%>
 <div class="page-head">
   <div>
     <h1>Transactions</h1>
     <div class="sub">Connect your bank and Mizan reads your transactions and subscriptions in near real-time.</div>
   </div>
+  <% if (bqEnabled && user.basiq_user_id) { %>
+  <a href="/basiq/sync" class="btn btn-ghost btn-sm">↻ Sync now</a>
+  <% } %>
 </div>
+
+<% if (bqStatus === 'connected' || bqStatus === 'synced') { %>
+<div class="alert alert-success">✓ Bank <%= bqStatus %> via Basiq — accounts saved. Transactions appear below as they sync.</div>
+<% } else if (bqStatus === 'error') { %>
+<div class="alert alert-error">Basiq connection hit a snag. Check the BASIQ_API_KEY on the server and try again.</div>
+<% } else if (bqStatus === 'nokey') { %>
+<div class="alert alert-error">Basiq isn't configured yet — add BASIQ_API_KEY on Render (free sandbox at dashboard.basiq.io). Until then, bank tiles run in demo mode.</div>
+<% } %>
+
+<% if (liveTx.length) { %>
+<div class="panel" style="margin-bottom:1.2rem;">
+  <div class="panel-title">Recent transactions <span class="chip chip-accent">Live via Basiq</span></div>
+  <table class="table">
+    <thead><tr><th>Date</th><th>Description</th><th style="text-align:right;">Amount</th></tr></thead>
+    <tbody>
+      <% liveTx.forEach(function(t) { %>
+      <tr>
+        <td style="white-space:nowrap;"><%= (t.postDate || t.transactionDate || '').slice(0, 10) %></td>
+        <td><%= t.description || t.subClass && t.subClass.title || '—' %></td>
+        <td style="text-align:right; font-weight:600; color:<%= Number(t.amount) < 0 ? 'var(--danger)' : 'var(--accent-strong)' %>;">
+          $<%= Math.abs(Number(t.amount) || 0).toLocaleString('en-AU', { minimumFractionDigits: 2 }) %>
+        </td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+<% } %>
 
 <div class="assistant-card" style="margin-bottom:1.2rem;">
   <div class="avatar">M</div>
@@ -18,9 +54,9 @@
 
 <div class="widget-grid">
   <div class="panel col-7">
-    <div class="panel-title">Connect an account <span class="chip chip-accent">Powered by Basiq</span></div>
+    <div class="panel-title">Connect an account <span class="chip chip-accent"><%= bqEnabled ? 'Basiq sandbox live' : 'Powered by Basiq' %></span></div>
     <div class="field"><input type="search" placeholder="Search 100+ Australian institutions…"></div>
-    <div class="inst-grid">
+    <div class="inst-grid" <%= bqEnabled ? 'data-basiq-live' : '' %>>
       <div class="inst"><span class="inst-logo" style="background:#FFCC00; color:#000;">CBA</span><span class="inst-name">CommBank</span></div>
       <div class="inst"><span class="inst-logo" style="background:#DA1710;">W</span><span class="inst-name">Westpac</span></div>
       <div class="inst"><span class="inst-logo" style="background:#C20000;">NAB</span><span class="inst-name">NAB</span></div>

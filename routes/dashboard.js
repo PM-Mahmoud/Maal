@@ -12,6 +12,10 @@ const { getScoresByUserId, getLatestScoreByUserId, saveScore } = require('../db/
 const { getRecommendationsByUserId, updateRecommendationStatus, saveRecommendationsBatch } = require('../db/recommendations');
 const { getAccountsByUserId, addAccount, deleteAccount, syncAccount } = require('../db/linked_accounts');
 const { computeScore } = require('../lib/score-engine');
+const { computeMizanScore } = require('../lib/mizan-score');
+const { recordSnapshot, getSnapshots } = require('../db/snapshots');
+const advisor = require('../services/advisor');
+const basiqService = require('../services/basiq');
 
 // ─── Auth guard middleware ─────────────────────────────────────────────────
 
@@ -45,16 +49,64 @@ router.get('/', async (req, res) => {
     const shs = scores.find(s => s.score_type === 'super_health');
     const ehs = scores.find(s => s.score_type === 'ethical_score');
 
+    // Mizan Score — single composite wellbeing score
+    const mizanScore = computeMizanScore(profile);
+
+    // Record today's net-worth snapshot, then load history for the real chart
+    const p = profile || {};
+    const superBal  = Number(p.super_balance) || 0;
+    const investBal = Number(p.investment_portfolio) || 0;
+    const propertyV = Number(p.property_value) || 0;
+    const debts     = (Number(p.hecs_balance) || 0) + (Number(p.total_debt) || 0);
+    const assets    = superBal + investBal + propertyV;
+    let snapshots = [];
+    try {
+      await recordSnapshot(req.session.userId, {
+        netWorth: assets - debts,
+        assetsTotal: assets,
+        superBalance: superBal,
+        investBalance: investBal,
+        debtsTotal: debts,
+      });
+      snapshots = await getSnapshots(req.session.userId, 366);
+    } catch (snapErr) {
+      console.error('Snapshot error (run migrations?):', snapErr.message);
+    }
+
     res.render('dashboard-overview', {
       user, profile, session,
       financialScore: fhs,
       superScore: shs,
       ethicalScore: ehs,
+      mizanScore,
+      snapshots,
       pageTitle: 'Dashboard'
     });
   } catch (err) {
     console.error('Dashboard error:', err.message);
     res.status(500).render('error', { message: 'Failed to load dashboard.' });
+  }
+});
+
+// ─── API: Ask Mizan chat (DeepSeek-powered) ──────────────────────────────────
+
+router.post('/ask/message', async (req, res) => {
+  try {
+    const { messages } = req.body; // [{role:'user'|'assistant', content:string}, ...]
+    if (!Array.isArray(messages) || !messages.length) {
+      return res.status(400).json({ error: 'No messages.' });
+    }
+    const clean = messages
+      .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+      .map(m => ({ role: m.role, content: m.content.slice(0, 2000) }));
+
+    const { user, profile } = await dashboardContext(req);
+    const mizan = computeMizanScore(profile);
+    const reply = await advisor.chat(user, profile, mizan, clean);
+    res.json({ ok: true, reply, live: advisor.hasAdvisor() });
+  } catch (err) {
+    console.error('ask/message error:', err.message);
+    res.status(500).json({ error: 'The advisor hit a snag — try again in a moment.' });
   }
 });
 
@@ -115,7 +167,22 @@ router.get('/vault', async (req, res) => {
 router.get('/transactions', async (req, res) => {
   try {
     const ctx = await dashboardContext(req);
-    res.render('dashboard-transactions', { ...ctx, pageTitle: 'Transactions' });
+    // Live transactions if Basiq is configured and the user has connected
+    let liveTransactions = [];
+    if (basiqService.hasBasiq() && ctx.user.basiq_user_id) {
+      try {
+        liveTransactions = await basiqService.getTransactions(ctx.user.basiq_user_id, 25);
+      } catch (e) {
+        console.error('Basiq transactions fetch failed:', e.message);
+      }
+    }
+    res.render('dashboard-transactions', {
+      ...ctx,
+      pageTitle: 'Transactions',
+      basiqEnabled: basiqService.hasBasiq(),
+      basiqStatus: req.query.basiq || null,
+      liveTransactions,
+    });
   } catch (err) {
     console.error('/transactions error:', err.message);
     res.status(500).render('error', { message: 'Failed to load Transactions.' });

@@ -13,6 +13,7 @@
 
 const express = require('express');
 const router = express.Router();
+const { setUserPlan } = require('../db/users');
 
 const PLANS = {
   pro: { name: 'Mizan Pro', amount: 2000, blurb: 'The full advisor experience' },   // $20.00 AUD
@@ -44,8 +45,9 @@ router.post('/checkout', requireAuth, async (req, res) => {
   const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
   const stripe = getStripe();
 
-  // Demo mode — no Stripe key configured. Simulate success.
+  // Demo mode — no Stripe key configured. Simulate success and persist the plan.
   if (!stripe) {
+    await setUserPlan(req.session.userId, planKey);
     return res.redirect(`/dashboard/settings?billing=demo&plan=${planKey}`);
   }
 
@@ -66,7 +68,7 @@ router.post('/checkout', requireAuth, async (req, res) => {
           },
         },
       }],
-      success_url: `${baseUrl}/dashboard/settings?billing=success&plan=${planKey}`,
+      success_url: `${baseUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}&plan=${planKey}`,
       cancel_url: `${baseUrl}/dashboard/settings?billing=cancel`,
       metadata: { userId: String(req.session.userId), plan: planKey },
     });
@@ -75,6 +77,37 @@ router.post('/checkout', requireAuth, async (req, res) => {
     console.error('Stripe checkout error:', err.message);
     return res.redirect('/dashboard/settings?billing=error');
   }
+});
+
+// ─── GET /billing/success — verify the Stripe session, persist the plan ──────
+
+router.get('/success', requireAuth, async (req, res) => {
+  const planKey = (req.query.plan || '').toLowerCase();
+  const stripe = getStripe();
+  try {
+    if (stripe && req.query.session_id) {
+      const session = await stripe.checkout.sessions.retrieve(req.query.session_id);
+      if (session && session.payment_status === 'paid' && PLANS[planKey]) {
+        await setUserPlan(req.session.userId, planKey);
+        return res.redirect(`/dashboard/settings?billing=success&plan=${planKey}`);
+      }
+    }
+    res.redirect('/dashboard/settings?billing=error');
+  } catch (err) {
+    console.error('Billing success verify error:', err.message);
+    res.redirect('/dashboard/settings?billing=error');
+  }
+});
+
+// ─── POST /billing/downgrade — back to free (demo-friendly) ──────────────────
+
+router.post('/downgrade', requireAuth, async (req, res) => {
+  try {
+    await setUserPlan(req.session.userId, 'free');
+  } catch (err) {
+    console.error('Downgrade error:', err.message);
+  }
+  res.redirect('/dashboard/settings?billing=downgraded');
 });
 
 module.exports = router;

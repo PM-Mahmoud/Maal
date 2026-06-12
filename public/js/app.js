@@ -74,20 +74,68 @@
     });
   });
 
-  /* ─── 2. Dashboard time-range tabs ────────────────────── */
+  /* ─── 2. Dashboard charts — real data + time-range tabs ── */
+  // window.MIZAN_SNAPSHOTS = [{ d: date, nw, inv, sup, debt }] (daily, oldest first)
+  function drawSpark(svgId, series) {
+    var svg = document.getElementById(svgId);
+    if (!svg) return;
+    var line = svg.querySelector('path.line');
+    var fill = svg.querySelector('path.fill');
+    if (!series.length) { line.setAttribute('d', ''); fill.setAttribute('d', ''); return; }
+    if (series.length === 1) series = [series[0], series[0]]; // flat line for day one
+    var min = Math.min.apply(null, series);
+    var max = Math.max.apply(null, series);
+    var span = (max - min) || 1;
+    var pts = series.map(function (v, i) {
+      var x = (i / (series.length - 1)) * 200;
+      var y = 32 - ((v - min) / span) * 26; // padding: 6 top, 4 bottom
+      return [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
+    });
+    var d = 'M' + pts.map(function (p) { return p[0] + ',' + p[1]; }).join(' L');
+    line.setAttribute('d', d);
+    fill.setAttribute('d', d + ' L200,36 L0,36 Z');
+  }
+
+  function rangeToDays(label) {
+    if (label === '1M') return 31;
+    if (label === '6M') return 184;
+    if (label === 'All') return 100000;
+    // YTD
+    var now = new Date();
+    return Math.max(2, Math.round((now - new Date(now.getFullYear(), 0, 1)) / 86400000));
+  }
+
+  function renderCharts(rangeLabel) {
+    var snaps = window.MIZAN_SNAPSHOTS || [];
+    var days = rangeToDays(rangeLabel);
+    var cutoff = Date.now() - days * 86400000;
+    var visible = snaps.filter(function (s) { return new Date(s.d).getTime() >= cutoff; });
+    if (!visible.length) visible = snaps;
+    drawSpark('spark-networth', visible.map(function (s) { return s.nw; }));
+    drawSpark('spark-invest',   visible.map(function (s) { return s.inv; }));
+    drawSpark('spark-super',    visible.map(function (s) { return s.sup; }));
+    drawSpark('spark-debts',    visible.map(function (s) { return s.debt; }));
+    // delta text from real data
+    var d = $('[data-networth-delta]');
+    if (d && visible.length >= 2) {
+      var first = visible[0].nw, last = visible[visible.length - 1].nw;
+      if (first !== 0) {
+        var pct = ((last - first) / Math.abs(first)) * 100;
+        d.textContent = (pct >= 0 ? '+' : '') + (Math.round(pct * 10) / 10) + '% over ' + rangeLabel;
+        d.classList.toggle('up', pct >= 0);
+        d.classList.toggle('down', pct < 0);
+      }
+    } else if (d && visible.length < 2) {
+      d.textContent = 'Day one — your history builds from today';
+    }
+  }
+
   var rangeTabs = $('#range-tabs');
-  if (rangeTabs) {
-    var deltas = {
-      '1M':  '+0.8% this month',
-      '6M':  '+1.9% past 6 months',
-      'YTD': '+2.4% this quarter',
-      'All': '+6.2% since you joined'
-    };
+  if (rangeTabs && document.getElementById('spark-networth')) {
+    renderCharts('YTD');
     rangeTabs.addEventListener('tabchange', function (e) {
-      var range = e.detail;
-      $all('.range-chip').forEach(function (c) { c.textContent = range; });
-      var d = $('[data-networth-delta]');
-      if (d && d.classList.contains('up')) d.textContent = deltas[range] || d.textContent;
+      $all('.range-chip').forEach(function (c) { c.textContent = e.detail; });
+      renderCharts(e.detail);
     });
   }
 
@@ -140,9 +188,11 @@
     });
   });
 
-  /* ─── 4. Institution tiles (Basiq demo connect) ───────── */
+  /* ─── 4. Institution tiles (Basiq connect — live or demo) ── */
   $all('.inst').forEach(function (tile) {
     tile.addEventListener('click', function () {
+      // Live mode: BASIQ_API_KEY configured → launch the real consent flow
+      if (tile.closest('[data-basiq-live]')) { location.href = '/basiq/connect'; return; }
       if (tile.classList.contains('connected')) { toast('Already connected (demo)'); return; }
       var name = ($('.inst-name', tile) || {}).textContent || 'Bank';
       openModal(
@@ -285,30 +335,53 @@
     renderRadars();
   }
 
-  /* ─── 7. Ask Mizan page ───────────────────────────────── */
+  /* ─── 7. Shared advisor chat (DeepSeek via /dashboard/ask/message) ── */
+  function makeChatSession(threadEl) {
+    var history = [];
+    function bubble(role, text) {
+      var el = document.createElement('div');
+      el.className = 'chat-msg ' + (role === 'user' ? 'me' : 'bot');
+      el.textContent = text;
+      threadEl.appendChild(el);
+      threadEl.style.display = 'flex';
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return el;
+    }
+    return function send(text) {
+      bubble('user', text);
+      history.push({ role: 'user', content: text });
+      var typing = bubble('assistant', '…');
+      typing.style.opacity = '0.6';
+      fetch('/dashboard/ask/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history })
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        typing.style.opacity = '';
+        if (j.ok) {
+          typing.textContent = j.reply;
+          history.push({ role: 'assistant', content: j.reply });
+        } else {
+          typing.textContent = j.error || 'Something went wrong — try again.';
+        }
+        typing.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }).catch(function () {
+        typing.style.opacity = '';
+        typing.textContent = 'Connection hiccup — try again in a moment.';
+      });
+    };
+  }
+
+  /* Ask Mizan page */
   var askSend = $('#ask-send');
   if (askSend) {
-    var askThread = $('#ask-thread');
-    function askReply(text) {
-      var me = document.createElement('div');
-      me.className = 'chat-msg me';
-      me.textContent = text;
-      askThread.appendChild(me);
-      askThread.style.display = 'flex';
-      setTimeout(function () {
-        var bot = document.createElement('div');
-        bot.className = 'chat-msg bot';
-        bot.textContent = 'Good question. Mizan chat is in preview — once your accounts are connected I\'ll answer this from your real data. For now: add assets & liabilities so I can see your full picture.';
-        askThread.appendChild(bot);
-        bot.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }, 650);
-    }
+    var askChat = makeChatSession($('#ask-thread'));
     askSend.addEventListener('click', function () {
       var input = $('#ask-input');
       var text = input.value.trim();
       if (!text) { input.focus(); return; }
       input.value = '';
-      askReply(text);
+      askChat(text);
     });
     $('#ask-input').addEventListener('keydown', function (e) {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); askSend.click(); }
@@ -319,6 +392,21 @@
         $('#ask-input').focus();
       });
     });
+  }
+
+  /* Floating chat widget (markup lives in app-layout) */
+  var widgetSend = $('#chat-send');
+  if (widgetSend && $('#chat-body')) {
+    var widgetChat = makeChatSession($('#chat-body'));
+    var widgetInput = $('#chat-input');
+    function widgetGo() {
+      var text = widgetInput.value.trim();
+      if (!text) return;
+      widgetInput.value = '';
+      widgetChat(text);
+    }
+    widgetSend.addEventListener('click', widgetGo);
+    widgetInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') widgetGo(); });
   }
 
   /* ─── 8. Research page ────────────────────────────────── */

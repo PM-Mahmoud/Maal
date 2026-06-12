@@ -216,3 +216,19 @@ module.exports = {
   ...module.exports,
   setPhone,
 };
+
+// ─── Subscription plan + Basiq linkage ───────────────────────────────────────
+
+async function setUserPlan(userId, plan) {
+  await pool.query(`UPDATE users SET plan = $2 WHERE id = $1`, [userId, plan]);
+}
+
+async function setBasiqUserId(userId, basiqUserId) {
+  await pool.query(`UPDATE users SET basiq_user_id = $2 WHERE id = $1`, [userId, basiqUserId]);
+}
+
+module.exports = {
+  ...module.exports,
+  setUserPlan,
+  setBasiqUserId,
+};

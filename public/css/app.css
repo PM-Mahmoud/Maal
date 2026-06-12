@@ -556,8 +556,30 @@ body.app-body {
   .score-row { grid-template-columns: 1fr; }
   .plans { grid-template-columns: 1fr; }
 }
+/* mobile top bar + slide-in sidebar */
+.mobile-topbar { display: none; }
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0; z-index: 90;
+  background: rgba(10, 16, 14, 0.45);
+}
+.sidebar-overlay.show { display: block; }
+
 @media (max-width: 820px) {
-  .sidebar { display: none; }
+  .mobile-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 80;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0.55rem 0.9rem;
+  }
+  .sidebar {
+    transform: translateX(-105%);
+    transition: transform 0.25s ease;
+    z-index: 95;
+    box-shadow: var(--shadow-lg);
+  }
+  .sidebar.open { transform: translateX(0); }
   .main { margin-left: 0; padding: 1.25rem 1rem 2.5rem; }
   .stat-grid, .suggest-grid, .field-row, .inst-grid, .grid-2, .grid-3, .score-cards { grid-template-columns: 1fr; }
+  .chat-fab { right: 14px; bottom: 14px; }
+  .chat-panel { right: 14px; bottom: 78px; }
 }

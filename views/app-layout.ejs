@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
+  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
   <title><%= pageTitle %> — Mizan</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,6 +23,15 @@
   </script>
 </head>
 <body class="app-body">
+  <!-- Mobile top bar -->
+  <div class="mobile-topbar">
+    <button class="icon-btn" id="mobile-menu" title="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <a href="/dashboard" class="sidebar-logo" style="margin:0; font-size:1.2rem;"><span class="mark">◈</span> Mizan</a>
+    <span style="width:34px;"></span>
+  </div>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
   <div class="app">
     <aside class="sidebar">
       <a href="/dashboard" class="sidebar-logo"><span class="mark">◈</span> Mizan</a>
@@ -110,39 +122,31 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Floating chat
+      // Floating chat open/close (messaging logic lives in /js/app.js)
       var fab = document.getElementById('chat-fab');
       var panel = document.getElementById('chat-panel');
       var chatClose = document.getElementById('chat-close');
-      var chatInput = document.getElementById('chat-input');
-      var chatSend = document.getElementById('chat-send');
-      var chatBody = document.getElementById('chat-body');
       if (fab && panel) {
-        fab.addEventListener('click', function() { panel.classList.toggle('open'); if (panel.classList.contains('open')) chatInput.focus(); });
+        fab.addEventListener('click', function() {
+          panel.classList.toggle('open');
+          if (panel.classList.contains('open')) document.getElementById('chat-input').focus();
+        });
         chatClose.addEventListener('click', function() { panel.classList.remove('open'); });
-        function sendChat() {
-          var text = chatInput.value.trim();
-          if (!text) return;
-          var me = document.createElement('div');
-          me.className = 'chat-msg me';
-          me.textContent = text;
-          chatBody.appendChild(me);
-          chatInput.value = '';
-          chatBody.scrollTop = chatBody.scrollHeight;
-          setTimeout(function() {
-            var bot = document.createElement('div');
-            bot.className = 'chat-msg bot';
-            bot.textContent = "Good question. I'm still in preview here — for a full answer over your data, open Ask Mizan and I'll walk you through it.";
-            var link = document.createElement('a');
-            link.href = '/dashboard/ask';
-            link.textContent = ' Open Ask Mizan →';
-            bot.appendChild(link);
-            chatBody.appendChild(bot);
-            chatBody.scrollTop = chatBody.scrollHeight;
-          }, 600);
-        }
-        chatSend.addEventListener('click', sendChat);
-        chatInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') sendChat(); });
+      }
+
+      // Mobile sidebar
+      var menuBtn = document.getElementById('mobile-menu');
+      var sidebar = document.querySelector('.sidebar');
+      var overlay = document.getElementById('sidebar-overlay');
+      if (menuBtn && sidebar) {
+        menuBtn.addEventListener('click', function() {
+          sidebar.classList.toggle('open');
+          overlay.classList.toggle('show');
+        });
+        overlay.addEventListener('click', function() {
+          sidebar.classList.remove('open');
+          overlay.classList.remove('show');
+        });
       }
 
       // Theme toggle
