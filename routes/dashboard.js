@@ -147,7 +147,7 @@ router.get('/radar', async (req, res) => {
 router.get('/assets', async (req, res) => {
   try {
     const ctx = await dashboardContext(req);
-    res.render('dashboard-assets', { ...ctx, pageTitle: 'Assets & Liabilities' });
+    res.render('dashboard-assets', { ...ctx, pageTitle: 'Assets & Liabilities', basiqEnabled: basiqService.hasBasiq() });
   } catch (err) {
     console.error('/assets error:', err.message);
     res.status(500).render('error', { message: 'Failed to load Assets & Liabilities.' });
@@ -167,13 +167,17 @@ router.get('/vault', async (req, res) => {
 router.get('/transactions', async (req, res) => {
   try {
     const ctx = await dashboardContext(req);
-    // Live transactions if Basiq is configured and the user has connected
+    // Live accounts + transactions if Basiq is configured and the user has connected
     let liveTransactions = [];
+    let liveAccounts = [];
     if (basiqService.hasBasiq() && ctx.user.basiq_user_id) {
       try {
-        liveTransactions = await basiqService.getTransactions(ctx.user.basiq_user_id, 25);
+        [liveAccounts, liveTransactions] = await Promise.all([
+          basiqService.getAccounts(ctx.user.basiq_user_id),
+          basiqService.getTransactions(ctx.user.basiq_user_id, 25),
+        ]);
       } catch (e) {
-        console.error('Basiq transactions fetch failed:', e.message);
+        console.error('Basiq fetch failed:', e.message);
       }
     }
     res.render('dashboard-transactions', {
@@ -182,6 +186,7 @@ router.get('/transactions', async (req, res) => {
       basiqEnabled: basiqService.hasBasiq(),
       basiqStatus: req.query.basiq || null,
       liveTransactions,
+      liveAccounts,
     });
   } catch (err) {
     console.error('/transactions error:', err.message);

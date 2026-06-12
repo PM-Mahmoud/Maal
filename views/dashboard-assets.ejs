@@ -98,7 +98,7 @@
     <div class="panel">
       <div class="panel-title">Connect Accounts <span class="chip chip-accent">via Basiq</span></div>
       <div class="field"><input type="search" placeholder="Search 100+ Australian institutions…"></div>
-      <div class="inst-grid">
+      <div class="inst-grid" <%= (typeof basiqEnabled !== 'undefined' && basiqEnabled) ? 'data-basiq-live' : '' %>>
         <div class="inst"><span class="inst-logo" style="background:#FFCC00; color:#000;">CBA</span><span class="inst-name">CommBank</span></div>
         <div class="inst"><span class="inst-logo" style="background:#DA1710;">W</span><span class="inst-name">Westpac</span></div>
         <div class="inst"><span class="inst-logo" style="background:#C20000;">NAB</span><span class="inst-name">NAB</span></div>
