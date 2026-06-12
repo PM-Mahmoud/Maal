@@ -36,7 +36,8 @@ router.get('/connect', async (req, res) => {
     res.redirect(url);
   } catch (err) {
     console.error('Basiq connect error:', err.message);
-    res.redirect('/dashboard/transactions?basiq=error');
+    const reason = encodeURIComponent(String(err.message || 'unknown').slice(0, 140));
+    res.redirect('/dashboard/transactions?basiq=error&reason=' + reason);
   }
 });
 

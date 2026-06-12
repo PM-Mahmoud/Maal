@@ -185,6 +185,7 @@ router.get('/transactions', async (req, res) => {
       pageTitle: 'Transactions',
       basiqEnabled: basiqService.hasBasiq(),
       basiqStatus: req.query.basiq || null,
+      basiqReason: req.query.reason || null,
       liveTransactions,
       liveAccounts,
     });

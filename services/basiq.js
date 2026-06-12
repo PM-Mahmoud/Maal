@@ -15,8 +15,13 @@
 
 const BASIQ_BASE = 'https://au-api.basiq.io';
 
+function apiKey() {
+  // trim() guards against stray spaces/newlines pasted into Render's env editor
+  return (process.env.BASIQ_API_KEY || '').trim();
+}
+
 function hasBasiq() {
-  return !!process.env.BASIQ_API_KEY;
+  return !!apiKey();
 }
 
 let cachedServerToken = null;
@@ -51,7 +56,7 @@ async function getServerToken() {
   const json = await basiqFetch('/token', {
     method: 'POST',
     body: 'scope=SERVER_ACCESS',
-  }, `Basic ${process.env.BASIQ_API_KEY}`);
+  }, `Basic ${apiKey()}`);
   cachedServerToken = `Bearer ${json.access_token}`;
   cachedServerTokenExp = Date.now() + 50 * 60 * 1000;
   return cachedServerToken;
@@ -62,7 +67,7 @@ async function getClientToken(basiqUserId) {
   const json = await basiqFetch('/token', {
     method: 'POST',
     body: `scope=CLIENT_ACCESS&userId=${encodeURIComponent(basiqUserId)}`,
-  }, `Basic ${process.env.BASIQ_API_KEY}`);
+  }, `Basic ${apiKey()}`);
   return json.access_token;
 }
 

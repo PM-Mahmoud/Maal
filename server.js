@@ -55,7 +55,15 @@ app.use(expressLayouts);
 // ─── Health (no DB) ───────────────────────────────────────────────────────
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'healthy' });
+  // Integration flags are booleans only — never expose key values.
+  res.json({
+    status: 'healthy',
+    integrations: {
+      basiq: !!(process.env.BASIQ_API_KEY || '').trim(),
+      advisor: !!((process.env.GROQ_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.AI_API_KEY || '').trim()),
+      stripe: !!(process.env.STRIPE_SECRET_KEY || '').trim(),
+    },
+  });
 });
 
 // ─── Static assets ────────────────────────────────────────────────────────

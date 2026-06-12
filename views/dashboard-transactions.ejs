@@ -17,7 +17,7 @@
 <% if (bqStatus === 'connected' || bqStatus === 'synced') { %>
 <div class="alert alert-success">✓ Bank <%= bqStatus %> via Basiq — accounts saved. Transactions appear below as they sync.</div>
 <% } else if (bqStatus === 'error') { %>
-<div class="alert alert-error">Basiq connection hit a snag. Check the BASIQ_API_KEY on the server and try again.</div>
+<div class="alert alert-error">Basiq connection hit a snag<% if (typeof basiqReason !== 'undefined' && basiqReason) { %>: <code style="font-size:0.78rem;"><%= basiqReason %></code><% } %>. Check the BASIQ_API_KEY on the server and try again.</div>
 <% } else if (bqStatus === 'nokey') { %>
 <div class="alert alert-error">Basiq isn't configured yet — add BASIQ_API_KEY on Render (free sandbox at dashboard.basiq.io). Until then, bank tiles run in demo mode.</div>
 <% } else if (bqEnabled && user.basiq_user_id && !liveAcc.length) { %>
