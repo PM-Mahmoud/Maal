@@ -97,6 +97,15 @@ function buildSystemPrompt(user, profile, mizan) {
   } else {
     lines.push('They have not added financial data yet — answer generally and suggest adding assets & liabilities in the app for personalised education.');
   }
+  // Soft personalisation fields from the Profile page (onboarding_data JSONB)
+  const od = (p && p.onboarding_data) || {};
+  if (od.tax_residency || od.state) lines.push(`- Tax: ${[od.tax_residency, od.state].filter(Boolean).join(', ')}`);
+  if (od.risk_tolerance) lines.push(`- Risk tolerance: ${od.risk_tolerance}${od.experience ? ', ' + od.experience + ' investor' : ''}`);
+  if (od.super_option) lines.push(`- Super invested in: ${od.super_option}`);
+  if (od.preferences) {
+    lines.push('');
+    lines.push(`The user set these preferences for how you should respond — honour them: "${String(od.preferences).slice(0, 600)}"`);
+  }
   if (mizan && mizan.hasData) {
     lines.push(`Their Mizan Score (composite financial wellbeing, 0-100) is ${mizan.score} (${mizan.band}). Pillars: ` +
       mizan.pillars.map((pl) => `${pl.label} ${pl.score}/100`).join(', ') + '.');

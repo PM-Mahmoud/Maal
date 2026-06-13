@@ -164,7 +164,15 @@ router.get('/radar', async (req, res) => {
 router.get('/assets', async (req, res) => {
   try {
     const ctx = await dashboardContext(req);
-    res.render('dashboard-assets', { ...ctx, pageTitle: 'Assets & Liabilities', basiqEnabled: basiqService.hasBasiq() });
+    // Live Basiq accounts shown separately from manual entries (no double-count)
+    const allAccounts = await getAccountsByUserId(req.session.userId).catch(() => []);
+    const liveAccounts = allAccounts.filter(a => String(a.account_reference || '').startsWith('basiq:'));
+    const { connected } = buildEffectiveProfile(ctx.profile, allAccounts);
+    res.render('dashboard-assets', {
+      ...ctx, pageTitle: 'Assets & Liabilities',
+      basiqEnabled: basiqService.hasBasiq(),
+      liveAccounts, connected,
+    });
   } catch (err) {
     console.error('/assets error:', err.message);
     res.status(500).render('error', { layout: false, message: 'Failed to load Assets & Liabilities.' });
@@ -482,6 +490,12 @@ router.get('/profile', async (req, res) => {
 
 // ─── API: update profile ──────────────────────────────────────────────────────
 
+// Strip "$", commas and spaces from money inputs → integer
+function parseMoney(v) {
+  const n = parseInt(String(v == null ? '' : v).replace(/[^0-9.-]/g, ''), 10);
+  return isNaN(n) ? 0 : n;
+}
+
 router.post('/profile',
   body('name').trim().isLength({ min: 1 }),
   async (req, res) => {
@@ -489,29 +503,61 @@ router.post('/profile',
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         const ctx = await dashboardContext(req);
-        const accounts = await getAccountsByUserId(req.session.userId);
         return res.render('dashboard-profile', {
-          ...ctx, accounts, pageTitle: 'Profile', error: 'Name is required.', success: null
+          ...ctx, pageTitle: 'Profile', error: 'Name is required.', success: null
         });
       }
+
+      const b = req.body;
       const { updateName } = require('../db/users');
-      await updateName(req.session.userId, req.body.name);
-      req.session.name = req.body.name;
+      await updateName(req.session.userId, b.name.trim());
+      req.session.name = b.name.trim();
+
+      // Merge onto the existing profile — upsertProfile overwrites every
+      // column, so we must pass the full row, not just the changed fields.
+      const existing = (await getProfileByUserId(req.session.userId)) || {};
+      const ethical = b.ethical_screening || '';
+      const merged = {
+        ...existing,
+        profession: (b.profession || '').trim() || null,
+        years_in_practice: b.years_in_practice ? parseInt(b.years_in_practice, 10) : null,
+        annual_income: parseMoney(b.annual_income),
+        retirement_age: b.retirement_age ? parseInt(b.retirement_age, 10) : 65,
+        hecs_balance: parseMoney(b.hecs_balance),
+        super_balance: parseMoney(b.super_balance),
+        has_private_health: b.private_health === 'yes',
+        prefers_halal: ethical === 'Halal framework' || ethical === 'Both',
+        prefers_esg: ethical === 'ESG / ethical framework' || ethical === 'Both',
+        // Soft personalisation fields → JSONB (no schema churn)
+        onboarding_data: {
+          ...(existing.onboarding_data || {}),
+          preferences: (b.preferences || '').trim(),
+          dob: b.dob || '',
+          marital_status: b.marital_status || '',
+          dependants: b.dependants != null && b.dependants !== '' ? parseInt(b.dependants, 10) || 0 : 0,
+          tax_residency: b.tax_residency || '',
+          state: b.state || '',
+          salary_sacrifice: (b.salary_sacrifice || '').trim(),
+          super_fund: b.super_fund || '',
+          super_option: b.super_option || '',
+          risk_tolerance: b.risk_tolerance || '',
+          experience: b.experience || '',
+          ethical_screening: ethical,
+        },
+      };
+      await updateProfile(req.session.userId, merged);
 
       const { user, profile, session } = await dashboardContext(req);
-      const accounts = await getAccountsByUserId(req.session.userId);
-
       res.render('dashboard-profile', {
-        user, profile, session, accounts,
+        user, profile, session,
         pageTitle: 'Profile',
-        success: 'Profile updated.', error: null
+        success: 'Profile saved.', error: null
       });
     } catch (err) {
       console.error('Update profile error:', err.message);
       const ctx = await dashboardContext(req);
-      const accounts = await getAccountsByUserId(req.session.userId).catch(() => []);
       res.render('dashboard-profile', {
-        ...ctx, accounts, pageTitle: 'Profile', error: 'Failed to update profile.', success: null
+        ...ctx, pageTitle: 'Profile', error: 'Failed to save profile.', success: null
       });
     }
   }

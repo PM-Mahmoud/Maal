@@ -85,6 +85,13 @@
   </div>
 </div>
 
+<% if (conn.count) { %>
+<div style="font-size:0.74rem; color:var(--fg-faint); margin:-0.3rem 0 0.6rem; line-height:1.6;">
+  Totals combine your manual entries with <%= conn.count %> live account<%= conn.count > 1 ? 's' : '' %> via Basiq.
+  Entered an account that's now connected? <a href="/dashboard/assets" style="color:var(--accent);">Clear its manual figure</a> so it isn't counted twice.
+</div>
+<% } %>
+
 <!-- ── The Mizan Score (single composite wellbeing score) ── -->
 <%
   var mz = (typeof mizanScore !== 'undefined' && mizanScore) ? mizanScore : { score: 0, band: '—', pillars: [], hasData: false };

@@ -44,7 +44,7 @@ const cases = {
   'dashboard-ask': base,
   'dashboard-research': base,
   'dashboard-radar': base,
-  'dashboard-assets': { ...base, basiqEnabled: false },
+  'dashboard-assets': { ...base, basiqEnabled: true, liveAccounts: [{ institution_name: 'Hooli Bank', institution_type: 'transaction', balance: 4250 }], connected: { count: 1, cash: 4250, super: 0, invest: 0, debt: 0 } },
   'dashboard-vault': base,
   'dashboard-transactions': { ...base, basiqEnabled: true, basiqStatus: 'error', basiqReason: 'Basiq 403 on /users', liveTransactions: [], liveAccounts: [] },
   'dashboard-goals': base,

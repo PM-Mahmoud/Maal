@@ -517,21 +517,8 @@
     });
   }
 
-  /* ─── 11. Profile: autosave non-DB fields locally ─────── */
-  if (location.pathname.indexOf('/dashboard/profile') === 0) {
-    $all('.panel .field input, .panel .field select, .panel .field textarea').forEach(function (el, i) {
-      if (el.closest('form')) return; // name form posts to the server
-      var key = 'mizan-profile-' + i;
-      var saved = store(key);
-      if (saved !== null && saved !== '' && !el.disabled) {
-        if (el.type === 'checkbox') el.checked = saved; else el.value = saved;
-      }
-      el.addEventListener('change', function () {
-        store(key, el.type === 'checkbox' ? el.checked : el.value);
-        toast('Saved');
-      });
-    });
-  }
+  /* (Profile fields now persist server-side via the form POST — the old
+     localStorage autosave hack was removed.) */
 
   /* ─── 12. Feedback modal (sidebar) ────────────────────── */
   var feedbackOpen = $('#feedback-open');
@@ -615,7 +602,21 @@
     });
   }
 
-  /* ─── 15. Misc demo buttons ───────────────────────────── */
+  /* ─── 15. Institution tile search (filters the bank grid) ── */
+  $all('[data-inst-search]').forEach(function (input) {
+    // Filter the nearest following .inst-grid by institution name
+    var grid = input.closest('.panel') ? input.closest('.panel').querySelector('.inst-grid') : null;
+    if (!grid) return;
+    input.addEventListener('input', function () {
+      var q = input.value.trim().toLowerCase();
+      $all('.inst', grid).forEach(function (tile) {
+        var name = ((tile.querySelector('.inst-name') || {}).textContent || '').toLowerCase();
+        tile.style.display = (!q || name.indexOf(q) !== -1) ? '' : 'none';
+      });
+    });
+  });
+
+  /* ─── 16. Misc demo buttons ───────────────────────────── */
   $all('[data-demo-soon]').forEach(function (b) {
     b.addEventListener('click', function (e) {
       e.preventDefault();

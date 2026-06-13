@@ -1,7 +1,18 @@
+<%
+  // Soft personalisation fields live in onboarding_data (JSONB); financial
+  // figures have their own columns. Both prefill the single form below.
+  var od = (profile && profile.onboarding_data) || {};
+  function money(n) { n = Number(n) || 0; return n ? '$' + n.toLocaleString('en-AU') : ''; }
+  function sel(a, b) { return String(a) === String(b) ? 'selected' : ''; }
+  var ethical = od.ethical_screening
+    || (profile && profile.prefers_halal && profile.prefers_esg ? 'Both'
+        : profile && profile.prefers_halal ? 'Halal framework'
+        : profile && profile.prefers_esg ? 'ESG / ethical framework' : 'No screening');
+%>
 <div class="page-head">
   <div>
     <h1>Profile</h1>
-    <div class="sub">The more Mizan knows, the sharper your education gets.</div>
+    <div class="sub">The more Mizan knows, the sharper your guidance gets. Everything here saves to your account.</div>
   </div>
 </div>
 
@@ -12,28 +23,23 @@
 <div class="alert alert-error"><%= error %></div>
 <% } %>
 
-<div class="panel" style="margin-bottom:1rem;">
-  <div class="panel-title">Preferences</div>
-  <p style="font-size:0.82rem; color:var(--fg-muted); margin:0 0 0.8rem;">
-    Personalise how Mizan responds to you. What should it keep top of mind when answering your questions?
-  </p>
-  <div style="display:flex; gap:0.45rem; flex-wrap:wrap; margin-bottom:0.8rem;">
-    <span class="chip chip-muted">Concise responses</span>
-    <span class="chip chip-muted">Tax focus</span>
-    <span class="chip chip-muted">Ethical screening</span>
-    <span class="chip chip-muted">My situation</span>
-  </div>
-  <div class="field">
-    <textarea rows="3" placeholder='e.g. "Always explain in plain language. I prefer ethical investments and want to maximise super before anything else."'></textarea>
-  </div>
-</div>
+<form action="/dashboard/profile" method="POST">
 
-<div class="widget-grid">
-  <div class="col-6">
+  <div class="panel" style="margin-bottom:1rem;">
+    <div class="panel-title">Preferences</div>
+    <p style="font-size:0.82rem; color:var(--fg-muted); margin:0 0 0.8rem;">
+      Tell Mizan how to respond — it reads this before every answer. Tone, priorities, anything to keep top of mind.
+    </p>
+    <div class="field">
+      <textarea name="preferences" rows="3" placeholder='e.g. "Always explain in plain language. I prefer ethical investments and want to maximise super before anything else."'><%= od.preferences || '' %></textarea>
+    </div>
+  </div>
 
-    <div class="panel" style="margin-bottom:1rem;">
-      <div class="panel-title">Account</div>
-      <form action="/dashboard/profile" method="POST">
+  <div class="widget-grid">
+    <div class="col-6">
+
+      <div class="panel" style="margin-bottom:1rem;">
+        <div class="panel-title">Account</div>
         <div class="field">
           <label for="name">Full name</label>
           <input type="text" id="name" name="name" value="<%= user.name || '' %>" required>
@@ -42,92 +48,148 @@
           <label for="email">Email address</label>
           <input type="email" id="email" value="<%= user.email %>" disabled style="opacity:0.6; cursor:not-allowed;">
         </div>
-        <button type="submit" class="btn btn-accent btn-sm">Save changes</button>
-      </form>
+      </div>
+
+      <div class="panel" style="margin-bottom:1rem;">
+        <div class="panel-title">About you</div>
+        <div class="field-row">
+          <div class="field"><label>Date of birth</label><input type="date" name="dob" value="<%= od.dob || '' %>"></div>
+          <div class="field"><label>Marital status</label>
+            <select name="marital_status">
+              <option value="">Select</option>
+              <option <%= sel(od.marital_status, 'Single') %>>Single</option>
+              <option <%= sel(od.marital_status, 'Married / de facto') %>>Married / de facto</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Dependants</label><input type="number" name="dependants" value="<%= od.dependants != null ? od.dependants : 0 %>" min="0"></div>
+          <div class="field"><label>Residency for tax</label>
+            <select name="tax_residency">
+              <option <%= sel(od.tax_residency, 'Australian resident') %>>Australian resident</option>
+              <option <%= sel(od.tax_residency, 'Foreign resident') %>>Foreign resident</option>
+              <option <%= sel(od.tax_residency, 'Working holiday maker') %>>Working holiday maker</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:1rem;">
+        <div class="panel-title">Work &amp; income</div>
+        <div class="field-row">
+          <div class="field"><label>Profession</label><input type="text" name="profession" value="<%= (profile && profile.profession) || '' %>" placeholder="e.g. Doctor, Pharmacist"></div>
+          <div class="field"><label>Years in practice</label><input type="number" name="years_in_practice" value="<%= (profile && profile.years_in_practice) || '' %>" min="0"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Annual gross income (AUD)</label><input type="text" name="annual_income" value="<%= money(profile && profile.annual_income) %>" placeholder="$120,000"></div>
+          <div class="field"><label>Expected retirement age</label><input type="number" name="retirement_age" value="<%= (profile && profile.retirement_age) || 65 %>"></div>
+        </div>
+      </div>
+
     </div>
 
-    <div class="panel" style="margin-bottom:1rem;">
-      <div class="panel-title">About you</div>
-      <div class="field-row">
-        <div class="field"><label>Date of birth</label><input type="date"></div>
-        <div class="field"><label>Marital status</label><select><option>Select</option><option>Single</option><option>Married / de facto</option></select></div>
-      </div>
-      <div class="field-row">
-        <div class="field"><label>Dependants</label><input type="number" value="0" min="0"></div>
-        <div class="field"><label>Residency for tax</label><select><option>Australian resident</option><option>Foreign resident</option><option>Working holiday maker</option></select></div>
-      </div>
-    </div>
+    <div class="col-6">
 
-    <div class="panel" style="margin-bottom:1rem;">
-      <div class="panel-title">Work &amp; income</div>
-      <div class="field-row">
-        <div class="field"><label>Profession</label><input type="text" value="<%= (profile && profile.profession) || '' %>" placeholder="e.g. Doctor, Pharmacist"></div>
-        <div class="field"><label>Years in practice</label><input type="number" value="<%= (profile && profile.years_in_practice) || '' %>" min="0"></div>
+      <div class="panel" style="margin-bottom:1rem;">
+        <div class="panel-title">Tax settings <span class="chip chip-accent">ATO</span></div>
+        <div class="field-row">
+          <div class="field"><label>State / Territory</label>
+            <select name="state">
+              <% ['NSW','VIC','QLD','WA','SA','TAS','ACT','NT'].forEach(function(s){ %>
+              <option <%= sel(od.state, s) %>><%= s %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="field"><label>HECS-HELP balance</label><input type="text" name="hecs_balance" value="<%= money(profile && profile.hecs_balance) %>" placeholder="$0"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Private health cover</label>
+            <select name="private_health">
+              <option value="yes" <%= profile && profile.has_private_health ? 'selected' : '' %>>Yes</option>
+              <option value="no" <%= profile && !profile.has_private_health ? 'selected' : '' %>>No (MLS may apply)</option>
+            </select>
+          </div>
+          <div class="field"><label>Salary sacrifice to super</label><input type="text" name="salary_sacrifice" value="<%= od.salary_sacrifice || '' %>" placeholder="$0 / fortnight"></div>
+        </div>
       </div>
-      <div class="field-row">
-        <div class="field"><label>Annual gross income (AUD)</label><input type="text" value="<%= (profile && profile.annual_income) ? '$' + profile.annual_income.toLocaleString('en-AU') : '' %>" placeholder="$120,000"></div>
-        <div class="field"><label>Expected retirement age</label><input type="number" value="<%= (profile && profile.retirement_age) || 65 %>"></div>
-      </div>
-      <a href="/onboarding" class="btn btn-ghost btn-sm">Edit onboarding data</a>
-    </div>
 
+      <div class="panel" style="margin-bottom:1rem;">
+        <div class="panel-title">Superannuation</div>
+        <div class="field-row">
+          <div class="field"><label>Super fund</label>
+            <select name="super_fund">
+              <option value="">Select fund</option>
+              <% ['AustralianSuper','HESTA','Hostplus','Aware Super','UniSuper','Rest','Other / SMSF'].forEach(function(f){ %>
+              <option <%= sel(od.super_fund, f) %>><%= f %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="field"><label>Balance</label><input type="text" name="super_balance" value="<%= money(profile && profile.super_balance) %>" placeholder="$0"></div>
+        </div>
+        <div class="field"><label>Investment option</label>
+          <select name="super_option">
+            <% ['Balanced','Growth','High Growth','Conservative','Ethical / sustainable option'].forEach(function(o){ %>
+            <option <%= sel(od.super_option, o) %>><%= o %></option>
+            <% }); %>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:1rem;">
+        <div class="panel-title">Investing profile</div>
+        <div class="field-row">
+          <div class="field"><label>Risk tolerance</label>
+            <select name="risk_tolerance">
+              <option value="">Select</option>
+              <% ['Conservative','Balanced','Growth','Aggressive'].forEach(function(r){ %>
+              <option <%= sel(od.risk_tolerance, r) %>><%= r %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="field"><label>Experience</label>
+            <select name="experience">
+              <option value="">Select</option>
+              <% ['Beginner','Intermediate','Advanced'].forEach(function(e){ %>
+              <option <%= sel(od.experience, e) %>><%= e %></option>
+              <% }); %>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>Ethical screening</label>
+          <select name="ethical_screening">
+            <% ['Halal framework','ESG / ethical framework','Both','No screening'].forEach(function(o){ %>
+            <option <%= sel(ethical, o) %>><%= o %></option>
+            <% }); %>
+          </select>
+        </div>
+      </div>
+
+    </div>
   </div>
 
-  <div class="col-6">
-
-    <div class="panel" style="margin-bottom:1rem;">
-      <div class="panel-title">Tax settings <span class="chip chip-accent">ATO</span></div>
-      <div class="field-row">
-        <div class="field"><label>State / Territory</label><select><option>NSW</option><option>VIC</option><option>QLD</option><option>WA</option><option>SA</option><option>TAS</option><option>ACT</option><option>NT</option></select></div>
-        <div class="field"><label>HECS-HELP balance</label><input type="text" value="<%= (profile && profile.hecs_balance) ? '$' + profile.hecs_balance.toLocaleString('en-AU') : '' %>" placeholder="$0"></div>
-      </div>
-      <div class="field-row">
-        <div class="field"><label>Private health cover</label><select><option>Yes</option><option>No (MLS may apply)</option></select></div>
-        <div class="field"><label>Salary sacrifice to super</label><input type="text" placeholder="$0 / fortnight"></div>
-      </div>
-    </div>
-
-    <div class="panel" style="margin-bottom:1rem;">
-      <div class="panel-title">Superannuation</div>
-      <div class="field-row">
-        <div class="field"><label>Super fund</label><select><option>Select fund</option><option>AustralianSuper</option><option>HESTA</option><option>Hostplus</option><option>Aware Super</option><option>UniSuper</option><option>Rest</option><option>Other / SMSF</option></select></div>
-        <div class="field"><label>Balance</label><input type="text" value="<%= (profile && profile.super_balance) ? '$' + profile.super_balance.toLocaleString('en-AU') : '' %>" placeholder="$0"></div>
-      </div>
-      <div class="field"><label>Investment option</label><select><option>Balanced</option><option>Growth</option><option>High Growth</option><option>Conservative</option><option>Ethical / sustainable option</option></select></div>
-    </div>
-
-    <div class="panel" style="margin-bottom:1rem;">
-      <div class="panel-title">Investing profile</div>
-      <div class="field-row">
-        <div class="field"><label>Risk tolerance</label><select><option>Select</option><option>Conservative</option><option>Balanced</option><option>Growth</option><option>Aggressive</option></select></div>
-        <div class="field"><label>Experience</label><select><option>Select</option><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select></div>
-      </div>
-      <div class="field"><label>Ethical screening</label>
-        <select>
-          <option <%= (profile && profile.prefers_halal) ? 'selected' : '' %>>Halal framework</option>
-          <option <%= (profile && profile.prefers_esg) ? 'selected' : '' %>>ESG / ethical framework</option>
-          <option>Both</option>
-          <option>No screening</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="panel" style="border-color:rgba(214,84,74,0.35);">
-      <div class="panel-title" style="color:var(--danger);">Danger zone</div>
-      <p style="font-size:0.8rem; color:var(--fg-muted); margin:0 0 0.9rem; line-height:1.6;">
-        Deleting your account permanently removes all data, scores and history. This cannot be undone.
-      </p>
-      <button class="btn btn-danger-soft btn-sm" id="delete-account-btn">Delete my account</button>
-    </div>
-
+  <div style="display:flex; justify-content:flex-end; align-items:center; gap:0.8rem; margin:0.2rem 0 1.5rem;">
+    <a href="/onboarding" class="btn btn-ghost btn-sm">Edit full onboarding</a>
+    <button type="submit" class="btn btn-accent">Save profile</button>
   </div>
+
+</form>
+
+<div class="panel" style="border-color:rgba(194,85,76,0.35); max-width:520px;">
+  <div class="panel-title" style="color:var(--danger);">Danger zone</div>
+  <p style="font-size:0.8rem; color:var(--fg-muted); margin:0 0 0.9rem; line-height:1.6;">
+    Deleting your account permanently removes all data, scores and history. This cannot be undone.
+  </p>
+  <button type="button" class="btn btn-danger-soft btn-sm" id="delete-account-btn">Delete my account</button>
 </div>
 
 <script>
   document.getElementById('delete-account-btn') && document.getElementById('delete-account-btn').addEventListener('click', function() {
     if (confirm('Are you sure you want to delete your account? This is irreversible.')) {
       if (confirm('Really delete? All your data will be permanently removed.')) {
-        fetch('/api/account/delete', { method: 'POST' }).then(function() { window.location.href = '/'; });
+        fetch('/api/account/delete', { method: 'POST' }).then(function(r) {
+          if (r.ok) { window.location.href = '/'; }
+          else { alert('Could not delete your account — please contact support.'); }
+        }).catch(function() { alert('Could not delete your account — are you online?'); });
       }
     }
   });

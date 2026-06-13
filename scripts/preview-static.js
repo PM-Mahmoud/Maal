@@ -102,6 +102,28 @@ app.get('/accounts', (_req, res, next) => {
     ],
   }).then(html => res.send(html)).catch(next);
 });
+app.get('/profile', (_req, res, next) => {
+  const profileWithOd = { ...profile, onboarding_data: {
+    preferences: 'Plain language only. Maximise super first; prefer ethical investments.',
+    dob: '1996-04-12', marital_status: 'Single', dependants: 0,
+    tax_residency: 'Australian resident', state: 'NSW', salary_sacrifice: '$200 / fortnight',
+    super_fund: 'AustralianSuper', super_option: 'Ethical / sustainable option',
+    risk_tolerance: 'Growth', experience: 'Intermediate', ethical_screening: 'Halal framework',
+  } };
+  renderInLayout('dashboard-profile', {
+    ...base, profile: profileWithOd, pageTitle: 'Profile', success: null, error: null,
+  }).then(html => res.send(html)).catch(next);
+});
+app.get('/assets', (_req, res, next) => {
+  renderInLayout('dashboard-assets', {
+    ...base, pageTitle: 'Assets & Liabilities', basiqEnabled: true,
+    liveAccounts: [
+      { institution_name: 'Hooli Bank', institution_type: 'transaction', balance: 4250 },
+      { institution_name: 'Hooli Saver', institution_type: 'savings', balance: 12200 },
+    ],
+    connected: { count: 2, cash: 16450, super: 0, invest: 0, debt: 0 },
+  }).then(html => res.send(html)).catch(next);
+});
 app.get('/transactions', (_req, res, next) => {
   renderInLayout('dashboard-transactions', {
     ...base, pageTitle: 'Transactions', basiqEnabled: true, basiqStatus: null,

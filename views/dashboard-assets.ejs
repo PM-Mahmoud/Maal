@@ -6,6 +6,7 @@
   var propertyV = Number(profile && profile.property_value) || 0;
   var hecs      = Number(profile && profile.hecs_balance) || 0;
   var otherDebt = Number(profile && profile.total_debt) || 0;
+  var liveAcc   = (typeof liveAccounts !== 'undefined' && liveAccounts) ? liveAccounts : [];
 %>
 
 <div class="page-head">
@@ -19,8 +20,26 @@
 <div class="widget-grid">
   <div class="col-8">
 
+    <% if (liveAcc.length) { %>
     <div class="panel" style="margin-bottom:1rem;">
-      <div class="panel-title">Superannuation <span class="chip chip-accent">AU</span></div>
+      <div class="panel-title">Connected accounts <span class="chip chip-accent">● Live via Basiq</span>
+        <a class="more" href="/basiq/sync">↻ Sync</a>
+      </div>
+      <% liveAcc.forEach(function(a) { %>
+      <div class="row-item">
+        <div><div class="row-main"><%= a.institution_name || 'Bank account' %></div><div class="row-sub"><%= (a.institution_type || 'account') %> · live balance</div></div>
+        <div class="row-val"><%= aud(a.balance) %></div>
+      </div>
+      <% }); %>
+      <p style="font-size:0.72rem; color:var(--fg-faint); margin:0.7rem 0 0; line-height:1.6;">
+        Live balances are added on top of your manual entries below. If you also entered one of these accounts
+        manually, set its manual figure to $0 so it isn't counted twice.
+      </p>
+    </div>
+    <% } %>
+
+    <div class="panel" style="margin-bottom:1rem;">
+      <div class="panel-title">Superannuation <span class="chip chip-muted">Manual</span></div>
       <% if (superBal > 0) { %>
         <div class="row-item">
           <div><div class="row-main">Super fund balance</div><div class="row-sub">Manual · update anytime</div></div>
@@ -97,7 +116,7 @@
 
     <div class="panel">
       <div class="panel-title">Connect Accounts <span class="chip chip-accent">via Basiq</span></div>
-      <div class="field"><input type="search" placeholder="Search 100+ Australian institutions…"></div>
+      <div class="field"><input type="search" data-inst-search placeholder="Search institutions…"></div>
       <div class="inst-grid" <%= (typeof basiqEnabled !== 'undefined' && basiqEnabled) ? 'data-basiq-live' : '' %>>
         <div class="inst"><span class="inst-logo" style="background:#FFCC00; color:#000;">CBA</span><span class="inst-name">CommBank</span></div>
         <div class="inst"><span class="inst-logo" style="background:#DA1710;">W</span><span class="inst-name">Westpac</span></div>
