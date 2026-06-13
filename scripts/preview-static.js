@@ -61,10 +61,21 @@ app.get('/login', (_req, res, next) => {
 });
 app.get('/dashboard', (_req, res, next) => {
   const score = { score_type: 'financial_health', score_value: 68, grade: 'Fair' };
+  const { buildEffectiveProfile } = require('../lib/connected');
+  const linked = [
+    { account_reference: 'basiq:a1', institution_type: 'transaction', balance: 4250 },
+    { account_reference: 'basiq:a2', institution_type: 'credit-card', balance: 1200 },
+  ];
+  const eff = buildEffectiveProfile(profile, linked);
   renderInLayout('dashboard-overview', {
-    ...base, pageTitle: 'Dashboard', financialScore: score, superScore: null,
-    ethicalScore: null, mizanScore: computeMizanScore(profile), snapshots,
-    taxImpact: estimateTax(profile),
+    ...base, profile: eff.profile, pageTitle: 'Dashboard', financialScore: score, superScore: null,
+    ethicalScore: null, mizanScore: computeMizanScore(eff.profile), snapshots,
+    taxImpact: estimateTax(eff.profile), connected: eff.connected,
+    recentTransactions: [
+      { description: 'Woolworths Metro', amount: -84.20, post_date: new Date() },
+      { description: 'Salary — NSW Health', amount: 5400, post_date: new Date(Date.now() - 2 * 86400000) },
+      { description: 'Transport for NSW', amount: -12.40, post_date: new Date(Date.now() - 3 * 86400000) },
+    ],
   }).then(html => res.send(html)).catch(next);
 });
 app.get('/roadmap', (_req, res, next) => {

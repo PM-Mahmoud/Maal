@@ -36,7 +36,7 @@ const base = { session, user, profile, pageTitle: 'Test' };
 
 // Per-view locals mirroring what each route passes (routes/*.js)
 const cases = {
-  'dashboard-overview': { ...base, financialScore: score, superScore: score, ethicalScore: score, mizanScore, snapshots: [], taxImpact: estimateTax(profile) },
+  'dashboard-overview': { ...base, financialScore: score, superScore: score, ethicalScore: score, mizanScore, snapshots: [], taxImpact: estimateTax(profile), connected: { count: 2, cash: 4250, super: 0, invest: 0, debt: 1200 }, recentTransactions: [{ description: 'Woolworths', amount: -84.20, post_date: new Date() }, { description: 'Salary', amount: 5400, post_date: new Date() }] },
   'dashboard-roadmap': { ...base, items: [
     { id: 1, title: 'Test item', details: 'Some details', status: 'planned', score: 3, upvotes: 4, downvotes: 1, my_vote: 1 },
     { id: 2, title: 'Another', details: null, status: 'open', score: 0, upvotes: 0, downvotes: 0, my_vote: null },

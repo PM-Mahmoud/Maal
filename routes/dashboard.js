@@ -15,6 +15,8 @@ const { computeScore } = require('../lib/score-engine');
 const { computeMizanScore } = require('../lib/mizan-score');
 const { recordSnapshot, getSnapshots } = require('../db/snapshots');
 const { estimateTax } = require('../lib/tax');
+const { buildEffectiveProfile } = require('../lib/connected');
+const { getRecentTransactions } = require('../db/transactions');
 const advisor = require('../services/advisor');
 const basiqService = require('../services/basiq');
 
@@ -44,11 +46,21 @@ async function dashboardContext(req) {
 
 router.get('/', async (req, res) => {
   try {
-    const { user, profile, session } = await dashboardContext(req);
+    const { user, profile: rawProfile, session } = await dashboardContext(req);
     const scores = await getScoresByUserId(req.session.userId, 3);
     const fhs = scores.find(s => s.score_type === 'financial_health');
     const shs = scores.find(s => s.score_type === 'super_health');
     const ehs = scores.find(s => s.score_type === 'ethical_score');
+
+    // Fold live Basiq balances into the manual entries — score, stats,
+    // snapshots and templates all see the combined picture.
+    const linkedAccounts = await getAccountsByUserId(req.session.userId).catch(() => []);
+    const { profile, connected } = buildEffectiveProfile(rawProfile, linkedAccounts);
+
+    // Recent synced transactions for the dashboard widget
+    let recentTransactions = [];
+    try { recentTransactions = await getRecentTransactions(req.session.userId, 6); }
+    catch (e) { console.error('Recent transactions error (run migrations?):', e.message); }
 
     // Mizan Score — single composite wellbeing score
     const mizanScore = computeMizanScore(profile);
@@ -82,6 +94,8 @@ router.get('/', async (req, res) => {
       ethicalScore: ehs,
       mizanScore,
       snapshots,
+      connected,
+      recentTransactions,
       taxImpact: estimateTax(profile),
       pageTitle: 'Dashboard'
     });
@@ -182,6 +196,18 @@ router.get('/transactions', async (req, res) => {
       } catch (e) {
         console.error('Basiq fetch failed:', e.message);
       }
+    }
+    // Fall back to transactions persisted at sync time if the live call
+    // returned nothing (API hiccup, expired consent, etc.)
+    if (!liveTransactions.length) {
+      try {
+        const rows = await getRecentTransactions(req.session.userId, 25);
+        liveTransactions = rows.map(r => ({
+          description: r.description,
+          amount: r.amount,
+          postDate: r.post_date ? new Date(r.post_date).toISOString() : '',
+        }));
+      } catch (e) { /* table may not exist before migration */ }
     }
     res.render('dashboard-transactions', {
       ...ctx,

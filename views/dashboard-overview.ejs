@@ -21,6 +21,7 @@
 
   var wellbeing = financialScore ? Number(financialScore.score_value) : null;
   var firstName = (session.name || session.email || 'there').split(' ')[0];
+  var conn = (typeof connected !== 'undefined' && connected) ? connected : { count: 0 };
 
   // setup checklist
   var steps = [
@@ -61,7 +62,7 @@
   <div class="panel stat-card">
     <div class="stat-label">Net Worth <span class="chip chip-muted range-chip">YTD</span></div>
     <div class="stat-value"><%= aud(netWorth) %></div>
-    <div class="stat-delta <%= hasData ? 'up' : '' %>" <%= hasData ? 'data-networth-delta' : '' %>><%= hasData ? 'Tracked daily from your data' : 'Add assets to start tracking' %></div>
+    <div class="stat-delta <%= hasData ? 'up' : '' %>" <%= hasData ? 'data-networth-delta' : '' %>><%= hasData ? (conn.count ? 'Manual entries + live balances' : 'Tracked daily from your data') : 'Add assets to start tracking' %></div>
     <svg class="sparkline" id="spark-networth" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
   </div>
   <div class="panel stat-card">
@@ -71,7 +72,7 @@
     <svg class="sparkline" id="spark-invest" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
   </div>
   <div class="panel stat-card">
-    <div class="stat-label">Total Cash <span class="chip chip-accent">Liquidity</span></div>
+    <div class="stat-label">Total Cash <span class="chip chip-accent"><%= conn.count ? '● ' + conn.count + ' live' : 'Liquidity' %></span></div>
     <div class="stat-value"><%= aud(cashBal) %></div>
     <div class="stat-delta"><%= cashBal > 0 ? (runwayMonths ? runwayMonths + ' months of runway' : 'Set monthly spend for runway') : 'Add cash & savings' %></div>
     <svg class="sparkline" id="spark-super" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
@@ -238,13 +239,33 @@
     <% } %>
   </div>
 
+  <%
+    var recentTx = (typeof recentTransactions !== 'undefined' && recentTransactions) ? recentTransactions : [];
+  %>
   <div class="panel col-6">
     <div class="panel-title">Recent Transactions <a class="more" href="/dashboard/transactions">View all →</a></div>
+    <% if (recentTx.length) { %>
+      <% recentTx.forEach(function(t) {
+           var d = t.post_date ? new Date(t.post_date) : null;
+           var amt = Number(t.amount) || 0;
+      %>
+      <div class="row-item">
+        <div>
+          <div class="row-main"><%= t.description || '—' %></div>
+          <div class="row-sub"><%= d ? d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : '' %></div>
+        </div>
+        <div class="row-val" style="color:<%= amt < 0 ? 'var(--danger)' : 'var(--accent)' %>;">
+          <%= (amt < 0 ? '−' : '+') + '$' + Math.abs(amt).toLocaleString('en-AU', { minimumFractionDigits: 2 }) %>
+        </div>
+      </div>
+      <% }); %>
+    <% } else { %>
     <div class="empty">
       <h3>No transactions yet</h3>
-      <p>Connect your bank securely via Basiq (Consumer Data Right) to see spending and subscriptions in near real-time.</p>
+      <p>Connect your bank securely via Basiq (Consumer Data Right), then press Sync — your spending appears here.</p>
       <a href="/dashboard/transactions" class="btn btn-accent btn-sm">Connect with Basiq</a>
     </div>
+    <% } %>
   </div>
 
   <div class="panel col-3">

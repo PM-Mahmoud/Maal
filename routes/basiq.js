@@ -11,6 +11,7 @@ const router = express.Router();
 const basiq = require('../services/basiq');
 const { findUserById, setBasiqUserId } = require('../db/users');
 const { getAccountsByUserId, addAccount, deleteAccount } = require('../db/linked_accounts');
+const { upsertBasiqTransactions } = require('../db/transactions');
 
 function requireAuth(req, res, next) {
   if (!req.session.userId) return res.redirect('/login');
@@ -61,6 +62,16 @@ async function syncAccountsToDb(req) {
       balance: Math.round(Number(acc.balance) || 0),
     });
   }
+
+  // Persist transactions too — the dashboard widget and transactions page
+  // read these from the DB instead of hitting Basiq on every page load.
+  try {
+    const txns = await basiq.getTransactions(user.basiq_user_id, 100);
+    await upsertBasiqTransactions(req.session.userId, txns);
+  } catch (e) {
+    console.error('Basiq transaction sync failed:', e.message);
+  }
+
   return accounts.length;
 }
 
