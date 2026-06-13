@@ -1,16 +1,46 @@
+<%
+  var radarList = (typeof radars !== 'undefined' && radars) ? radars : [];
+  var aiReady = typeof advisorReady !== 'undefined' ? advisorReady : false;
+%>
 <div class="page-head">
   <div>
     <h1>Radar</h1>
-    <div class="sub">Tell Mizan what to watch. Get alerted by email or SMS.</div>
+    <div class="sub">Tell Mizan what to watch. It checks on schedule and alerts you by email or SMS.</div>
   </div>
 </div>
+
+<% if (!aiReady) { %>
+<div class="alert alert-error">Radar needs the AI engine — add your Azure OpenAI keys on the server to switch it on.</div>
+<% } %>
 
 <div class="widget-grid">
   <div class="col-8">
 
     <div class="panel" style="margin-bottom:1rem;">
-      <div class="panel-title">Your radars</div>
-      <div id="radar-list"></div>
+      <div class="panel-title">Your radars <span class="chip chip-muted"><%= radarList.length %></span></div>
+      <div id="radar-list">
+        <% if (!radarList.length) { %>
+        <div class="empty" style="padding:1rem;"><p>No radars yet — create one on the right.</p></div>
+        <% } else { %>
+        <% radarList.forEach(function(r) { %>
+        <div class="row-item" data-radar="<%= r.id %>">
+          <div style="min-width:0; flex:1;">
+            <div class="row-main"><%= r.prompt %></div>
+            <div class="row-sub">
+              <%= r.frequency %> ·
+              <%= [r.notify_email ? 'email' : null, r.notify_sms ? 'SMS' : null].filter(Boolean).join(' + ') || 'no alerts' %>
+              <% if (r.last_run_at) { %> · last checked <%= new Date(r.last_run_at).toLocaleDateString('en-AU', {day:'numeric',month:'short'}) %><% if (r.last_alerted) { %> <span class="chip chip-warn">alerted</span><% } %><% } %>
+            </div>
+            <% if (r.last_result) { %><div class="row-sub" style="margin-top:0.3rem; white-space:normal; color:var(--fg-muted);"><%= r.last_result %></div><% } %>
+          </div>
+          <div style="display:flex; gap:0.3rem; flex-shrink:0;">
+            <button class="btn btn-ghost btn-sm" data-radar-run="<%= r.id %>" title="Check now">Run</button>
+            <button class="icon-btn" data-radar-del="<%= r.id %>" title="Delete">✕</button>
+          </div>
+        </div>
+        <% }); %>
+        <% } %>
+      </div>
     </div>
 
     <p style="font-size:0.74rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--fg-faint); margin:0 0 0.6rem;">Quick start — click to use a template</p>

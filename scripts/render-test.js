@@ -36,14 +36,14 @@ const base = { session, user, profile, pageTitle: 'Test' };
 
 // Per-view locals mirroring what each route passes (routes/*.js)
 const cases = {
-  'dashboard-overview': { ...base, financialScore: score, superScore: score, ethicalScore: score, mizanScore, snapshots: [], taxImpact: estimateTax(profile), connected: { count: 2, cash: 4250, super: 0, invest: 0, debt: 1200 }, recentTransactions: [{ description: 'Woolworths', amount: -84.20, post_date: new Date() }, { description: 'Salary', amount: 5400, post_date: new Date() }] },
+  'dashboard-overview': { ...base, financialScore: score, superScore: score, ethicalScore: score, mizanScore, snapshots: [], taxImpact: estimateTax(profile), connected: { count: 2, cash: 4250, super: 0, invest: 0, debt: 1200 }, recentTransactions: [{ description: 'Woolworths', amount: -84.20, post_date: new Date() }, { description: 'Salary', amount: 5400, post_date: new Date() }], movers: { top: [{ symbol: 'NVDA', price: 1203.4, percent: 4.2 }], bottom: [{ symbol: 'TSLA', price: 178.2, percent: -3.1 }] } },
   'dashboard-roadmap': { ...base, items: [
     { id: 1, title: 'Test item', details: 'Some details', status: 'planned', score: 3, upvotes: 4, downvotes: 1, my_vote: 1 },
     { id: 2, title: 'Another', details: null, status: 'open', score: 0, upvotes: 0, downvotes: 0, my_vote: null },
   ] },
   'dashboard-ask': base,
-  'dashboard-research': base,
-  'dashboard-radar': base,
+  'dashboard-research': { ...base, advisorReady: true, reports: [{ id: 1, question: 'What if the ASX drops 20%?', status: 'complete', created_at: new Date() }, { id: 2, question: 'Salary sacrifice vs mortgage?', status: 'error', created_at: new Date() }] },
+  'dashboard-radar': { ...base, advisorReady: true, radars: [{ id: 1, prompt: 'Alert me if NVDA moves more than 10% in a day', frequency: 'daily', notify_email: true, notify_sms: false, last_run_at: new Date(), last_alerted: true, last_result: 'NVDA fell 11% after weak guidance.' }, { id: 2, prompt: 'Watch my spending vs budget', frequency: 'weekly', notify_email: true, notify_sms: true, last_run_at: null, last_alerted: false, last_result: null }] },
   'dashboard-assets': { ...base, basiqEnabled: true, liveAccounts: [{ institution_name: 'Hooli Bank', institution_type: 'transaction', balance: 4250 }], connected: { count: 1, cash: 4250, super: 0, invest: 0, debt: 0 } },
   'dashboard-vault': base,
   'dashboard-transactions': { ...base, basiqEnabled: true, basiqStatus: 'error', basiqReason: 'Basiq 403 on /users', liveTransactions: [], liveAccounts: [] },

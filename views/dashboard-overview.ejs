@@ -229,19 +229,28 @@
     <% } %>
   </div>
 
+  <% var mv = (typeof movers !== 'undefined' && movers) ? movers : null; %>
   <div class="panel col-6">
-    <div class="panel-title">Top &amp; Bottom Movers <span class="chip chip-muted">Your holdings</span></div>
-    <% if (investBal > 0) { %>
-    <div class="empty">
-      <h3>Holdings sync coming soon</h3>
-      <p>Live market pricing for your individual holdings is on the roadmap. For now your total portfolio is tracked daily in the net-worth chart.</p>
-      <a href="/dashboard/roadmap" class="btn btn-ghost btn-sm">Vote on the roadmap</a>
-    </div>
+    <div class="panel-title">Top &amp; Bottom Movers <span class="chip <%= mv ? 'chip-accent' : 'chip-muted' %>"><%= mv ? '● Live' : 'Watchlist' %></span></div>
+    <% if (mv) { %>
+      <% mv.top.forEach(function(q) { var pct = Number(q.percent) || 0; %>
+      <div class="row-item">
+        <div><div class="row-main"><%= q.symbol %></div><div class="row-sub">$<%= (Number(q.price)||0).toLocaleString('en-AU', { minimumFractionDigits: 2 }) %></div></div>
+        <div class="row-val" style="color:var(--accent);">▲ <%= pct.toFixed(2) %>%</div>
+      </div>
+      <% }); %>
+      <% mv.bottom.forEach(function(q) { var pct = Number(q.percent) || 0; if (pct >= 0) return; %>
+      <div class="row-item">
+        <div><div class="row-main"><%= q.symbol %></div><div class="row-sub">$<%= (Number(q.price)||0).toLocaleString('en-AU', { minimumFractionDigits: 2 }) %></div></div>
+        <div class="row-val" style="color:var(--danger);">▼ <%= Math.abs(pct).toFixed(2) %>%</div>
+      </div>
+      <% }); %>
+      <p style="font-size:0.7rem; color:var(--fg-faint); margin:0.6rem 0 0;">Live via Finnhub · default watchlist (set MIZAN_WATCHLIST to customise).</p>
     <% } else { %>
     <div class="empty">
-      <h3>No investments yet</h3>
-      <p>Add your portfolio and Mizan will surface the holdings moving your net worth the most.</p>
-      <button class="btn btn-accent btn-sm" data-add-asset="investment_portfolio">+ Add investments</button>
+      <h3>Connect live market data</h3>
+      <p>Add a free Finnhub API key (FINNHUB_API_KEY) and Mizan surfaces the day's biggest movers on your watchlist here.</p>
+      <a href="/dashboard/research" class="btn btn-ghost btn-sm">Explore Research</a>
     </div>
     <% } %>
   </div>

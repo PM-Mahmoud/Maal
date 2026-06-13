@@ -277,52 +277,57 @@
     renderGoals();
   }
 
-  /* ─── 6. Radar page ───────────────────────────────────── */
+  /* ─── 6. Radar page (real, server-backed) ─────────────── */
   var radarCreate = $('#radar-create');
   if (radarCreate) {
-    function renderRadars() {
-      var list = $('#radar-list');
-      var radars = store('mizan-radars') || [];
-      if (!list) return;
-      list.innerHTML = '';
-      if (!radars.length) { list.innerHTML = '<div class="empty" style="padding:1rem;"><p>No radars yet — create one on the right.</p></div>'; return; }
-      radars.forEach(function (r, i) {
-        var row = document.createElement('div');
-        row.className = 'row-item';
-        row.innerHTML = '<div><div class="row-main">' + r.text + '</div><div class="row-sub">' + r.freq + ' · ' + r.time + ' AEST · ' + r.notify.join(' + ') + '</div></div>' +
-          '<button class="icon-btn" data-del-radar="' + i + '" title="Delete">✕</button>';
-        list.appendChild(row);
-      });
-      $all('[data-del-radar]').forEach(function (b) {
-        b.addEventListener('click', function () {
-          var all = store('mizan-radars') || [];
-          all.splice(parseInt(b.getAttribute('data-del-radar'), 10), 1);
-          store('mizan-radars', all);
-          renderRadars();
-          toast('Radar deleted');
-        });
-      });
-    }
-
     radarCreate.addEventListener('click', function () {
-      var text = ($('#radar-text') || {}).value || '';
-      text = text.trim();
+      var text = (($('#radar-text') || {}).value || '').trim();
       if (!text) { toast('Describe what Mizan should watch'); $('#radar-text').focus(); return; }
       var freqTab = $('#radar-freq .tab.active');
-      var notify = [];
-      if (($('#radar-email') || {}).checked) notify.push('email');
-      if (($('#radar-sms') || {}).checked) notify.push('SMS');
-      var radars = store('mizan-radars') || [];
-      radars.push({
-        text: text,
-        freq: freqTab ? freqTab.textContent.trim() : 'Daily',
-        time: ($('#radar-time') || {}).value || '09:00',
-        notify: notify.length ? notify : ['email']
+      var frequency = (freqTab ? freqTab.textContent.trim() : 'Daily').toLowerCase();
+      radarCreate.disabled = true;
+      fetch('/dashboard/radar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: text,
+          frequency: frequency,
+          notifyEmail: ($('#radar-email') || {}).checked !== false,
+          notifySms: !!($('#radar-sms') || {}).checked
+        })
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        radarCreate.disabled = false;
+        if (j.ok) { toast('Radar created 📡'); setTimeout(function () { location.reload(); }, 600); }
+        else toast(j.error || 'Could not create radar');
+      }).catch(function () { radarCreate.disabled = false; toast('Could not create radar — are you online?'); });
+    });
+
+    // Delete a radar
+    $all('[data-radar-del]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (!confirm('Delete this radar?')) return;
+        fetch('/dashboard/radar/' + b.getAttribute('data-radar-del'), { method: 'DELETE' })
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            if (j.ok) { var row = b.closest('[data-radar]'); if (row) row.remove(); toast('Radar deleted'); }
+            else toast(j.error || 'Could not delete');
+          }).catch(function () { toast('Could not delete radar'); });
       });
-      store('mizan-radars', radars);
-      $('#radar-text').value = '';
-      renderRadars();
-      toast('Radar created 📡 — it will run on schedule');
+    });
+
+    // Run a radar on demand
+    $all('[data-radar-run]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var orig = b.textContent;
+        b.disabled = true; b.textContent = '…';
+        fetch('/dashboard/radar/' + b.getAttribute('data-radar-run') + '/run', { method: 'POST' })
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            b.disabled = false; b.textContent = orig;
+            if (j.ok) { toast(j.alerted ? '📡 Alert: ' + j.summary.slice(0, 80) : 'Checked — nothing to flag'); setTimeout(function () { location.reload(); }, 1400); }
+            else toast(j.error || 'Run failed');
+          }).catch(function () { b.disabled = false; b.textContent = orig; toast('Run failed'); });
+      });
     });
 
     $all('[data-radar-template]').forEach(function (row) {
@@ -333,8 +338,6 @@
         toast('Template loaded — tweak it and hit Create');
       });
     });
-
-    renderRadars();
   }
 
   /* ─── 7. Shared advisor chat (DeepSeek via /dashboard/ask/message) ── */
@@ -411,35 +414,66 @@
     widgetInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') widgetGo(); });
   }
 
-  /* ─── 8. Research page ────────────────────────────────── */
+  /* ─── 8. Research page (real, server-backed) ──────────── */
   var researchRun = $('#research-run');
   if (researchRun) {
-    function renderResearch() {
-      var listEl = $('#research-history');
-      var items = store('mizan-research') || [];
-      if (!listEl) return;
-      listEl.innerHTML = '';
-      if (!items.length) { listEl.innerHTML = '<div class="empty" style="padding:1.2rem 0.5rem;"><p>No research yet. Your completed reports will appear here.</p></div>'; return; }
-      items.forEach(function (r) {
-        var row = document.createElement('div');
-        row.className = 'row-item';
-        row.innerHTML = '<div><div class="row-main">' + r.q + '</div><div class="row-sub">' + r.when + '</div></div><span class="chip chip-warn">Queued</span>';
-        listEl.appendChild(row);
-      });
+    var reportEl = $('#research-report');
+
+    function showReport(data) {
+      if (!reportEl) return;
+      $('#research-report-q').textContent = data.question || '';
+      $('#research-report-body').textContent = data.report || '';
+      var statusEl = $('#research-report-status');
+      statusEl.textContent = data.status === 'error' ? 'Error' : 'Ready';
+      statusEl.className = 'chip ' + (data.status === 'error' ? 'chip-danger' : 'chip-accent');
+      var src = $('#research-report-sources');
+      var sources = data.sources || [];
+      if (sources.length) {
+        src.innerHTML = '<div class="row-sub" style="font-weight:600; margin-bottom:0.3rem;">Sources</div>' +
+          sources.map(function (s, i) {
+            return '<div class="row-sub" style="padding:0.15rem 0;">[' + (i + 1) + '] <a href="' + s.url +
+              '" target="_blank" rel="noopener" style="color:var(--accent);">' + (s.title || s.url) + '</a>' +
+              (s.source ? ' · ' + s.source : '') + '</div>';
+          }).join('');
+      } else { src.innerHTML = ''; }
+      reportEl.style.display = '';
+      reportEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    researchRun.addEventListener('click', function () {
+
+    function runResearch() {
       var input = $('#research-input');
       var text = input.value.trim();
       if (!text) { input.focus(); return; }
-      var items = store('mizan-research') || [];
-      items.unshift({ q: text, when: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) + ' · ~40 min' });
-      store('mizan-research', items);
-      input.value = '';
-      renderResearch();
-      toast('Research queued 🔬 — you\'ll get an email when it\'s ready');
-    });
+      researchRun.disabled = true;
+      reportEl.style.display = '';
+      $('#research-report-q').textContent = text;
+      $('#research-report-body').textContent = 'Researching — pulling live data and reading the latest news…';
+      $('#research-report-status').textContent = 'Running';
+      $('#research-report-status').className = 'chip chip-muted';
+      $('#research-report-sources').innerHTML = '';
+      reportEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      fetch('/dashboard/research/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: text })
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        researchRun.disabled = false;
+        if (j.ok) {
+          input.value = '';
+          showReport({ question: j.question, report: j.report, sources: j.sources, status: 'complete' });
+          setTimeout(function () { location.reload(); }, 1200); // refresh history list
+        } else {
+          showReport({ question: text, report: j.error || 'Something went wrong.', status: 'error' });
+        }
+      }).catch(function () {
+        researchRun.disabled = false;
+        showReport({ question: text, report: 'Connection hiccup — try again in a moment.', status: 'error' });
+      });
+    }
+
+    researchRun.addEventListener('click', runResearch);
     $('#research-input').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); researchRun.click(); }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); runResearch(); }
     });
     $all('[data-research-suggest]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -447,7 +481,15 @@
         $('#research-input').focus();
       });
     });
-    renderResearch();
+    // Open a past report from the history list
+    $all('[data-report-id]').forEach(function (row) {
+      row.addEventListener('click', function () {
+        fetch('/dashboard/research/' + row.getAttribute('data-report-id'))
+          .then(function (r) { return r.json(); })
+          .then(function (j) { if (j.ok) showReport(j); })
+          .catch(function () { toast('Could not load that report'); });
+      });
+    });
   }
 
   /* ─── 9. Vault + transactions file uploads (demo) ─────── */

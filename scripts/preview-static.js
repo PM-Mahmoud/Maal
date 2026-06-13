@@ -76,6 +76,14 @@ app.get('/dashboard', (_req, res, next) => {
       { description: 'Salary — NSW Health', amount: 5400, post_date: new Date(Date.now() - 2 * 86400000) },
       { description: 'Transport for NSW', amount: -12.40, post_date: new Date(Date.now() - 3 * 86400000) },
     ],
+    movers: { top: [
+      { symbol: 'NVDA', price: 1203.40, percent: 4.21 },
+      { symbol: 'MSFT', price: 471.10, percent: 1.84 },
+      { symbol: 'AAPL', price: 214.05, percent: 0.62 },
+    ], bottom: [
+      { symbol: 'TSLA', price: 178.22, percent: -3.10 },
+      { symbol: 'AMZN', price: 184.70, percent: -1.42 },
+    ] },
   }).then(html => res.send(html)).catch(next);
 });
 app.get('/roadmap', (_req, res, next) => {
@@ -99,6 +107,24 @@ app.get('/accounts', (_req, res, next) => {
     accounts: [
       { id: 1, institution_name: 'Hooli Bank', institution_type: 'bank', account_reference: 'basiq:abc1', balance: 4250, connection_status: 'active', last_synced_at: new Date() },
       { id: 2, institution_name: 'AustralianSuper', institution_type: 'super_fund', account_reference: '8821', balance: 38000, connection_status: 'connected', last_synced_at: null },
+    ],
+  }).then(html => res.send(html)).catch(next);
+});
+app.get('/research', (_req, res, next) => {
+  renderInLayout('dashboard-research', {
+    ...base, pageTitle: 'Research', advisorReady: true,
+    reports: [
+      { id: 1, question: 'What if the ASX drops 20% next quarter — how exposed am I?', status: 'complete', created_at: new Date() },
+      { id: 2, question: "Latest news affecting Australian bank shares?", status: 'complete', created_at: new Date(Date.now() - 86400000) },
+    ],
+  }).then(html => res.send(html)).catch(next);
+});
+app.get('/radar', (_req, res, next) => {
+  renderInLayout('dashboard-radar', {
+    ...base, pageTitle: 'Radar', advisorReady: true,
+    radars: [
+      { id: 1, prompt: 'Alert me if NVDA moves more than 10% in a day, and tell me what caused it', frequency: 'daily', notify_email: true, notify_sms: false, last_run_at: new Date(), last_alerted: true, last_result: 'NVDA fell 11% after soft data-centre guidance; broad AI-chip selloff.' },
+      { id: 2, prompt: 'If my monthly spending goes 20% over average, alert me', frequency: 'weekly', notify_email: true, notify_sms: true, last_run_at: null, last_alerted: false, last_result: null },
     ],
   }).then(html => res.send(html)).catch(next);
 });

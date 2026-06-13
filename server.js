@@ -67,6 +67,24 @@ app.get('/health', (_req, res) => {
   });
 });
 
+// ─── Radar cron sweep ──────────────────────────────────────────────────────
+// Hit by an external scheduler (e.g. cron-job.org) on whatever cadence you
+// like, e.g. hourly: GET /internal/radar/run?token=<RADAR_CRON_SECRET>.
+// Evaluates every radar whose frequency interval has elapsed and emails/SMSes
+// alerts. Protected by a shared secret; returns 403 if unset or mismatched.
+app.get('/internal/radar/run', async (req, res) => {
+  const secret = (process.env.RADAR_CRON_SECRET || '').trim();
+  if (!secret || req.query.token !== secret) return res.status(403).json({ error: 'forbidden' });
+  try {
+    const { runDueRadars } = require('./services/radar');
+    const result = await runDueRadars();
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    console.error('radar cron error:', e.message);
+    res.status(500).json({ error: 'radar sweep failed' });
+  }
+});
+
 // ─── Static assets ────────────────────────────────────────────────────────
 
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));

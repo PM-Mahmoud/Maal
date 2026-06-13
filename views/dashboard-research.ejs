@@ -1,47 +1,55 @@
+<%
+  var reportList = (typeof reports !== 'undefined' && reports) ? reports : [];
+  var aiReady = typeof advisorReady !== 'undefined' ? advisorReady : false;
+  function when(d) { try { return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }); } catch (e) { return ''; } }
+%>
 <div class="page-head">
   <div>
     <h1>Research</h1>
-    <div class="sub">Deep-dive scenario analysis on your finances — results in 30–50 minutes.</div>
+    <div class="sub">Ask anything. Mizan grounds the answer in live market data and web research, then explains it.</div>
   </div>
 </div>
+
+<% if (!aiReady) { %>
+<div class="alert alert-error">Research needs the AI engine — add your Azure OpenAI keys on the server to switch it on.</div>
+<% } %>
 
 <div class="widget-grid">
   <div class="col-8">
 
     <div class="composer">
-      <textarea id="research-input" placeholder="What happens if interest rates rise 1%?"></textarea>
+      <textarea id="research-input" placeholder="What happens to my borrowing power if the RBA cuts rates 0.5%?"></textarea>
       <div class="composer-bar">
-        <span style="font-size:0.75rem; color:var(--fg-faint);">Runs a full scenario model over your data</span>
-        <button class="send-btn" id="research-run" title="Run">↑</button>
+        <span style="font-size:0.75rem; color:var(--fg-faint);">Grounded in live data · education only</span>
+        <button class="send-btn" id="research-run" title="Run research">↑</button>
       </div>
+    </div>
+
+    <!-- Report renders here -->
+    <div id="research-report" class="panel" style="margin-top:1rem; display:none;">
+      <div class="panel-title">Report <span class="chip chip-accent" id="research-report-status">Ready</span></div>
+      <div id="research-report-q" style="font-weight:600; font-size:0.92rem; margin-bottom:0.6rem;"></div>
+      <div id="research-report-body" style="font-size:0.9rem; line-height:1.7; color:var(--fg); white-space:pre-wrap;"></div>
+      <div id="research-report-sources" style="margin-top:1rem;"></div>
     </div>
 
     <p style="text-align:center; font-size:0.8rem; color:var(--fg-muted); margin:1.4rem 0 0.7rem;">Try research like…</p>
     <div class="suggest-grid">
-      <button class="suggest" data-research-suggest>What if the ASX drops 20% next quarter? Analyse the impact</button>
-      <button class="suggest" data-research-suggest>Run a Monte Carlo simulation for my retirement at 60</button>
-      <button class="suggest" data-research-suggest>Stress test my portfolio against a property downturn</button>
-      <button class="suggest" data-research-suggest>Compare salary sacrifice vs. extra mortgage repayments</button>
-      <button class="suggest" data-research-suggest>What are my biggest financial risks right now?</button>
+      <button class="suggest" data-research-suggest>What if the ASX drops 20% next quarter — how exposed am I?</button>
+      <button class="suggest" data-research-suggest>Compare salary sacrifice vs extra mortgage repayments for me</button>
+      <button class="suggest" data-research-suggest>What's the latest news affecting Australian bank shares?</button>
       <button class="suggest" data-research-suggest>Project my net worth if I save an extra $500/month</button>
+      <button class="suggest" data-research-suggest>How would a 1% HECS indexation change affect my balance?</button>
+      <button class="suggest" data-research-suggest>What are my biggest financial risks right now?</button>
     </div>
 
-    <div class="banner banner-danger">
-      <div class="banner-head">
-        <span>⚠ Low data warning</span>
-        <a href="/dashboard/assets" class="btn btn-ghost btn-sm">Add Asset or Liability</a>
-      </div>
-      <strong style="font-size:0.85rem;">Not enough assets &amp; liabilities.</strong>
-      <p>Research quality depends on your data. Add assets and liabilities or connect a bank via Basiq first.</p>
-    </div>
-
-    <div class="assistant-card">
+    <div class="assistant-card" style="margin-top:1.4rem;">
       <div class="avatar">M</div>
       <div>
-        <div style="font-weight:600; font-size:0.95rem;">How to use Research</div>
+        <div style="font-weight:600; font-size:0.95rem;">How Research works</div>
         <p style="font-size:0.85rem; color:var(--fg-muted); margin:0.4rem 0 0; line-height:1.6;">
-          Ask "what happens if…?" questions and Mizan runs the numbers across your portfolio, super, debts and cash flow —
-          due diligence and what-if modelling in one flow. Reports land here and in your email when complete.
+          Ask a question and Mizan pulls live market data and recent news, reads them against your profile,
+          and writes a grounded report with sources — in seconds. Education only, never personal advice.
         </p>
       </div>
     </div>
@@ -49,19 +57,23 @@
   </div>
 
   <div class="col-4">
-    <div class="panel" style="margin-bottom:1rem;">
-      <div class="panel-title">Research History</div>
-      <div id="research-history"></div>
-    </div>
     <div class="panel">
-      <div class="panel-title">Suggested Research</div>
-      <div class="row-item"><div class="row-main">Market Scenarios</div></div>
-      <div class="row-item"><div class="row-main">Simulations</div></div>
-      <div class="row-item"><div class="row-main">Portfolio Analysis</div></div>
-      <div class="row-item"><div class="row-main">Risk Assessment</div></div>
-      <div class="row-item"><div class="row-main">Spending Insights</div></div>
-      <div class="row-item"><div class="row-main">Buy a home</div></div>
-      <div class="row-item"><div class="row-main">Super &amp; retirement</div></div>
+      <div class="panel-title">Research history</div>
+      <div id="research-history">
+        <% if (!reportList.length) { %>
+        <div class="empty" style="padding:1.2rem 0.5rem;"><p>No research yet. Your reports will appear here.</p></div>
+        <% } else { %>
+        <% reportList.forEach(function(r) { %>
+        <div class="row-item" data-report-id="<%= r.id %>" style="cursor:pointer;">
+          <div style="min-width:0;">
+            <div class="row-main" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><%= r.question %></div>
+            <div class="row-sub"><%= when(r.created_at) %></div>
+          </div>
+          <span class="chip <%= r.status === 'complete' ? 'chip-accent' : r.status === 'error' ? 'chip-danger' : 'chip-muted' %>"><%= r.status %></span>
+        </div>
+        <% }); %>
+        <% } %>
+      </div>
     </div>
   </div>
 </div>

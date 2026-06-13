@@ -17,6 +17,11 @@ const { recordSnapshot, getSnapshots } = require('../db/snapshots');
 const { estimateTax } = require('../lib/tax');
 const { buildEffectiveProfile } = require('../lib/connected');
 const { getRecentTransactions } = require('../db/transactions');
+const researchDb = require('../db/research');
+const { runResearch } = require('../services/research');
+const radarDb = require('../db/radar');
+const radarService = require('../services/radar');
+const marketdata = require('../services/marketdata');
 const advisor = require('../services/advisor');
 const basiqService = require('../services/basiq');
 
@@ -65,6 +70,20 @@ router.get('/', async (req, res) => {
     // Mizan Score — single composite wellbeing score
     const mizanScore = computeMizanScore(profile);
 
+    // Top & bottom movers from live quotes (Finnhub) when configured
+    let movers = null;
+    if (marketdata.hasMarketData()) {
+      try {
+        const watch = (process.env.MIZAN_WATCHLIST || 'AAPL,MSFT,NVDA,GOOGL,AMZN,TSLA,JPM,V')
+          .split(',').map(s => s.trim()).filter(Boolean);
+        const quotes = await marketdata.getQuotes(watch);
+        if (quotes.length) {
+          const sorted = quotes.slice().sort((a, b) => (b.percent || 0) - (a.percent || 0));
+          movers = { top: sorted.slice(0, 3), bottom: sorted.slice(-3).reverse() };
+        }
+      } catch (e) { console.error('movers error:', e.message); }
+    }
+
     // Record today's net-worth snapshot, then load history for the real chart
     const p = profile || {};
     const superBal  = Number(p.super_balance) || 0;
@@ -96,6 +115,7 @@ router.get('/', async (req, res) => {
       snapshots,
       connected,
       recentTransactions,
+      movers,
       taxImpact: estimateTax(profile),
       pageTitle: 'Dashboard'
     });
@@ -142,20 +162,108 @@ router.get('/ask', async (req, res) => {
 router.get('/research', async (req, res) => {
   try {
     const ctx = await dashboardContext(req);
-    res.render('dashboard-research', { ...ctx, pageTitle: 'Research' });
+    let reports = [];
+    try { reports = await researchDb.listReports(req.session.userId, 20); }
+    catch (e) { console.error('research history error (run migrations?):', e.message); }
+    res.render('dashboard-research', {
+      ...ctx, pageTitle: 'Research', reports,
+      advisorReady: advisor.hasAdvisor(),
+    });
   } catch (err) {
     console.error('/research error:', err.message);
     res.status(500).render('error', { layout: false, message: 'Failed to load Research.' });
   }
 });
 
+// Run a research report synchronously (a few seconds) and persist it.
+router.post('/research/run', async (req, res) => {
+  try {
+    const question = String(req.body.question || '').trim().slice(0, 600);
+    if (!question) return res.status(400).json({ error: 'Ask a research question first.' });
+
+    const { user, profile } = await dashboardContext(req);
+    const mizan = computeMizanScore(profile);
+    const id = await researchDb.createReport(req.session.userId, question);
+    try {
+      const { report, sources } = await runResearch(user, profile, mizan, question);
+      await researchDb.completeReport(id, report, sources);
+      res.json({ ok: true, id, report, sources, question });
+    } catch (e) {
+      console.error('research run failed:', e.message);
+      await researchDb.failReport(id, 'The research engine hit a snag — please try again.');
+      res.status(500).json({ error: 'The research engine hit a snag — please try again.' });
+    }
+  } catch (err) {
+    console.error('research/run error:', err.message);
+    res.status(500).json({ error: 'Could not start research.' });
+  }
+});
+
+// Fetch a single saved report (history click)
+router.get('/research/:id', async (req, res) => {
+  try {
+    const r = await researchDb.getReport(req.params.id, req.session.userId);
+    if (!r) return res.status(404).json({ error: 'Report not found.' });
+    res.json({ ok: true, report: r.report, sources: r.sources || [], question: r.question, status: r.status });
+  } catch (err) {
+    console.error('research/:id error:', err.message);
+    res.status(500).json({ error: 'Could not load report.' });
+  }
+});
+
 router.get('/radar', async (req, res) => {
   try {
     const ctx = await dashboardContext(req);
-    res.render('dashboard-radar', { ...ctx, pageTitle: 'Radar' });
+    let radars = [];
+    try { radars = await radarDb.listRadars(req.session.userId); }
+    catch (e) { console.error('radar list error (run migrations?):', e.message); }
+    res.render('dashboard-radar', {
+      ...ctx, pageTitle: 'Radar', radars, advisorReady: advisor.hasAdvisor(),
+    });
   } catch (err) {
     console.error('/radar error:', err.message);
     res.status(500).render('error', { layout: false, message: 'Failed to load Radar.' });
+  }
+});
+
+router.post('/radar', async (req, res) => {
+  try {
+    const prompt = String(req.body.prompt || '').trim().slice(0, 600);
+    if (!prompt) return res.status(400).json({ error: 'Describe what Mizan should watch.' });
+    const freq = ['daily', 'weekly', 'monthly'].includes(req.body.frequency) ? req.body.frequency : 'daily';
+    const id = await radarDb.createRadar(req.session.userId, {
+      prompt,
+      symbols: radarService.extractSymbols(prompt),
+      frequency: freq,
+      notifyEmail: req.body.notifyEmail !== false,
+      notifySms: !!req.body.notifySms,
+    });
+    res.json({ ok: true, id });
+  } catch (err) {
+    console.error('radar create error:', err.message);
+    res.status(500).json({ error: 'Could not create radar.' });
+  }
+});
+
+router.delete('/radar/:id', async (req, res) => {
+  try {
+    await radarDb.deleteRadar(req.params.id, req.session.userId);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('radar delete error:', err.message);
+    res.status(500).json({ error: 'Could not delete radar.' });
+  }
+});
+
+// Run a radar on demand ("Run now")
+router.post('/radar/:id/run', async (req, res) => {
+  try {
+    const result = await radarService.runRadar(req.params.id, req.session.userId);
+    if (!result) return res.status(404).json({ error: 'Radar not found.' });
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('radar run error:', err.message);
+    res.status(500).json({ error: 'Radar run failed — try again.' });
   }
 });
 
