@@ -31,6 +31,42 @@
 
 const OpenAI = require('openai');
 
+// ─── Azure OpenAI (preferred — same resource the user runs for promptdoc) ────
+// Env: AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, AZURE_OPENAI_DEPLOYMENT,
+//      AZURE_OPENAI_API_VERSION (default 2024-10-21).
+// Supports both endpoint shapes (classic *.openai.azure.com and the unified
+// Foundry *.services.ai.azure.com/openai/v1), mirroring promptdoc's adapter.
+function azureConfig() {
+  const endpoint = (process.env.AZURE_OPENAI_ENDPOINT || '').replace(/\/+$/, '');
+  const apiKey = (process.env.AZURE_OPENAI_API_KEY || '').trim();
+  const deployment = (process.env.AZURE_OPENAI_DEPLOYMENT || '').trim();
+  if (!endpoint || !apiKey || !deployment) return null;
+  const apiVersion = process.env.AZURE_OPENAI_API_VERSION || '2024-10-21';
+  const useV1 = endpoint.includes('services.ai.azure.com') || endpoint.endsWith('/openai/v1');
+  const v1Base = endpoint.endsWith('/openai/v1') ? endpoint : `${endpoint.replace(/\/openai$/, '')}/openai/v1`;
+  const url = useV1
+    ? `${v1Base}/chat/completions`
+    : `${endpoint}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
+  return { url, apiKey, deployment, useV1 };
+}
+
+async function azureChatCompletion(messages, { maxTokens = 600, temperature = 0.6 } = {}) {
+  const cfg = azureConfig();
+  const body = { messages, max_tokens: maxTokens, temperature };
+  if (cfg.useV1) body.model = cfg.deployment; // v1 routes by model; classic by URL
+  const res = await fetch(cfg.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'api-key': cfg.apiKey },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Azure OpenAI ${res.status}: ${detail.slice(0, 200)}`);
+  }
+  const json = await res.json();
+  return json.choices && json.choices[0] && json.choices[0].message ? json.choices[0].message.content : '';
+}
+
 function providerConfig() {
   // 1. Fully custom provider
   if (process.env.AI_API_KEY && process.env.AI_BASE_URL) {
@@ -40,7 +76,7 @@ function providerConfig() {
       model: process.env.AI_MODEL || 'llama-3.3-70b-versatile',
     };
   }
-  // 2. Groq (recommended default — US servers, open models, free tier)
+  // 2. Groq (US servers, open models, free tier)
   if (process.env.GROQ_API_KEY) {
     return {
       apiKey: process.env.GROQ_API_KEY,
@@ -60,7 +96,7 @@ function providerConfig() {
 }
 
 function hasAdvisor() {
-  return !!providerConfig();
+  return !!azureConfig() || !!providerConfig();
 }
 
 function getClient() {
@@ -123,17 +159,24 @@ const FALLBACK_REPLY =
  */
 async function chat(user, profile, mizan, messages) {
   if (!hasAdvisor()) return FALLBACK_REPLY;
+  return complete([
+    { role: 'system', content: buildSystemPrompt(user, profile, mizan) },
+    ...messages.slice(-10), // keep context small + cheap
+  ], { maxTokens: 600, temperature: 0.6 });
+}
+
+// Low-level completion shared by chat, research and radar. Azure first, then
+// any OpenAI-compatible provider. Returns the assistant's text.
+async function complete(messages, opts = {}) {
+  if (azureConfig()) return azureChatCompletion(messages, opts);
   const { client, model } = getClient();
   const completion = await client.chat.completions.create({
-    model: model,
-    max_tokens: 600,
-    temperature: 0.6,
-    messages: [
-      { role: 'system', content: buildSystemPrompt(user, profile, mizan) },
-      ...messages.slice(-10), // keep context small + cheap
-    ],
+    model,
+    max_tokens: opts.maxTokens || 600,
+    temperature: opts.temperature != null ? opts.temperature : 0.6,
+    messages,
   });
   return completion.choices[0].message.content;
 }
 
-module.exports = { hasAdvisor, chat };
+module.exports = { hasAdvisor, chat, complete };

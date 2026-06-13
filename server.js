@@ -60,7 +60,8 @@ app.get('/health', (_req, res) => {
     status: 'healthy',
     integrations: {
       basiq: !!(process.env.BASIQ_API_KEY || '').trim(),
-      advisor: !!((process.env.GROQ_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.AI_API_KEY || '').trim()),
+      advisor: !!((process.env.AZURE_OPENAI_API_KEY || process.env.GROQ_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.AI_API_KEY || '').trim()),
+      azure: !!((process.env.AZURE_OPENAI_API_KEY || '').trim() && (process.env.AZURE_OPENAI_ENDPOINT || '').trim() && (process.env.AZURE_OPENAI_DEPLOYMENT || '').trim()),
       stripe: !!(process.env.STRIPE_SECRET_KEY || '').trim(),
     },
   });
