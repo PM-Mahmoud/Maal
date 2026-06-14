@@ -7,13 +7,28 @@
 
 <div style="max-width: 680px; margin: 0 auto;">
 
-  <div class="dropzone" data-dropzone="vault">
+  <% var vaultFiles = (typeof files !== 'undefined' && files) ? files : []; %>
+
+  <div class="dropzone" data-dropzone="vault" data-kind="vault">
     <div style="font-size:1.6rem; margin-bottom:0.5rem;">⇪</div>
     <strong>Drop files here or click to browse</strong>
-    <p style="margin:0.4rem 0 0; font-size:0.78rem;">Images, PDF, Word and CSV accepted · max 90&nbsp;MB per file</p>
+    <p style="margin:0.4rem 0 0; font-size:0.78rem;">Images, PDF, Word and CSV accepted · max 10&nbsp;MB per file</p>
   </div>
 
-  <div data-uploads="vault"></div>
+  <div data-uploads="vault">
+    <% if (vaultFiles.length) { %>
+    <div class="panel-title" style="margin-top:1rem;">Your documents</div>
+    <% vaultFiles.forEach(function(f) { %>
+    <div class="row-item" data-file-row="<%= f.id %>">
+      <div style="min-width:0;">
+        <div class="row-main">📄 <a href="/dashboard/vault/file/<%= f.id %>" style="color:var(--fg);"><%= f.filename %></a></div>
+        <div class="row-sub"><%= Math.max(1, Math.round(Number(f.size_bytes) / 1024)) %> KB · <%= new Date(f.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) %></div>
+      </div>
+      <button class="icon-btn" data-del-file="<%= f.id %>" title="Delete">✕</button>
+    </div>
+    <% }); %>
+    <% } %>
+  </div>
 
   <div class="assistant-card" style="margin-top:1.2rem;">
     <div class="avatar">M</div>

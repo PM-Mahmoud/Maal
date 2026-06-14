@@ -30,7 +30,7 @@ async function findUserByEmail(email) {
 async function findUserById(id) {
   const result = await pool.query(
     `SELECT id, email, name, provider, email_verified, created_at,
-            plan, basiq_user_id, phone, two_factor_enabled
+            plan, basiq_user_id, phone, two_factor_enabled, notification_prefs
      FROM users WHERE id = $1`,
     [id]
   );
@@ -233,9 +233,20 @@ async function setTwoFactor(userId, enabled) {
   await pool.query(`UPDATE users SET two_factor_enabled = $2 WHERE id = $1`, [userId, !!enabled]);
 }
 
+// Merge a single key into the user's notification_prefs JSONB.
+async function setNotificationPref(userId, key, value) {
+  await pool.query(
+    `UPDATE users
+        SET notification_prefs = COALESCE(notification_prefs, '{}'::jsonb) || jsonb_build_object($2::text, $3::boolean)
+      WHERE id = $1`,
+    [userId, key, !!value]
+  );
+}
+
 module.exports = {
   ...module.exports,
   setUserPlan,
   setBasiqUserId,
   setTwoFactor,
+  setNotificationPref,
 };

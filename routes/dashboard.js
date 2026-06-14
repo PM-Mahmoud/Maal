@@ -22,6 +22,10 @@ const { runResearch } = require('../services/research');
 const radarDb = require('../db/radar');
 const radarService = require('../services/radar');
 const marketdata = require('../services/marketdata');
+const goalsDb = require('../db/goals');
+const vaultDb = require('../db/vault');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const advisor = require('../services/advisor');
 const basiqService = require('../services/basiq');
 
@@ -290,10 +294,68 @@ router.get('/assets', async (req, res) => {
 router.get('/vault', async (req, res) => {
   try {
     const ctx = await dashboardContext(req);
-    res.render('dashboard-vault', { ...ctx, pageTitle: 'Vault' });
+    let files = [];
+    try { files = await vaultDb.listFiles(req.session.userId, 'vault'); }
+    catch (e) { console.error('vault list error (run migrations?):', e.message); }
+    res.render('dashboard-vault', { ...ctx, pageTitle: 'Vault', files });
   } catch (err) {
     console.error('/vault error:', err.message);
     res.status(500).render('error', { layout: false, message: 'Failed to load Vault.' });
+  }
+});
+
+// Upload a document (Vault or a bank statement). Stored in Postgres bytea.
+router.post('/vault/upload', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file received.' });
+    const kind = req.body.kind === 'statement' ? 'statement' : 'vault';
+    const id = await vaultDb.addFile(req.session.userId, {
+      kind,
+      filename: String(req.file.originalname || 'document').slice(0, 255),
+      mime: req.file.mimetype,
+      size: req.file.size,
+      content: req.file.buffer,
+    });
+    res.json({ ok: true, id, filename: req.file.originalname, size: req.file.size });
+  } catch (err) {
+    console.error('vault upload error:', err.message);
+    res.status(500).json({ error: 'Upload failed.' });
+  }
+});
+
+// List uploaded files of a kind (JSON) — used by the transactions statement list
+router.get('/vault/list/:kind', async (req, res) => {
+  try {
+    const kind = req.params.kind === 'statement' ? 'statement' : 'vault';
+    const files = await vaultDb.listFiles(req.session.userId, kind);
+    res.json({ ok: true, files });
+  } catch (err) {
+    console.error('vault list error:', err.message);
+    res.status(500).json({ error: 'Could not list files.' });
+  }
+});
+
+// Download / view a stored file
+router.get('/vault/file/:id', async (req, res) => {
+  try {
+    const f = await vaultDb.getFile(req.params.id, req.session.userId);
+    if (!f) return res.status(404).render('error', { layout: false, message: 'File not found.' });
+    res.setHeader('Content-Type', f.mime || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `inline; filename="${(f.filename || 'document').replace(/"/g, '')}"`);
+    res.send(f.content);
+  } catch (err) {
+    console.error('vault download error:', err.message);
+    res.status(500).render('error', { layout: false, message: 'Could not load the file.' });
+  }
+});
+
+router.delete('/vault/file/:id', async (req, res) => {
+  try {
+    await vaultDb.deleteFile(req.params.id, req.session.userId);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('vault delete error:', err.message);
+    res.status(500).json({ error: 'Could not delete file.' });
   }
 });
 
@@ -325,6 +387,9 @@ router.get('/transactions', async (req, res) => {
         }));
       } catch (e) { /* table may not exist before migration */ }
     }
+    let statementFiles = [];
+    try { statementFiles = await vaultDb.listFiles(req.session.userId, 'statement'); }
+    catch (e) { /* table may not exist before migration */ }
     res.render('dashboard-transactions', {
       ...ctx,
       pageTitle: 'Transactions',
@@ -333,6 +398,7 @@ router.get('/transactions', async (req, res) => {
       basiqReason: req.query.reason || null,
       liveTransactions,
       liveAccounts,
+      statementFiles,
     });
   } catch (err) {
     console.error('/transactions error:', err.message);
@@ -343,10 +409,48 @@ router.get('/transactions', async (req, res) => {
 router.get('/goals', async (req, res) => {
   try {
     const ctx = await dashboardContext(req);
-    res.render('dashboard-goals', { ...ctx, pageTitle: 'Goals' });
+    let goals = [];
+    try { goals = await goalsDb.listGoals(req.session.userId); }
+    catch (e) { console.error('goals list error (run migrations?):', e.message); }
+    res.render('dashboard-goals', { ...ctx, pageTitle: 'Goals', goals });
   } catch (err) {
     console.error('/goals error:', err.message);
     res.status(500).render('error', { layout: false, message: 'Failed to load Goals.' });
+  }
+});
+
+router.post('/goals', async (req, res) => {
+  try {
+    const name = String(req.body.name || '').trim().slice(0, 120);
+    const target = parseInt(req.body.target, 10);
+    if (!name || isNaN(target) || target <= 0) return res.status(400).json({ error: 'Add a name and a target amount.' });
+    const types = ['Grow', 'Save', 'Pay Off', 'Invest'];
+    const type = types.includes(req.body.type) ? req.body.type : 'Save';
+    const id = await goalsDb.createGoal(req.session.userId, { name, type, target, current: parseInt(req.body.current, 10) || 0 });
+    res.json({ ok: true, id });
+  } catch (err) {
+    console.error('goal create error:', err.message);
+    res.status(500).json({ error: 'Could not create goal.' });
+  }
+});
+
+router.post('/goals/:id/progress', async (req, res) => {
+  try {
+    await goalsDb.updateGoalProgress(req.params.id, req.session.userId, parseInt(req.body.current, 10) || 0);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('goal progress error:', err.message);
+    res.status(500).json({ error: 'Could not update goal.' });
+  }
+});
+
+router.delete('/goals/:id', async (req, res) => {
+  try {
+    await goalsDb.deleteGoal(req.params.id, req.session.userId);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('goal delete error:', err.message);
+    res.status(500).json({ error: 'Could not delete goal.' });
   }
 });
 
@@ -368,6 +472,23 @@ router.post('/assets/update', async (req, res) => {
   } catch (err) {
     console.error('assets/update error:', err.message);
     res.status(500).json({ error: 'Failed to save.' });
+  }
+});
+
+// ─── API: persist a notification preference toggle ───────────────────────────
+
+const NOTIFICATION_KEYS = ['portfolio_summary', 'market_alerts', 'research_reports', 'spending_alerts', 'score_changes', 'product_updates'];
+
+router.post('/settings/notifications', async (req, res) => {
+  try {
+    const { key, value } = req.body;
+    if (!NOTIFICATION_KEYS.includes(key)) return res.status(400).json({ error: 'Unknown preference.' });
+    const { setNotificationPref } = require('../db/users');
+    await setNotificationPref(req.session.userId, key, !!value);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('settings/notifications error:', err.message);
+    res.status(500).json({ error: 'Failed to save preference.' });
   }
 });
 

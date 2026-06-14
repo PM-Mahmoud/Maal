@@ -2,39 +2,39 @@
    Mizan — Landing & Auth theme (light, unified with app.css)
    ============================================================ */
 
-/* Minimal flat system inspired by tokorocapital.com — one light grotesk,
-   monochrome green family, hairline borders, no shadows. */
+/* PromptDoc design system — warm cream canvas, deep-teal primary, terracotta
+   accent, Geist sans, soft shadows, rounded cards. Matches sibling promptdoc. */
 :root {
-  --bg: #FFFFFF;
+  --bg: #FAF8F4;
   --surface: #FFFFFF;
-  --surface-2: #F3F3F1;
-  --surface-3: #E9EAE5;
-  --fg: #1F2722;
-  --fg-muted: #5C6660;
-  --fg-faint: #98A29B;
-  --border: #E6E8E3;
-  --border-strong: #D5D8D1;
-  --accent: #115832;
-  --accent-strong: #0C4127;
-  --accent-soft: #E3F0E8;
-  --accent-softer: #F1F8F3;
-  --gold: #A18A4C;
-  --gold-soft: #F2EDE0;
-  --danger: #C2554C;
-  --danger-soft: #F7E9E7;
-  --shadow: none;
-  --shadow-lg: 0 16px 48px rgba(20, 30, 24, 0.10);
-  --font-display: 'Hanken Grotesk', 'Helvetica Neue', Arial, sans-serif;
-  --font-body: 'Hanken Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  --surface-2: #F2EEE6;
+  --surface-3: #E9E3D6;
+  --fg: #1A2421;
+  --fg-muted: #5B6A64;
+  --fg-faint: #97A39D;
+  --border: #E4DDD0;
+  --border-strong: #D6CDBB;
+  --accent: #0F5D5E;
+  --accent-strong: #0B4A4B;
+  --accent-soft: #E2EDEA;
+  --accent-softer: #EFF5F2;
+  --gold: #C45F37;
+  --gold-soft: #FBE9DF;
+  --danger: #B3422F;
+  --danger-soft: #F6E2DC;
+  --shadow: 0 1px 2px rgba(26, 36, 33, 0.05), 0 8px 24px -12px rgba(26, 36, 33, 0.12);
+  --shadow-lg: 0 12px 32px -8px rgba(26, 36, 33, 0.18);
+  --font-display: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-body: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
   --radius: 12px;
   --radius-sm: 8px;
   /* legacy aliases (onboarding wizard etc.) */
-  --green-deep: #115832;
-  --green-mid: #2E6B4A;
-  --green-light: #739B82;
-  --accent-dim: #0C4127;
+  --green-deep: #0F5D5E;
+  --green-mid: #127C71;
+  --green-light: #58B3A4;
+  --accent-dim: #0B4A4B;
   --card-bg: #FFFFFF;
-  --bg-alt: #F3F3F1;
+  --bg-alt: #F2EEE6;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -417,99 +417,93 @@ a { color: var(--accent); }
 }
 
 /* ============================================================
-   Tokoro minimal pass — landing: editorial, flat, hairline
+   PromptDoc pass — landing: warm, soft-shadowed, Geist, semibold
    ============================================================ */
 
-body { line-height: 1.65; }
+body { line-height: 1.6; }
 
-/* Nav: quiet, hairline, uppercase links */
-.navbar { background: rgba(255, 255, 255, 0.92); }
-.logo-text { font-weight: 400; font-size: 1.15rem; }
-.nav-links a {
-  font-size: 0.72rem; font-weight: 500;
-  letter-spacing: 0.12em; text-transform: uppercase;
+/* Nav */
+.navbar { background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(16px); }
+.logo-text { font-weight: 600; font-size: 1.15rem; letter-spacing: -0.01em; }
+.nav-links a { font-size: 0.875rem; font-weight: 500; }
+.nav-cta { padding: 0.5rem 1.2rem; border-radius: 999px; }
+
+/* Hero */
+.hero { padding: 10rem 2rem 5.5rem; }
+.hero-glow {
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 14%, transparent), color-mix(in srgb, var(--gold) 8%, transparent) 55%, transparent 70%);
 }
-.nav-cta { letter-spacing: 0.08em; padding: 0.5rem 1.2rem; }
-
-/* Hero: massive light headline, no glow */
-.hero { padding: 11rem 2rem 6rem; }
-.hero-glow { display: none; }
 .hero-badge {
-  background: transparent;
-  border: 1px solid var(--border-strong);
-  color: var(--fg-muted);
-  font-size: 0.68rem; font-weight: 500;
-  letter-spacing: 0.14em; text-transform: uppercase;
+  background: var(--accent-soft);
+  border: 1px solid transparent;
+  color: var(--accent);
+  font-size: 0.74rem; font-weight: 500;
 }
 .badge-dot { background: var(--accent); }
 .hero-headline {
-  font-size: clamp(2.9rem, 6vw, 4.8rem);
-  font-weight: 300;
+  font-size: clamp(2.7rem, 5.4vw, 4.2rem);
+  font-weight: 600;
   line-height: 1.08;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.03em;
 }
 .hero-headline em { font-style: normal; color: var(--accent); }
 .hero-sub { font-weight: 400; }
-.hero-cta, .hero-cta-secondary { font-weight: 500; }
-.hero-cta:hover { transform: none; }
+.hero-cta, .hero-cta-secondary { font-weight: 500; border-radius: 999px; }
 
-/* Hero preview card: flat */
-.score-card { box-shadow: none; border-radius: var(--radius); }
-.score-number { font-weight: 300; letter-spacing: -0.03em; }
-.score-fill { background: var(--accent); }
-.score-label {
-  font-size: 0.66rem; font-weight: 600;
-  letter-spacing: 0.13em; text-transform: uppercase;
-}
+/* Hero preview card: soft-shadowed */
+.score-card { box-shadow: var(--shadow); border-radius: var(--radius); }
+.score-number { font-weight: 600; letter-spacing: -0.03em; }
+.score-fill { background: linear-gradient(90deg, var(--accent), var(--gold)); }
+.score-label { font-size: 0.7rem; font-weight: 600; color: var(--fg-muted); }
 
-/* Proof strip: airy */
-.proof { background: var(--surface-2); border: none; padding: 2.2rem 2rem; }
-.proof-item .proof-big { font-weight: 400; font-size: 1.4rem; }
+/* Proof strip */
+.proof { background: var(--surface-2); border: none; padding: 2rem; }
+.proof-item .proof-big { font-weight: 600; font-size: 1.4rem; }
 
-/* Sections: editorial titles */
-.section { padding: 6.5rem 2rem; }
+/* Sections */
+.section { padding: 5.5rem 2rem; }
 .section-alt { background: var(--surface-2); border: none; }
-.section-kicker { color: var(--fg-muted); font-weight: 500; letter-spacing: 0.16em; }
+.section-kicker { color: var(--accent); font-weight: 600; letter-spacing: 0.08em; }
 .section-title {
-  font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 300;
+  font-size: clamp(1.9rem, 3.6vw, 2.7rem);
+  font-weight: 600;
   line-height: 1.15;
   letter-spacing: -0.02em;
 }
 .section-sub { font-weight: 400; }
 
-/* Cards: flat, hairline, hover = border only */
+/* Cards: soft-shadowed, lift on hover (promptdoc PromptCard) */
 .feature-card, .step, .value-item, .price-card {
-  box-shadow: none;
-  transition: border-color 0.2s;
+  box-shadow: var(--shadow);
+  border-radius: var(--radius);
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
-.feature-card:hover { transform: none; box-shadow: none; border-color: var(--accent); }
+.feature-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
 .section-alt .feature-card { background: var(--surface); }
-.feature-icon { background: var(--accent-soft); color: var(--accent); border-radius: 8px; }
-.feature-card h3, .step h3, .value-item h4 { font-weight: 500; }
-.step-num { font-weight: 300; opacity: 1; color: var(--accent-soft); -webkit-text-stroke: 1px var(--accent); }
-.value-item .vi-icon { background: var(--surface-2); color: var(--accent); }
-.values-narrative { font-weight: 300; font-size: clamp(1.4rem, 2.6vw, 1.9rem); line-height: 1.4; letter-spacing: -0.01em; }
+.feature-icon { background: var(--accent-soft); color: var(--accent); border-radius: 10px; }
+.feature-card h3, .step h3, .value-item h4 { font-weight: 600; letter-spacing: -0.01em; }
+.step-num { font-weight: 600; opacity: 0.9; color: var(--accent); }
+.value-item .vi-icon { background: var(--gold-soft); color: var(--gold); }
+.values-narrative { font-weight: 500; font-size: clamp(1.4rem, 2.6vw, 1.85rem); line-height: 1.4; letter-spacing: -0.01em; }
 .values-narrative em { font-style: normal; color: var(--accent); }
 
-/* Pricing: flat */
-.price-card.featured { border-color: var(--accent); box-shadow: none; }
-.price-tag { font-weight: 300; }
-.price-name { font-weight: 500; }
+/* Pricing */
+.price-card.featured { border-color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent), var(--shadow); }
+.price-tag { font-weight: 600; }
+.price-name { font-weight: 600; }
 
-/* Closing: solid forest block */
+/* Closing: solid teal block */
 .closing-inner {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent-strong), var(--accent) 130%);
   border-radius: var(--radius);
-  padding: 5.5rem 2rem;
+  padding: 5rem 2rem;
 }
-.closing-inner h2 { font-weight: 300; letter-spacing: -0.02em; font-size: clamp(2rem, 4vw, 3rem); }
-.closing-cta { color: var(--accent); font-weight: 500; }
-.closing-cta:hover { transform: none; }
+.closing-inner h2 { font-weight: 600; letter-spacing: -0.02em; font-size: clamp(1.9rem, 3.6vw, 2.7rem); }
+.closing-cta { color: var(--accent); font-weight: 600; border-radius: 999px; }
 
-/* Footer: quiet */
+/* Footer */
 .footer { background: var(--surface); }
-.footer-links a { font-size: 0.78rem; letter-spacing: 0.04em; }
+.footer-links a { font-size: 0.82rem; }
 
 /* Buttons global */
 .btn-gold, .cta-button { font-weight: 500; }

@@ -154,6 +154,31 @@ app.get('/transactions', (_req, res, next) => {
   renderInLayout('dashboard-transactions', {
     ...base, pageTitle: 'Transactions', basiqEnabled: true, basiqStatus: null,
     basiqReason: null, liveTransactions: [], liveAccounts: [],
+    statementFiles: [{ id: 2, filename: 'cba-may-2026.csv', mime: 'text/csv', size_bytes: 5120, created_at: new Date() }],
+  }).then(html => res.send(html)).catch(next);
+});
+app.get('/goals', (_req, res, next) => {
+  renderInLayout('dashboard-goals', {
+    ...base, pageTitle: 'Goals',
+    goals: [
+      { id: 1, name: 'Emergency fund', type: 'Save', target: 20000, current: 12500, created_at: new Date() },
+      { id: 2, name: 'Pay off HECS', type: 'Pay Off', target: 42000, current: 8000, created_at: new Date() },
+      { id: 3, name: 'House deposit', type: 'Grow', target: 150000, current: 31000, created_at: new Date() },
+    ],
+  }).then(html => res.send(html)).catch(next);
+});
+app.get('/vault', (_req, res, next) => {
+  renderInLayout('dashboard-vault', {
+    ...base, pageTitle: 'Vault',
+    files: [
+      { id: 1, filename: 'ATO-Notice-of-Assessment-2025.pdf', mime: 'application/pdf', size_bytes: 184320, created_at: new Date() },
+      { id: 2, filename: 'AustralianSuper-statement-Q2.pdf', mime: 'application/pdf', size_bytes: 98304, created_at: new Date(Date.now() - 5 * 86400000) },
+    ],
+  }).then(html => res.send(html)).catch(next);
+});
+app.get('/settings', (_req, res, next) => {
+  renderInLayout('dashboard-settings', {
+    ...base, pageTitle: 'Settings', billingStatus: null, billingPlanName: '',
   }).then(html => res.send(html)).catch(next);
 });
 

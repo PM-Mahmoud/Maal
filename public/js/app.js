@@ -216,41 +216,10 @@
     });
   });
 
-  /* ─── 5. Goals page ───────────────────────────────────── */
+  /* ─── 5. Goals page (real, server-backed) ─────────────── */
   var goalsList = $('#goals-list');
   if (goalsList) {
     var GOAL_TYPES = ['Grow', 'Save', 'Pay Off', 'Invest'];
-    var goalFilter = 'All Goals';
-
-    function renderGoals() {
-      var goals = store('mizan-goals') || [];
-      var visible = goals.filter(function (g) { return goalFilter === 'All Goals' || g.type === goalFilter; });
-      var empty = $('#goals-empty');
-      if (empty) empty.style.display = visible.length ? 'none' : '';
-      $all('.goal-card', goalsList).forEach(function (c) { c.remove(); });
-      visible.forEach(function (g, i) {
-        var pct = g.target > 0 ? Math.min(100, Math.round((g.current || 0) / g.target * 100)) : 0;
-        var card = document.createElement('div');
-        card.className = 'panel goal-card';
-        card.style.marginBottom = '0.8rem';
-        card.innerHTML =
-          '<div class="panel-title">' + g.name +
-          ' <span><span class="chip chip-accent">' + g.type + '</span> ' +
-          '<button class="icon-btn" data-del-goal="' + goals.indexOf(g) + '" title="Delete">✕</button></span></div>' +
-          '<div class="row-item" style="border:none;padding:0.2rem 0;"><div class="row-sub">' + audFmt(g.current || 0) + ' of ' + audFmt(g.target) + '</div><div class="row-val">' + pct + '%</div></div>' +
-          '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%;"></div></div>';
-        goalsList.appendChild(card);
-      });
-      $all('[data-del-goal]').forEach(function (b) {
-        b.addEventListener('click', function () {
-          var all = store('mizan-goals') || [];
-          all.splice(parseInt(b.getAttribute('data-del-goal'), 10), 1);
-          store('mizan-goals', all);
-          renderGoals();
-          toast('Goal removed');
-        });
-      });
-    }
 
     function goalModal() {
       openModal('Create a goal',
@@ -262,19 +231,57 @@
           var name = $('#mz-goal-name', o).value.trim();
           var target = parseInt($('#mz-goal-target', o).value, 10);
           if (!name || isNaN(target) || target <= 0) { toast('Add a name and target'); return false; }
-          var goals = store('mizan-goals') || [];
-          goals.push({ name: name, type: $('#mz-goal-type', o).value, target: target, current: parseInt($('#mz-goal-current', o).value, 10) || 0 });
-          store('mizan-goals', goals);
-          renderGoals();
-          toast('Goal created 🎯');
+          fetch('/dashboard/goals', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: name, type: $('#mz-goal-type', o).value,
+              target: target, current: parseInt($('#mz-goal-current', o).value, 10) || 0
+            })
+          }).then(function (r) { return r.json(); }).then(function (j) {
+            if (j.ok) { toast('Goal created 🎯'); setTimeout(function () { location.reload(); }, 500); }
+            else toast(j.error || 'Could not create goal');
+          }).catch(function () { toast('Could not create goal'); });
         },
         'Create goal');
     }
 
     $all('[data-new-goal]').forEach(function (b) { b.addEventListener('click', goalModal); });
+
+    // Delete a goal
+    $all('[data-del-goal]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (!confirm('Delete this goal?')) return;
+        fetch('/dashboard/goals/' + b.getAttribute('data-del-goal'), { method: 'DELETE' })
+          .then(function (r) { return r.json(); })
+          .then(function (j) { if (j.ok) { var c = b.closest('.goal-card'); if (c) c.remove(); toast('Goal removed'); } });
+      });
+    });
+
+    // Update saved-so-far
+    $all('[data-save-progress]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var id = b.getAttribute('data-save-progress');
+        var input = $('.goal-progress-input[data-goal-id="' + id + '"]');
+        fetch('/dashboard/goals/' + id + '/progress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ current: parseInt(input.value, 10) || 0 })
+        }).then(function (r) { return r.json(); }).then(function (j) {
+          if (j.ok) { toast('Progress updated'); setTimeout(function () { location.reload(); }, 400); }
+          else toast(j.error || 'Could not update');
+        }).catch(function () { toast('Could not update'); });
+      });
+    });
+
+    // Client-side type filter
     var goalTabs = $('#goal-tabs');
-    if (goalTabs) goalTabs.addEventListener('tabchange', function (e) { goalFilter = e.detail; renderGoals(); });
-    renderGoals();
+    if (goalTabs) goalTabs.addEventListener('tabchange', function (e) {
+      var f = e.detail;
+      $all('.goal-card', goalsList).forEach(function (c) {
+        c.style.display = (f === 'All Goals' || c.getAttribute('data-goal-type') === f) ? '' : 'none';
+      });
+    });
   }
 
   /* ─── 6. Radar page (real, server-backed) ─────────────── */
@@ -492,12 +499,13 @@
     });
   }
 
-  /* ─── 9. Vault + transactions file uploads (demo) ─────── */
+  /* ─── 9. Vault + transactions file uploads (real, server-backed) ─── */
   $all('[data-dropzone]').forEach(function (zone) {
+    var kind = zone.getAttribute('data-kind') || (zone.getAttribute('data-dropzone') === 'vault' ? 'vault' : 'statement');
     var input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;
-    input.accept = '.pdf,.csv,.docx,.png,.jpg,.jpeg';
+    input.accept = '.pdf,.csv,.docx,.xlsx,.png,.jpg,.jpeg';
     input.style.display = 'none';
     zone.parentNode.appendChild(input);
     zone.addEventListener('click', function () { input.click(); });
@@ -512,39 +520,52 @@
 
     function handleFiles(files) {
       if (!files || !files.length) return;
-      var key = zone.getAttribute('data-dropzone') === 'vault' ? 'mizan-vault' : 'mizan-statements';
-      var stored = store(key) || [];
-      Array.prototype.forEach.call(files, function (f) {
-        stored.unshift({ name: f.name, size: Math.round(f.size / 1024) + ' KB', when: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) });
+      var queue = Array.prototype.slice.call(files);
+      var done = 0, failed = 0;
+      toast('Uploading ' + queue.length + ' file' + (queue.length > 1 ? 's' : '') + '…');
+      queue.forEach(function (f) {
+        if (f.size > 10 * 1024 * 1024) { failed++; toast(f.name + ' is over 10 MB — skipped'); return finish(); }
+        var fd = new FormData();
+        fd.append('file', f);
+        fd.append('kind', kind);
+        fetch('/dashboard/vault/upload', { method: 'POST', body: fd })
+          .then(function (r) { return r.json(); })
+          .then(function (j) { if (!j.ok) failed++; finish(); })
+          .catch(function () { failed++; finish(); });
       });
-      store(key, stored);
-      renderUploads(key);
-      toast(files.length + ' file' + (files.length > 1 ? 's' : '') + ' added (demo) — parsing coming soon');
+      function finish() {
+        done++;
+        if (done === queue.length) {
+          if (failed) toast(failed + ' upload' + (failed > 1 ? 's' : '') + ' failed');
+          else toast('Uploaded ✓');
+          setTimeout(function () { location.reload(); }, 700);
+        }
+      }
     }
   });
 
-  function renderUploads(key) {
-    var listEl = $('[data-uploads="' + (key === 'mizan-vault' ? 'vault' : 'statements') + '"]');
-    if (!listEl) return;
-    var items = store(key) || [];
-    if (!items.length) { listEl.innerHTML = ''; return; }
-    listEl.innerHTML = '<div class="panel-title" style="margin-top:1rem;">Uploaded documents</div>' + items.map(function (f, i) {
-      return '<div class="row-item"><div><div class="row-main">📄 ' + f.name + '</div><div class="row-sub">' + f.size + ' · ' + f.when + '</div></div><span class="chip chip-accent">Stored</span></div>';
-    }).join('');
-  }
-  renderUploads('mizan-vault');
-  renderUploads('mizan-statements');
+  // Delete a stored file (server-rendered rows)
+  $all('[data-del-file]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (!confirm('Delete this file?')) return;
+      fetch('/dashboard/vault/file/' + b.getAttribute('data-del-file'), { method: 'DELETE' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) { if (j.ok) { var row = b.closest('[data-file-row]'); if (row) row.remove(); toast('File deleted'); } });
+    });
+  });
 
-  /* ─── 10. Settings: switches persist + delete account ─── */
+  /* ─── 10. Settings: notification prefs (server) + delete account ─── */
   if (location.pathname.indexOf('/dashboard/settings') === 0) {
-    $all('.switch input').forEach(function (sw, i) {
-      if (sw.id === 'tfa-switch') return; // server-backed, handled below
-      var key = 'mizan-pref-' + i;
-      var saved = store(key);
-      if (saved !== null) sw.checked = saved;
+    $all('.switch input[data-notif]').forEach(function (sw) {
       sw.addEventListener('change', function () {
-        store(key, sw.checked);
-        toast(sw.checked ? 'Notification on' : 'Notification off');
+        fetch('/dashboard/settings/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: sw.getAttribute('data-notif'), value: sw.checked })
+        }).then(function (r) { return r.json(); }).then(function (j) {
+          if (j.ok) toast(sw.checked ? 'Notification on' : 'Notification off');
+          else { sw.checked = !sw.checked; toast(j.error || 'Could not save'); }
+        }).catch(function () { sw.checked = !sw.checked; toast('Could not save preference'); });
       });
     });
     var del = $('#settings-delete');

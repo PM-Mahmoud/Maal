@@ -20,6 +20,10 @@
 <% } %>
 
 <% var currentPlan = (user && user.plan) || 'free'; %>
+<%
+  var np = (user && user.notification_prefs) || {};
+  function npOn(key, def) { var v = np[key]; return (v === undefined || v === null) ? def : v; }
+%>
 
 <div class="widget-grid">
   <div class="col-6">
@@ -28,27 +32,27 @@
       <div class="panel-title">Email notifications</div>
       <div class="row-item">
         <div><div class="row-main">Portfolio summary <span class="chip chip-muted">Daily</span></div><div class="row-sub">Net worth, portfolio value, cash, debts and recent transactions.</div></div>
-        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" data-notif="portfolio_summary" <%= npOn('portfolio_summary', true) ? 'checked' : '' %>><span class="slider"></span></label>
       </div>
       <div class="row-item">
         <div><div class="row-main">Market alerts <span class="chip chip-muted">Daily</span></div><div class="row-sub">When ASX or global price moves affect your net worth by 0.5%+.</div></div>
-        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" data-notif="market_alerts" <%= npOn('market_alerts', true) ? 'checked' : '' %>><span class="slider"></span></label>
       </div>
       <div class="row-item">
         <div><div class="row-main">Research reports <span class="chip chip-muted">On completion</span></div><div class="row-sub">An email when your deep research reports are ready.</div></div>
-        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" data-notif="research_reports" <%= npOn('research_reports', true) ? 'checked' : '' %>><span class="slider"></span></label>
       </div>
       <div class="row-item">
         <div><div class="row-main">Spending alerts <span class="chip chip-muted">Every Monday</span></div><div class="row-sub">Unusual spending spikes detected across connected accounts.</div></div>
-        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" data-notif="spending_alerts" <%= npOn('spending_alerts', true) ? 'checked' : '' %>><span class="slider"></span></label>
       </div>
       <div class="row-item">
         <div><div class="row-main">Score changes <span class="chip chip-accent">Mizan</span></div><div class="row-sub">When your credit, debt or financial wellbeing score moves.</div></div>
-        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" data-notif="score_changes" <%= npOn('score_changes', true) ? 'checked' : '' %>><span class="slider"></span></label>
       </div>
       <div class="row-item">
         <div><div class="row-main">Product updates <span class="chip chip-muted">Marketing</span></div><div class="row-sub">New features and improvements to Mizan.</div></div>
-        <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" data-notif="product_updates" <%= npOn('product_updates', false) ? 'checked' : '' %>><span class="slider"></span></label>
       </div>
     </div>
 

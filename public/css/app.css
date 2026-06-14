@@ -2,60 +2,60 @@
    Mizan App — design system (light default, dark via data-theme)
    ============================================================ */
 
-/* Minimal flat system inspired by tokorocapital.com — one light grotesk,
-   monochrome green family, hairline borders, no shadows. */
+/* PromptDoc design system — warm cream canvas, deep-teal primary, terracotta
+   accent, Geist sans, soft shadows, rounded cards. Matches sibling promptdoc. */
 :root {
-  --bg: #FAFAF8;
+  --bg: #FAF8F4;
   --surface: #FFFFFF;
-  --surface-2: #F3F3F1;
-  --surface-3: #E9EAE5;
-  --fg: #1F2722;
-  --fg-muted: #5C6660;
-  --fg-faint: #98A29B;
-  --border: #E6E8E3;
-  --border-strong: #D5D8D1;
-  --accent: #115832;
-  --accent-strong: #0C4127;
-  --accent-soft: #E3F0E8;
-  --accent-softer: #F1F8F3;
-  --gold: #A18A4C;
-  --gold-soft: #F2EDE0;
-  --danger: #C2554C;
-  --danger-soft: #F7E9E7;
-  --warn: #B08230;
-  --warn-soft: #F5EEDF;
+  --surface-2: #F2EEE6;
+  --surface-3: #E9E3D6;
+  --fg: #1A2421;
+  --fg-muted: #5B6A64;
+  --fg-faint: #97A39D;
+  --border: #E4DDD0;
+  --border-strong: #D6CDBB;
+  --accent: #0F5D5E;
+  --accent-strong: #0B4A4B;
+  --accent-soft: #E2EDEA;
+  --accent-softer: #EFF5F2;
+  --gold: #C45F37;
+  --gold-soft: #FBE9DF;
+  --danger: #B3422F;
+  --danger-soft: #F6E2DC;
+  --warn: #B3812F;
+  --warn-soft: #F4ECDD;
   --info-soft: #E8EFF4;
-  --shadow: none;
-  --shadow-lg: 0 16px 48px rgba(20, 30, 24, 0.12);
-  --font-display: 'Hanken Grotesk', 'Helvetica Neue', Arial, sans-serif;
-  --font-body: 'Hanken Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  --shadow: 0 1px 2px rgba(26, 36, 33, 0.05), 0 8px 24px -12px rgba(26, 36, 33, 0.12);
+  --shadow-lg: 0 12px 32px -8px rgba(26, 36, 33, 0.18);
+  --font-display: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-body: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
   --radius: 12px;
   --radius-sm: 8px;
 }
 
 [data-theme="dark"] {
-  --bg: #101411;
-  --surface: #151A16;
-  --surface-2: #1B211C;
-  --surface-3: #232B25;
-  --fg: #E8ECE7;
-  --fg-muted: #9AA59D;
-  --fg-faint: #6C7670;
-  --border: rgba(255, 255, 255, 0.08);
+  --bg: #0E1413;
+  --surface: #161D1B;
+  --surface-2: #1C2522;
+  --surface-3: #232E2A;
+  --fg: #E7EBE8;
+  --fg-muted: #94A39C;
+  --fg-faint: #6C7A73;
+  --border: #27332F;
   --border-strong: rgba(255, 255, 255, 0.16);
-  --accent: #AED4AF;
-  --accent-strong: #C6E4C7;
-  --accent-soft: rgba(174, 212, 175, 0.14);
-  --accent-softer: rgba(174, 212, 175, 0.07);
-  --gold: #C0A968;
-  --gold-soft: rgba(192, 169, 104, 0.14);
-  --danger: #DA8078;
-  --danger-soft: rgba(218, 128, 120, 0.14);
+  --accent: #58B3A4;
+  --accent-strong: #7CCABD;
+  --accent-soft: #15302B;
+  --accent-softer: rgba(88, 179, 164, 0.08);
+  --gold: #EF9B72;
+  --gold-soft: rgba(239, 155, 114, 0.14);
+  --danger: #E0705C;
+  --danger-soft: rgba(224, 112, 92, 0.14);
   --warn: #CFA45A;
   --warn-soft: rgba(207, 164, 90, 0.14);
   --info-soft: rgba(120, 160, 190, 0.12);
-  --shadow: none;
-  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 14px 40px -10px rgba(0, 0, 0, 0.6);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -587,80 +587,87 @@ body.app-body {
 }
 
 /* ============================================================
-   Tokoro minimal pass — flat, airy, hairline, one light grotesk
+   PromptDoc pass — warm, soft-shadowed cards, Geist, teal + terracotta
    ============================================================ */
 
-/* Flat canvas — no ambient washes */
 body.app-body { background: var(--bg); }
 
-/* Editorial typography: big and light */
-.page-head h1 { font-size: 1.9rem; font-weight: 300; letter-spacing: -0.015em; }
+/* Headings: clean semibold, tight tracking (Geist) */
+.page-head h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.02em; }
 .page-head .sub { font-weight: 400; }
-.stat-value { font-size: 2.1rem; font-weight: 300; letter-spacing: -0.02em; }
-.score-card-big { font-weight: 300; }
-.ring-num { font-weight: 400; }
-.modal h2 { font-weight: 400; letter-spacing: -0.01em; }
-.empty h3 { font-weight: 500; }
-.plan-price, .price-tag { font-weight: 300; letter-spacing: -0.02em; }
+.stat-value { font-size: 1.95rem; font-weight: 600; letter-spacing: -0.025em; }
+.score-card-big { font-weight: 600; }
+.ring-num { font-weight: 600; }
+.modal h2 { font-weight: 600; letter-spacing: -0.015em; }
+.empty h3 { font-weight: 600; }
+.plan-price, .price-tag { font-weight: 600; letter-spacing: -0.02em; }
 
-/* Panel titles become quiet uppercase micro-labels */
+/* Card titles: semibold, normal case (promptdoc style) */
 .panel-title {
-  font-size: 0.68rem;
+  font-size: 0.82rem;
   font-weight: 600;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  color: var(--fg-muted);
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--fg);
 }
-.panel-title .chip { letter-spacing: 0.02em; text-transform: none; }
-.panel-title .more { letter-spacing: 0.02em; text-transform: none; font-size: 0.74rem; }
+.panel-title .chip { letter-spacing: 0; }
+.panel-title .more { font-size: 0.78rem; font-weight: 500; }
 
-/* Hairline flatness everywhere */
-.panel { box-shadow: none; transition: border-color 0.2s; }
-.panel:hover { border-color: var(--border-strong); }
-.stat-card:hover { border-color: var(--accent); }
-.tab.active { box-shadow: none; border: 1px solid var(--border-strong); }
-.tabs { background: transparent; border: 1px solid var(--border); }
+/* Soft-shadowed cards that lift on hover */
+.panel {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.stat-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.tab.active { box-shadow: var(--shadow); border: none; }
+.tabs { background: var(--surface-2); border: none; }
 
-/* Sidebar: quiet, flat, smaller type */
+/* Chips: rounded, soft-tinted */
+.chip { border-radius: 999px; font-weight: 500; }
+.chip-accent { background: var(--accent-soft); color: var(--accent); }
+.chip-gold { background: var(--gold-soft); color: var(--gold); }
+
+/* Sidebar */
 .sidebar { background: var(--surface); }
-.side-item { font-weight: 400; }
-.side-item.active {
-  background: var(--accent-soft);
-  color: var(--accent);
-  box-shadow: none;
-}
+.side-item { font-weight: 500; }
+.side-item.active { background: var(--accent-soft); color: var(--accent); box-shadow: none; }
 [data-theme="dark"] .side-item.active { color: var(--accent-strong); }
-.sidebar-logo { font-weight: 400; letter-spacing: 0.01em; }
-.side-group { font-weight: 500; letter-spacing: 0.14em; }
+.sidebar-logo { font-weight: 600; letter-spacing: -0.01em; }
+.side-group { font-weight: 600; letter-spacing: 0.1em; }
 
-/* Buttons: flat pills, no glow */
-.btn { border-radius: 999px; box-shadow: none; transition: background 0.15s, border-color 0.15s, color 0.15s; }
-.btn:active { transform: none; }
-.btn-accent { background: var(--accent); box-shadow: none; }
-.btn-accent:hover { background: var(--accent-strong); box-shadow: none; }
-[data-theme="dark"] .btn-accent { color: #101411; }
-[data-theme="dark"] .app-body a.btn-accent, [data-theme="dark"] .app-body .btn-accent { color: #101411; }
+/* Buttons: pill, soft shadow on the primary */
+.btn { border-radius: 999px; font-weight: 500; transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s; }
+.btn:active { transform: scale(0.98); }
+.btn-accent { background: var(--accent); color: var(--surface); box-shadow: var(--shadow); }
+.btn-accent:hover { background: var(--accent-strong); }
+[data-theme="dark"] .btn-accent { color: #06201D; }
+[data-theme="dark"] .app-body a.btn-accent, [data-theme="dark"] .app-body .btn-accent { color: #06201D; }
+.app-body a.btn-accent, .app-body button.btn-accent, .app-body .btn-accent { color: var(--surface); }
 .btn-primary, .btn-secondary { border-radius: 999px; }
-.chat-fab { box-shadow: none; }
-.chat-fab:hover { transform: none; background: var(--accent-strong); }
-[data-theme="dark"] .chat-fab { color: #101411; }
-[data-theme="dark"] .chat-msg.me { color: #101411; }
-[data-theme="dark"] .side-item.active { background: var(--accent-soft); }
+.chat-fab { box-shadow: var(--shadow-lg); }
+.chat-fab:hover { transform: translateY(-1px); background: var(--accent-strong); }
+[data-theme="dark"] .chat-fab { color: #06201D; }
+[data-theme="dark"] .chat-msg.me { color: #06201D; }
+
+/* Inputs: rounded, teal focus ring */
+.field input, .field select, .field textarea { border-radius: var(--radius-sm); }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 
 /* Focus visibility */
 .btn:focus-visible, .icon-btn:focus-visible, .tab:focus-visible,
 .field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible {
-  outline: 1.5px solid var(--accent);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* Charts: thinner, calmer */
-.sparkline path.line { stroke-width: 1.5; }
-.ring .track, .ring .meter { stroke-width: 6; }
+/* Charts */
+.sparkline path.line { stroke-width: 1.75; }
+.ring .track, .ring .meter { stroke-width: 7; }
 
-/* Avatar: flat forest, no gradient */
-.avatar { background: var(--accent); font-family: var(--font-body); font-weight: 500; }
-[data-theme="dark"] .avatar { color: #101411; }
+/* Avatar: teal→terracotta gradient (promptdoc accent pairing) */
+.avatar { background: linear-gradient(135deg, var(--accent), var(--gold)); font-family: var(--font-body); font-weight: 600; color: #fff; }
+[data-theme="dark"] .avatar { color: #06201D; }
 
 /* ─── Privacy mode — blur every balance ─────────────────── */
 .stat-value, .row-val, .sparkline { transition: filter 0.25s; }

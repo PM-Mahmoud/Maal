@@ -1,3 +1,7 @@
+<%
+  var goalList = (typeof goals !== 'undefined' && goals) ? goals : [];
+  function aud(n) { n = Number(n) || 0; return '$' + n.toLocaleString('en-AU', { maximumFractionDigits: 0 }); }
+%>
 <div class="page-head">
   <div>
     <h1>Goals</h1>
@@ -15,20 +19,33 @@
 </div>
 
 <div id="goals-list">
+  <% if (!goalList.length) { %>
   <div class="panel" id="goals-empty" style="margin-bottom:1rem;">
     <div class="empty" style="padding:3rem 1rem;">
-      <h3>No goals found</h3>
-      <p>You haven't created any financial goals yet. Set goals — an emergency fund, a home deposit, paying down HECS, a super target — and track your progress.</p>
+      <h3>No goals yet</h3>
+      <p>Set goals — an emergency fund, a home deposit, paying down HECS, a super target — and track your progress.</p>
       <button class="btn btn-accent btn-sm" data-new-goal>Create your first goal</button>
     </div>
   </div>
-</div>
-
-<div class="panel">
-  <div class="panel-title">Suggestions</div>
-  <div class="empty">
-    <h3>No suggestions available</h3>
-    <p>Connect more accounts to get personalised suggestions for your financial goals.</p>
-    <a href="/dashboard/transactions" class="btn btn-ghost btn-sm">Connect accounts</a>
+  <% } else { %>
+  <% goalList.forEach(function(g) {
+       var pct = Number(g.target) > 0 ? Math.min(100, Math.round(Number(g.current) / Number(g.target) * 100)) : 0;
+  %>
+  <div class="panel goal-card" data-goal-type="<%= g.type %>" style="margin-bottom:0.8rem;">
+    <div class="panel-title">
+      <span><%= g.name %> <span class="chip chip-accent"><%= g.type %></span></span>
+      <button class="icon-btn" data-del-goal="<%= g.id %>" title="Delete">✕</button>
+    </div>
+    <div class="row-item" style="border:none; padding:0.2rem 0;">
+      <div class="row-sub"><%= aud(g.current) %> of <%= aud(g.target) %></div>
+      <div class="row-val"><%= pct %>%</div>
+    </div>
+    <div class="bar-track"><div class="bar-fill" style="width:<%= pct %>%;"></div></div>
+    <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.7rem;">
+      <input type="number" class="goal-progress-input" data-goal-id="<%= g.id %>" min="0" value="<%= Number(g.current) %>" style="max-width:160px;" placeholder="Update saved amount">
+      <button class="btn btn-ghost btn-sm" data-save-progress="<%= g.id %>">Update</button>
+    </div>
   </div>
+  <% }); %>
+  <% } %>
 </div>
