@@ -16,7 +16,7 @@ const { computeMizanScore } = require('../lib/mizan-score');
 const { recordSnapshot, getSnapshots } = require('../db/snapshots');
 const { estimateTax } = require('../lib/tax');
 const { buildEffectiveProfile } = require('../lib/connected');
-const { getRecentTransactions } = require('../db/transactions');
+const { getRecentTransactions, getTxnsSince } = require('../db/transactions');
 const researchDb = require('../db/research');
 const { runResearch } = require('../services/research');
 const radarDb = require('../db/radar');
@@ -71,6 +71,11 @@ router.get('/', async (req, res) => {
     try { recentTransactions = await getRecentTransactions(req.session.userId, 6); }
     catch (e) { console.error('Recent transactions error (run migrations?):', e.message); }
 
+    // Signed transactions for the in/out cash-flow charting on the tiles
+    let chartTxns = [];
+    try { chartTxns = await getTxnsSince(req.session.userId, 400); }
+    catch (e) { /* table may not exist before migration */ }
+
     // Mizan Score — single composite wellbeing score
     const mizanScore = computeMizanScore(profile);
 
@@ -104,6 +109,7 @@ router.get('/', async (req, res) => {
         superBalance: superBal,
         investBalance: investBal,
         debtsTotal: debts,
+        cashBalance: cashBal,
       });
       snapshots = await getSnapshots(req.session.userId, 366);
     } catch (snapErr) {
@@ -119,6 +125,7 @@ router.get('/', async (req, res) => {
       snapshots,
       connected,
       recentTransactions,
+      chartTxns,
       movers,
       taxImpact: estimateTax(profile),
       pageTitle: 'Dashboard'

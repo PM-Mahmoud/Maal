@@ -38,9 +38,13 @@
 %>
 
 <script>
-  // Real net-worth history for the charts (daily snapshots from the database)
+  // Real balance history for the charts (daily snapshots from the database)
   window.MIZAN_SNAPSHOTS = <%- JSON.stringify((typeof snapshots !== 'undefined' && snapshots ? snapshots : []).map(function(s) {
-    return { d: s.snap_date, nw: Number(s.net_worth), inv: Number(s.invest_balance), sup: Number(s.super_balance), debt: Number(s.debts_total) };
+    return { d: s.snap_date, nw: Number(s.net_worth), inv: Number(s.invest_balance), sup: Number(s.super_balance), debt: Number(s.debts_total), cash: Number(s.cash_balance) };
+  })) %>;
+  // Signed transactions for in/out cash-flow on the tile trend view
+  window.MIZAN_TXNS = <%- JSON.stringify((typeof chartTxns !== 'undefined' && chartTxns ? chartTxns : []).map(function(t) {
+    return { d: t.post_date, amt: Number(t.amount) };
   })) %>;
 </script>
 
@@ -51,36 +55,36 @@
   </div>
   <div class="page-head-actions">
     <div class="tabs" id="range-tabs">
-      <button class="tab">1M</button><button class="tab">6M</button><button class="tab active">YTD</button><button class="tab">All</button>
+      <button class="tab active">1M</button><button class="tab">3M</button><button class="tab">1Y</button><button class="tab">All</button>
     </div>
     <button class="btn btn-accent" data-add-asset="investment_portfolio">Add +</button>
   </div>
 </div>
 
-<!-- ── headline stats ── -->
+<!-- ── headline stats (click a tile to expand its trend) ── -->
 <div class="stat-grid">
-  <div class="panel stat-card">
-    <div class="stat-label">Net Worth <span class="chip chip-muted range-chip">YTD</span></div>
+  <div class="panel stat-card" data-trend="networth" data-trend-label="Net Worth" tabindex="0" role="button" title="View trend">
+    <div class="stat-label">Net Worth <span class="chip chip-muted range-chip">1M</span></div>
     <div class="stat-value"><%= aud(netWorth) %></div>
-    <div class="stat-delta <%= hasData ? 'up' : '' %>" <%= hasData ? 'data-networth-delta' : '' %>><%= hasData ? (conn.count ? 'Manual entries + live balances' : 'Tracked daily from your data') : 'Add assets to start tracking' %></div>
+    <div class="stat-delta <%= hasData ? 'up' : '' %>" data-delta="networth"><%= hasData ? (conn.count ? 'Manual entries + live balances' : 'Tracked daily from your data') : 'Add assets to start tracking' %></div>
     <svg class="sparkline" id="spark-networth" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
   </div>
-  <div class="panel stat-card">
-    <div class="stat-label">Investments <span class="chip chip-muted range-chip">YTD</span></div>
+  <div class="panel stat-card" data-trend="invest" data-trend-label="Investments" tabindex="0" role="button" title="View trend">
+    <div class="stat-label">Investments <span class="chip chip-muted range-chip">1M</span></div>
     <div class="stat-value"><%= aud(investBal) %></div>
-    <div class="stat-delta"><%= investBal > 0 ? 'Across your portfolios' : 'No investments added yet' %></div>
+    <div class="stat-delta" data-delta="invest"><%= investBal > 0 ? 'Across your portfolios' : 'No investments added yet' %></div>
     <svg class="sparkline" id="spark-invest" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
   </div>
-  <div class="panel stat-card">
+  <div class="panel stat-card" data-trend="cash" data-trend-label="Total Cash" tabindex="0" role="button" title="View trend">
     <div class="stat-label">Total Cash <span class="chip chip-accent"><%= conn.count ? '● ' + conn.count + ' live' : 'Liquidity' %></span></div>
     <div class="stat-value"><%= aud(cashBal) %></div>
-    <div class="stat-delta"><%= cashBal > 0 ? (runwayMonths ? runwayMonths + ' months of runway' : 'Set monthly spend for runway') : 'Add cash & savings' %></div>
-    <svg class="sparkline" id="spark-super" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
+    <div class="stat-delta" data-delta="cash"><%= cashBal > 0 ? (runwayMonths ? runwayMonths + ' months of runway' : 'Set monthly spend for runway') : 'Add cash & savings' %></div>
+    <svg class="sparkline" id="spark-cash" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
   </div>
-  <div class="panel stat-card">
+  <div class="panel stat-card" data-trend="debts" data-trend-label="Total Debts" tabindex="0" role="button" title="View trend">
     <div class="stat-label">Total Debts <span class="chip chip-muted">incl. HECS</span></div>
     <div class="stat-value"><%= aud(totalDebts) %></div>
-    <div class="stat-delta"><%= totalDebts > 0 ? 'HECS indexation applies 1 June' : 'No liabilities recorded' %></div>
+    <div class="stat-delta" data-delta="debts"><%= totalDebts > 0 ? 'HECS indexation applies 1 June' : 'No liabilities recorded' %></div>
     <svg class="sparkline" id="spark-debts" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
   </div>
 </div>

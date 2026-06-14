@@ -96,48 +96,181 @@
     fill.setAttribute('d', d + ' L200,36 L0,36 Z');
   }
 
-  function rangeToDays(label) {
+  // metric → snapshot field, label, and whether "up" is bad (debts)
+  var METRICS = {
+    networth: { field: 'nw',   label: 'Net Worth',   invert: false },
+    invest:   { field: 'inv',  label: 'Investments', invert: false },
+    cash:     { field: 'cash', label: 'Total Cash',  invert: false },
+    debts:    { field: 'debt', label: 'Total Debts', invert: true }
+  };
+
+  function rangeDays(label) {
     if (label === '1M') return 31;
-    if (label === '6M') return 184;
-    if (label === 'All') return 100000;
-    // YTD
-    var now = new Date();
-    return Math.max(2, Math.round((now - new Date(now.getFullYear(), 0, 1)) / 86400000));
+    if (label === '3M') return 92;
+    if (label === '1Y') return 366;
+    return 100000; // All
+  }
+  function inRange(list, label) {
+    if (!list || !list.length) return [];
+    if (label === 'All') return list.slice();
+    var cutoff = Date.now() - rangeDays(label) * 86400000;
+    var v = list.filter(function (x) { return new Date(x.d).getTime() >= cutoff; });
+    return v.length ? v : list.slice();
+  }
+  function snapsInRange(label) { return inRange(window.MIZAN_SNAPSHOTS || [], label); }
+
+  // Money in/out from signed transactions over the range
+  function flowSummary(label) {
+    var txns = window.MIZAN_TXNS || [];
+    if (label !== 'All') {
+      var cutoff = Date.now() - rangeDays(label) * 86400000;
+      txns = txns.filter(function (t) { return new Date(t.d).getTime() >= cutoff; });
+    }
+    var inSum = 0, outSum = 0;
+    txns.forEach(function (t) { var a = Number(t.amt) || 0; if (a >= 0) inSum += a; else outSum += -a; });
+    return { moneyIn: inSum, moneyOut: outSum, net: inSum - outSum, count: txns.length };
   }
 
-  function renderCharts(rangeLabel) {
-    var snaps = window.MIZAN_SNAPSHOTS || [];
-    var days = rangeToDays(rangeLabel);
-    var cutoff = Date.now() - days * 86400000;
-    var visible = snaps.filter(function (s) { return new Date(s.d).getTime() >= cutoff; });
-    if (!visible.length) visible = snaps;
+  function deltaText(metric, visible, label) {
+    var cfg = METRICS[metric];
+    if (visible.length < 2) return null; // keep the server descriptive text
+    var first = visible[0][cfg.field], last = visible[visible.length - 1][cfg.field];
+    var diff = last - first;
+    var pct = first !== 0 ? (diff / Math.abs(first)) * 100 : 0;
+    var sign = diff > 0 ? '+' : diff < 0 ? '−' : '';
+    var good = cfg.invert ? diff <= 0 : diff >= 0;
+    return {
+      text: sign + audFmt(Math.abs(diff)) + ' · ' + (pct >= 0 ? '+' : '') + (Math.round(pct * 10) / 10) + '% over ' + label,
+      good: good, changed: diff !== 0
+    };
+  }
+
+  function renderCharts(label) {
+    var visible = snapsInRange(label);
     drawSpark('spark-networth', visible.map(function (s) { return s.nw; }));
     drawSpark('spark-invest',   visible.map(function (s) { return s.inv; }));
-    drawSpark('spark-super',    visible.map(function (s) { return s.sup; }));
+    drawSpark('spark-cash',     visible.map(function (s) { return s.cash; }));
     drawSpark('spark-debts',    visible.map(function (s) { return s.debt; }));
-    // delta text from real data
-    var d = $('[data-networth-delta]');
-    if (d && visible.length >= 2) {
-      var first = visible[0].nw, last = visible[visible.length - 1].nw;
-      if (first !== 0) {
-        var pct = ((last - first) / Math.abs(first)) * 100;
-        d.textContent = (pct >= 0 ? '+' : '') + (Math.round(pct * 10) / 10) + '% over ' + rangeLabel;
-        d.classList.toggle('up', pct >= 0);
-        d.classList.toggle('down', pct < 0);
-      }
-    } else if (d && visible.length < 2) {
-      d.textContent = 'Day one — your history builds from today';
+    Object.keys(METRICS).forEach(function (metric) {
+      var el = $('[data-delta="' + metric + '"]');
+      if (!el) return;
+      var d = deltaText(metric, visible, label);
+      if (!d) return; // not enough history — leave the descriptive text
+      el.textContent = d.text;
+      el.classList.toggle('up', d.good && d.changed);
+      el.classList.toggle('down', !d.good && d.changed);
+    });
+  }
+
+  /* ─── 2b. Expanded trend modal (click a stat tile) ─────── */
+  function fmtDate(d) {
+    try { return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }); } catch (e) { return ''; }
+  }
+  function buildBigChart(series, dates) {
+    if (!series.length) return '<div class="empty" style="padding:2.5rem 1rem;"><p>No history yet for this range — it builds as snapshots accrue daily.</p></div>';
+    if (series.length === 1) { series = [series[0], series[0]]; dates = [dates[0], dates[0]]; }
+    var W = 640, H = 240, padL = 6, padR = 6, padT = 14, padB = 30;
+    var min = Math.min.apply(null, series), max = Math.max.apply(null, series);
+    var span = (max - min) || Math.abs(max) || 1;
+    var lo = min - span * 0.08, hi = max + span * 0.08, rng = (hi - lo) || 1;
+    var n = series.length;
+    function X(i) { return padL + (i / (n - 1)) * (W - padL - padR); }
+    function Y(v) { return padT + (1 - (v - lo) / rng) * (H - padT - padB); }
+    var pts = series.map(function (v, i) { return X(i).toFixed(1) + ',' + Y(v).toFixed(1); });
+    var line = 'M' + pts.join(' L');
+    var area = line + ' L' + X(n - 1).toFixed(1) + ',' + (H - padB) + ' L' + X(0).toFixed(1) + ',' + (H - padB) + ' Z';
+    var grid = '';
+    for (var g = 0; g <= 2; g++) { var gy = (padT + (g / 2) * (H - padT - padB)).toFixed(1); grid += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (W - padR) + '" y2="' + gy + '" class="tc-grid"/>'; }
+    return '<svg class="trend-chart-svg" viewBox="0 0 ' + W + ' ' + H + '">' + grid +
+      '<path d="' + area + '" class="tc-fill"/><path d="' + line + '" class="tc-line"/></svg>' +
+      '<div class="trend-axis"><span>' + fmtDate(dates[0]) + '</span><span>' + fmtDate(dates[dates.length - 1]) + '</span></div>';
+  }
+
+  function openTrendModal(metric, startRange) {
+    var cfg = METRICS[metric];
+    if (!cfg) return;
+    var nowValEl = $('.stat-card[data-trend="' + metric + '"] .stat-value');
+    var nowVal = nowValEl ? nowValEl.textContent : '';
+    var range = startRange || (($('#range-tabs .tab.active') || {}).textContent || '1M').trim();
+
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.display = 'flex';
+    overlay.innerHTML =
+      '<div class="modal trend-modal">' +
+      '<div class="trend-head">' +
+        '<div><div class="trend-title">' + cfg.label + '</div><div class="trend-now">' + nowVal + '</div></div>' +
+        '<div class="tabs trend-range">' +
+          ['1M', '3M', '1Y', 'All'].map(function (r) { return '<button class="tab' + (r === range ? ' active' : '') + '">' + r + '</button>'; }).join('') +
+        '</div>' +
+      '</div>' +
+      '<div class="trend-body"></div>' +
+      '<div class="modal-actions"><button type="button" class="btn btn-ghost btn-sm" data-trend-close>Close</button></div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    function render(r) {
+      var visible = snapsInRange(r);
+      var series = visible.map(function (s) { return s[cfg.field]; });
+      var dates = visible.map(function (s) { return s.d; });
+      var open = series.length ? series[0] : 0, close = series.length ? series[series.length - 1] : 0;
+      var diff = close - open;
+      var good = cfg.invert ? diff <= 0 : diff >= 0;
+      var flow = flowSummary(r);
+      var inW = flow.moneyIn, outW = flow.moneyOut, tot = inW + outW;
+      var body =
+        '<div class="trend-chart">' + buildBigChart(series, dates) + '</div>' +
+        '<div class="trend-stats">' +
+          '<div><div class="ts-k">Opening</div><div class="ts-v">' + audFmt(open) + '</div></div>' +
+          '<div><div class="ts-k">Closing</div><div class="ts-v">' + audFmt(close) + '</div></div>' +
+          '<div><div class="ts-k">Change</div><div class="ts-v ' + (diff === 0 ? '' : good ? 'up' : 'down') + '">' +
+            (diff > 0 ? '+' : diff < 0 ? '−' : '') + audFmt(Math.abs(diff)) + '</div></div>' +
+        '</div>' +
+        '<div class="trend-flow">' +
+          '<div class="tf-title">Money in &amp; out · ' + r + (flow.count ? ' (' + flow.count + ' transactions)' : '') + '</div>' +
+          (tot > 0
+            ? '<div class="tf-bar"><span class="tf-in" style="flex:' + inW + '"></span><span class="tf-out" style="flex:' + outW + '"></span></div>'
+            : '<div class="row-sub" style="padding:0.4rem 0;">No transactions in this period. Connect a bank via Basiq and sync to see money in and out here.</div>') +
+          (tot > 0
+            ? '<div class="tf-legend"><span class="up">▲ In ' + audFmt(flow.moneyIn) + '</span>' +
+              '<span class="down">▼ Out ' + audFmt(flow.moneyOut) + '</span>' +
+              '<span>Net ' + (flow.net >= 0 ? '+' : '−') + audFmt(Math.abs(flow.net)) + '</span></div>'
+            : '') +
+        '</div>';
+      $('.trend-body', overlay).innerHTML = body;
     }
+    render(range);
+
+    var rangeBox = $('.trend-range', overlay);
+    rangeBox.addEventListener('click', function (e) {
+      var t = e.target.closest('.tab');
+      if (!t) return;
+      $all('.tab', rangeBox).forEach(function (x) { x.classList.remove('active'); });
+      t.classList.add('active');
+      render(t.textContent.trim());
+    });
+    function close() { overlay.remove(); document.removeEventListener('keydown', esc); }
+    function esc(e) { if (e.key === 'Escape') close(); }
+    overlay.addEventListener('click', function (e) { if (e.target === overlay || e.target.hasAttribute('data-trend-close')) close(); });
+    document.addEventListener('keydown', esc);
   }
 
   var rangeTabs = $('#range-tabs');
   if (rangeTabs && document.getElementById('spark-networth')) {
-    renderCharts('YTD');
+    renderCharts('1M');
     rangeTabs.addEventListener('tabchange', function (e) {
       $all('.range-chip').forEach(function (c) { c.textContent = e.detail; });
       renderCharts(e.detail);
     });
   }
+
+  // Click / keyboard a stat tile to expand its trend
+  $all('.stat-card[data-trend]').forEach(function (card) {
+    card.addEventListener('click', function () { openTrendModal(card.getAttribute('data-trend')); });
+    card.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTrendModal(card.getAttribute('data-trend')); }
+    });
+  });
 
   /* ─── 3. Add asset / liability (persists to profile) ──── */
   var ASSET_FIELDS = {

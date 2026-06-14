@@ -39,4 +39,17 @@ async function getRecentTransactions(userId, limit = 10) {
   return result.rows;
 }
 
-module.exports = { upsertBasiqTransactions, getRecentTransactions };
+// Signed amounts + dates for charting cash flow (in/out) over a window.
+async function getTxnsSince(userId, days = 400, limit = 1000) {
+  const result = await pool.query(
+    `SELECT post_date, amount
+       FROM transactions
+       WHERE user_id = $1 AND post_date >= CURRENT_DATE - $2::int
+       ORDER BY post_date ASC
+       LIMIT $3`,
+    [userId, days, limit]
+  );
+  return result.rows;
+}
+
+module.exports = { upsertBasiqTransactions, getRecentTransactions, getTxnsSince };

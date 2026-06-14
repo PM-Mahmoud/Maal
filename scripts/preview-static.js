@@ -33,16 +33,26 @@ const { estimateTax } = require('../lib/tax');
 const { buildLandingContext } = require('../lib/landing-context');
 
 // 30 days of plausible snapshots so the sparklines draw
-const snapshots = Array.from({ length: 30 }, (_, i) => {
-  const drift = i * 120 + Math.sin(i / 3) * 900;
+const SNAP_DAYS = 200;
+const snapshots = Array.from({ length: SNAP_DAYS }, (_, i) => {
+  const drift = i * 70 + Math.sin(i / 7) * 1400;
   return {
-    snap_date: new Date(Date.now() - (29 - i) * 86400000).toISOString().slice(0, 10),
-    net_worth: 36500 + drift,
-    invest_balance: 24000 + drift * 0.4,
-    super_balance: 36000 + i * 60,
-    debts_total: 46000 - i * 25,
+    snap_date: new Date(Date.now() - (SNAP_DAYS - 1 - i) * 86400000).toISOString().slice(0, 10),
+    net_worth: 30000 + drift,
+    invest_balance: 22000 + drift * 0.35,
+    super_balance: 34000 + i * 40,
+    debts_total: 49000 - i * 18,
+    cash_balance: 14000 + Math.sin(i / 5) * 2600 + i * 25,
   };
 });
+// Signed transactions over ~120 days for the in/out cash-flow view
+const chartTxns = [];
+for (let i = 0; i < 120; i++) {
+  const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+  if (i % 14 === 0) chartTxns.push({ post_date: d, amount: 5400 });      // fortnightly salary in
+  if (i % 3 === 0) chartTxns.push({ post_date: d, amount: -(40 + (i % 9) * 12) }); // spending out
+  if (i % 30 === 5) chartTxns.push({ post_date: d, amount: -1850 });     // rent out
+}
 
 async function renderInLayout(view, locals) {
   const body = await ejs.renderFile(path.join(VIEWS, view + '.ejs'), locals);
@@ -70,7 +80,7 @@ app.get('/dashboard', (_req, res, next) => {
   renderInLayout('dashboard-overview', {
     ...base, profile: eff.profile, pageTitle: 'Dashboard', financialScore: score, superScore: null,
     ethicalScore: null, mizanScore: computeMizanScore(eff.profile), snapshots,
-    taxImpact: estimateTax(eff.profile), connected: eff.connected,
+    taxImpact: estimateTax(eff.profile), connected: eff.connected, chartTxns,
     recentTransactions: [
       { description: 'Woolworths Metro', amount: -84.20, post_date: new Date() },
       { description: 'Salary — NSW Health', amount: 5400, post_date: new Date(Date.now() - 2 * 86400000) },
