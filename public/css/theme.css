@@ -2,39 +2,42 @@
    Mizan — Landing & Auth theme (light, unified with app.css)
    ============================================================ */
 
-/* PromptDoc design system — warm cream canvas, deep-teal primary, terracotta
-   accent, Geist sans, soft shadows, rounded cards. Matches sibling promptdoc. */
+/* Sahha-inspired system — monochrome ink/white/grey, mint-teal accent, Geist
+   grotesque, black rounded-rect buttons, 3px teal top bar. Matches sahha.ai. */
 :root {
-  --bg: #FAF8F4;
+  --bg: #FBFBFB;
   --surface: #FFFFFF;
-  --surface-2: #F2EEE6;
-  --surface-3: #E9E3D6;
-  --fg: #1A2421;
-  --fg-muted: #5B6A64;
-  --fg-faint: #97A39D;
-  --border: #E4DDD0;
-  --border-strong: #D6CDBB;
-  --accent: #0F5D5E;
-  --accent-strong: #0B4A4B;
-  --accent-soft: #E2EDEA;
-  --accent-softer: #EFF5F2;
-  --gold: #C45F37;
-  --gold-soft: #FBE9DF;
-  --danger: #B3422F;
-  --danger-soft: #F6E2DC;
-  --shadow: 0 1px 2px rgba(26, 36, 33, 0.05), 0 8px 24px -12px rgba(26, 36, 33, 0.12);
-  --shadow-lg: 0 12px 32px -8px rgba(26, 36, 33, 0.18);
+  --surface-2: #F4F4F5;
+  --surface-3: #E9E9EB;
+  --fg: #0E0E10;
+  --fg-muted: #6B6F76;
+  --fg-faint: #9CA0A6;
+  --border: #E8E8EA;
+  --border-strong: #D7D7DA;
+  --accent: #12B5A6;
+  --accent-strong: #0E9488;
+  --accent-soft: #DEF7F4;
+  --accent-softer: #F1FCFA;
+  --accent-bar: #5FE3D1;
+  --ink: #0E0E10;
+  --on-ink: #FFFFFF;
+  --gold: #C2701E;
+  --gold-soft: #F6EBDD;
+  --danger: #DC2626;
+  --danger-soft: #FBE7E7;
+  --shadow: 0 1px 2px rgba(14, 14, 16, 0.05), 0 8px 24px -12px rgba(14, 14, 16, 0.12);
+  --shadow-lg: 0 12px 32px -8px rgba(14, 14, 16, 0.16);
   --font-display: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
   --font-body: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
   --radius: 12px;
   --radius-sm: 8px;
   /* legacy aliases (onboarding wizard etc.) */
-  --green-deep: #0F5D5E;
-  --green-mid: #127C71;
-  --green-light: #58B3A4;
-  --accent-dim: #0B4A4B;
+  --green-deep: #0E0E10;
+  --green-mid: #12B5A6;
+  --green-light: #5FE3D1;
+  --accent-dim: #0E9488;
   --card-bg: #FFFFFF;
-  --bg-alt: #F2EEE6;
+  --bg-alt: #F4F4F5;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -417,89 +420,114 @@ a { color: var(--accent); }
 }
 
 /* ============================================================
-   PromptDoc pass — landing: warm, soft-shadowed, Geist, semibold
+   Sahha pass — landing: monochrome, mint-teal accent, black buttons,
+   bold grotesque, 3px teal top bar, subtle dot-grid hero
    ============================================================ */
 
 body { line-height: 1.6; }
 
+/* Signature 3px mint-teal accent bar across the very top */
+body::before {
+  content: ''; position: fixed; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--accent-bar); z-index: 200;
+}
+
 /* Nav */
-.navbar { background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(16px); }
-.logo-text { font-weight: 600; font-size: 1.15rem; letter-spacing: -0.01em; }
+.navbar { background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(16px); }
+.logo-text { font-weight: 700; font-size: 1.15rem; letter-spacing: -0.02em; }
+.logo-mark { color: var(--fg); }
 .nav-links a { font-size: 0.875rem; font-weight: 500; }
-.nav-cta { padding: 0.5rem 1.2rem; border-radius: 999px; }
+.nav-cta { background: var(--ink); color: var(--on-ink) !important; padding: 0.5rem 1.2rem; border-radius: var(--radius-sm); }
+.nav-cta:hover { background: color-mix(in srgb, var(--ink) 86%, var(--bg)); }
 
-/* Hero */
-.hero { padding: 10rem 2rem 5.5rem; }
-.hero-glow {
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 14%, transparent), color-mix(in srgb, var(--gold) 8%, transparent) 55%, transparent 70%);
+/* Hero — subtle dot-grid texture (Sahha) */
+.hero {
+  padding: 9rem 2rem 5rem;
+  background-image: radial-gradient(var(--border-strong) 1px, transparent 1px);
+  background-size: 22px 22px;
+  background-position: center top;
 }
+.hero-glow { display: none; }
 .hero-badge {
-  background: var(--accent-soft);
-  border: 1px solid transparent;
-  color: var(--accent);
-  font-size: 0.74rem; font-weight: 500;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: 0.68rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
 }
-.badge-dot { background: var(--accent); }
+.badge-dot { display: none; }
 .hero-headline {
-  font-size: clamp(2.7rem, 5.4vw, 4.2rem);
-  font-weight: 600;
-  line-height: 1.08;
-  letter-spacing: -0.03em;
+  font-size: clamp(2.8rem, 5.6vw, 4.4rem);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
 }
-.hero-headline em { font-style: normal; color: var(--accent); }
+.hero-headline em { font-style: normal; color: var(--fg); }
 .hero-sub { font-weight: 400; }
-.hero-cta, .hero-cta-secondary { font-weight: 500; border-radius: 999px; }
+.hero-cta { background: var(--ink); color: var(--on-ink); font-weight: 500; border-radius: var(--radius-sm); }
+.hero-cta:hover { background: color-mix(in srgb, var(--ink) 86%, var(--bg)); }
+.hero-cta-secondary { font-weight: 500; border-radius: var(--radius-sm); background: var(--surface); border-color: var(--border-strong); }
 
-/* Hero preview card: soft-shadowed */
+/* Hero preview card */
 .score-card { box-shadow: var(--shadow); border-radius: var(--radius); }
-.score-number { font-weight: 600; letter-spacing: -0.03em; }
-.score-fill { background: linear-gradient(90deg, var(--accent), var(--gold)); }
-.score-label { font-size: 0.7rem; font-weight: 600; color: var(--fg-muted); }
+.score-number { font-weight: 700; letter-spacing: -0.04em; }
+.score-fill { background: var(--fg); }
+.score-label { font-size: 0.66rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-muted); }
+.score-pill.pass { background: var(--accent-soft); color: var(--accent-strong); }
+.breakdown-dot.sharia { background: var(--fg); }
+.breakdown-dot.health { background: var(--accent); }
+.breakdown-dot.human { background: var(--fg-faint); }
 
 /* Proof strip */
 .proof { background: var(--surface-2); border: none; padding: 2rem; }
-.proof-item .proof-big { font-weight: 600; font-size: 1.4rem; }
+.proof-item .proof-big { font-weight: 700; font-size: 1.4rem; }
 
 /* Sections */
 .section { padding: 5.5rem 2rem; }
 .section-alt { background: var(--surface-2); border: none; }
-.section-kicker { color: var(--accent); font-weight: 600; letter-spacing: 0.08em; }
+.section-kicker { color: var(--fg-muted); font-weight: 600; letter-spacing: 0.12em; }
 .section-title {
-  font-size: clamp(1.9rem, 3.6vw, 2.7rem);
-  font-weight: 600;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
+  font-size: clamp(2rem, 3.8vw, 2.9rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
 }
 .section-sub { font-weight: 400; }
 
-/* Cards: soft-shadowed, lift on hover (promptdoc PromptCard) */
+/* Cards: hairline, lift on hover */
 .feature-card, .step, .value-item, .price-card {
   box-shadow: var(--shadow);
   border-radius: var(--radius);
-  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
 }
-.feature-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.feature-card:hover { transform: translateY(-2px); border-color: var(--border-strong); }
 .section-alt .feature-card { background: var(--surface); }
-.feature-icon { background: var(--accent-soft); color: var(--accent); border-radius: 10px; }
-.feature-card h3, .step h3, .value-item h4 { font-weight: 600; letter-spacing: -0.01em; }
-.step-num { font-weight: 600; opacity: 0.9; color: var(--accent); }
-.value-item .vi-icon { background: var(--gold-soft); color: var(--gold); }
-.values-narrative { font-weight: 500; font-size: clamp(1.4rem, 2.6vw, 1.85rem); line-height: 1.4; letter-spacing: -0.01em; }
-.values-narrative em { font-style: normal; color: var(--accent); }
+.feature-icon { background: var(--ink); color: var(--on-ink); border-radius: 10px; }
+.feature-card h3, .step h3, .value-item h4 { font-weight: 600; letter-spacing: -0.015em; }
+.step-num { font-weight: 700; opacity: 1; color: var(--fg); }
+.value-item .vi-icon { background: var(--surface-2); color: var(--fg); }
+.values-narrative { font-weight: 600; font-size: clamp(1.5rem, 2.8vw, 2rem); line-height: 1.32; letter-spacing: -0.025em; }
+.values-narrative em { font-style: normal; color: var(--accent-strong); }
 
 /* Pricing */
-.price-card.featured { border-color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent), var(--shadow); }
-.price-tag { font-weight: 600; }
+.price-card.featured { border-color: var(--ink); box-shadow: 0 0 0 1.5px var(--ink), var(--shadow); }
+.price-tag { font-weight: 700; }
 .price-name { font-weight: 600; }
+.price-cta.primary { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+.price-cta.primary:hover { background: color-mix(in srgb, var(--ink) 86%, var(--bg)); }
+.price-cta { border-radius: var(--radius-sm); }
 
-/* Closing: solid teal block */
+/* Closing: solid ink (near-black) block — Sahha high contrast */
 .closing-inner {
-  background: linear-gradient(135deg, var(--accent-strong), var(--accent) 130%);
+  background: var(--ink);
   border-radius: var(--radius);
   padding: 5rem 2rem;
 }
-.closing-inner h2 { font-weight: 600; letter-spacing: -0.02em; font-size: clamp(1.9rem, 3.6vw, 2.7rem); }
-.closing-cta { color: var(--accent); font-weight: 600; border-radius: 999px; }
+.closing-inner h2 { font-weight: 700; letter-spacing: -0.035em; font-size: clamp(2rem, 3.8vw, 2.9rem); color: var(--on-ink); }
+.closing-inner p { color: color-mix(in srgb, var(--on-ink) 70%, transparent); }
+.closing-cta { background: var(--surface); color: var(--ink); font-weight: 600; border-radius: var(--radius-sm); }
+
+/* Buttons (global) */
+.btn-gold, .cta-button { background: var(--ink); color: var(--on-ink); font-weight: 500; border-radius: var(--radius-sm); }
+.btn-gold:hover, .cta-button:hover { background: color-mix(in srgb, var(--ink) 86%, var(--bg)); }
 
 /* Footer */
 .footer { background: var(--surface); }

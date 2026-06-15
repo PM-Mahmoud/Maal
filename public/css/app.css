@@ -2,31 +2,35 @@
    Mizan App — design system (light default, dark via data-theme)
    ============================================================ */
 
-/* PromptDoc design system — warm cream canvas, deep-teal primary, terracotta
-   accent, Geist sans, soft shadows, rounded cards. Matches sibling promptdoc. */
+/* Sahha-inspired system — monochrome (near-black ink / white / grey) with a
+   mint-teal accent, Geist grotesque, black rounded-rect buttons, hairline
+   borders + soft shadows. Matches the look of sahha.ai. */
 :root {
-  --bg: #FAF8F4;
+  --bg: #FBFBFB;
   --surface: #FFFFFF;
-  --surface-2: #F2EEE6;
-  --surface-3: #E9E3D6;
-  --fg: #1A2421;
-  --fg-muted: #5B6A64;
-  --fg-faint: #97A39D;
-  --border: #E4DDD0;
-  --border-strong: #D6CDBB;
-  --accent: #0F5D5E;
-  --accent-strong: #0B4A4B;
-  --accent-soft: #E2EDEA;
-  --accent-softer: #EFF5F2;
-  --gold: #C45F37;
-  --gold-soft: #FBE9DF;
-  --danger: #B3422F;
-  --danger-soft: #F6E2DC;
+  --surface-2: #F4F4F5;
+  --surface-3: #E9E9EB;
+  --fg: #0E0E10;
+  --fg-muted: #6B6F76;
+  --fg-faint: #9CA0A6;
+  --border: #E8E8EA;
+  --border-strong: #D7D7DA;
+  --accent: #12B5A6;
+  --accent-strong: #0E9488;
+  --accent-soft: #DEF7F4;
+  --accent-softer: #F1FCFA;
+  --accent-bar: #5FE3D1;
+  --ink: #0E0E10;
+  --on-ink: #FFFFFF;
+  --gold: #C2701E;
+  --gold-soft: #F6EBDD;
+  --danger: #DC2626;
+  --danger-soft: #FBE7E7;
   --warn: #B3812F;
   --warn-soft: #F4ECDD;
   --info-soft: #E8EFF4;
-  --shadow: 0 1px 2px rgba(26, 36, 33, 0.05), 0 8px 24px -12px rgba(26, 36, 33, 0.12);
-  --shadow-lg: 0 12px 32px -8px rgba(26, 36, 33, 0.18);
+  --shadow: 0 1px 2px rgba(14, 14, 16, 0.05), 0 8px 24px -12px rgba(14, 14, 16, 0.12);
+  --shadow-lg: 0 12px 32px -8px rgba(14, 14, 16, 0.16);
   --font-display: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
   --font-body: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
   --radius: 12px;
@@ -34,28 +38,31 @@
 }
 
 [data-theme="dark"] {
-  --bg: #0E1413;
-  --surface: #161D1B;
-  --surface-2: #1C2522;
-  --surface-3: #232E2A;
-  --fg: #E7EBE8;
-  --fg-muted: #94A39C;
-  --fg-faint: #6C7A73;
-  --border: #27332F;
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --accent: #58B3A4;
-  --accent-strong: #7CCABD;
-  --accent-soft: #15302B;
-  --accent-softer: rgba(88, 179, 164, 0.08);
-  --gold: #EF9B72;
-  --gold-soft: rgba(239, 155, 114, 0.14);
-  --danger: #E0705C;
-  --danger-soft: rgba(224, 112, 92, 0.14);
+  --bg: #0A0A0B;
+  --surface: #141416;
+  --surface-2: #1C1C1F;
+  --surface-3: #26262A;
+  --fg: #F5F5F6;
+  --fg-muted: #A0A0A6;
+  --fg-faint: #6E6E73;
+  --border: #262629;
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --accent: #2DD4C4;
+  --accent-strong: #5FE3D1;
+  --accent-soft: rgba(45, 212, 196, 0.14);
+  --accent-softer: rgba(45, 212, 196, 0.07);
+  --accent-bar: #5FE3D1;
+  --ink: #F5F5F6;
+  --on-ink: #0A0A0B;
+  --gold: #E0A45E;
+  --gold-soft: rgba(224, 164, 94, 0.14);
+  --danger: #F87171;
+  --danger-soft: rgba(248, 113, 113, 0.14);
   --warn: #CFA45A;
   --warn-soft: rgba(207, 164, 90, 0.14);
   --info-soft: rgba(120, 160, 190, 0.12);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 14px 40px -10px rgba(0, 0, 0, 0.6);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 14px 40px -10px rgba(0, 0, 0, 0.7);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -587,68 +594,81 @@ body.app-body {
 }
 
 /* ============================================================
-   PromptDoc pass — warm, soft-shadowed cards, Geist, teal + terracotta
+   Sahha pass — monochrome ink/white/grey, mint-teal accent, black buttons,
+   bold grotesque headings, hairline cards, 3px teal top bar
    ============================================================ */
 
 body.app-body { background: var(--bg); }
 
-/* Headings: clean semibold, tight tracking (Geist) */
-.page-head h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.02em; }
-.page-head .sub { font-weight: 400; }
-.stat-value { font-size: 1.95rem; font-weight: 600; letter-spacing: -0.025em; }
-.score-card-big { font-weight: 600; }
-.ring-num { font-weight: 600; }
-.modal h2 { font-weight: 600; letter-spacing: -0.015em; }
-.empty h3 { font-weight: 600; }
-.plan-price, .price-tag { font-weight: 600; letter-spacing: -0.02em; }
+/* Signature 3px mint-teal accent bar across the very top of every page */
+body.app-body::before {
+  content: ''; position: fixed; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--accent-bar); z-index: 200;
+}
 
-/* Card titles: semibold, normal case (promptdoc style) */
+/* Headings: bold, tight, near-black (Sahha display) */
+.page-head h1 { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.03em; }
+.page-head .sub { font-weight: 400; }
+.stat-value { font-size: 2rem; font-weight: 700; letter-spacing: -0.035em; }
+.score-card-big { font-weight: 700; }
+.ring-num { font-weight: 700; }
+.modal h2 { font-weight: 700; letter-spacing: -0.02em; }
+.empty h3 { font-weight: 600; }
+.plan-price, .price-tag { font-weight: 700; letter-spacing: -0.025em; }
+
+/* Card titles: semibold, normal case */
 .panel-title {
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  text-transform: none;
-  color: var(--fg);
+  font-size: 0.82rem; font-weight: 600; letter-spacing: -0.01em;
+  text-transform: none; color: var(--fg);
 }
 .panel-title .chip { letter-spacing: 0; }
 .panel-title .more { font-size: 0.78rem; font-weight: 500; }
 
-/* Soft-shadowed cards that lift on hover */
+/* Cards: hairline + soft shadow, subtle lift */
 .panel {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
 }
-.stat-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.stat-card:hover { transform: translateY(-2px); border-color: var(--border-strong); }
 .tab.active { box-shadow: var(--shadow); border: none; }
-.tabs { background: var(--surface-2); border: none; }
+.tabs { background: var(--surface-2); border: none; border-radius: var(--radius-sm); }
 
-/* Chips: rounded, soft-tinted */
-.chip { border-radius: 999px; font-weight: 500; }
-.chip-accent { background: var(--accent-soft); color: var(--accent); }
+/* Chips: grey monochrome by default; accent stays teal-tinted */
+.chip { border-radius: 6px; font-weight: 500; }
+.chip-muted { background: var(--surface-2); color: var(--fg-muted); }
+.chip-accent { background: var(--accent-soft); color: var(--accent-strong); }
 .chip-gold { background: var(--gold-soft); color: var(--gold); }
 
-/* Sidebar */
+/* Sidebar: monochrome; active = grey fill + ink text + teal indicator */
 .sidebar { background: var(--surface); }
 .side-item { font-weight: 500; }
-.side-item.active { background: var(--accent-soft); color: var(--accent); box-shadow: none; }
-[data-theme="dark"] .side-item.active { color: var(--accent-strong); }
-.sidebar-logo { font-weight: 600; letter-spacing: -0.01em; }
+.side-item.active {
+  background: var(--surface-2); color: var(--fg); box-shadow: none;
+  position: relative;
+}
+.side-item.active::before {
+  content: ''; position: absolute; left: 0; top: 18%; bottom: 18%;
+  width: 2.5px; border-radius: 2px; background: var(--accent);
+}
+[data-theme="dark"] .side-item.active { color: var(--fg); }
+.sidebar-logo { font-weight: 700; letter-spacing: -0.02em; }
+.sidebar-logo .mark { color: var(--fg); }
 .side-group { font-weight: 600; letter-spacing: 0.1em; }
 
-/* Buttons: pill, soft shadow on the primary */
-.btn { border-radius: 999px; font-weight: 500; transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s; }
+/* Buttons: black (ink) primary, rounded rectangle (not pill), outline 2nd */
+.btn { border-radius: var(--radius-sm); font-weight: 500; transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s; }
 .btn:active { transform: scale(0.98); }
-.btn-accent { background: var(--accent); color: var(--surface); box-shadow: var(--shadow); }
-.btn-accent:hover { background: var(--accent-strong); }
-[data-theme="dark"] .btn-accent { color: #06201D; }
-[data-theme="dark"] .app-body a.btn-accent, [data-theme="dark"] .app-body .btn-accent { color: #06201D; }
-.app-body a.btn-accent, .app-body button.btn-accent, .app-body .btn-accent { color: var(--surface); }
-.btn-primary, .btn-secondary { border-radius: 999px; }
-.chat-fab { box-shadow: var(--shadow-lg); }
-.chat-fab:hover { transform: translateY(-1px); background: var(--accent-strong); }
-[data-theme="dark"] .chat-fab { color: #06201D; }
-[data-theme="dark"] .chat-msg.me { color: #06201D; }
+.btn-accent { background: var(--ink); color: var(--on-ink); box-shadow: none; border-color: var(--ink); }
+.btn-accent:hover { background: color-mix(in srgb, var(--ink) 86%, var(--bg)); }
+.app-body a.btn-accent, .app-body button.btn-accent, .app-body .btn-accent { color: var(--on-ink); }
+[data-theme="dark"] .app-body a.btn-accent, [data-theme="dark"] .app-body .btn-accent { color: var(--on-ink); }
+.btn-ghost { background: var(--surface); color: var(--fg); border-color: var(--border-strong); }
+.btn-ghost:hover { background: var(--surface-2); }
+.btn-primary, .btn-secondary { border-radius: var(--radius-sm); }
+.chat-fab { background: var(--ink); color: var(--on-ink); box-shadow: var(--shadow-lg); }
+.chat-fab:hover { transform: translateY(-1px); background: color-mix(in srgb, var(--ink) 86%, var(--bg)); }
+.chat-msg.me { background: var(--ink); color: var(--on-ink); }
 
 /* Inputs: rounded, teal focus ring */
 .field input, .field select, .field textarea { border-radius: var(--radius-sm); }
@@ -661,13 +681,19 @@ body.app-body { background: var(--bg); }
   outline-offset: 2px;
 }
 
-/* Charts */
-.sparkline path.line { stroke-width: 1.75; }
-.ring .track, .ring .meter { stroke-width: 7; }
+/* Charts: monochrome ink line on a faint grey fill (Sahha restraint) */
+.sparkline path.line { stroke: var(--fg); stroke-width: 1.75; }
+.sparkline path.fill { fill: var(--surface-2); }
+.ring .track { stroke: var(--surface-3); stroke-width: 7; }
+.ring .meter { stroke: var(--fg); stroke-width: 7; }
+.bar-fill { background: var(--fg); }
 
-/* Avatar: teal→terracotta gradient (promptdoc accent pairing) */
-.avatar { background: linear-gradient(135deg, var(--accent), var(--gold)); font-family: var(--font-body); font-weight: 600; color: #fff; }
-[data-theme="dark"] .avatar { color: #06201D; }
+/* Avatar: solid ink squircle, white mark (Sahha logo style) */
+.avatar { background: var(--ink); font-family: var(--font-body); font-weight: 700; color: var(--on-ink); border-radius: 10px; }
+
+/* Deltas keep meaning: up = teal, down = red */
+.stat-delta.up { color: var(--accent-strong); }
+.stat-delta.down { color: var(--danger); }
 
 /* ─── Privacy mode — blur every balance ─────────────────── */
 .stat-value, .row-val, .sparkline { transition: filter 0.25s; }
@@ -700,14 +726,14 @@ body.app-body { background: var(--bg); }
 .trend-modal { max-width: 680px; width: 100%; }
 .trend-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .trend-title { font-size: 0.74rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg-muted); }
-.trend-now { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.02em; margin-top: 0.15rem; }
+.trend-now { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.03em; margin-top: 0.15rem; }
 .trend-range { flex-shrink: 0; }
 
 .trend-chart { margin: 0.2rem 0 0.6rem; }
 .trend-chart-svg { width: 100%; height: auto; display: block; }
 .trend-chart-svg .tc-grid { stroke: var(--border); stroke-width: 1; }
-.trend-chart-svg .tc-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
-.trend-chart-svg .tc-fill { fill: var(--accent-soft); stroke: none; opacity: 0.7; }
+.trend-chart-svg .tc-line { fill: none; stroke: var(--fg); stroke-width: 2; stroke-linejoin: round; }
+.trend-chart-svg .tc-fill { fill: var(--surface-2); stroke: none; opacity: 0.9; }
 .trend-axis { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--fg-faint); margin-top: 0.25rem; }
 
 .trend-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin: 0.4rem 0 1rem; }
