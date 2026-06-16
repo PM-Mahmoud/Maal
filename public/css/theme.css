@@ -535,3 +535,73 @@ body::before {
 
 /* Buttons global */
 .btn-gold, .cta-button { font-weight: 500; }
+
+/* ============================================================
+   Products — Sahha-style gradient feature cards (3 + 2 layout)
+   ============================================================ */
+.products { padding: 1rem 2rem 5.5rem; }
+.products-inner { max-width: 1180px; margin: 0 auto; }
+.product-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem; margin-top: 2.4rem; }
+.product-card {
+  position: relative; overflow: hidden;
+  border-radius: 16px; min-height: 300px;
+  padding: 1.6rem 1.7rem;
+  display: flex; flex-direction: column;
+  color: #fff; box-shadow: var(--shadow);
+  transition: transform 0.2s, box-shadow 0.2s;
+  text-decoration: none;
+}
+.product-card, .product-card:hover, .product-card * { text-decoration: none; }
+.product-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+.product-card.span2 { grid-column: span 2; }
+.product-card.span3 { grid-column: span 3; min-height: 260px; }
+.pc-title { font-size: 1.12rem; font-weight: 600; letter-spacing: -0.025em; color: #fff; margin: 0; line-height: 1.2; max-width: 86%; }
+.pc-mock { flex: 1; display: flex; align-items: center; justify-content: center; margin: 1.1rem 0; min-height: 0; }
+.pc-label {
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.82);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.pc-arrow { font-size: 1.05rem; transition: transform 0.2s; }
+.product-card:hover .pc-arrow { transform: translateX(4px); }
+
+/* Atmospheric gradients (cool top row, warm bottom row) */
+.pc-1 { background: radial-gradient(135% 135% at 18% 6%, #61736a 0%, #313c37 56%, #232b27 100%); }
+.pc-2 { background: radial-gradient(135% 135% at 84% 0%, #c2bcd2 0%, #847e98 52%, #5b5670 100%); }
+.pc-3 { background: radial-gradient(135% 135% at 50% -10%, #3d4046 0%, #21242a 68%, #15171b 100%); }
+.pc-4 { background: radial-gradient(140% 130% at 14% 105%, #e0a85f 0%, #bb741f 50%, #7c4912 100%); }
+.pc-5 { background: radial-gradient(140% 130% at 86% 105%, #604a39 0%, #3b2c21 56%, #221a13 100%); }
+/* soft top highlight on every card for depth */
+.product-card::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 80% at 50% -20%, rgba(255,255,255,0.18), transparent 60%);
+}
+.product-card > * { position: relative; z-index: 1; }
+
+/* Frosted-glass mock UI inside the cards */
+.pc-glass {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+}
+.pc-ring text { font-family: var(--font-display); }
+.pc-chat { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; max-width: 230px; }
+.pc-bubble { font-size: 0.8rem; line-height: 1.4; padding: 0.55rem 0.8rem; border-radius: 12px; }
+.pc-bubble.them { align-self: flex-start; background: rgba(255,255,255,0.16); border-bottom-left-radius: 4px; }
+.pc-bubble.me { align-self: flex-end; background: rgba(255,255,255,0.92); color: #1a1a1a; border-bottom-right-radius: 4px; font-weight: 500; }
+.pc-row { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.6rem 0.85rem; font-size: 0.82rem; }
+.pc-row + .pc-row { border-top: 1px solid rgba(255,255,255,0.12); }
+.pc-dot { width: 7px; height: 7px; border-radius: 50%; background: #5FE3D1; box-shadow: 0 0 0 3px rgba(95,227,209,0.25); display: inline-block; }
+.pc-stat { font-family: var(--font-display); font-size: 1.7rem; font-weight: 700; letter-spacing: -0.03em; }
+.pc-sub { font-size: 0.72rem; color: rgba(255,255,255,0.75); }
+.pc-pill { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 500; padding: 0.3rem 0.7rem; border-radius: 999px; background: rgba(255,255,255,0.16); }
+
+@media (max-width: 900px) {
+  .product-grid { grid-template-columns: 1fr 1fr; }
+  .product-card.span2, .product-card.span3 { grid-column: span 1; }
+}
+@media (max-width: 560px) {
+  .product-grid { grid-template-columns: 1fr; }
+  .product-card.span2, .product-card.span3 { grid-column: span 1; }
+}
