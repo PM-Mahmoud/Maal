@@ -6,7 +6,7 @@
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
   <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
-  <title><%= pageTitle %> — Mizan</title>
+  <title><%= pageTitle %> — Maal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -16,9 +16,9 @@
     // Apply saved theme before paint (default: light)
     (function() {
       try {
-        var t = localStorage.getItem('mizan-theme') || 'light';
+        var t = localStorage.getItem('maal-theme') || 'light';
         document.documentElement.setAttribute('data-theme', t);
-        if (localStorage.getItem('mizan-privacy') === 'on') {
+        if (localStorage.getItem('maal-privacy') === 'on') {
           document.documentElement.setAttribute('data-privacy', 'on');
         }
       } catch (e) {}
@@ -31,21 +31,21 @@
     <button class="icon-btn" id="mobile-menu" title="Menu">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
     </button>
-    <a href="/dashboard" class="sidebar-logo" style="margin:0; font-size:1.2rem;"><span class="mark">◈</span> Mizan</a>
+    <a href="/dashboard" class="sidebar-logo" style="margin:0; font-size:1.2rem;"><span class="mark">◈</span> Maal</a>
     <span style="width:34px;"></span>
   </div>
   <div class="sidebar-overlay" id="sidebar-overlay"></div>
   <div class="app">
     <aside class="sidebar">
-      <a href="/dashboard" class="sidebar-logo"><span class="mark">◈</span> Mizan</a>
+      <a href="/dashboard" class="sidebar-logo"><span class="mark">◈</span> Maal</a>
 
       <a href="/dashboard" class="side-item <%= pageTitle === 'Dashboard' ? 'active' : '' %>">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
         Dashboard
       </a>
-      <a href="/dashboard/ask" class="side-item <%= pageTitle === 'Ask Mizan' ? 'active' : '' %>">
+      <a href="/dashboard/ask" class="side-item <%= pageTitle === 'Ask Maal' ? 'active' : '' %>">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-8 8H5l-2 2V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8z"/></svg>
-        Ask Mizan
+        Ask Maal
       </a>
       <a href="/dashboard/research" class="side-item <%= pageTitle === 'Research' ? 'active' : '' %>">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
@@ -73,7 +73,7 @@
       <div class="side-divider"></div>
       <a href="#" class="side-item" id="feedback-open">Share Feedback</a>
       <a href="/dashboard/roadmap" class="side-item <%= pageTitle === 'Roadmap' ? 'active' : '' %>">Roadmap</a>
-      <a href="mailto:support@mizan.au" class="side-item">Support</a>
+      <a href="mailto:support@hellomaal.com" class="side-item">Support</a>
 
       <div class="sidebar-bottom">
         <button type="button" class="icon-btn" id="theme-toggle" title="Toggle light/dark">
@@ -96,19 +96,19 @@
     <main class="main">
       <%- body %>
       <div class="disclaimer">
-        DISCLAIMER: Mizan does not provide financial advice. Any information provided
-        by Mizan is for educational purposes only. You should do your own research.
+        DISCLAIMER: Maal does not provide financial advice. Any information provided
+        by Maal is for educational purposes only. You should do your own research.
         Investing is risky and you can lose all of your money.
       </div>
     </main>
   </div>
 
-  <!-- Floating Mizan chat -->
+  <!-- Floating Maal chat -->
   <div class="chat-panel" id="chat-panel">
     <div class="chat-head">
       <div class="avatar" style="width:34px;height:34px;font-size:0.85rem;">M</div>
       <div>
-        <div style="font-size:0.88rem;font-weight:600;">Chat with Mizan</div>
+        <div style="font-size:0.88rem;font-weight:600;">Chat with Maal</div>
         <div class="status">● Online</div>
       </div>
       <button class="icon-btn chat-close" id="chat-close" title="Close">✕</button>
@@ -122,7 +122,7 @@
     </div>
     <div class="chat-disclaimer">Educational guidance only — not financial advice.</div>
   </div>
-  <button class="chat-fab" id="chat-fab" title="Chat with Mizan">
+  <button class="chat-fab" id="chat-fab" title="Chat with Maal">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-8 8H5l-2 2V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8z"/></svg>
   </button>
 
@@ -162,7 +162,7 @@
           var cur = document.documentElement.getAttribute('data-theme') || 'light';
           var next = cur === 'light' ? 'dark' : 'light';
           document.documentElement.setAttribute('data-theme', next);
-          try { localStorage.setItem('mizan-theme', next); } catch (e) {}
+          try { localStorage.setItem('maal-theme', next); } catch (e) {}
         });
       }
 
@@ -173,7 +173,7 @@
           var on = document.documentElement.getAttribute('data-privacy') === 'on';
           if (on) document.documentElement.removeAttribute('data-privacy');
           else document.documentElement.setAttribute('data-privacy', 'on');
-          try { localStorage.setItem('mizan-privacy', on ? 'off' : 'on'); } catch (e) {}
+          try { localStorage.setItem('maal-privacy', on ? 'off' : 'on'); } catch (e) {}
         });
       }
 

@@ -25,7 +25,7 @@ function profileLine(profile) {
 }
 
 // Returns { report, sources } — sources: [{ title, url, source }]
-async function runResearch(user, profile, mizan, question) {
+async function runResearch(user, profile, maal, question) {
   if (!advisor.hasAdvisor()) {
     return {
       report: "Research needs the AI engine switched on. Add your Azure OpenAI keys "
@@ -68,12 +68,12 @@ async function runResearch(user, profile, mizan, question) {
     : '\n\n(No live market/web data is connected — answer from general knowledge and clearly note that figures may be out of date.)';
 
   const system = [
-    'You are Mizan Research, an education-only financial research analyst for Australians.',
+    'You are Maal Research, an education-only financial research analyst for Australians.',
     'Produce a structured, decision-useful report — NOT personal financial advice. Explain scenarios, trade-offs and mechanisms so the user can decide; remind them to do their own research / see a licensed adviser for big moves.',
     'Australian context: superannuation (SG 12%), HECS-HELP (indexed 1 June), franking credits, CGT discount, EOFY 30 June, negative gearing, RBA cash rate, ASX.',
     'Structure: a one-line summary, then 2-4 short sections with headers, then a "What this means for you" close. Use AUD. Cite live sources inline as [1], [2] where you used them.',
     `The user: ${profileLine(profile)}.`,
-    mizan && mizan.hasData ? `Their Mizan wellbeing score is ${mizan.score}/100 (${mizan.band}).` : '',
+    maal && maal.hasData ? `Their Maal wellbeing score is ${maal.score}/100 (${maal.band}).` : '',
   ].filter(Boolean).join('\n');
 
   const report = await advisor.complete([

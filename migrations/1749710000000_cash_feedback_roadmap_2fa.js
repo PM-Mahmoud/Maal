@@ -41,7 +41,7 @@ module.exports = {
         INSERT INTO roadmap_items (title, details, status) VALUES
         ('Live market data for Top & Bottom Movers', 'Real-time ASX and US prices for your holdings.', 'planned'),
         ('Radar email & SMS alerts', 'Scheduled radar runs that actually notify you.', 'in_progress'),
-        ('Statement parsing in Vault', 'Upload a PDF statement and Mizan reads the transactions.', 'planned'),
+        ('Statement parsing in Vault', 'Upload a PDF statement and Maal reads the transactions.', 'planned'),
         ('Shared access for partners & accountants', 'Invite a read-only viewer to your dashboard.', 'open')
       `);
     }

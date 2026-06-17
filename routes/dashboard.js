@@ -12,7 +12,7 @@ const { getScoresByUserId, getLatestScoreByUserId, saveScore } = require('../db/
 const { getRecommendationsByUserId, updateRecommendationStatus, saveRecommendationsBatch } = require('../db/recommendations');
 const { getAccountsByUserId, addAccount, deleteAccount, syncAccount } = require('../db/linked_accounts');
 const { computeScore } = require('../lib/score-engine');
-const { computeMizanScore } = require('../lib/mizan-score');
+const { computeMaalScore } = require('../lib/maal-score');
 const { recordSnapshot, getSnapshots } = require('../db/snapshots');
 const { estimateTax } = require('../lib/tax');
 const { buildEffectiveProfile } = require('../lib/connected');
@@ -76,14 +76,14 @@ router.get('/', async (req, res) => {
     try { chartTxns = await getTxnsSince(req.session.userId, 400); }
     catch (e) { /* table may not exist before migration */ }
 
-    // Mizan Score — single composite wellbeing score
-    const mizanScore = computeMizanScore(profile);
+    // Maal Score — single composite wellbeing score
+    const maalScore = computeMaalScore(profile);
 
     // Top & bottom movers from live quotes (Finnhub) when configured
     let movers = null;
     if (marketdata.hasMarketData()) {
       try {
-        const watch = (process.env.MIZAN_WATCHLIST || 'AAPL,MSFT,NVDA,GOOGL,AMZN,TSLA,JPM,V')
+        const watch = (process.env.MAAL_WATCHLIST || 'AAPL,MSFT,NVDA,GOOGL,AMZN,TSLA,JPM,V')
           .split(',').map(s => s.trim()).filter(Boolean);
         const quotes = await marketdata.getQuotes(watch);
         if (quotes.length) {
@@ -121,7 +121,7 @@ router.get('/', async (req, res) => {
       financialScore: fhs,
       superScore: shs,
       ethicalScore: ehs,
-      mizanScore,
+      maalScore,
       snapshots,
       connected,
       recentTransactions,
@@ -136,7 +136,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ─── API: Ask Mizan chat (DeepSeek-powered) ──────────────────────────────────
+// ─── API: Ask Maal chat (DeepSeek-powered) ──────────────────────────────────
 
 router.post('/ask/message', async (req, res) => {
   try {
@@ -149,8 +149,8 @@ router.post('/ask/message', async (req, res) => {
       .map(m => ({ role: m.role, content: m.content.slice(0, 2000) }));
 
     const { user, profile } = await dashboardContext(req);
-    const mizan = computeMizanScore(profile);
-    const reply = await advisor.chat(user, profile, mizan, clean);
+    const maal = computeMaalScore(profile);
+    const reply = await advisor.chat(user, profile, maal, clean);
     res.json({ ok: true, reply, live: advisor.hasAdvisor() });
   } catch (err) {
     console.error('ask/message error:', err.message);
@@ -158,15 +158,15 @@ router.post('/ask/message', async (req, res) => {
   }
 });
 
-// ─── Pages: advisor suite (Ask Mizan, Research, Radar) ───────────────────────
+// ─── Pages: advisor suite (Ask Maal, Research, Radar) ───────────────────────
 
 router.get('/ask', async (req, res) => {
   try {
     const ctx = await dashboardContext(req);
-    res.render('dashboard-ask', { ...ctx, pageTitle: 'Ask Mizan' });
+    res.render('dashboard-ask', { ...ctx, pageTitle: 'Ask Maal' });
   } catch (err) {
     console.error('/ask error:', err.message);
-    res.status(500).render('error', { layout: false, message: 'Failed to load Ask Mizan.' });
+    res.status(500).render('error', { layout: false, message: 'Failed to load Ask Maal.' });
   }
 });
 
@@ -193,10 +193,10 @@ router.post('/research/run', async (req, res) => {
     if (!question) return res.status(400).json({ error: 'Ask a research question first.' });
 
     const { user, profile } = await dashboardContext(req);
-    const mizan = computeMizanScore(profile);
+    const maal = computeMaalScore(profile);
     const id = await researchDb.createReport(req.session.userId, question);
     try {
-      const { report, sources } = await runResearch(user, profile, mizan, question);
+      const { report, sources } = await runResearch(user, profile, maal, question);
       await researchDb.completeReport(id, report, sources);
       res.json({ ok: true, id, report, sources, question });
     } catch (e) {
@@ -240,7 +240,7 @@ router.get('/radar', async (req, res) => {
 router.post('/radar', async (req, res) => {
   try {
     const prompt = String(req.body.prompt || '').trim().slice(0, 600);
-    if (!prompt) return res.status(400).json({ error: 'Describe what Mizan should watch.' });
+    if (!prompt) return res.status(400).json({ error: 'Describe what Maal should watch.' });
     const freq = ['daily', 'weekly', 'monthly'].includes(req.body.frequency) ? req.body.frequency : 'daily';
     const id = await radarDb.createRadar(req.session.userId, {
       prompt,
@@ -518,7 +518,7 @@ router.post('/settings/2fa', async (req, res) => {
 router.get('/settings', async (req, res) => {
   try {
     const ctx = await dashboardContext(req);
-    const planNames = { pro: 'Mizan Pro ($20/mo)', max: 'Mizan Max ($200/mo)' };
+    const planNames = { pro: 'Maal Pro ($20/mo)', max: 'Maal Max ($200/mo)' };
     res.render('dashboard-settings', {
       ...ctx,
       pageTitle: 'Settings',

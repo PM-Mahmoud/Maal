@@ -39,11 +39,11 @@
 
 <script>
   // Real balance history for the charts (daily snapshots from the database)
-  window.MIZAN_SNAPSHOTS = <%- JSON.stringify((typeof snapshots !== 'undefined' && snapshots ? snapshots : []).map(function(s) {
+  window.MAAL_SNAPSHOTS = <%- JSON.stringify((typeof snapshots !== 'undefined' && snapshots ? snapshots : []).map(function(s) {
     return { d: s.snap_date, nw: Number(s.net_worth), inv: Number(s.invest_balance), sup: Number(s.super_balance), debt: Number(s.debts_total), cash: Number(s.cash_balance) };
   })) %>;
   // Signed transactions for in/out cash-flow on the tile trend view
-  window.MIZAN_TXNS = <%- JSON.stringify((typeof chartTxns !== 'undefined' && chartTxns ? chartTxns : []).map(function(t) {
+  window.MAAL_TXNS = <%- JSON.stringify((typeof chartTxns !== 'undefined' && chartTxns ? chartTxns : []).map(function(t) {
     return { d: t.post_date, amt: Number(t.amount) };
   })) %>;
 </script>
@@ -96,9 +96,9 @@
 </div>
 <% } %>
 
-<!-- ── The Mizan Score (single composite wellbeing score) ── -->
+<!-- ── The Maal Score (single composite wellbeing score) ── -->
 <%
-  var mz = (typeof mizanScore !== 'undefined' && mizanScore) ? mizanScore : { score: 0, band: '—', pillars: [], hasData: false };
+  var mz = (typeof maalScore !== 'undefined' && maalScore) ? maalScore : { score: 0, band: '—', pillars: [], hasData: false };
   var bandChip = mz.score >= 65 ? 'chip-accent' : mz.score >= 50 ? 'chip-gold' : mz.score >= 35 ? 'chip-warn' : 'chip-danger';
 %>
 <div class="panel" style="margin: 1rem 0; padding: 1.5rem 1.6rem;">
@@ -111,7 +111,7 @@
         <text class="ring-sub" x="50" y="68" text-anchor="middle">of 100</text>
       </svg>
       <div>
-        <div class="score-name" style="font-size:1.05rem;">Mizan Score <% if (mz.hasData) { %><span class="chip <%= bandChip %>"><%= mz.band %></span><% } %></div>
+        <div class="score-name" style="font-size:1.05rem;">Maal Score <% if (mz.hasData) { %><span class="chip <%= bandChip %>"><%= mz.band %></span><% } %></div>
         <div class="score-desc" style="margin-top:0.3rem;">
           <%= mz.hasData
               ? 'Your financial wellbeing in one number — savings, debt, super, wealth and protection, weighted the way researchers measure financial health.'
@@ -153,7 +153,7 @@
   </div>
 
   <div class="panel col-4" style="background: linear-gradient(150deg, var(--accent-softer), var(--surface)); ">
-    <div class="panel-title">Ask Mizan <a class="more" href="/dashboard/ask">Open →</a></div>
+    <div class="panel-title">Ask Maal <a class="more" href="/dashboard/ask">Open →</a></div>
     <p style="font-size:0.83rem; color:var(--fg-muted); margin:0 0 0.8rem;">Your CFO-level second opinion. Ask anything about your finances.</p>
     <div class="suggest-grid" style="grid-template-columns:1fr;">
       <button class="suggest" onclick="location.href='/dashboard/ask'">How did my net worth change this month?</button>
@@ -167,7 +167,7 @@
     <div class="panel-title">Radar <a class="more" href="/dashboard/radar">Explore →</a></div>
     <div class="empty">
       <h3>Set up your first radar</h3>
-      <p>Tell Mizan what to watch — your spending, the ASX, rate moves — and get alerted by email or SMS.</p>
+      <p>Tell Maal what to watch — your spending, the ASX, rate moves — and get alerted by email or SMS.</p>
       <a href="/dashboard/radar" class="btn btn-ghost btn-sm">Explore Radar</a>
     </div>
   </div>
@@ -226,10 +226,10 @@
     <% } %>
     <div class="row-item"><div><div class="row-main">Take-home pay</div><div class="row-sub"><%= tax.effectiveRate %>% effective · <%= tax.marginalRate %>% marginal</div></div><div class="row-val" style="color:var(--accent-strong);"><%= aud(tax.takeHomeMonthly) %>/mo</div></div>
     <p style="font-size:0.72rem; color:var(--fg-faint); margin:0.7rem 0 0; line-height:1.6;">
-      Indicative only — excludes deductions, offsets and salary packaging. Ask Mizan to explore strategies.
+      Indicative only — excludes deductions, offsets and salary packaging. Ask Maal to explore strategies.
     </p>
     <% } else { %>
-    <div class="empty"><h3>Add your income</h3><p>Set your annual income and Mizan estimates tax, Medicare and HECS withholding instantly.</p><a href="/dashboard/profile" class="btn btn-ghost btn-sm">Complete profile</a></div>
+    <div class="empty"><h3>Add your income</h3><p>Set your annual income and Maal estimates tax, Medicare and HECS withholding instantly.</p><a href="/dashboard/profile" class="btn btn-ghost btn-sm">Complete profile</a></div>
     <% } %>
   </div>
 
@@ -249,11 +249,11 @@
         <div class="row-val" style="color:var(--danger);">▼ <%= Math.abs(pct).toFixed(2) %>%</div>
       </div>
       <% }); %>
-      <p style="font-size:0.7rem; color:var(--fg-faint); margin:0.6rem 0 0;">Live via Finnhub · default watchlist (set MIZAN_WATCHLIST to customise).</p>
+      <p style="font-size:0.7rem; color:var(--fg-faint); margin:0.6rem 0 0;">Live via Finnhub · default watchlist (set MAAL_WATCHLIST to customise).</p>
     <% } else { %>
     <div class="empty">
       <h3>Connect live market data</h3>
-      <p>Add a free Finnhub API key (FINNHUB_API_KEY) and Mizan surfaces the day's biggest movers on your watchlist here.</p>
+      <p>Add a free Finnhub API key (FINNHUB_API_KEY) and Maal surfaces the day's biggest movers on your watchlist here.</p>
       <a href="/dashboard/research" class="btn btn-ghost btn-sm">Explore Research</a>
     </div>
     <% } %>

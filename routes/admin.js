@@ -20,14 +20,14 @@ function requireAdmin(req, res, next) {
   }
 
   // Show password form
-  res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Admin — Mizan</title>
+  res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Admin — Maal</title>
 <style>body{background:#0A0F0D;color:#F0EFE9;font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
 .box{background:#0F2E24;border:1px solid rgba(201,168,76,0.15);border-radius:16px;padding:2.5rem;width:360px}
 h2{color:#C9A84C;margin:0 0 1.5rem;font-size:1.2rem}
 input{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:0.7rem 0.9rem;color:#F0EFE9;font-size:0.95rem;outline:none;box-sizing:border-box;margin-bottom:1rem}
 button{width:100%;background:#C9A84C;color:#0A0F0D;font-weight:600;padding:0.75rem;border:none;border-radius:8px;cursor:pointer;font-size:0.95rem}
 .err{color:#E07070;font-size:0.85rem;margin-bottom:0.75rem}</style></head>
-<body><div class="box"><h2>◈ Mizan Admin</h2>
+<body><div class="box"><h2>◈ Maal Admin</h2>
 ${req.query.error ? '<div class="err">Incorrect password.</div>' : ''}
 <form method="POST" action="/admin/login"><input type="password" name="password" placeholder="Admin password" autofocus><button>Enter</button></form>
 </div></body></html>`);
@@ -74,7 +74,7 @@ router.get('/admin', requireAdmin, async (req, res) => {
 
   res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Admin — Mizan</title>
+<title>Admin — Maal</title>
 <style>
 :root{--bg:#0A0F0D;--fg:#F0EFE9;--fg-muted:#8A8D83;--accent:#C9A84C;--green-deep:#0F2E24;--border:rgba(201,168,76,0.15)}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -104,7 +104,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .section-title{font-size:0.85rem;font-weight:600;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:1rem}
 </style></head><body>
 <div class="topbar">
-  <span class="topbar-logo">◈ Mizan</span>
+  <span class="topbar-logo">◈ Maal</span>
   <span class="topbar-title">Admin</span>
   <a href="/admin/logout" class="topbar-logout">Sign out</a>
 </div>

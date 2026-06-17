@@ -47,11 +47,11 @@
         <label class="switch"><input type="checkbox" data-notif="spending_alerts" <%= npOn('spending_alerts', true) ? 'checked' : '' %>><span class="slider"></span></label>
       </div>
       <div class="row-item">
-        <div><div class="row-main">Score changes <span class="chip chip-accent">Mizan</span></div><div class="row-sub">When your credit, debt or financial wellbeing score moves.</div></div>
+        <div><div class="row-main">Score changes <span class="chip chip-accent">Maal</span></div><div class="row-sub">When your credit, debt or financial wellbeing score moves.</div></div>
         <label class="switch"><input type="checkbox" data-notif="score_changes" <%= npOn('score_changes', true) ? 'checked' : '' %>><span class="slider"></span></label>
       </div>
       <div class="row-item">
-        <div><div class="row-main">Product updates <span class="chip chip-muted">Marketing</span></div><div class="row-sub">New features and improvements to Mizan.</div></div>
+        <div><div class="row-main">Product updates <span class="chip chip-muted">Marketing</span></div><div class="row-sub">New features and improvements to Maal.</div></div>
         <label class="switch"><input type="checkbox" data-notif="product_updates" <%= npOn('product_updates', false) ? 'checked' : '' %>><span class="slider"></span></label>
       </div>
     </div>
@@ -87,7 +87,7 @@
           <ul>
             <li>Financial Wellbeing Score</li>
             <li>Manual assets &amp; liabilities</li>
-            <li>Limited Ask Mizan chat</li>
+            <li>Limited Ask Maal chat</li>
             <li>1 connected account</li>
           </ul>
           <% if (currentPlan === 'free') { %>
@@ -103,7 +103,7 @@
           <div class="plan-price">$20 <span class="per">/mo</span></div>
           <div class="plan-blurb">The full advisor experience.</div>
           <ul>
-            <li>Unlimited Ask Mizan chat</li>
+            <li>Unlimited Ask Maal chat</li>
             <li>All three scores + history</li>
             <li>Bank connections via Basiq</li>
             <li>Radar alerts (email &amp; SMS)</li>
@@ -140,7 +140,7 @@
         </div>
       </div>
       <p style="font-size:0.74rem; color:var(--fg-faint); margin:0.9rem 0 0; line-height:1.6;">
-        Your subscription funds Mizan — the advisor behind chat, radar, deep research, and its core job:
+        Your subscription funds Maal — the advisor behind chat, radar, deep research, and its core job:
         reading your financial statements, bank accounts and transactions so you can understand your financial
         situation. Usage refreshes on the 1st of each month. Bank connections pause after 30 days of inactivity.
       </p>
@@ -148,8 +148,8 @@
 
     <div class="panel" style="margin-bottom:1rem;">
       <div class="panel-title">Invite friends</div>
-      <p style="font-size:0.82rem; color:var(--fg-muted); margin:0 0 0.7rem;">Share Mizan and track your referrals.</p>
-      <div class="field"><input type="text" value="https://mizan.au/?ref=<%= (session.name || 'you').replace(/\s+/g, '').toLowerCase() %>" readonly></div>
+      <p style="font-size:0.82rem; color:var(--fg-muted); margin:0 0 0.7rem;">Share Maal and track your referrals.</p>
+      <div class="field"><input type="text" value="https://hellomaal.com/?ref=<%= (session.name || 'you').replace(/\s+/g, '').toLowerCase() %>" readonly></div>
       <div class="grid-2">
         <div class="panel" style="text-align:center; padding:0.9rem;"><div style="font-size:1.3rem; font-weight:800;">0</div><div class="row-sub">Total signups</div></div>
         <div class="panel" style="text-align:center; padding:0.9rem;"><div style="font-size:1.3rem; font-weight:800;">0</div><div class="row-sub">Connected accounts</div></div>

@@ -11,7 +11,7 @@ function getIp(req) {
 }
 
 function googleAuthUrl(state) {
-  const base = process.env.BASE_URL || 'https://mizan-ufgq.onrender.com';
+  const base = process.env.BASE_URL || 'https://hellomaal.com';
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID,
     redirect_uri: `${base}/auth/google/callback`,
@@ -25,7 +25,7 @@ function googleAuthUrl(state) {
 }
 
 async function exchangeCode(code) {
-  const base = process.env.BASE_URL || 'https://mizan-ufgq.onrender.com';
+  const base = process.env.BASE_URL || 'https://hellomaal.com';
   const payload = new URLSearchParams({
     code,
     client_id: process.env.GOOGLE_CLIENT_ID,

@@ -1,5 +1,5 @@
 // services/advisor.js
-// The Mizan advisor brain — chat completions via any OpenAI-compatible API.
+// The Maal advisor brain — chat completions via any OpenAI-compatible API.
 //
 // DEFAULT PROVIDER: Groq (https://groq.com) — a US company running open-weight
 // models (Meta's Llama) on US servers. No data routed to China, which keeps
@@ -12,7 +12,7 @@
 //   1. Sign up at https://console.groq.com (free)
 //   2. Create an API key
 //   3. On Render: Environment → add GROQ_API_KEY = <key>
-//   4. Redeploy. Ask Mizan and the chat widget now answer for real.
+//   4. Redeploy. Ask Maal and the chat widget now answer for real.
 //
 // SWAPPING PROVIDERS (no code change needed) — set all three env vars:
 //   AI_API_KEY, AI_BASE_URL, AI_MODEL
@@ -109,10 +109,10 @@ function aud(n) {
   return '$' + n.toLocaleString('en-AU', { maximumFractionDigits: 0 });
 }
 
-function buildSystemPrompt(user, profile, mizan) {
+function buildSystemPrompt(user, profile, maal) {
   const p = profile || {};
   const lines = [
-    'You are Mizan, a warm, sharp CFO-level financial advisor inside the Mizan app — the all-in-one for ethical investing, built for Australians.',
+    'You are Maal, a warm, sharp CFO-level financial advisor inside the Maal app — the all-in-one for ethical investing, built for Australians.',
     'You provide EDUCATION ONLY, never personal financial advice. Do not tell the user what to do with their money; explain concepts, trade-offs and how things work so they can decide. Where relevant, gently remind them big decisions deserve their own research or a licensed adviser.',
     'You know Australian finance natively: superannuation (SG 12%), HECS-HELP (income-contingent, indexed 1 June), franking credits, EOFY (30 June), ATO, Medicare levy surcharge, CGT discount, ASX.',
     'Keep answers concise: 2-4 short paragraphs max, plain language, no bullet-point walls. Use AUD.',
@@ -142,9 +142,9 @@ function buildSystemPrompt(user, profile, mizan) {
     lines.push('');
     lines.push(`The user set these preferences for how you should respond — honour them: "${String(od.preferences).slice(0, 600)}"`);
   }
-  if (mizan && mizan.hasData) {
-    lines.push(`Their Mizan Score (composite financial wellbeing, 0-100) is ${mizan.score} (${mizan.band}). Pillars: ` +
-      mizan.pillars.map((pl) => `${pl.label} ${pl.score}/100`).join(', ') + '.');
+  if (maal && maal.hasData) {
+    lines.push(`Their Maal Score (composite financial wellbeing, 0-100) is ${maal.score} (${maal.band}). Pillars: ` +
+      maal.pillars.map((pl) => `${pl.label} ${pl.score}/100`).join(', ') + '.');
   }
   return lines.join('\n');
 }
@@ -152,15 +152,15 @@ function buildSystemPrompt(user, profile, mizan) {
 const FALLBACK_REPLY =
   "I'm not fully switched on yet — the team hasn't connected my brain (an AI API key) in this environment. " +
   'Once a GROQ_API_KEY is added on the server, I can answer this properly using your real data. ' +
-  'In the meantime, try adding your assets and liabilities so your dashboard and Mizan Score stay accurate.';
+  'In the meantime, try adding your assets and liabilities so your dashboard and Maal Score stay accurate.';
 
 /**
  * @returns {Promise<string>} the assistant's reply
  */
-async function chat(user, profile, mizan, messages) {
+async function chat(user, profile, maal, messages) {
   if (!hasAdvisor()) return FALLBACK_REPLY;
   return complete([
-    { role: 'system', content: buildSystemPrompt(user, profile, mizan) },
+    { role: 'system', content: buildSystemPrompt(user, profile, maal) },
     ...messages.slice(-10), // keep context small + cheap
   ], { maxTokens: 600, temperature: 0.6 });
 }

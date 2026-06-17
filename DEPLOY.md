@@ -1,4 +1,4 @@
-# Mizan — Deployment Guide
+# Maal — Deployment Guide
 
 Stack: Node.js + Express + PostgreSQL (Neon) + Render
 
@@ -7,25 +7,25 @@ Stack: Node.js + Express + PostgreSQL (Neon) + Render
 ## Step 1 — Create a free PostgreSQL database on Neon
 
 1. Go to **https://neon.tech** and sign up (free)
-2. Create a new project → name it `mizan`
-3. When prompted for a database name, use `mizan` (or leave as default)
+2. Create a new project → name it `maal`
+3. When prompted for a database name, use `maal` (or leave as default)
 4. On the project dashboard, click **Connection string** → copy the URL
-   It looks like: `postgresql://user:password@ep-xxx.us-east-1.aws.neon.tech/mizan?sslmode=require`
+   It looks like: `postgresql://user:password@ep-xxx.us-east-1.aws.neon.tech/maal?sslmode=require`
 5. Save this — it's your `DATABASE_URL`
 
 ---
 
 ## Step 2 — Push the code to GitHub
 
-1. Go to **https://github.com/new** and create a new **private** repository named `mizan`
-2. In your terminal, navigate to the `halalmetrics/` folder:
+1. Go to **https://github.com/new** and create a new **private** repository named `maal`
+2. In your terminal, navigate to the `maal/` folder:
    ```bash
-   cd path/to/halalmetrics
+   cd path/to/maal
    git init
    git add .
    git commit -m "Initial commit"
    git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/mizan.git
+   git remote add origin https://github.com/YOUR_USERNAME/maal.git
    git push -u origin main
    ```
 
@@ -35,7 +35,7 @@ Stack: Node.js + Express + PostgreSQL (Neon) + Render
 
 1. Go to **https://render.com** → sign in with GitHub
 2. Click **New → Web Service**
-3. Select your `mizan` GitHub repository
+3. Select your `maal` GitHub repository
 4. Render will detect `render.yaml` automatically. Confirm the settings:
    - **Build Command:** `npm install && npm run migrate`
    - **Start Command:** `npm start`
@@ -90,7 +90,7 @@ In your Render service → **Environment** tab, add:
 ## Local development
 
 ```bash
-cd halalmetrics
+cd maal
 cp .env.example .env         # fill in DATABASE_URL + SESSION_SECRET
 npm install
 npm run migrate              # run DB migrations

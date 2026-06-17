@@ -49,7 +49,7 @@ async function sendSms(to, body) {
 }
 
 async function sendOtpSms(phone, otp) {
-  await sendSms(phone, `Your Mizan verification code is: ${otp}. It expires in 10 minutes.`);
+  await sendSms(phone, `Your Maal verification code is: ${otp}. It expires in 10 minutes.`);
 }
 
 module.exports = { sendSms, sendOtpSms };

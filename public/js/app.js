@@ -1,5 +1,5 @@
 /* ============================================================
-   Mizan app interactivity — tabs, modals, toasts, page wiring
+   Maal app interactivity — tabs, modals, toasts, page wiring
    ============================================================ */
 (function () {
   'use strict';
@@ -75,7 +75,7 @@
   });
 
   /* ─── 2. Dashboard charts — real data + time-range tabs ── */
-  // window.MIZAN_SNAPSHOTS = [{ d: date, nw, inv, sup, debt }] (daily, oldest first)
+  // window.MAAL_SNAPSHOTS = [{ d: date, nw, inv, sup, debt }] (daily, oldest first)
   function drawSpark(svgId, series) {
     var svg = document.getElementById(svgId);
     if (!svg) return;
@@ -117,11 +117,11 @@
     var v = list.filter(function (x) { return new Date(x.d).getTime() >= cutoff; });
     return v.length ? v : list.slice();
   }
-  function snapsInRange(label) { return inRange(window.MIZAN_SNAPSHOTS || [], label); }
+  function snapsInRange(label) { return inRange(window.MAAL_SNAPSHOTS || [], label); }
 
   // Money in/out from signed transactions over the range
   function flowSummary(label) {
-    var txns = window.MIZAN_TXNS || [];
+    var txns = window.MAAL_TXNS || [];
     if (label !== 'All') {
       var cutoff = Date.now() - rangeDays(label) * 86400000;
       txns = txns.filter(function (t) { return new Date(t.d).getTime() >= cutoff; });
@@ -333,7 +333,7 @@
       openModal(
         'Connect ' + name,
         '<p style="font-size:0.85rem;color:var(--fg-muted);margin:0 0 0.8rem;">This is a demo of the Basiq (Consumer Data Right) flow. In production you would be redirected to ' + name + ' to approve read-only access.</p>' +
-        '<p style="font-size:0.75rem;color:var(--fg-faint);margin:0;">🔒 Mizan can never move money. Access is revocable anytime.</p>',
+        '<p style="font-size:0.75rem;color:var(--fg-faint);margin:0;">🔒 Maal can never move money. Access is revocable anytime.</p>',
         function () {
           fetch('/dashboard/accounts', {
             method: 'POST',
@@ -422,7 +422,7 @@
   if (radarCreate) {
     radarCreate.addEventListener('click', function () {
       var text = (($('#radar-text') || {}).value || '').trim();
-      if (!text) { toast('Describe what Mizan should watch'); $('#radar-text').focus(); return; }
+      if (!text) { toast('Describe what Maal should watch'); $('#radar-text').focus(); return; }
       var freqTab = $('#radar-freq .tab.active');
       var frequency = (freqTab ? freqTab.textContent.trim() : 'Daily').toLowerCase();
       radarCreate.disabled = true;
@@ -517,7 +517,7 @@
     };
   }
 
-  /* Ask Mizan page */
+  /* Ask Maal page */
   var askSend = $('#ask-send');
   if (askSend) {
     var askChat = makeChatSession($('#ask-thread'));

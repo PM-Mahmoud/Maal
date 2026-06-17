@@ -28,15 +28,15 @@ const score = {
   score_breakdown: {}, diagnosis: 'Solid start.', action_plan: [],
   halal_compliance_score: 70, portfolio_health_score: 60, created_at: new Date(),
 };
-const { computeMizanScore } = require('../lib/mizan-score');
-const mizanScore = computeMizanScore(profile);
+const { computeMaalScore } = require('../lib/maal-score');
+const maalScore = computeMaalScore(profile);
 const { estimateTax } = require('../lib/tax');
 
 const base = { session, user, profile, pageTitle: 'Test' };
 
 // Per-view locals mirroring what each route passes (routes/*.js)
 const cases = {
-  'dashboard-overview': { ...base, financialScore: score, superScore: score, ethicalScore: score, mizanScore, snapshots: [], taxImpact: estimateTax(profile), connected: { count: 2, cash: 4250, super: 0, invest: 0, debt: 1200 }, recentTransactions: [{ description: 'Woolworths', amount: -84.20, post_date: new Date() }, { description: 'Salary', amount: 5400, post_date: new Date() }], movers: { top: [{ symbol: 'NVDA', price: 1203.4, percent: 4.2 }], bottom: [{ symbol: 'TSLA', price: 178.2, percent: -3.1 }] }, chartTxns: [{ post_date: new Date(), amount: 5400 }, { post_date: new Date(), amount: -84.2 }] },
+  'dashboard-overview': { ...base, financialScore: score, superScore: score, ethicalScore: score, maalScore, snapshots: [], taxImpact: estimateTax(profile), connected: { count: 2, cash: 4250, super: 0, invest: 0, debt: 1200 }, recentTransactions: [{ description: 'Woolworths', amount: -84.20, post_date: new Date() }, { description: 'Salary', amount: 5400, post_date: new Date() }], movers: { top: [{ symbol: 'NVDA', price: 1203.4, percent: 4.2 }], bottom: [{ symbol: 'TSLA', price: 178.2, percent: -3.1 }] }, chartTxns: [{ post_date: new Date(), amount: 5400 }, { post_date: new Date(), amount: -84.2 }] },
   'dashboard-roadmap': { ...base, items: [
     { id: 1, title: 'Test item', details: 'Some details', status: 'planned', score: 3, upvotes: 4, downvotes: 1, my_vote: 1 },
     { id: 2, title: 'Another', details: null, status: 'open', score: 0, upvotes: 0, downvotes: 0, my_vote: null },
@@ -48,7 +48,7 @@ const cases = {
   'dashboard-vault': { ...base, files: [{ id: 1, filename: 'NOA-2025.pdf', mime: 'application/pdf', size_bytes: 184320, created_at: new Date() }] },
   'dashboard-transactions': { ...base, basiqEnabled: true, basiqStatus: 'error', basiqReason: 'Basiq 403 on /users', liveTransactions: [], liveAccounts: [], statementFiles: [{ id: 2, filename: 'cba-may.csv', mime: 'text/csv', size_bytes: 5120, created_at: new Date() }] },
   'dashboard-goals': { ...base, goals: [{ id: 1, name: 'Emergency fund', type: 'Save', target: 20000, current: 12000, created_at: new Date() }, { id: 2, name: 'Pay off HECS', type: 'Pay Off', target: 42000, current: 8000, created_at: new Date() }] },
-  'dashboard-settings': { ...base, billingStatus: 'success', billingPlanName: 'Mizan Pro ($20/mo)' },
+  'dashboard-settings': { ...base, billingStatus: 'success', billingPlanName: 'Maal Pro ($20/mo)' },
   'dashboard-scores': { ...base, financialScore: score, superScore: score, ethicalScore: score, fhsHistory: [score], shsHistory: [], ehsHistory: [] },
   'dashboard-recommendations': { ...base, recommendations: [], filter: 'all' },
   'dashboard-accounts': { ...base, accounts: [], basiqEnabled: true },

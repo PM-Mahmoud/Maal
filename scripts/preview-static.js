@@ -28,7 +28,7 @@ const profile = {
   has_private_health: true, practice_owner: false, insurance_cover: 'partial',
   retirement_age: 60, onboarding_data: {}, completed_onboarding: true,
 };
-const { computeMizanScore } = require('../lib/mizan-score');
+const { computeMaalScore } = require('../lib/maal-score');
 const { estimateTax } = require('../lib/tax');
 const { buildLandingContext } = require('../lib/landing-context');
 
@@ -79,7 +79,7 @@ app.get('/dashboard', (_req, res, next) => {
   const eff = buildEffectiveProfile(profile, linked);
   renderInLayout('dashboard-overview', {
     ...base, profile: eff.profile, pageTitle: 'Dashboard', financialScore: score, superScore: null,
-    ethicalScore: null, mizanScore: computeMizanScore(eff.profile), snapshots,
+    ethicalScore: null, maalScore: computeMaalScore(eff.profile), snapshots,
     taxImpact: estimateTax(eff.profile), connected: eff.connected, chartTxns,
     recentTransactions: [
       { description: 'Woolworths Metro', amount: -84.20, post_date: new Date() },
@@ -102,7 +102,7 @@ app.get('/roadmap', (_req, res, next) => {
     items: [
       { id: 1, title: 'Live market data for Top & Bottom Movers', details: 'Real-time ASX and US prices for your holdings.', status: 'planned', score: 12, upvotes: 13, downvotes: 1, my_vote: 1 },
       { id: 2, title: 'Radar email & SMS alerts', details: 'Scheduled radar runs that actually notify you.', status: 'in_progress', score: 8, upvotes: 8, downvotes: 0, my_vote: null },
-      { id: 3, title: 'Statement parsing in Vault', details: 'Upload a PDF statement and Mizan reads the transactions.', status: 'open', score: -1, upvotes: 2, downvotes: 3, my_vote: -1 },
+      { id: 3, title: 'Statement parsing in Vault', details: 'Upload a PDF statement and Maal reads the transactions.', status: 'open', score: -1, upvotes: 2, downvotes: 3, my_vote: -1 },
     ],
   }).then(html => res.send(html)).catch(next);
 });

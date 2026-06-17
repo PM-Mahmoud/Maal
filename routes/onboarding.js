@@ -244,14 +244,14 @@ router.post('/complete', requireAuth, async (req, res) => {
     try {
       const { sendEmail } = require('../services/email');
       const firstName = (req.session.name || '').split(' ')[0] || 'there';
-      const baseUrl = process.env.BASE_URL || 'https://mizan-2.polsia.app';
+      const baseUrl = process.env.BASE_URL || 'https://maal-2.polsia.app';
       const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background:#0A0F0D;font-family:'DM Sans',system-ui,sans-serif;color:#F0EFE9;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0F0D;padding:40px 20px;">
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" style="background:#0F2E24;border:1px solid rgba(201,168,76,0.15);border-radius:16px;overflow:hidden;max-width:560px;width:100%;">
         <tr><td style="padding:40px;">
-          <p style="margin:0 0 24px;font-size:1.5rem;font-weight:600;color:#C9A84C;">◈ Mizan</p>
+          <p style="margin:0 0 24px;font-size:1.5rem;font-weight:600;color:#C9A84C;">◈ Maal</p>
           <h1 style="margin:0 0 16px;font-size:1.5rem;font-weight:600;">Your Financial Health Score is ready, ${firstName}.</h1>
           <p style="margin:0 0 20px;font-size:0.95rem;color:#8A8D83;line-height:1.7;">
             Your onboarding is complete and your scores have been calculated. Here's what you achieved:
@@ -285,8 +285,8 @@ router.post('/complete', requireAuth, async (req, res) => {
 
       sendEmail({
         to: req.session.email,
-        from: 'noreply@mizan-2.polsia.app',
-        subject: 'Your Financial Health Score is ready — Mizan',
+        from: 'noreply@maal-2.polsia.app',
+        subject: 'Your Financial Health Score is ready — Maal',
         html,
         text: `Your Financial Health Score is ${result.score}/100 (${result.grade}). View your dashboard: ${baseUrl}/dashboard`
       }).catch(emailErr => console.error('Completion email failed:', emailErr.message));

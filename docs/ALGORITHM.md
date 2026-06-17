@@ -1,7 +1,7 @@
-# Mizan Financial Health Score — Algorithm Specification v2
+# Maal Financial Health Score — Algorithm Specification v2
 
 > Version: 2.0 (2026-05-23)
-> Owned by: Mizan (Polsia)
+> Owned by: Maal (Polsia)
 > Audience: Engineering team, product team
 
 ---

@@ -19,7 +19,7 @@ function extractSymbols(text) {
   return Array.from(new Set(found)).slice(0, 5);
 }
 
-const BASE_URL = (process.env.BASE_URL || 'https://mizan-ufgq.onrender.com').replace(/\/+$/, '');
+const BASE_URL = (process.env.BASE_URL || 'https://hellomaal.com').replace(/\/+$/, '');
 
 // Evaluate one radar → { alerted, summary }
 async function evaluateRadar(radar, user, profile) {
@@ -55,7 +55,7 @@ async function evaluateRadar(radar, user, profile) {
   const dataBlock = dataChunks.length ? dataChunks.join('\n\n') : '(No live market/news data available right now.)';
 
   const system = [
-    'You are Mizan Radar, monitoring a standing financial watch for an Australian user (education only, not advice).',
+    'You are Maal Radar, monitoring a standing financial watch for an Australian user (education only, not advice).',
     'Decide whether the user\'s condition warrants alerting them RIGHT NOW based on the live data provided.',
     'Reply in EXACTLY this format:',
     'VERDICT: ALERT  (only if the condition is clearly met or something genuinely noteworthy happened) — otherwise VERDICT: OK',
@@ -74,7 +74,7 @@ async function evaluateRadar(radar, user, profile) {
 }
 
 async function notify(radar, user, summary) {
-  const subject = '📡 Mizan Radar alert';
+  const subject = '📡 Maal Radar alert';
   const html = `<div style="font-family:Inter,Arial,sans-serif;max-width:520px;">
     <h2 style="font-weight:600;">Your radar flagged something</h2>
     <p style="color:#444;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;">Watching: ${escapeHtml(radar.prompt)}</p>
@@ -82,13 +82,13 @@ async function notify(radar, user, summary) {
     <p style="margin-top:1.5rem;"><a href="${BASE_URL}/dashboard/radar" style="background:#115832;color:#fff;padding:0.6rem 1.2rem;border-radius:999px;text-decoration:none;">Open Radar</a></p>
     <p style="font-size:0.72rem;color:#888;margin-top:1.5rem;">Education only — not financial advice.</p>
   </div>`;
-  const text = `Mizan Radar alert\nWatching: ${radar.prompt}\n\n${summary}\n\n${BASE_URL}/dashboard/radar`;
+  const text = `Maal Radar alert\nWatching: ${radar.prompt}\n\n${summary}\n\n${BASE_URL}/dashboard/radar`;
 
   if (radar.notify_email && user.email) {
     await sendEmail({ to: user.email, subject, html, text }).catch((e) => console.error('Radar email failed:', e.message));
   }
   if (radar.notify_sms && (user.phone || radar.user_phone)) {
-    await sendSms(user.phone || radar.user_phone, `Mizan Radar: ${summary}`.slice(0, 320)).catch((e) => console.error('Radar SMS failed:', e.message));
+    await sendSms(user.phone || radar.user_phone, `Maal Radar: ${summary}`.slice(0, 320)).catch((e) => console.error('Radar SMS failed:', e.message));
   }
 }
 

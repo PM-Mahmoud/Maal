@@ -9,15 +9,15 @@
 //
 // Env vars used:
 //   STRIPE_SECRET_KEY  — Stripe secret key (use the sk_test_ one for testing)
-//   BASE_URL           — e.g. https://mizan-ufgq.onrender.com
+//   BASE_URL           — e.g. https://hellomaal.com
 
 const express = require('express');
 const router = express.Router();
 const { setUserPlan } = require('../db/users');
 
 const PLANS = {
-  pro: { name: 'Mizan Pro', amount: 2000, blurb: 'The full advisor experience' },   // $20.00 AUD
-  max: { name: 'Mizan Max', amount: 20000, blurb: 'For complex finances' },         // $200.00 AUD
+  pro: { name: 'Maal Pro', amount: 2000, blurb: 'The full advisor experience' },   // $20.00 AUD
+  max: { name: 'Maal Max', amount: 20000, blurb: 'For complex finances' },         // $200.00 AUD
 };
 
 function requireAuth(req, res, next) {
