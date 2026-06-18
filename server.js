@@ -89,7 +89,7 @@ app.get('/internal/radar/run', async (req, res) => {
 // POST /internal/ingest-knowledge?token=<INGEST_SECRET>
 // Fires the RAG ingest pipeline in the background; returns immediately.
 // Watch Render logs for progress. Protected by INGEST_SECRET env var.
-app.post('/internal/ingest-knowledge', (req, res) => {
+app.get('/internal/ingest-knowledge', (req, res) => {
   const secret = (process.env.INGEST_SECRET || '').trim();
   if (!secret || req.query.token !== secret) return res.status(403).json({ error: 'forbidden' });
   // Respond immediately — ingest runs in background (takes several minutes)
