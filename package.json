@@ -6,7 +6,8 @@
     "start": "node server.js",
     "dev": "node server.js",
     "build": "npm run migrate",
-    "migrate": "node migrate.js"
+    "migrate": "node migrate.js",
+    "test": "node test/calc.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
