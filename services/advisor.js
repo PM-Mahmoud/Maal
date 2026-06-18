@@ -109,7 +109,40 @@ function aud(n) {
   return '$' + n.toLocaleString('en-AU', { maximumFractionDigits: 0 });
 }
 
-function buildSystemPrompt(user, profile, maal) {
+// Profile fields the figure-extractor is allowed to fill, mirroring the
+// asset/liability whitelist in public/js/app.js (ASSET_FIELDS).
+const EXTRACT_FIELDS = {
+  cash_savings: 'Cash & savings',
+  super_balance: 'Superannuation balance',
+  investment_portfolio: 'Investments (shares, ETFs, crypto)',
+  property_value: 'Property value',
+  monthly_expenses: 'Monthly spending',
+  hecs_balance: 'HECS-HELP balance',
+  total_debt: 'Other debt (loans, cards)',
+};
+
+// Fold the user's readable Vault documents into the system prompt so the
+// advisor can answer from them. Budgeted so a few large statements can't blow
+// the context window.
+function buildDocsSection(docs) {
+  if (!Array.isArray(docs) || !docs.length) return '';
+  let budget = 8000; // chars across all docs
+  const parts = [];
+  for (let i = 0; i < docs.length && budget > 0; i++) {
+    const d = docs[i] || {};
+    const text = String(d.extracted_text || '').slice(0, budget);
+    if (!text) continue;
+    budget -= text.length;
+    parts.push('--- ' + (d.filename || 'document') + ' ---\n' + text);
+  }
+  if (!parts.length) return '';
+  return '\n\nThe user has uploaded these documents to their Vault. Use them as a ' +
+    'source of truth when answering, and name the document when you draw a figure ' +
+    'or fact from one. Only use what is actually written here — never invent numbers.\n\n' +
+    parts.join('\n\n');
+}
+
+function buildSystemPrompt(user, profile, maal, docs) {
   const p = profile || {};
   const lines = [
     'You are Maal, a warm, sharp CFO-level financial advisor inside the Maal app — the all-in-one for ethical investing, built for Australians.',
@@ -146,7 +179,7 @@ function buildSystemPrompt(user, profile, maal) {
     lines.push(`Their Maal Score (composite financial wellbeing, 0-100) is ${maal.score} (${maal.band}). Pillars: ` +
       maal.pillars.map((pl) => `${pl.label} ${pl.score}/100`).join(', ') + '.');
   }
-  return lines.join('\n');
+  return lines.join('\n') + buildDocsSection(docs);
 }
 
 const FALLBACK_REPLY =
@@ -157,12 +190,52 @@ const FALLBACK_REPLY =
 /**
  * @returns {Promise<string>} the assistant's reply
  */
-async function chat(user, profile, maal, messages) {
+async function chat(user, profile, maal, messages, docs) {
   if (!hasAdvisor()) return FALLBACK_REPLY;
   return complete([
-    { role: 'system', content: buildSystemPrompt(user, profile, maal) },
+    { role: 'system', content: buildSystemPrompt(user, profile, maal, docs) },
     ...messages.slice(-10), // keep context small + cheap
   ], { maxTokens: 600, temperature: 0.6 });
+}
+
+// Read a document's text and pull out profile figures the user can choose to
+// apply. Returns { fields: [{ field, label, amount }] } — only whitelisted
+// fields with finite, non-negative numbers. Never writes anything itself.
+async function extractFigures(text) {
+  if (!hasAdvisor()) return { fields: [], reason: 'ai-unavailable' };
+  const doc = String(text || '').slice(0, 12000);
+  if (!doc.trim()) return { fields: [], reason: 'empty' };
+  const keys = Object.keys(EXTRACT_FIELDS).join(', ');
+  const system =
+    'You extract financial figures from an Australian user\'s document to pre-fill ' +
+    'their profile. Respond with ONLY a JSON object, no prose. Keys MUST come from ' +
+    'this exact list (omit any you cannot find): ' + keys + '. Values are plain AUD ' +
+    'numbers — no $ signs, no commas, no text. Only include a figure the document ' +
+    'clearly states. If nothing is found, return {}.';
+  let raw = '';
+  try {
+    raw = await complete(
+      [{ role: 'system', content: system }, { role: 'user', content: doc }],
+      { maxTokens: 300, temperature: 0 }
+    );
+  } catch (e) {
+    return { fields: [], reason: 'error' };
+  }
+  let parsed = {};
+  try {
+    const m = String(raw || '').match(/\{[\s\S]*\}/);
+    parsed = m ? JSON.parse(m[0]) : {};
+  } catch (e) {
+    parsed = {};
+  }
+  const fields = [];
+  Object.keys(EXTRACT_FIELDS).forEach((key) => {
+    if (!(key in parsed)) return;
+    const amount = Number(String(parsed[key]).replace(/[^0-9.\-]/g, ''));
+    if (!isFinite(amount) || amount < 0) return;
+    fields.push({ field: key, label: EXTRACT_FIELDS[key], amount: Math.round(amount) });
+  });
+  return { fields };
 }
 
 // Low-level completion shared by chat, research and radar. Azure first, then
@@ -179,4 +252,4 @@ async function complete(messages, opts = {}) {
   return completion.choices[0].message.content;
 }
 
-module.exports = { hasAdvisor, chat, complete };
+module.exports = { hasAdvisor, chat, complete, extractFigures };

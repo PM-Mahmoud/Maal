@@ -181,8 +181,8 @@ app.get('/vault', (_req, res, next) => {
   renderInLayout('dashboard-vault', {
     ...base, pageTitle: 'Vault',
     files: [
-      { id: 1, filename: 'ATO-Notice-of-Assessment-2025.pdf', mime: 'application/pdf', size_bytes: 184320, created_at: new Date() },
-      { id: 2, filename: 'AustralianSuper-statement-Q2.pdf', mime: 'application/pdf', size_bytes: 98304, created_at: new Date(Date.now() - 5 * 86400000) },
+      { id: 1, filename: 'ATO-Notice-of-Assessment-2025.pdf', mime: 'application/pdf', size_bytes: 184320, created_at: new Date(), has_text: true },
+      { id: 2, filename: 'AustralianSuper-statement-Q2.pdf', mime: 'application/pdf', size_bytes: 98304, created_at: new Date(Date.now() - 5 * 86400000), has_text: false },
     ],
   }).then(html => res.send(html)).catch(next);
 });
@@ -191,6 +191,16 @@ app.get('/settings', (_req, res, next) => {
     ...base, pageTitle: 'Settings', billingStatus: null, billingPlanName: '',
   }).then(html => res.send(html)).catch(next);
 });
+
+// Mock endpoints so the Vault "Extract figures" flow can be exercised in preview.
+app.post('/dashboard/vault/extract/:id', (_req, res) => {
+  res.json({ ok: true, filename: 'ATO-Notice-of-Assessment-2025.pdf', fields: [
+    { field: 'super_balance', label: 'Superannuation balance', amount: 38250 },
+    { field: 'hecs_balance', label: 'HECS-HELP balance', amount: 41800 },
+    { field: 'cash_savings', label: 'Cash & savings', amount: 18500 },
+  ] });
+});
+app.post('/dashboard/assets/update', (_req, res) => res.json({ ok: true }));
 
 app.use((err, _req, res, _next) => {
   console.error(err);

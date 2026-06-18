@@ -24,6 +24,7 @@ const radarService = require('../services/radar');
 const marketdata = require('../services/marketdata');
 const goalsDb = require('../db/goals');
 const vaultDb = require('../db/vault');
+const { extractText } = require('../services/extract');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const advisor = require('../services/advisor');
@@ -150,7 +151,10 @@ router.post('/ask/message', async (req, res) => {
 
     const { user, profile } = await dashboardContext(req);
     const maal = computeMaalScore(profile);
-    const reply = await advisor.chat(user, profile, maal, clean);
+    let docs = [];
+    try { docs = await vaultDb.getReadableDocs(req.session.userId); }
+    catch (e) { console.error('vault docs for advisor failed:', e.message); }
+    const reply = await advisor.chat(user, profile, maal, clean, docs);
     res.json({ ok: true, reply, live: advisor.hasAdvisor() });
   } catch (err) {
     console.error('ask/message error:', err.message);
@@ -316,17 +320,46 @@ router.post('/vault/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file received.' });
     const kind = req.body.kind === 'statement' ? 'statement' : 'vault';
+    // Pull readable text so Maal can answer from the doc + extract figures.
+    // Best-effort: failure just means the file is stored but not yet readable.
+    let extractedText = '';
+    try { extractedText = await extractText(req.file.buffer, req.file.mimetype, req.file.originalname); }
+    catch (e) { console.error('extract on upload failed:', e.message); }
     const id = await vaultDb.addFile(req.session.userId, {
       kind,
       filename: String(req.file.originalname || 'document').slice(0, 255),
       mime: req.file.mimetype,
       size: req.file.size,
       content: req.file.buffer,
+      extractedText,
     });
-    res.json({ ok: true, id, filename: req.file.originalname, size: req.file.size });
+    res.json({ ok: true, id, filename: req.file.originalname, size: req.file.size, hasText: !!extractedText });
   } catch (err) {
     console.error('vault upload error:', err.message);
     res.status(500).json({ error: 'Upload failed.' });
+  }
+});
+
+// Read a stored document and propose profile figures the user can apply.
+// Returns candidates only — nothing is written until the user confirms via
+// the existing /assets/update endpoint.
+router.post('/vault/extract/:id', async (req, res) => {
+  try {
+    const doc = await vaultDb.getTextById(req.params.id, req.session.userId);
+    if (!doc) return res.status(404).json({ error: 'Document not found.' });
+    if (!doc.extracted_text) {
+      return res.json({ ok: true, fields: [], reason: 'no-text',
+        message: 'Maal could not read text from this file. Scanned or image files need OCR (coming soon) — try a digital PDF, Word or CSV.' });
+    }
+    if (!advisor.hasAdvisor()) {
+      return res.json({ ok: true, fields: [], reason: 'ai-unavailable',
+        message: 'The AI isn’t configured on this server yet, so figures can’t be extracted.' });
+    }
+    const { fields, reason } = await advisor.extractFigures(doc.extracted_text);
+    res.json({ ok: true, fields: fields || [], reason, filename: doc.filename });
+  } catch (err) {
+    console.error('vault extract error:', err.message);
+    res.status(500).json({ error: 'Could not read that document.' });
   }
 });
 

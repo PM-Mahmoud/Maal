@@ -21,10 +21,17 @@
     <% vaultFiles.forEach(function(f) { %>
     <div class="row-item" data-file-row="<%= f.id %>">
       <div style="min-width:0;">
-        <div class="row-main">📄 <a href="/dashboard/vault/file/<%= f.id %>" style="color:var(--fg);"><%= f.filename %></a></div>
+        <div class="row-main">📄 <a href="/dashboard/vault/file/<%= f.id %>" style="color:var(--fg);"><%= f.filename %></a>
+          <% if (f.has_text) { %><span class="chip chip-accent" style="margin-left:0.35rem;">Readable</span><% } %>
+        </div>
         <div class="row-sub"><%= Math.max(1, Math.round(Number(f.size_bytes) / 1024)) %> KB · <%= new Date(f.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) %></div>
       </div>
-      <button class="icon-btn" data-del-file="<%= f.id %>" title="Delete" aria-label="Delete <%= f.filename %>">✕</button>
+      <div style="display:flex; align-items:center; gap:0.4rem; flex-shrink:0;">
+        <% if (f.has_text) { %>
+        <button class="btn btn-ghost btn-sm" data-extract-file="<%= f.id %>" data-filename="<%= f.filename %>">✨ Extract figures</button>
+        <% } %>
+        <button class="icon-btn" data-del-file="<%= f.id %>" title="Delete" aria-label="Delete <%= f.filename %>">✕</button>
+      </div>
     </div>
     <% }); %>
     <% } %>
@@ -36,7 +43,9 @@
       <div style="font-weight:600; font-size:0.95rem;">What is Vault?</div>
       <p style="font-size:0.85rem; color:var(--fg-muted); margin:0.4rem 0 0.8rem; line-height:1.6;">
         Documents you upload become part of Maal's knowledge base, so the education you get reflects your
-        actual situation — statements are read and understood, not just stored.
+        actual situation — statements are read and understood, not just stored. Text-based files (PDF, Word,
+        CSV) are read by Maal's AI to power answers and figure extraction; their text is processed securely
+        and never sold. Scanned or photographed documents aren't readable yet.
       </p>
       <div class="grid-2" style="gap:0.3rem 1.2rem;">
         <div class="check-item done"><span class="check-dot">✓</span> ATO Notices of Assessment</div>

@@ -738,6 +738,66 @@
     });
   });
 
+  /* ─── 9b. Extract figures from a Vault document into the profile ─── */
+  $all('[data-extract-file]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var id = b.getAttribute('data-extract-file');
+      var fname = b.getAttribute('data-filename') || 'document';
+      var orig = b.textContent;
+      b.disabled = true; b.textContent = 'Reading…';
+      fetch('/dashboard/vault/extract/' + id, { method: 'POST' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          b.disabled = false; b.textContent = orig;
+          if (!j.ok) { toast(j.error || 'Could not read that document'); return; }
+          if (!j.fields || !j.fields.length) {
+            toast(j.message || 'No figures found in “' + fname + '”.');
+            return;
+          }
+          extractApplyModal(fname, j.fields);
+        })
+        .catch(function () { b.disabled = false; b.textContent = orig; toast('Could not read that document'); });
+    });
+  });
+
+  // Confirm dialog: user picks which extracted figures to write to their profile.
+  function extractApplyModal(fname, fields) {
+    var rows = fields.map(function (f, i) {
+      return '<label class="field" style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.6rem;">' +
+        '<input type="checkbox" class="mz-xf-on" data-field="' + f.field + '" checked style="width:auto;">' +
+        '<span style="flex:1;">' + escapeHtml(f.label) + '</span>' +
+        '<input type="number" class="mz-xf-amt" data-field="' + f.field + '" value="' + f.amount + '" min="0" style="max-width:140px;">' +
+        '</label>';
+    }).join('');
+    openModal(
+      'Add figures from this document',
+      '<p style="font-size:0.82rem; color:var(--fg-muted); margin:0 0 0.9rem;">Maal read “' + escapeHtml(fname) +
+        '”. Review the figures below and choose which to save to your profile. Nothing is saved until you confirm.</p>' +
+      rows +
+      '<p style="font-size:0.72rem; color:var(--fg-faint); margin:0.3rem 0 0;">Each selected value replaces the current balance for that category.</p>',
+      function (overlay) {
+        var picks = $all('.mz-xf-on', overlay).filter(function (c) { return c.checked; });
+        if (!picks.length) { toast('Tick at least one figure to add'); return false; }
+        var jobs = picks.map(function (c) {
+          var field = c.getAttribute('data-field');
+          var amtEl = overlay.querySelector('.mz-xf-amt[data-field="' + field + '"]');
+          var amount = parseInt(amtEl.value, 10) || 0;
+          return fetch('/dashboard/assets/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ field: field, amount: amount })
+          }).then(function (r) { return r.json(); });
+        });
+        Promise.all(jobs).then(function (results) {
+          var ok = results.filter(function (x) { return x && x.ok; }).length;
+          toast(ok + ' figure' + (ok === 1 ? '' : 's') + ' added to your profile ✓');
+          setTimeout(function () { location.reload(); }, 800);
+        }).catch(function () { toast('Some figures could not be saved'); });
+      },
+      'Add to my profile'
+    );
+  }
+
   /* ─── 10. Settings: notification prefs (server) + delete account ─── */
   if (location.pathname.indexOf('/dashboard/settings') === 0) {
     $all('.switch input[data-notif]').forEach(function (sw) {
