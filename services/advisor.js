@@ -1,79 +1,91 @@
 // services/advisor.js
 // The Maal advisor brain — chat completions via any OpenAI-compatible API.
 //
-// DEFAULT PROVIDER: Groq (https://groq.com) — a US company running open-weight
-// models (Meta's Llama) on US servers. No data routed to China, which keeps
-// things simple for Australian privacy/regulatory peace of mind (Privacy Act
-// APP 8 cross-border disclosure is much easier to reason about with US/EU
-// processors). Very cheap (~US$0.59/M input tokens for Llama 3.3 70B) and has
-// a free tier for testing.
+// ACTIVE PROVIDER: Azure OpenAI (AZURE_OPENAI_ENDPOINT / _API_KEY / _DEPLOYMENT)
+// Supports both classic *.openai.azure.com and Foundry *.services.ai.azure.com.
 //
-// HOW TO SET UP (~2 minutes):
-//   1. Sign up at https://console.groq.com (free)
-//   2. Create an API key
-//   3. On Render: Environment → add GROQ_API_KEY = <key>
-//   4. Redeploy. Ask Maal and the chat widget now answer for real.
+// TWO-TIER MODEL (Phase 3):
+//   cheap tier  — default for all calls. Uses AZURE_OPENAI_DEPLOYMENT (or
+//                 LLM_MODEL_CHEAP if set). Fast, low-cost, good for chat/summaries.
+//   strong tier — opt-in per call via complete(msgs, { tier: 'strong' }). Uses
+//                 LLM_MODEL_STRONG (or falls back to cheap if not set). Route here
+//                 for Monte Carlo narration, portfolio interpretation (Phase 5).
 //
-// SWAPPING PROVIDERS (no code change needed) — set all three env vars:
-//   AI_API_KEY, AI_BASE_URL, AI_MODEL
+// To wire up strong tier: add one env var on Render:
+//   LLM_MODEL_STRONG = <your gpt-4o or other deployment name>
+//
+// FALLBACK PROVIDERS (if no Azure configured) — set all three env vars:
+//   AI_API_KEY, AI_BASE_URL, AI_MODEL (cheap), LLM_MODEL_STRONG (optional)
 // Examples:
-//   Together AI: AI_BASE_URL=https://api.together.xyz/v1   AI_MODEL=meta-llama/Llama-3.3-70B-Instruct-Turbo
-//   Fireworks:   AI_BASE_URL=https://api.fireworks.ai/inference/v1
-//   Mistral(EU): AI_BASE_URL=https://api.mistral.ai/v1     AI_MODEL=mistral-small-latest
-//   DeepSeek:    AI_BASE_URL=https://api.deepseek.com      AI_MODEL=deepseek-chat
-//   HuggingFace: AI_BASE_URL=https://router.huggingface.co/v1
-//                AI_MODEL=meta-llama/Llama-3.3-70B-Instruct  (HF routes to
-//                partner providers at pass-through prices; pin your allowed
-//                providers in HF settings if data routing matters to you)
-//   (DEEPSEEK_API_KEY alone also still works, for backwards compatibility.)
-// For full Australian data residency later: AWS Bedrock in ap-southeast-2
-// (Sydney) hosts Llama/Mistral onshore — bigger setup, revisit when it matters.
+//   Groq:        AI_BASE_URL=https://api.groq.com/openai/v1   AI_MODEL=llama-3.3-70b-versatile
+//   Together AI: AI_BASE_URL=https://api.together.xyz/v1       AI_MODEL=meta-llama/Llama-3.3-70B-Instruct-Turbo
+//   Mistral(EU): AI_BASE_URL=https://api.mistral.ai/v1         AI_MODEL=mistral-small-latest
 
 const OpenAI = require('openai');
 
-// ─── Azure OpenAI (preferred — same resource the user runs for promptdoc) ────
-// Env: AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, AZURE_OPENAI_DEPLOYMENT,
-//      AZURE_OPENAI_API_VERSION (default 2024-10-21).
-// Supports both endpoint shapes (classic *.openai.azure.com and the unified
-// Foundry *.services.ai.azure.com/openai/v1), mirroring promptdoc's adapter.
-function azureConfig() {
+// ─── Azure OpenAI ─────────────────────────────────────────────────────────────
+// tier: 'cheap' (default) | 'strong'
+// Cheap deployment = LLM_MODEL_CHEAP || AZURE_OPENAI_DEPLOYMENT
+// Strong deployment = LLM_MODEL_STRONG || cheap deployment (graceful fallback)
+function azureConfig(tier) {
+  if (tier === undefined) tier = 'cheap';
   const endpoint = (process.env.AZURE_OPENAI_ENDPOINT || '').replace(/\/+$/, '');
   const apiKey = (process.env.AZURE_OPENAI_API_KEY || '').trim();
-  const deployment = (process.env.AZURE_OPENAI_DEPLOYMENT || '').trim();
-  if (!endpoint || !apiKey || !deployment) return null;
+  const baseDeployment = (process.env.AZURE_OPENAI_DEPLOYMENT || '').trim();
+  if (!endpoint || !apiKey || !baseDeployment) return null;
+
+  const cheapDeployment = (process.env.LLM_MODEL_CHEAP || baseDeployment).trim();
+  const strongDeployment = (process.env.LLM_MODEL_STRONG || cheapDeployment).trim();
+  const deployment = tier === 'strong' ? strongDeployment : cheapDeployment;
+
   const apiVersion = process.env.AZURE_OPENAI_API_VERSION || '2024-10-21';
   const useV1 = endpoint.includes('services.ai.azure.com') || endpoint.endsWith('/openai/v1');
-  const v1Base = endpoint.endsWith('/openai/v1') ? endpoint : `${endpoint.replace(/\/openai$/, '')}/openai/v1`;
+  const v1Base = endpoint.endsWith('/openai/v1') ? endpoint : (endpoint.replace(/\/openai$/, '') + '/openai/v1');
+  // Classic endpoint embeds deployment in URL; v1 uses model field in body
   const url = useV1
-    ? `${v1Base}/chat/completions`
-    : `${endpoint}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
-  return { url, apiKey, deployment, useV1 };
+    ? (v1Base + '/chat/completions')
+    : (endpoint + '/openai/deployments/' + deployment + '/chat/completions?api-version=' + apiVersion);
+
+  return { url, apiKey, deployment, useV1, tier };
 }
 
-async function azureChatCompletion(messages, { maxTokens = 600, temperature = 0.6 } = {}) {
-  const cfg = azureConfig();
-  const body = { messages, max_tokens: maxTokens, temperature };
-  if (cfg.useV1) body.model = cfg.deployment; // v1 routes by model; classic by URL
+async function azureChatCompletion(messages, opts) {
+  if (!opts) opts = {};
+  const maxTokens = opts.maxTokens !== undefined ? opts.maxTokens : 600;
+  const temperature = opts.temperature !== undefined ? opts.temperature : 0.6;
+  const tier = opts.tier || 'cheap';
+  const cfg = azureConfig(tier);
+  const body = { messages: messages, max_tokens: maxTokens, temperature: temperature };
+  if (cfg.useV1) body.model = cfg.deployment; // v1 routes by model name
   const res = await fetch(cfg.url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'api-key': cfg.apiKey },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`Azure OpenAI ${res.status}: ${detail.slice(0, 200)}`);
+    const detail = await res.text().catch(function() { return ''; });
+    throw new Error('Azure OpenAI ' + res.status + ' (' + cfg.tier + '/' + cfg.deployment + '): ' + detail.slice(0, 200));
   }
   const json = await res.json();
   return json.choices && json.choices[0] && json.choices[0].message ? json.choices[0].message.content : '';
 }
 
-function providerConfig() {
+// ─── Non-Azure OpenAI-compatible providers ────────────────────────────────────
+function providerConfig(tier) {
+  if (tier === undefined) tier = 'cheap';
+
+  function resolveModel(cheapDefault) {
+    const cheap = (process.env.LLM_MODEL_CHEAP || process.env.AI_MODEL || cheapDefault).trim();
+    const strong = (process.env.LLM_MODEL_STRONG || cheap).trim();
+    return tier === 'strong' ? strong : cheap;
+  }
+
   // 1. Fully custom provider
   if (process.env.AI_API_KEY && process.env.AI_BASE_URL) {
     return {
       apiKey: process.env.AI_API_KEY,
       baseURL: process.env.AI_BASE_URL,
-      model: process.env.AI_MODEL || 'llama-3.3-70b-versatile',
+      model: resolveModel('llama-3.3-70b-versatile'),
     };
   }
   // 2. Groq (US servers, open models, free tier)
@@ -81,7 +93,7 @@ function providerConfig() {
     return {
       apiKey: process.env.GROQ_API_KEY,
       baseURL: 'https://api.groq.com/openai/v1',
-      model: process.env.AI_MODEL || 'llama-3.3-70b-versatile',
+      model: resolveModel('llama-3.3-70b-versatile'),
     };
   }
   // 3. DeepSeek (backwards compatibility)
@@ -89,7 +101,7 @@ function providerConfig() {
     return {
       apiKey: process.env.DEEPSEEK_API_KEY,
       baseURL: 'https://api.deepseek.com',
-      model: 'deepseek-chat',
+      model: resolveModel('deepseek-chat'),
     };
   }
   return null;
@@ -99,8 +111,8 @@ function hasAdvisor() {
   return !!azureConfig() || !!providerConfig();
 }
 
-function getClient() {
-  const cfg = providerConfig();
+function getClient(tier) {
+  const cfg = providerConfig(tier || 'cheap');
   return { client: new OpenAI({ baseURL: cfg.baseURL, apiKey: cfg.apiKey }), model: cfg.model };
 }
 
@@ -109,8 +121,6 @@ function aud(n) {
   return '$' + n.toLocaleString('en-AU', { maximumFractionDigits: 0 });
 }
 
-// Profile fields the figure-extractor is allowed to fill, mirroring the
-// asset/liability whitelist in public/js/app.js (ASSET_FIELDS).
 const EXTRACT_FIELDS = {
   cash_savings: 'Cash & savings',
   super_balance: 'Superannuation balance',
@@ -121,12 +131,9 @@ const EXTRACT_FIELDS = {
   total_debt: 'Other debt (loans, cards)',
 };
 
-// Fold the user's readable Vault documents into the system prompt so the
-// advisor can answer from them. Budgeted so a few large statements can't blow
-// the context window.
 function buildDocsSection(docs) {
   if (!Array.isArray(docs) || !docs.length) return '';
-  let budget = 8000; // chars across all docs
+  let budget = 8000;
   const parts = [];
   for (let i = 0; i < docs.length && budget > 0; i++) {
     const d = docs[i] || {};
@@ -154,53 +161,46 @@ function buildSystemPrompt(user, profile, maal, docs) {
   ];
   if (p.annual_income || p.super_balance || p.investment_portfolio || p.hecs_balance || p.total_debt) {
     lines.push('Their current financial snapshot (from their profile — use it to ground your answers):');
-    if (p.profession) lines.push(`- Profession: ${p.profession}${p.years_in_practice ? ', ' + p.years_in_practice + ' years in practice' : ''}`);
-    if (p.annual_income) lines.push(`- Annual gross income: ${aud(p.annual_income)}`);
-    if (p.super_balance) lines.push(`- Super balance: ${aud(p.super_balance)}`);
-    if (p.investment_portfolio) lines.push(`- Investments (non-super): ${aud(p.investment_portfolio)}`);
-    if (p.property_value) lines.push(`- Property value: ${aud(p.property_value)}`);
-    if (p.hecs_balance) lines.push(`- HECS-HELP balance: ${aud(p.hecs_balance)}`);
-    if (p.total_debt) lines.push(`- Other debt: ${aud(p.total_debt)}`);
+    if (p.profession) lines.push('- Profession: ' + p.profession + (p.years_in_practice ? ', ' + p.years_in_practice + ' years in practice' : ''));
+    if (p.annual_income) lines.push('- Annual gross income: ' + aud(p.annual_income));
+    if (p.super_balance) lines.push('- Super balance: ' + aud(p.super_balance));
+    if (p.investment_portfolio) lines.push('- Investments (non-super): ' + aud(p.investment_portfolio));
+    if (p.property_value) lines.push('- Property value: ' + aud(p.property_value));
+    if (p.hecs_balance) lines.push('- HECS-HELP balance: ' + aud(p.hecs_balance));
+    if (p.total_debt) lines.push('- Other debt: ' + aud(p.total_debt));
     if (p.prefers_halal) lines.push('- Prefers halal-compliant investing (no riba/interest-based products, no prohibited sectors)');
     if (p.prefers_esg) lines.push('- Prefers ESG/ethical investing');
   } else {
     lines.push('They have not added financial data yet — answer generally and suggest adding assets & liabilities in the app for personalised education.');
   }
-  // Soft personalisation fields from the Profile page (onboarding_data JSONB)
   const od = (p && p.onboarding_data) || {};
-  if (od.tax_residency || od.state) lines.push(`- Tax: ${[od.tax_residency, od.state].filter(Boolean).join(', ')}`);
-  if (od.risk_tolerance) lines.push(`- Risk tolerance: ${od.risk_tolerance}${od.experience ? ', ' + od.experience + ' investor' : ''}`);
-  if (od.super_option) lines.push(`- Super invested in: ${od.super_option}`);
+  if (od.tax_residency || od.state) lines.push('- Tax: ' + [od.tax_residency, od.state].filter(Boolean).join(', '));
+  if (od.risk_tolerance) lines.push('- Risk tolerance: ' + od.risk_tolerance + (od.experience ? ', ' + od.experience + ' investor' : ''));
+  if (od.super_option) lines.push('- Super invested in: ' + od.super_option);
   if (od.preferences) {
     lines.push('');
-    lines.push(`The user set these preferences for how you should respond — honour them: "${String(od.preferences).slice(0, 600)}"`);
+    lines.push('The user set these preferences for how you should respond — honour them: "' + String(od.preferences).slice(0, 600) + '"');
   }
   if (maal && maal.hasData) {
-    lines.push(`Their Maal Score (composite financial wellbeing, 0-100) is ${maal.score} (${maal.band}). Pillars: ` +
-      maal.pillars.map((pl) => `${pl.label} ${pl.score}/100`).join(', ') + '.');
+    lines.push('Their Maal Score (composite financial wellbeing, 0-100) is ' + maal.score + ' (' + maal.band + '). Pillars: ' +
+      maal.pillars.map(function(pl) { return pl.label + ' ' + pl.score + '/100'; }).join(', ') + '.');
   }
   return lines.join('\n') + buildDocsSection(docs);
 }
 
 const FALLBACK_REPLY =
-  "I'm not fully switched on yet — the team hasn't connected my brain (an AI API key) in this environment. " +
-  'Once a GROQ_API_KEY is added on the server, I can answer this properly using your real data. ' +
+  "I'm not fully switched on yet — no AI provider is configured in this environment. " +
+  'Add AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, and AZURE_OPENAI_DEPLOYMENT on the server to enable me. ' +
   'In the meantime, try adding your assets and liabilities so your dashboard and Maal Score stay accurate.';
 
-/**
- * @returns {Promise<string>} the assistant's reply
- */
 async function chat(user, profile, maal, messages, docs) {
   if (!hasAdvisor()) return FALLBACK_REPLY;
   return complete([
     { role: 'system', content: buildSystemPrompt(user, profile, maal, docs) },
-    ...messages.slice(-10), // keep context small + cheap
-  ], { maxTokens: 600, temperature: 0.6 });
+    ...messages.slice(-10),
+  ], { maxTokens: 600, temperature: 0.6 }); // chat always uses cheap tier
 }
 
-// Read a document's text and pull out profile figures the user can choose to
-// apply. Returns { fields: [{ field, label, amount }] } — only whitelisted
-// fields with finite, non-negative numbers. Never writes anything itself.
 async function extractFigures(text) {
   if (!hasAdvisor()) return { fields: [], reason: 'ai-unavailable' };
   const doc = String(text || '').slice(0, 12000);
@@ -229,27 +229,30 @@ async function extractFigures(text) {
     parsed = {};
   }
   const fields = [];
-  Object.keys(EXTRACT_FIELDS).forEach((key) => {
+  Object.keys(EXTRACT_FIELDS).forEach(function(key) {
     if (!(key in parsed)) return;
     const amount = Number(String(parsed[key]).replace(/[^0-9.\-]/g, ''));
     if (!isFinite(amount) || amount < 0) return;
     fields.push({ field: key, label: EXTRACT_FIELDS[key], amount: Math.round(amount) });
   });
-  return { fields };
+  return { fields: fields };
 }
 
 // Low-level completion shared by chat, research and radar. Azure first, then
 // any OpenAI-compatible provider. Returns the assistant's text.
-async function complete(messages, opts = {}) {
-  if (azureConfig()) return azureChatCompletion(messages, opts);
-  const { client, model } = getClient();
-  const completion = await client.chat.completions.create({
-    model,
+// opts.tier: 'cheap' (default) | 'strong'
+async function complete(messages, opts) {
+  if (!opts) opts = {};
+  const tier = opts.tier || 'cheap';
+  if (azureConfig(tier)) return azureChatCompletion(messages, Object.assign({}, opts, { tier: tier }));
+  const clientInfo = getClient(tier);
+  const completion = await clientInfo.client.chat.completions.create({
+    model: clientInfo.model,
     max_tokens: opts.maxTokens || 600,
     temperature: opts.temperature != null ? opts.temperature : 0.6,
-    messages,
+    messages: messages,
   });
   return completion.choices[0].message.content;
 }
 
-module.exports = { hasAdvisor, chat, complete, extractFigures };
+module.exports = { hasAdvisor: hasAdvisor, chat: chat, complete: complete, extractFigures: extractFigures };
