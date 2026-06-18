@@ -325,7 +325,7 @@
     total_debt:           'Other debt (loans, cards)'
   };
 
-  function assetModal(preselect, isLiability) {
+  function assetModal(preselect, isLiability, currentValue) {
     var opts = Object.keys(ASSET_FIELDS)
       .filter(function (k) {
         var isDebt = (k === 'hecs_balance' || k === 'total_debt');
@@ -335,9 +335,9 @@
         return '<option value="' + k + '"' + (k === preselect ? ' selected' : '') + '>' + ASSET_FIELDS[k] + '</option>';
       }).join('');
     openModal(
-      isLiability ? 'Add a liability' : 'Add an asset',
+      (currentValue ? (isLiability ? 'Edit liability' : 'Edit asset') : (isLiability ? 'Add a liability' : 'Add an asset')),
       '<div class="field"><label>Category</label><select id="mz-asset-field">' + opts + '</select></div>' +
-      '<div class="field"><label>Current value (AUD)</label><input type="number" id="mz-asset-amount" min="0" step="100" placeholder="e.g. 40000"></div>' +
+      '<div class="field"><label>Current value (AUD)</label><input type="number" id="mz-asset-amount" min="0" step="100" placeholder="e.g. 40000"' + (currentValue ? ' value="' + currentValue + '"' : '') + '></div>' +
       '<p style="font-size:0.75rem;color:var(--fg-faint);margin:0;">This sets the current balance for the category — it updates your dashboard and scores.</p>',
       function (overlay) {
         var amountEl = $('#mz-asset-amount', overlay);
@@ -364,6 +364,32 @@
       e.preventDefault();
       var f = btn.getAttribute('data-add-asset');
       assetModal(f, f === 'hecs_balance' || f === 'total_debt');
+    });
+  });
+
+  $all('[data-edit-asset]').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var f = btn.getAttribute('data-edit-asset');
+      var v = parseInt(btn.getAttribute('data-edit-value'), 10) || 0;
+      assetModal(f, f === 'hecs_balance' || f === 'total_debt', v);
+    });
+  });
+
+  $all('[data-remove-asset]').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var f = btn.getAttribute('data-remove-asset');
+      var label = ASSET_FIELDS[f] || f;
+      if (!confirm('Remove ' + label + ' from your portfolio? This clears the value — you can re-add it anytime.')) return;
+      fetch('/dashboard/assets/remove', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ field: f })
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        if (j.ok) { toast(label + ' removed'); setTimeout(function () { location.reload(); }, 700); }
+        else toast(j.error || 'Could not remove');
+      }).catch(function () { toast('Could not remove — please try again'); });
     });
   });
 

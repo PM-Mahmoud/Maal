@@ -515,6 +515,22 @@ router.post('/assets/update', async (req, res) => {
   }
 });
 
+// ─── API: clear/remove a manual asset or liability field ─────────────────────
+router.post('/assets/remove', async (req, res) => {
+  try {
+    const { field } = req.body;
+    if (!ASSET_FIELDS.includes(field)) return res.status(400).json({ error: 'Unknown field.' });
+
+    const existing = (await getProfileByUserId(req.session.userId)) || {};
+    const merged = { ...existing, [field]: null };
+    await updateProfile(req.session.userId, merged);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('assets/remove error:', err.message);
+    res.status(500).json({ error: 'Failed to remove.' });
+  }
+});
+
 // ─── API: persist a notification preference toggle ───────────────────────────
 
 const NOTIFICATION_KEYS = ['portfolio_summary', 'market_alerts', 'research_reports', 'spending_alerts', 'score_changes', 'product_updates'];

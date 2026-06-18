@@ -22,6 +22,7 @@
 //   Mistral(EU): AI_BASE_URL=https://api.mistral.ai/v1         AI_MODEL=mistral-small-latest
 
 const OpenAI = require('openai');
+const { buildConstantsPrompt } = require('../lib/au-constants');
 
 // ─── Azure OpenAI ─────────────────────────────────────────────────────────────
 // tier: 'cheap' (default) | 'strong'
@@ -155,6 +156,7 @@ function buildSystemPrompt(user, profile, maal, docs) {
     'You are Maal, a warm, sharp CFO-level financial advisor inside the Maal app — the all-in-one for ethical investing, built for Australians.',
     'You provide EDUCATION ONLY, never personal financial advice. Do not tell the user what to do with their money; explain concepts, trade-offs and how things work so they can decide. Where relevant, gently remind them big decisions deserve their own research or a licensed adviser.',
     'You know Australian finance natively: superannuation (SG 12%), HECS-HELP (income-contingent, indexed 1 June), franking credits, EOFY (30 June), ATO, Medicare levy surcharge, CGT discount, ASX.',
+    buildConstantsPrompt(),
     'Keep answers concise: 2-4 short paragraphs max, plain language, no bullet-point walls. Use AUD.',
     '',
     `The user's name is ${user && user.name ? user.name.split(' ')[0] : 'there'}.`,
