@@ -85,6 +85,27 @@ app.get('/internal/radar/run', async (req, res) => {
   }
 });
 
+// ─── Knowledge ingest trigger (one-time HTTP trigger, no shell needed) ─────
+// POST /internal/ingest-knowledge?token=<INGEST_SECRET>
+// Fires the RAG ingest pipeline in the background; returns immediately.
+// Watch Render logs for progress. Protected by INGEST_SECRET env var.
+app.post('/internal/ingest-knowledge', (req, res) => {
+  const secret = (process.env.INGEST_SECRET || '').trim();
+  if (!secret || req.query.token !== secret) return res.status(403).json({ error: 'forbidden' });
+  // Respond immediately — ingest runs in background (takes several minutes)
+  res.json({ ok: true, message: 'Ingest started — watch Render logs for progress' });
+  // Fire-and-forget: run after response is flushed
+  setImmediate(async () => {
+    try {
+      const { runIngest } = require('./scripts/ingest-knowledge');
+      await runIngest({ verbose: true });
+      console.log('[ingest] Knowledge base ingest completed successfully');
+    } catch (e) {
+      console.error('[ingest] Knowledge base ingest failed:', e.message);
+    }
+  });
+});
+
 // ─── Static assets ────────────────────────────────────────────────────────
 
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));

@@ -102,7 +102,7 @@ async function main() {
     batchSize: 16,
     onProgress: (done, total) => {
       if (done % 16 === 0 || done === total) {
-        process.stdout.write(`\r  ${done}/${total} chunks embedded`);
+        console.log(`  ${done}/${total} chunks embedded`);
       }
     },
   });
@@ -133,7 +133,7 @@ async function main() {
         updated_at = NOW()
     `, [r.slug, r.title, r.chunkIndex, r.content, embedding, r.source, r.category, r.region, r.tags]);
     upserted++;
-    if (upserted % 20 === 0) process.stdout.write(`\r  ${upserted}/${records.length} rows upserted`);
+    if (upserted % 20 === 0) console.log(`  ${upserted}/${records.length} rows upserted`);
   }
   console.log(`\n${upserted} chunks upserted into knowledge_chunks.`);
 
@@ -153,4 +153,13 @@ async function main() {
   console.log('\nDone.');
 }
 
-main().catch(err => { console.error(err); process.exit(1); });
+async function runIngest(opts = {}) {
+  return main();
+}
+
+// Run directly: node scripts/ingest-knowledge.js [--dry-run]
+if (require.main === module) {
+  main().catch(err => { console.error(err); process.exit(1); });
+}
+
+module.exports = { runIngest };
