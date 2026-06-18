@@ -325,6 +325,58 @@
     total_debt:           'Other debt (loans, cards)'
   };
 
+  // ── Live score refresh: updates ring + pillars without page reload ──────────
+  function refreshMaalScore() {
+    fetch('/dashboard/api/maal-score')
+      .then(function (r) { return r.json(); })
+      .then(function (s) {
+        if (!s.ok) return;
+        // Ring number + arc
+        var ringNum = document.getElementById('score-ring-num');
+        var ringMeter = document.getElementById('score-ring-meter');
+        if (ringNum) ringNum.textContent = s.score;
+        if (ringMeter) {
+          var arc = Math.round((s.score / 100) * 264);
+          ringMeter.setAttribute('stroke-dasharray', arc + ' 264');
+          ringMeter.classList.toggle('warn', s.score < 50);
+        }
+        // Pillar bars + scores
+        (s.pillars || []).forEach(function (pl) {
+          var bar = document.getElementById('pillar-bar-' + pl.key);
+          var scoreEl = document.getElementById('pillar-score-' + pl.key);
+          if (bar) { bar.style.width = pl.score + '%'; bar.style.background = pl.score < 40 ? 'var(--warn)' : ''; }
+          if (scoreEl) scoreEl.textContent = pl.score;
+        });
+      })
+      .catch(function () {});
+  }
+
+  // ── In-place DOM update after save/remove ────────────────────────────────
+  var TILE_IDS = {
+    investment_portfolio: 'ov-tile-invest',
+    cash_savings:         'ov-tile-cash',
+    super_balance:        null,
+    property_value:       null,
+  };
+  var DEBT_FIELDS = { hecs_balance: true, total_debt: true };
+
+  function updateTileValues(field, newVal) {
+    var fmt = newVal > 0 ? '$' + Math.round(newVal).toLocaleString('en-AU') : '$0';
+    // Main stat tile
+    var tileId = TILE_IDS[field];
+    if (tileId) {
+      var tile = document.getElementById(tileId);
+      if (tile) tile.textContent = fmt;
+    }
+    // Breakdown row value
+    var rowVal = document.getElementById('ov-val-' + field);
+    if (rowVal) rowVal.textContent = fmt;
+    // Update edit-value attr on edit buttons so next open shows correct value
+    document.querySelectorAll('[data-edit-asset="' + field + '"]').forEach(function (b) {
+      b.setAttribute('data-edit-value', newVal || 0);
+    });
+  }
+
   function assetModal(preselect, isLiability, currentValue) {
     var opts = Object.keys(ASSET_FIELDS)
       .filter(function (k) {
@@ -338,7 +390,7 @@
       (currentValue ? (isLiability ? 'Edit liability' : 'Edit asset') : (isLiability ? 'Add a liability' : 'Add an asset')),
       '<div class="field"><label>Category</label><select id="mz-asset-field">' + opts + '</select></div>' +
       '<div class="field"><label>Current value (AUD)</label><input type="number" id="mz-asset-amount" min="0" step="100" placeholder="e.g. 40000"' + (currentValue ? ' value="' + currentValue + '"' : '') + '></div>' +
-      '<p style="font-size:0.75rem;color:var(--fg-faint);margin:0;">This sets the current balance for the category — it updates your dashboard and scores.</p>',
+      '<p style="font-size:0.75rem;color:var(--fg-faint);margin:0;">Updates your dashboard and Maal Score instantly.</p>',
       function (overlay) {
         var amountEl = $('#mz-asset-amount', overlay);
         clearFieldError(amountEl);
@@ -350,8 +402,13 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ field: field, amount: amount })
         }).then(function (r) { return r.json(); }).then(function (j) {
-          if (j.ok) { toast('Saved — ' + ASSET_FIELDS[field] + ' set to ' + audFmt(amount)); setTimeout(function () { location.reload(); }, 700); }
-          else toast(j.error || 'Could not save');
+          if (j.ok) {
+            toast(ASSET_FIELDS[field] + ' updated to ' + audFmt(amount));
+            updateTileValues(field, amount);
+            refreshMaalScore();
+            // Full reload only if we're not on the overview (other pages need server data)
+            if (!document.getElementById('score-ring-meter')) setTimeout(function () { location.reload(); }, 800);
+          } else { toast(j.error || 'Could not save'); }
         }).catch(function () { toast('Could not save — are you online?'); });
       },
       'Save'
@@ -381,14 +438,18 @@
       e.stopPropagation();
       var f = btn.getAttribute('data-remove-asset');
       var label = ASSET_FIELDS[f] || f;
-      if (!confirm('Remove ' + label + ' from your portfolio? This clears the value — you can re-add it anytime.')) return;
+      if (!confirm('Clear ' + label + '? You can re-add it anytime.')) return;
       fetch('/dashboard/assets/remove', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ field: f })
       }).then(function (r) { return r.json(); }).then(function (j) {
-        if (j.ok) { toast(label + ' removed'); setTimeout(function () { location.reload(); }, 700); }
-        else toast(j.error || 'Could not remove');
+        if (j.ok) {
+          toast(label + ' cleared');
+          updateTileValues(f, 0);
+          refreshMaalScore();
+          if (!document.getElementById('score-ring-meter')) setTimeout(function () { location.reload(); }, 800);
+        } else { toast(j.error || 'Could not remove'); }
       }).catch(function () { toast('Could not remove — please try again'); });
     });
   });

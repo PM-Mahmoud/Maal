@@ -70,11 +70,11 @@
     <svg class="sparkline" id="spark-networth" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
   </div>
   <div class="panel stat-card" data-trend="invest" data-trend-label="Investments" tabindex="0" role="button" title="View trend">
-    <div class="stat-label">Investments <span class="chip chip-muted range-chip">1M</span>
+    <div class="stat-label" id="ov-label-invest">Investments <span class="chip chip-muted range-chip">1M</span>
       <button class="tile-edit-btn" data-edit-asset="investment_portfolio" data-edit-value="<%= investBal %>" title="Edit" onclick="event.stopPropagation()">✎</button>
       <% if (investBal > 0) { %><button class="tile-edit-btn tile-edit-btn--remove" data-remove-asset="investment_portfolio" title="Clear" onclick="event.stopPropagation()">✕</button><% } %>
     </div>
-    <div class="stat-value"><%= aud(investBal) %></div>
+    <div class="stat-value" id="ov-tile-invest"><%= aud(investBal) %></div>
     <div class="stat-delta" data-delta="invest"><%= investBal > 0 ? 'Across your portfolios' : 'No investments added yet' %></div>
     <svg class="sparkline" id="spark-invest" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
   </div>
@@ -83,7 +83,7 @@
       <button class="tile-edit-btn" data-edit-asset="cash_savings" data-edit-value="<%= cashBal %>" title="Edit" onclick="event.stopPropagation()">✎</button>
       <% if (cashBal > 0) { %><button class="tile-edit-btn tile-edit-btn--remove" data-remove-asset="cash_savings" title="Clear" onclick="event.stopPropagation()">✕</button><% } %>
     </div>
-    <div class="stat-value"><%= aud(cashBal) %></div>
+    <div class="stat-value" id="ov-tile-cash"><%= aud(cashBal) %></div>
     <div class="stat-delta" data-delta="cash"><%= cashBal > 0 ? (runwayMonths ? runwayMonths + ' months of runway' : 'Set monthly spend for runway') : 'Add cash & savings' %></div>
     <svg class="sparkline" id="spark-cash" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
   </div>
@@ -92,7 +92,7 @@
       <button class="tile-edit-btn" data-edit-asset="hecs_balance" data-edit-value="<%= hecs %>" title="Edit HECS" onclick="event.stopPropagation()">✎</button>
       <% if (totalDebts > 0) { %><button class="tile-edit-btn tile-edit-btn--remove" data-remove-asset="hecs_balance" title="Clear HECS" onclick="event.stopPropagation()">✕</button><% } %>
     </div>
-    <div class="stat-value"><%= aud(totalDebts) %></div>
+    <div class="stat-value" id="ov-tile-debts"><%= aud(totalDebts) %></div>
     <div class="stat-delta" data-delta="debts"><%= totalDebts > 0 ? 'HECS indexation applies 1 June' : 'No liabilities recorded' %></div>
     <svg class="sparkline" id="spark-debts" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
   </div>
@@ -115,8 +115,8 @@
     <div class="col-4" style="display:flex; align-items:center; gap:1.3rem;">
       <svg class="ring" viewBox="0 0 100 100" style="width:110px; height:110px;">
         <circle class="track" cx="50" cy="50" r="42"/>
-        <circle class="meter <%= mz.score < 50 && mz.hasData ? 'warn' : '' %>" cx="50" cy="50" r="42" stroke-dasharray="<%= Math.round((mz.hasData ? mz.score : 0)/100*264) %> 264"/>
-        <text class="ring-num" x="50" y="47" text-anchor="middle" dominant-baseline="central" style="font-size:1.5rem;"><%= mz.hasData ? mz.score : '—' %></text>
+        <circle id="score-ring-meter" class="meter <%= mz.score < 50 && mz.hasData ? 'warn' : '' %>" cx="50" cy="50" r="42" stroke-dasharray="<%= Math.round((mz.hasData ? mz.score : 0)/100*264) %> 264"/>
+        <text id="score-ring-num" class="ring-num" x="50" y="47" text-anchor="middle" dominant-baseline="central" style="font-size:1.5rem;"><%= mz.hasData ? mz.score : '—' %></text>
         <text class="ring-sub" x="50" y="68" text-anchor="middle">of 100</text>
       </svg>
       <div>
@@ -137,9 +137,9 @@
         <div style="flex:1;">
           <div class="row-main" style="display:flex; justify-content:space-between;">
             <span><%= pl.label %> <span style="color:var(--fg-faint); font-weight:400; font-size:0.72rem;"><%= Math.round(pl.weight*100) %>%</span></span>
-            <span><%= mz.hasData ? pl.score : '—' %></span>
+            <span id="pillar-score-<%= pl.key %>"><%= mz.hasData ? pl.score : '—' %></span>
           </div>
-          <div class="bar-track"><div class="bar-fill <%= pl.score < 40 ? '' : '' %>" style="width:<%= mz.hasData ? pl.score : 0 %>%; <%= pl.score < 40 ? 'background:var(--warn);' : '' %>"></div></div>
+          <div class="bar-track"><div id="pillar-bar-<%= pl.key %>" class="bar-fill" style="width:<%= mz.hasData ? pl.score : 0 %>%; <%= pl.score < 40 ? 'background:var(--warn);' : '' %>"></div></div>
           <div class="row-sub" style="margin-top:0.2rem;"><%= pl.note %></div>
         </div>
       </div>
@@ -185,13 +185,13 @@
     <div class="panel-title">Assets <span class="more"><%= aud(totalAssets) %></span></div>
     <% if (totalAssets > 0) { %>
       <% if (superBal > 0) { %>
-      <div class="row-item"><div><div class="row-main">Superannuation</div><div class="bar-track" style="width:140px;"><div class="bar-fill" style="width:<%= Math.round(superBal/totalAssets*100) %>%;"></div></div></div><div class="row-val"><%= aud(superBal) %></div></div>
+      <div class="row-item"><div><div class="row-main">Superannuation</div><div class="bar-track" style="width:140px;"><div class="bar-fill" style="width:<%= Math.round(superBal/totalAssets*100) %>%;"></div></div></div><div class="row-val" id="ov-val-super_balance"><%= aud(superBal) %></div><div class="row-actions"><button class="tile-edit-btn" style="display:inline-block;" data-edit-asset="super_balance" data-edit-value="<%= superBal %>">✎</button><button class="tile-edit-btn tile-edit-btn--remove" style="display:inline-block;" data-remove-asset="super_balance">✕</button></div></div>
       <% } %>
       <% if (investBal > 0) { %>
-      <div class="row-item"><div><div class="row-main">Investments</div><div class="bar-track" style="width:140px;"><div class="bar-fill" style="width:<%= Math.round(investBal/totalAssets*100) %>%;"></div></div></div><div class="row-val"><%= aud(investBal) %></div></div>
+      <div class="row-item"><div><div class="row-main">Investments</div><div class="bar-track" style="width:140px;"><div class="bar-fill" style="width:<%= Math.round(investBal/totalAssets*100) %>%;"></div></div></div><div class="row-val" id="ov-val-investment_portfolio"><%= aud(investBal) %></div><div class="row-actions"><button class="tile-edit-btn" style="display:inline-block;" data-edit-asset="investment_portfolio" data-edit-value="<%= investBal %>">✎</button><button class="tile-edit-btn tile-edit-btn--remove" style="display:inline-block;" data-remove-asset="investment_portfolio">✕</button></div></div>
       <% } %>
       <% if (propertyV > 0) { %>
-      <div class="row-item"><div><div class="row-main">Property</div><div class="bar-track" style="width:140px;"><div class="bar-fill" style="width:<%= Math.round(propertyV/totalAssets*100) %>%;"></div></div></div><div class="row-val"><%= aud(propertyV) %></div></div>
+      <div class="row-item"><div><div class="row-main">Property</div><div class="bar-track" style="width:140px;"><div class="bar-fill" style="width:<%= Math.round(propertyV/totalAssets*100) %>%;"></div></div></div><div class="row-val" id="ov-val-property_value"><%= aud(propertyV) %></div><div class="row-actions"><button class="tile-edit-btn" style="display:inline-block;" data-edit-asset="property_value" data-edit-value="<%= propertyV %>">✎</button><button class="tile-edit-btn tile-edit-btn--remove" style="display:inline-block;" data-remove-asset="property_value">✕</button></div></div>
       <% } %>
     <% } else { %>
       <div class="empty"><h3>No assets yet</h3><p>Add your super, savings, shares or property.</p><button class="btn btn-accent btn-sm" data-add-asset="investment_portfolio">+ Add Asset</button></div>
@@ -202,10 +202,10 @@
     <div class="panel-title">Liabilities <span class="more"><%= aud(totalDebts) %></span></div>
     <% if (totalDebts > 0) { %>
       <% if (hecs > 0) { %>
-      <div class="row-item"><div class="row-main">HECS-HELP</div><div class="row-val"><%= aud(hecs) %></div></div>
+      <div class="row-item"><div class="row-main">HECS-HELP</div><div class="row-val" id="ov-val-hecs_balance"><%= aud(hecs) %></div><div class="row-actions"><button class="tile-edit-btn" style="display:inline-block;" data-edit-asset="hecs_balance" data-edit-value="<%= hecs %>">✎</button><button class="tile-edit-btn tile-edit-btn--remove" style="display:inline-block;" data-remove-asset="hecs_balance">✕</button></div></div>
       <% } %>
       <% if (otherDebt > 0) { %>
-      <div class="row-item"><div class="row-main">Other debt</div><div class="row-val"><%= aud(otherDebt) %></div></div>
+      <div class="row-item"><div class="row-main">Other debt</div><div class="row-val" id="ov-val-total_debt"><%= aud(otherDebt) %></div><div class="row-actions"><button class="tile-edit-btn" style="display:inline-block;" data-edit-asset="total_debt" data-edit-value="<%= otherDebt %>">✎</button><button class="tile-edit-btn tile-edit-btn--remove" style="display:inline-block;" data-remove-asset="total_debt">✕</button></div></div>
       <% } %>
     <% } else { %>
       <div class="empty"><h3>No liabilities</h3><p>Track HECS, mortgages, cards and loans here.</p><button class="btn btn-danger-soft btn-sm" data-add-asset="hecs_balance">+ Add Liability</button></div>

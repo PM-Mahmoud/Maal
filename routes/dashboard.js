@@ -107,6 +107,22 @@ async function autoRecalcScores(userId, profile) {
   }
 }
 
+
+// ─── API: live Maal Score (no reload needed) ────────────────────────────────
+router.get('/api/maal-score', async (req, res) => {
+  try {
+    const profile = await getProfileByUserId(req.session.userId);
+    const { profile: effectiveProfile } = buildEffectiveProfile(
+      profile,
+      await getAccountsByUserId(req.session.userId).catch(() => [])
+    );
+    const score = computeMaalScore(effectiveProfile);
+    res.json({ ok: true, ...score });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 router.get('/', async (req, res) => {
   try {
     const { user, profile: rawProfile, session } = await dashboardContext(req);
