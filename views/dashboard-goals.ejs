@@ -34,7 +34,7 @@
   <div class="panel goal-card" data-goal-type="<%= g.type %>" style="margin-bottom:0.8rem;">
     <div class="panel-title">
       <span><%= g.name %> <span class="chip chip-accent"><%= g.type %></span></span>
-      <button class="icon-btn" data-del-goal="<%= g.id %>" title="Delete">✕</button>
+      <button class="icon-btn" data-del-goal="<%= g.id %>" title="Delete" aria-label="Delete goal <%= g.name %>">✕</button>
     </div>
     <div class="row-item" style="border:none; padding:0.2rem 0;">
       <div class="row-sub"><%= aud(g.current) %> of <%= aud(g.target) %></div>

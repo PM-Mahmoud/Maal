@@ -24,7 +24,7 @@
         <div class="row-main">📄 <a href="/dashboard/vault/file/<%= f.id %>" style="color:var(--fg);"><%= f.filename %></a></div>
         <div class="row-sub"><%= Math.max(1, Math.round(Number(f.size_bytes) / 1024)) %> KB · <%= new Date(f.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) %></div>
       </div>
-      <button class="icon-btn" data-del-file="<%= f.id %>" title="Delete">✕</button>
+      <button class="icon-btn" data-del-file="<%= f.id %>" title="Delete" aria-label="Delete <%= f.filename %>">✕</button>
     </div>
     <% }); %>
     <% } %>

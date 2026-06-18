@@ -33,6 +33,43 @@
     return '$' + n.toLocaleString('en-AU', { maximumFractionDigits: 0 });
   }
 
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /* Inline form validation: per-field error text + aria-invalid (replaces
+     toast-only feedback so the message sits next to the bad field and is
+     announced to screen readers). */
+  function setFieldError(inputEl, message) {
+    if (!inputEl) return;
+    inputEl.setAttribute('aria-invalid', 'true');
+    inputEl.classList.add('input-error');
+    var field = inputEl.closest('.field') || inputEl.parentNode;
+    var err = field.querySelector('.field-error');
+    if (!err) {
+      err = document.createElement('div');
+      err.className = 'field-error';
+      err.setAttribute('aria-live', 'polite');
+      field.appendChild(err);
+    }
+    err.textContent = message;
+    // Drop the error as soon as the user starts fixing the field.
+    inputEl.addEventListener('input', function clear() {
+      clearFieldError(inputEl);
+      inputEl.removeEventListener('input', clear);
+    });
+  }
+  function clearFieldError(inputEl) {
+    if (!inputEl) return;
+    inputEl.removeAttribute('aria-invalid');
+    inputEl.classList.remove('input-error');
+    var field = inputEl.closest('.field') || inputEl.parentNode;
+    var err = field && field.querySelector('.field-error');
+    if (err) err.remove();
+  }
+
   /* Simple modal factory (one at a time) */
   function openModal(title, bodyHTML, onSubmit, submitLabel) {
     closeModal();
@@ -65,11 +102,15 @@
 
   /* ─── 1. Generic tab toggling (all .tabs groups) ──────── */
   $all('.tabs').forEach(function (group) {
+    $all('.tab', group).forEach(function (x) {
+      x.setAttribute('aria-pressed', x.classList.contains('active') ? 'true' : 'false');
+    });
     group.addEventListener('click', function (e) {
       var t = e.target.closest('.tab');
       if (!t || !group.contains(t)) return;
-      $all('.tab', group).forEach(function (x) { x.classList.remove('active'); });
+      $all('.tab', group).forEach(function (x) { x.classList.remove('active'); x.setAttribute('aria-pressed', 'false'); });
       t.classList.add('active');
+      t.setAttribute('aria-pressed', 'true');
       group.dispatchEvent(new CustomEvent('tabchange', { detail: t.textContent.trim() }));
     });
   });
@@ -201,7 +242,7 @@
       '<div class="trend-head">' +
         '<div><div class="trend-title">' + cfg.label + '</div><div class="trend-now">' + nowVal + '</div></div>' +
         '<div class="tabs trend-range">' +
-          ['1M', '3M', '1Y', 'All'].map(function (r) { return '<button class="tab' + (r === range ? ' active' : '') + '">' + r + '</button>'; }).join('') +
+          ['1M', '3M', '1Y', 'All'].map(function (r) { return '<button class="tab' + (r === range ? ' active' : '') + '" aria-pressed="' + (r === range ? 'true' : 'false') + '">' + r + '</button>'; }).join('') +
         '</div>' +
       '</div>' +
       '<div class="trend-body"></div>' +
@@ -245,8 +286,9 @@
     rangeBox.addEventListener('click', function (e) {
       var t = e.target.closest('.tab');
       if (!t) return;
-      $all('.tab', rangeBox).forEach(function (x) { x.classList.remove('active'); });
+      $all('.tab', rangeBox).forEach(function (x) { x.classList.remove('active'); x.setAttribute('aria-pressed', 'false'); });
       t.classList.add('active');
+      t.setAttribute('aria-pressed', 'true');
       render(t.textContent.trim());
     });
     function close() { overlay.remove(); document.removeEventListener('keydown', esc); }
@@ -298,9 +340,11 @@
       '<div class="field"><label>Current value (AUD)</label><input type="number" id="mz-asset-amount" min="0" step="100" placeholder="e.g. 40000"></div>' +
       '<p style="font-size:0.75rem;color:var(--fg-faint);margin:0;">This sets the current balance for the category — it updates your dashboard and scores.</p>',
       function (overlay) {
+        var amountEl = $('#mz-asset-amount', overlay);
+        clearFieldError(amountEl);
         var field = $('#mz-asset-field', overlay).value;
-        var amount = parseInt($('#mz-asset-amount', overlay).value, 10);
-        if (isNaN(amount) || amount < 0) { toast('Enter a valid amount'); return false; }
+        var amount = parseInt(amountEl.value, 10);
+        if (isNaN(amount) || amount < 0) { setFieldError(amountEl, 'Enter a valid amount (0 or more).'); amountEl.focus(); return false; }
         fetch('/dashboard/assets/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -361,9 +405,14 @@
         '<div class="field"><label>Target amount (AUD)</label><input type="number" id="mz-goal-target" min="1" placeholder="e.g. 10000"></div>' +
         '<div class="field"><label>Saved so far (AUD)</label><input type="number" id="mz-goal-current" min="0" value="0"></div>',
         function (o) {
-          var name = $('#mz-goal-name', o).value.trim();
-          var target = parseInt($('#mz-goal-target', o).value, 10);
-          if (!name || isNaN(target) || target <= 0) { toast('Add a name and target'); return false; }
+          var nameEl = $('#mz-goal-name', o), targetEl = $('#mz-goal-target', o);
+          clearFieldError(nameEl); clearFieldError(targetEl);
+          var name = nameEl.value.trim();
+          var target = parseInt(targetEl.value, 10);
+          var firstBad = null;
+          if (!name) { setFieldError(nameEl, 'Goal name is required.'); firstBad = firstBad || nameEl; }
+          if (isNaN(target) || target <= 0) { setFieldError(targetEl, 'Target amount is required.'); firstBad = firstBad || targetEl; }
+          if (firstBad) { firstBad.focus(); return false; }
           fetch('/dashboard/goals', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -495,8 +544,10 @@
     return function send(text) {
       bubble('user', text);
       history.push({ role: 'user', content: text });
-      var typing = bubble('assistant', '…');
+      var typing = bubble('assistant', 'Maal is thinking…');
       typing.style.opacity = '0.6';
+      typing.setAttribute('role', 'status');
+      typing.setAttribute('aria-live', 'polite');
       fetch('/dashboard/ask/message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -696,7 +747,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ key: sw.getAttribute('data-notif'), value: sw.checked })
         }).then(function (r) { return r.json(); }).then(function (j) {
-          if (j.ok) toast(sw.checked ? 'Notification on' : 'Notification off');
+          if (j.ok) toast(sw.checked ? 'Saved ✓ Notification on' : 'Saved ✓ Notification off');
           else { sw.checked = !sw.checked; toast(j.error || 'Could not save'); }
         }).catch(function () { sw.checked = !sw.checked; toast('Could not save preference'); });
       });
@@ -803,12 +854,34 @@
     // Filter the nearest following .inst-grid by institution name
     var grid = input.closest('.panel') ? input.closest('.panel').querySelector('.inst-grid') : null;
     if (!grid) return;
+    var msg = document.createElement('div');
+    msg.className = 'inst-empty';
+    msg.setAttribute('aria-live', 'polite');
+    msg.style.display = 'none';
+    grid.parentNode.insertBefore(msg, grid.nextSibling);
     input.addEventListener('input', function () {
       var q = input.value.trim().toLowerCase();
+      var shown = 0;
       $all('.inst', grid).forEach(function (tile) {
         var name = ((tile.querySelector('.inst-name') || {}).textContent || '').toLowerCase();
-        tile.style.display = (!q || name.indexOf(q) !== -1) ? '' : 'none';
+        var match = (!q || name.indexOf(q) !== -1);
+        tile.style.display = match ? '' : 'none';
+        if (match) shown++;
       });
+      if (q && shown === 0) {
+        msg.innerHTML = 'No institutions found for &ldquo;' + escapeHtml(input.value.trim()) +
+          '&rdquo;. <button type="button" class="btn btn-ghost btn-sm" data-inst-clear>Clear search</button>';
+        msg.style.display = '';
+      } else {
+        msg.style.display = 'none';
+      }
+    });
+    msg.addEventListener('click', function (e) {
+      if (e.target.closest('[data-inst-clear]')) {
+        input.value = '';
+        input.dispatchEvent(new Event('input'));
+        input.focus();
+      }
     });
   });
 

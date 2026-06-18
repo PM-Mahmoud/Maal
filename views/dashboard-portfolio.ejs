@@ -341,7 +341,7 @@
       </p>
     </div>
 
-    <button type="submit" class="btn-primary" style="width:100%;padding:0.8rem;font-size:0.9rem;">
+    <button type="submit" id="portfolio-submit" class="btn-primary" style="width:100%;padding:0.8rem;font-size:0.9rem;">
       Build my portfolio →
     </button>
 
@@ -369,7 +369,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // Form validation
+  // Form validation + submit loading state
   document.getElementById('portfolio-form').addEventListener('submit', function(e) {
     const age = document.getElementById('age').value.trim();
     if (!age || isNaN(parseInt(age)) || parseInt(age) < 18 || parseInt(age) > 80) {
@@ -377,7 +377,11 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('age').focus();
       document.getElementById('age').style.borderColor = 'rgba(224,112,112,0.6)';
       setTimeout(function() { document.getElementById('age').style.borderColor = ''; }, 2000);
+      return;
     }
+    // Valid — show a loading state so a server cold-start doesn't look frozen.
+    var btn = document.getElementById('portfolio-submit');
+    if (btn) { btn.disabled = true; btn.textContent = 'Building your portfolio…'; }
   });
 });
 </script>

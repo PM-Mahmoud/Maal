@@ -750,3 +750,12 @@ body.app-body::before {
 .tf-legend { display: flex; gap: 1.2rem; flex-wrap: wrap; font-size: 0.8rem; font-weight: 500; margin-top: 0.55rem; }
 .tf-legend .up { color: var(--accent-strong); }
 .tf-legend .down { color: var(--gold); }
+
+/* Inline form validation + search empty state (Tier 1 QA fixes) */
+.field-error { color: var(--danger); font-size: 0.75rem; margin-top: 0.3rem; line-height: 1.4; }
+input.input-error, select.input-error, textarea.input-error { border-color: var(--danger); }
+input.input-error:focus, select.input-error:focus, textarea.input-error:focus {
+  outline: none; box-shadow: 0 0 0 3px var(--danger-soft);
+}
+.inst-empty { text-align: center; color: var(--fg-muted); padding: 1rem; font-size: 0.85rem; line-height: 1.6; }
+.inst-empty .btn { margin-left: 0.4rem; vertical-align: baseline; }
