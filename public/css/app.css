@@ -759,3 +759,58 @@ input.input-error:focus, select.input-error:focus, textarea.input-error:focus {
 }
 .inst-empty { text-align: center; color: var(--fg-muted); padding: 1rem; font-size: 0.85rem; line-height: 1.6; }
 .inst-empty .btn { margin-left: 0.4rem; vertical-align: baseline; }
+
+/* ─── Premium stat tile gradients — mirrors landing page product card palette ── */
+.stat-card[data-trend="networth"] {
+  background: radial-gradient(135% 135% at 18% 6%, #61736a 0%, #313c37 56%, #232b27 100%);
+  border-color: transparent;
+}
+.stat-card[data-trend="invest"] {
+  background: radial-gradient(135% 135% at 84% 0%, #c2bcd2 0%, #847e98 52%, #5b5670 100%);
+  border-color: transparent;
+}
+.stat-card[data-trend="cash"] {
+  background: radial-gradient(140% 130% at 14% 105%, #e0a85f 0%, #bb741f 50%, #7c4912 100%);
+  border-color: transparent;
+}
+.stat-card[data-trend="debts"] {
+  background: radial-gradient(135% 135% at 50% -10%, #3d4046 0%, #21242a 68%, #15171b 100%);
+  border-color: transparent;
+}
+/* Top-light gloss overlay identical to landing page ::after */
+.stat-card[data-trend]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 80% at 50% -20%, rgba(255,255,255,0.18), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+/* Keep content above the overlay */
+.stat-card[data-trend] > * { position: relative; z-index: 1; }
+/* Text: white on coloured tiles */
+.stat-card[data-trend] .stat-label,
+.stat-card[data-trend] .stat-value,
+.stat-card[data-trend] .stat-delta { color: rgba(255,255,255,0.92); }
+.stat-card[data-trend] .stat-delta.up  { color: #5FE3D1; }
+.stat-card[data-trend] .stat-delta.down { color: #fca5a5; }
+/* Sparklines: white on coloured tiles */
+.stat-card[data-trend] .sparkline path.line { stroke: rgba(255,255,255,0.85); }
+.stat-card[data-trend] .sparkline path.fill { fill: rgba(255,255,255,0.13); }
+/* Chips inside coloured tiles: translucent white */
+.stat-card[data-trend] .chip {
+  background: rgba(255,255,255,0.16);
+  color: rgba(255,255,255,0.9);
+  border: none;
+}
+.stat-card[data-trend] .chip-accent {
+  background: rgba(95,227,209,0.22);
+  color: #5FE3D1;
+}
+/* Hover: stronger lift and glow */
+.stat-card[data-trend]:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.22);
+  border-color: transparent;
+}
+/* Dark mode: same gradients look great, no override needed */
