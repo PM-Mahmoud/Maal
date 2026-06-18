@@ -137,6 +137,19 @@
       border-color: var(--accent);
     }
     .field-group input::placeholder { color: rgba(240,239,233,0.3); }
+    .field-group select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(240%2C239%2C233%2C0.55)' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      padding-right: 2.5rem;
+      cursor: pointer;
+    }
+    .step-error-msg {
+      color: #f87171;
+      font-size: 0.83rem;
+      margin: 0.5rem 0 0;
+      text-align: center;
+    }
     .field-group select option { background: #0F2E24; color: var(--fg); }
     .field-hint {
       font-size: 0.78rem;
@@ -490,6 +503,7 @@
               value="<%= formData && formData.age ? formData.age : '' %>">
           </div>
 
+          <p class="step-error-msg" id="step1-err" style="display:none;"></p>
           <div class="btn-row">
             <button type="button" class="btn-next" onclick="goStep(2)">Next →</button>
           </div>
@@ -765,8 +779,15 @@
 
     function highlightEmpty(el) {
       el.style.borderColor = '#f87171';
-      setTimeout(() => el.style.borderColor = '', 2000);
       el.focus();
+      function clearErr() { el.style.borderColor = ''; el.removeEventListener('change', clearErr); el.removeEventListener('input', clearErr); }
+      el.addEventListener('change', clearErr);
+      el.addEventListener('input', clearErr);
+    }
+
+    function showStepError(stepNum, msg) {
+      const el = document.getElementById('step' + stepNum + '-err');
+      if (el) { el.textContent = msg; el.style.display = msg ? 'block' : 'none'; }
     }
 
     function isEmpty(val) {
@@ -775,9 +796,23 @@
 
     function validateStep(step) {
       if (step === 1) {
+        showStepError(1, '');
+        const prof = document.querySelector('[name="profession"]');
+        if (isEmpty(prof.value)) {
+          highlightEmpty(prof);
+          showStepError(1, 'Please select your profession.');
+          return false;
+        }
+        const stage = document.querySelector('[name="stage"]');
+        if (isEmpty(stage.value)) {
+          highlightEmpty(stage);
+          showStepError(1, 'Please select your career stage.');
+          return false;
+        }
         const age = document.querySelector('[name="age"]');
         if (isEmpty(age.value) || Number(age.value) < 18 || Number(age.value) > 80) {
           highlightEmpty(age);
+          showStepError(1, 'Please enter a valid age (18–80).');
           return false;
         }
       }
