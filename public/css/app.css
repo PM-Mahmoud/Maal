@@ -248,6 +248,11 @@ body.app-body {
 .btn-icon:hover { background: var(--surface-2); color: var(--fg); }
 .btn-icon-danger:hover { background: #FEE2E2; color: #B91C1C; border-color: #FECACA; }
 html[data-theme="dark"] .btn-icon-danger:hover { background: rgba(185,28,28,0.2); color: #FCA5A5; border-color: rgba(185,28,28,0.4); }
+/* ── Tile edit/remove mini-buttons (stat cards on overview) ── */
+.tile-edit-btn { display:none; background:none; border:none; padding:0.1rem 0.3rem; font-size:0.75rem; cursor:pointer; color:var(--fg-faint); line-height:1; border-radius:4px; margin-left:3px; transition:background 0.1s,color 0.1s; vertical-align:middle; }
+.tile-edit-btn:hover { background:var(--surface-2); color:var(--fg); }
+.tile-edit-btn--remove:hover { color:#B91C1C; }
+.stat-card:hover .tile-edit-btn { display:inline-block; }
 .row-item:last-child { border-bottom: none; }
 .row-main { font-size: 0.86rem; font-weight: 500; }
 .row-sub { font-size: 0.74rem; color: var(--fg-muted); }

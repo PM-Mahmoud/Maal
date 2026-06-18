@@ -55,6 +55,58 @@ async function dashboardContext(req) {
 
 // ─── Page: /dashboard (overview) ────────────────────────────────────────────
 
+
+// ─── Helper: auto-recalculate & save scores (called from dashboard load + asset updates) ───
+// Only runs if profile has income data and last save was >1hr ago — avoids flooding history.
+async function autoRecalcScores(userId, profile) {
+  if (!profile || !(Number(profile.annual_income) > 0)) return;
+  try {
+    const latest = await getLatestScoreByUserId(userId, 'financial_health');
+    const age = (latest && latest.calculated_at)
+      ? Date.now() - new Date(latest.calculated_at).getTime()
+      : Infinity;
+    if (age < 60 * 60 * 1000) return; // fresh enough — skip
+    const scoreData = {
+      age: profile.years_in_practice ? 30 + (Number(profile.years_in_practice) || 0) : 30,
+      annualIncome: profile.annual_income,
+      hecsBalance: profile.hecs_balance,
+      superBalance: profile.super_balance,
+      investmentBalance: profile.investment_portfolio,
+      propertyValue: profile.property_value,
+      otherDebtBalance: profile.total_debt,
+      insuranceCover: profile.insurance_cover || 'none',
+      retirementAge: profile.retirement_age || 65,
+      investmentAllocation: profile.onboarding_data?.investmentAllocation || [],
+    };
+    const result = computeScore(scoreData);
+    await saveScore(userId, {
+      score_type: 'financial_health',
+      score_value: result.score,
+      grade: result.grade,
+      score_breakdown: result.components,
+      diagnosis: result.diagnosis,
+      halal_compliance_score: result.halalComplianceScore,
+      portfolio_health_score: result.portfolioHealthScore,
+      action_plan: result.recommendations,
+    });
+    await saveScore(userId, {
+      score_type: 'ethical_score',
+      score_value: result.halalComplianceScore,
+      grade: result.halalComplianceScore >= 80 ? 'Excellent'
+           : result.halalComplianceScore >= 60 ? 'Good'
+           : result.halalComplianceScore >= 40 ? 'Fair' : 'Needs Work',
+      score_breakdown: {},
+      diagnosis: null,
+    });
+    // Update recommendations in background
+    if (result.recommendations.length) {
+      saveRecommendationsBatch(userId, result.recommendations).catch(() => {});
+    }
+  } catch (e) {
+    console.error('autoRecalcScores error:', e.message);
+  }
+}
+
 router.get('/', async (req, res) => {
   try {
     const { user, profile: rawProfile, session } = await dashboardContext(req);
@@ -80,6 +132,8 @@ router.get('/', async (req, res) => {
 
     // Maal Score — single composite wellbeing score
     const maalScore = computeMaalScore(profile);
+    // Auto-refresh scores in background — no await so page load is unblocked
+    autoRecalcScores(req.session.userId, profile).catch(() => {});
 
     // Top & bottom movers from live quotes (Finnhub) when configured
     let movers = null;
@@ -509,6 +563,8 @@ router.post('/assets/update', async (req, res) => {
     const existing = (await getProfileByUserId(req.session.userId)) || {};
     const merged = { ...existing, [field]: value };
     await updateProfile(req.session.userId, merged);
+    // Refresh scores to reflect the updated asset value
+    autoRecalcScores(req.session.userId, merged).catch(() => {});
     res.json({ ok: true });
   } catch (err) {
     console.error('assets/update error:', err.message);

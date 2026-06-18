@@ -19,7 +19,7 @@
     <% if (financialScore) { %><span class="grade-pill <%= financialScore.grade ? financialScore.grade.toLowerCase().replace(' ','-') : '' %>"><%= financialScore.grade || '' %></span><% } %>
   </div>
   <div class="score-card" style="text-align:center;">
-    <div class="score-card-label">Halal / ESG Score</div>
+    <div class="score-card-label">Ethical Score</div>
     <div class="score-card-big"><%= ethicalScore ? ethicalScore.score_value : '—' %><span class="score-card-max">/100</span></div>
     <span style="font-size:0.8rem;color:var(--fg-muted)">Portfolio compliance</span>
   </div>
@@ -58,7 +58,7 @@
 
 <% if (ethicalScore && ethicalScore.score_value) { %>
 <div class="card">
-  <div class="card-title">Halal / ESG Compliance</div>
+  <div class="card-title">Ethical Compliance</div>
   <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:1rem;">
     <div style="font-family:var(--font-display);font-size:3rem;font-weight:700;color:var(--accent);line-height:1;"><%= ethicalScore.score_value %><span style="font-size:1.5rem;color:var(--fg-muted);font-weight:300;">/100</span></div>
     <div>
@@ -68,11 +68,11 @@
   </div>
   <p style="font-size:0.85rem;color:var(--fg-muted);margin:0;line-height:1.6;">
     <% if (ethicalScore.score_value >= 80) { %>
-      Your portfolio is predominantly halal/ESG compliant. Most of your investments align with Islamic principles or ethical screening standards.
+      Your portfolio is predominantly ethically compliant. Most of your investments align with ethical screening standards.
     <% } else if (ethicalScore.score_value >= 50) { %>
       Your portfolio has a mix of compliant and non-compliant holdings. Review the non-compliant positions to improve your score.
     <% } else { %>
-      Significant changes needed to bring your portfolio into compliance. Consider switching to halal-screened funds or ethical ETFs.
+      Significant changes needed to bring your portfolio into compliance. Consider switching to ethically-screened funds or ethical ETFs.
     <% } %>
   </p>
 </div>
@@ -88,7 +88,7 @@
           <th style="text-align:left;padding:0.5rem 0.5rem 0.5rem;color:var(--fg-muted);font-weight:500;">Date</th>
           <th style="text-align:right;padding:0.5rem;color:var(--fg-muted);font-weight:500;">Financial Health</th>
           <th style="text-align:right;padding:0.5rem;color:var(--fg-muted);font-weight:500;">Grade</th>
-          <th style="text-align:right;padding:0.5rem;color:var(--fg-muted);font-weight:500;">Halal/ESG</th>
+          <th style="text-align:right;padding:0.5rem;color:var(--fg-muted);font-weight:500;">Ethical</th>
         </tr>
       </thead>
       <tbody>

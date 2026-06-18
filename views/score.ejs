@@ -712,11 +712,11 @@
           <% }); %>
         </div>
 
-        <!-- Halal & Portfolio scores -->
+        <!-- Ethical & Portfolio scores -->
         <% if (result.halalComplianceScore !== undefined) { %>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.5rem;">
           <div class="breakdown-item">
-            <div class="b-label">Halal / Ethical Compliance</div>
+            <div class="b-label">Ethical Compliance</div>
             <div class="b-bar-wrap">
               <div class="b-bar" style="width:<%= result.halalComplianceScore %>%"></div>
             </div>
@@ -749,7 +749,7 @@
         <!-- Email CTA -->
         <div class="cta-section">
           <h3>Get your full Maal report</h3>
-          <p>Portfolio screening + halal/ethical compliance + ongoing monitoring — built for Australian health professionals. Join the waitlist for early access.</p>
+          <p>Portfolio screening + ethical compliance + ongoing monitoring — built for Australian health professionals. Join the waitlist for early access.</p>
           <form class="cta-email-form" id="ctaForm" onsubmit="submitCTA(event)">
             <input type="email" id="ctaEmail" placeholder="your@email.com" required>
             <button type="submit">Join waitlist →</button>

@@ -265,7 +265,7 @@
       <div class="toggle-group">
         <label class="toggle-btn <%= (prefill && prefill.investorType === 'Halal') || (!prefill) ? 'active' : '' %>">
           <input type="radio" name="investorType" value="Halal" class="toggle-input"
-            <%= (prefill && prefill.investorType === 'Halal') || (!prefill) ? 'checked' : '' %>> Halal (Shariah)
+            <%= (prefill && prefill.investorType === 'Halal') || (!prefill) ? 'checked' : '' %>> Ethical (Islamic)
         </label>
         <label class="toggle-btn <%= prefill && prefill.investorType === 'Ethical' ? 'active' : '' %>">
           <input type="radio" name="investorType" value="Ethical" class="toggle-input"
@@ -273,7 +273,7 @@
         </label>
       </div>
       <p style="font-size:0.75rem;color:var(--fg-muted);margin:0.25rem 0 0;">
-        Halal uses Shariah-screened funds. Ethical uses ESG-screened funds.
+        Islamic option uses Shariah-screened funds. Ethical uses ESG-screened funds.
       </p>
     </div>
 

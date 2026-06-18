@@ -70,19 +70,28 @@
     <svg class="sparkline" id="spark-networth" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
   </div>
   <div class="panel stat-card" data-trend="invest" data-trend-label="Investments" tabindex="0" role="button" title="View trend">
-    <div class="stat-label">Investments <span class="chip chip-muted range-chip">1M</span></div>
+    <div class="stat-label">Investments <span class="chip chip-muted range-chip">1M</span>
+      <button class="tile-edit-btn" data-edit-asset="investment_portfolio" data-edit-value="<%= investBal %>" title="Edit" onclick="event.stopPropagation()">✎</button>
+      <% if (investBal > 0) { %><button class="tile-edit-btn tile-edit-btn--remove" data-remove-asset="investment_portfolio" title="Clear" onclick="event.stopPropagation()">✕</button><% } %>
+    </div>
     <div class="stat-value"><%= aud(investBal) %></div>
     <div class="stat-delta" data-delta="invest"><%= investBal > 0 ? 'Across your portfolios' : 'No investments added yet' %></div>
     <svg class="sparkline" id="spark-invest" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
   </div>
   <div class="panel stat-card" data-trend="cash" data-trend-label="Total Cash" tabindex="0" role="button" title="View trend">
-    <div class="stat-label">Total Cash <span class="chip chip-accent"><%= conn.count ? '● ' + conn.count + ' live' : 'Liquidity' %></span></div>
+    <div class="stat-label">Total Cash <span class="chip chip-accent"><%= conn.count ? '● ' + conn.count + ' live' : 'Liquidity' %></span>
+      <button class="tile-edit-btn" data-edit-asset="cash_savings" data-edit-value="<%= cashBal %>" title="Edit" onclick="event.stopPropagation()">✎</button>
+      <% if (cashBal > 0) { %><button class="tile-edit-btn tile-edit-btn--remove" data-remove-asset="cash_savings" title="Clear" onclick="event.stopPropagation()">✕</button><% } %>
+    </div>
     <div class="stat-value"><%= aud(cashBal) %></div>
     <div class="stat-delta" data-delta="cash"><%= cashBal > 0 ? (runwayMonths ? runwayMonths + ' months of runway' : 'Set monthly spend for runway') : 'Add cash & savings' %></div>
     <svg class="sparkline" id="spark-cash" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
   </div>
   <div class="panel stat-card" data-trend="debts" data-trend-label="Total Debts" tabindex="0" role="button" title="View trend">
-    <div class="stat-label">Total Debts <span class="chip chip-muted">incl. HECS</span></div>
+    <div class="stat-label">Total Debts <span class="chip chip-muted">incl. HECS</span>
+      <button class="tile-edit-btn" data-edit-asset="hecs_balance" data-edit-value="<%= hecs %>" title="Edit HECS" onclick="event.stopPropagation()">✎</button>
+      <% if (totalDebts > 0) { %><button class="tile-edit-btn tile-edit-btn--remove" data-remove-asset="hecs_balance" title="Clear HECS" onclick="event.stopPropagation()">✕</button><% } %>
+    </div>
     <div class="stat-value"><%= aud(totalDebts) %></div>
     <div class="stat-delta" data-delta="debts"><%= totalDebts > 0 ? 'HECS indexation applies 1 June' : 'No liabilities recorded' %></div>
     <svg class="sparkline" id="spark-debts" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>

@@ -472,7 +472,7 @@
     { title: 'Debt & Liabilities', sub: 'Knowing your liabilities is essential for an accurate score.', section: '4 of 7' },
     { title: 'Assets & Investments', sub: 'What are you currently invested in?', section: '5 of 7' },
     { title: 'Your Goals', sub: 'Where are you trying to get to?', section: '6 of 7' },
-    { title: 'Halal or Ethical?', sub: 'Configure your investment preferences.', section: '7 of 7' },
+    { title: 'Ethical Preferences', sub: 'Configure your ethical investment preferences.', section: '7 of 7' },
   ];
 
   const STORAGE_KEY = 'maal_onboarding';
@@ -751,7 +751,7 @@
     </div>
   `;
 
-  // Step 7: Halal/Ethical Preferences
+  // Step 7: Ethical Preferences
   STEP_CONTENT[7] = `
     <div class="step-section-tag">Section 7 of 7</div>
     <h2>Investment Preferences</h2>
@@ -762,7 +762,7 @@
       <div class="radio-group" id="isMuslim">
         <label class="radio-item" onclick="selectRadio('isMuslim', this, 'yes'); showHalalSection()">
           <input type="radio" name="is_muslim" value="yes" />
-          <div><div class="radio-text">Yes</div><div class="radio-sub">I want a fully halal-compliant portfolio</div></div>
+          <div><div class="radio-text">Yes</div><div class="radio-sub">I want a faith-based ethical portfolio</div></div>
         </label>
         <label class="radio-item" onclick="selectRadio('isMuslim', this, 'no'); showEthicalSection()">
           <input type="radio" name="is_muslim" value="no" />
@@ -773,15 +773,15 @@
 
     <div id="halalSection" style="display:none;">
       <div class="field-group">
-        <label class="field-label">Halal preference</label>
+        <label class="field-label">Ethical framework</label>
         <div class="radio-group" id="halalPreference">
           <label class="radio-item" onclick="selectRadio('halalPreference', this, 'strict')">
             <input type="radio" name="halal_preference" value="strict" />
-            <div><div class="radio-text">Strict Halal only</div><div class="radio-sub">Sharia-compliant: no gambling, alcohol, pork, weapons, banking interest</div></div>
+            <div><div class="radio-text">Islamic (Shariah-compliant)</div><div class="radio-sub">Shariah-screened: excludes gambling, alcohol, pork, weapons, interest-based banking</div></div>
           </label>
           <label class="radio-item" onclick="selectRadio('halalPreference', this, 'halal_plus')">
             <input type="radio" name="halal_preference" value="halal_plus" />
-            <div><div class="radio-text">Halal + avoid specific sectors</div><div class="radio-sub">Halal-compliant plus any additional exclusions I choose</div></div>
+            <div><div class="radio-text">Islamic + custom screening</div><div class="radio-sub">Shariah-compliant plus any additional sector exclusions you choose</div></div>
           </label>
         </div>
       </div>
@@ -1220,7 +1220,7 @@
           </div>
           <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:1.1rem;text-align:center;border:1px solid var(--border);">
             <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:#8A8D83;margin-bottom:0.5rem;">Ethical Score</div>
-            <div style="font-size:2rem;font-weight:700;color:#C9A84C;">${resultData.halalScore}<span style="font-size:1rem;color:#8A8D83;">/100</span></div>
+            <div style="font-size:2rem;font-weight:700;color:#C9A84C;">${resultData.ethicalScore}<span style="font-size:1rem;color:#8A8D83;">/100</span></div>
             <div style="font-size:0.75rem;color:#7ED4A6;margin-top:0.3rem;">Compliance</div>
           </div>
         </div>
