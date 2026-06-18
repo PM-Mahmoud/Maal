@@ -5,7 +5,7 @@
 // text-embedding-3-small produces 1536-dimensional vectors.
 // HNSW index: better recall than IVFFlat, can be built on empty table.
 
-module.exports = async function up(client) {
+exports.up = async function up(client) {
   await client.query(`
     CREATE TABLE IF NOT EXISTS knowledge_chunks (
       id            SERIAL PRIMARY KEY,
