@@ -814,3 +814,129 @@ input.input-error:focus, select.input-error:focus, textarea.input-error:focus {
   border-color: transparent;
 }
 /* Dark mode: same gradients look great, no override needed */
+
+/* ══════════════════════════════════════════════════════════
+   PREMIUM GLOSS PASS v2 — universal card elevation
+   ══════════════════════════════════════════════════════════ */
+
+/* ── 1. Stacking context on all surface cards ────────────── */
+.panel, .card, .score-card { position: relative; overflow: hidden; }
+
+/* ── 2. Subtle top-lit gloss (lower opacity than stat tiles) */
+.panel::after, .card::after, .score-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(110% 55% at 50% -12%, rgba(255,255,255,0.11), transparent 55%);
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 0;
+}
+/* Keep card content above the gloss layer */
+.panel > *, .card > *, .score-card > * { position: relative; z-index: 1; }
+
+/* ── 3. Layered shadow — replaces the single flat shadow ─── */
+.panel, .card, .score-card {
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.04),
+    0 3px 10px rgba(0,0,0,0.06),
+    0 0 0 1px rgba(14,14,16,0.035);
+}
+/* Stat tiles already have their own hover shadow — leave them */
+.stat-card[data-trend]:hover {
+  box-shadow: 0 12px 32px rgba(0,0,0,0.22);
+}
+
+/* ── 4. Maal Score hero panel — deep forest green ─────────── */
+.panel-hero {
+  background: radial-gradient(140% 120% at 20% 5%, #2d5a4e 0%, #1a3328 60%, #0f1e18 100%);
+  border-color: transparent;
+  color: rgba(255,255,255,0.94);
+  /* Override CSS variables so inline var(--fg-x) style="" attrs go white */
+  --fg:       rgba(255,255,255,0.94);
+  --fg-muted: rgba(255,255,255,0.68);
+  --fg-faint: rgba(255,255,255,0.42);
+  --border:   rgba(255,255,255,0.10);
+}
+.panel-hero::after {
+  background: radial-gradient(120% 80% at 50% -20%, rgba(255,255,255,0.15), transparent 60%);
+}
+.panel-hero .bar-track { background: rgba(255,255,255,0.12); }
+.panel-hero .bar-fill  { background: #5FE3D1; }
+.panel-hero .ring .track { stroke: rgba(255,255,255,0.14); }
+.panel-hero .ring .meter { stroke: #5FE3D1; }
+.panel-hero .ring-num  { fill: #fff; }
+.panel-hero .ring-sub  { fill: rgba(255,255,255,0.5); }
+.panel-hero .chip      { background: rgba(255,255,255,0.14); color: rgba(255,255,255,0.9); border: none; }
+.panel-hero .chip-accent { background: rgba(95,227,209,0.24); color: #5FE3D1; }
+.panel-hero .btn        { color: #5FE3D1; border-color: rgba(95,227,209,0.4); }
+
+/* ── 5. Score page cards — tinted by metric ──────────────── */
+.score-cards .score-card:nth-child(1) {
+  background: linear-gradient(145deg, #f0faf7 0%, #e7f5ee 100%);
+}
+.score-cards .score-card:nth-child(2) {
+  background: linear-gradient(145deg, #fdf6eb 0%, #faeede 100%);
+}
+.score-cards .score-card:nth-child(3) {
+  background: linear-gradient(145deg, #edf3fb 0%, #e4edf8 100%);
+}
+[data-theme="dark"] .score-cards .score-card:nth-child(1) {
+  background: linear-gradient(145deg, rgba(18,181,166,0.13) 0%, rgba(18,181,166,0.06) 100%);
+}
+[data-theme="dark"] .score-cards .score-card:nth-child(2) {
+  background: linear-gradient(145deg, rgba(194,112,30,0.15) 0%, rgba(194,112,30,0.07) 100%);
+}
+[data-theme="dark"] .score-cards .score-card:nth-child(3) {
+  background: linear-gradient(145deg, rgba(91,134,177,0.15) 0%, rgba(91,134,177,0.07) 100%);
+}
+
+/* ── 6. Goal cards — subtle warm green tint ──────────────── */
+.goal-card {
+  background: linear-gradient(140deg, #f5fbf8 0%, #edf7f2 100%);
+}
+[data-theme="dark"] .goal-card {
+  background: linear-gradient(140deg, rgba(18,181,166,0.10) 0%, rgba(18,181,166,0.04) 100%);
+}
+
+/* ── 7. Assistant card — dark AI look with variable scoping ─ */
+.assistant-card {
+  background: radial-gradient(135% 120% at 10% 5%, #2a3d38 0%, #1c2b26 60%, #141f1c 100%);
+  border-color: rgba(95,227,209,0.18);
+  position: relative;
+  overflow: hidden;
+  color: rgba(255,255,255,0.92);
+  /* Override CSS variables so inline color:var(--fg-muted) attrs go light */
+  --fg:       rgba(255,255,255,0.92);
+  --fg-muted: rgba(255,255,255,0.64);
+  --fg-faint: rgba(255,255,255,0.40);
+}
+.assistant-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 70% at 50% -15%, rgba(255,255,255,0.10), transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+.assistant-card > * { position: relative; z-index: 1; }
+.assistant-card .check-dot { color: #5FE3D1; }
+
+/* ── 8. Modals — gloss without overflow:hidden clip ─────── */
+.modal {
+  position: relative;
+  box-shadow:
+    0 8px 40px rgba(0,0,0,0.16),
+    0 2px 8px rgba(0,0,0,0.08),
+    0 0 0 1px rgba(14,14,16,0.06);
+}
+.modal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(110% 50% at 50% -10%, rgba(255,255,255,0.10), transparent 50%);
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 0;
+}
+.modal > * { position: relative; z-index: 1; }
