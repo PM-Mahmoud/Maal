@@ -26,6 +26,7 @@ const goalsDb = require('../db/goals');
 const vaultDb = require('../db/vault');
 const { extractText } = require('../services/extract');
 const multer = require('multer');
+const { superProjection, monteCarlo } = require('../lib/calc');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const advisor = require('../services/advisor');
 const basiqService = require('../services/basiq');
@@ -864,5 +865,93 @@ router.get('/history', async (req, res) => {
     res.status(500).render('error', { layout: false, message: 'Failed to load history.' });
   }
 });
+
+// ─── Helper: age from profile ───────────────────────────────────────────────
+
+function ageFromProfile(profile) {
+  const dob = profile && profile.onboarding_data && profile.onboarding_data.dob;
+  if (dob) {
+    let birth;
+    if (dob.includes('/')) {
+      const [d, m, y] = dob.split('/');
+      birth = new Date(Number(y), Number(m) - 1, Number(d));
+    } else {
+      birth = new Date(dob);
+    }
+    if (!isNaN(birth.getTime())) {
+      return Math.floor((Date.now() - birth.getTime()) / (365.25 * 24 * 3600 * 1000));
+    }
+  }
+  return Math.min(75, Math.max(22, 25 + (Number(profile && profile.years_in_practice) || 0)));
+}
+
+function maritalFromProfile(profile) {
+  const raw = ((profile && profile.onboarding_data && profile.onboarding_data.marital_status) || '').toLowerCase();
+  return raw.includes('married') || raw.includes('couple') || raw.includes('de facto') ? 'couple' : 'single';
+}
+
+// ─── Page: /dashboard/projections ───────────────────────────────────────────
+
+router.get('/projections', async (req, res) => {
+  try {
+    const { user, profile, session } = await dashboardContext(req);
+    const age          = ageFromProfile(profile);
+    const salary       = Number(profile && profile.annual_income) || 0;
+    const superBal     = Number(profile && profile.super_balance) || 0;
+    const retirementAge = Number(profile && profile.retirement_age) || 67;
+    const maritalStatus = maritalFromProfile(profile);
+    const extra        = 0;
+
+    const projection = superProjection({ currentBalance: superBal, salary, age, retirementAge, maritalStatus, extraAnnual: extra });
+    const mc = monteCarlo({ currentBalance: superBal, salary, age, retirementAge, maritalStatus, simulations: 1000, seed: 42 });
+
+    let narration = null;
+    try {
+      const { complete } = require('../services/advisor');
+      const gap = mc.asfaTarget - mc.p50;
+      const msgs = [
+        { role: 'system', content: 'You are an educational financial wellness assistant for Maal, an Australian platform for health professionals. Keep responses factual, concise, and educational — never personal financial advice.' },
+        { role: 'user', content: `Write a 3-sentence retirement projection summary for an Australian health professional (educational purposes only):
+Age ${age}, salary $${salary.toLocaleString('en-AU')}, current super $${superBal.toLocaleString('en-AU')}, retiring at ${retirementAge}.
+Median projection: $${mc.p50.toLocaleString('en-AU')} | ASFA comfortable target: $${mc.asfaTarget.toLocaleString('en-AU')} | Success rate: ${mc.successRate}%
+${gap > 0 ? 'They have a gap of $' + Math.abs(gap).toLocaleString('en-AU') + ' to the ASFA comfortable target.' : 'They are on track or ahead of the ASFA comfortable target.'}
+Mention projection uncertainty and that this is not financial advice.` }
+      ];
+      narration = await complete(msgs, { tier: 'strong', max_tokens: 180 });
+    } catch (_e) { /* narration optional */ }
+
+    res.render('dashboard-projections', {
+      user, profile, session,
+      age, salary, superBal, retirementAge, maritalStatus,
+      projection, mc, narration,
+      pageTitle: 'Projections'
+    });
+  } catch (err) {
+    console.error('/projections error:', err.message);
+    res.status(500).render('error', { layout: false, message: 'Failed to load Projections.' });
+  }
+});
+
+// ─── API: /dashboard/projections/what-if ────────────────────────────────────
+
+router.get('/projections/what-if', async (req, res) => {
+  try {
+    const { profile } = await dashboardContext(req);
+    const age          = ageFromProfile(profile);
+    const salary       = Number(profile && profile.annual_income) || 0;
+    const superBal     = Number(profile && profile.super_balance) || 0;
+    const retirementAge = Number(profile && profile.retirement_age) || 67;
+    const maritalStatus = maritalFromProfile(profile);
+    const extra        = Math.max(0, Math.min(100000, Number(req.query.extra) || 0));
+
+    const projection = superProjection({ currentBalance: superBal, salary, age, retirementAge, maritalStatus, extraAnnual: extra });
+    const mc = monteCarlo({ currentBalance: superBal, salary, age, retirementAge, maritalStatus, simulations: 1000, seed: 42, extraAnnual: extra });
+
+    res.json({ ok: true, projection, mc, extra });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 module.exports = router;

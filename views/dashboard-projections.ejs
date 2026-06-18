@@ -1,0 +1,301 @@
+<%
+  var p50    = mc.p50 || 0;
+  var target = mc.asfaTarget || 0;
+  var gap    = target - p50;
+  var onTrack = gap <= 0;
+  var yrs    = projection.yearsToRetirement || 0;
+  var sr     = mc.successRate || 0;
+  function aud(n) { n = Number(n)||0; return '$'+n.toLocaleString('en-AU',{maximumFractionDigits:0}); }
+%>
+
+<div class="page-head">
+  <div>
+    <h1>Retirement Projections</h1>
+    <div class="sub">Super balance forecast to age <%= retirementAge %> · 1,000-path Monte Carlo · educational only</div>
+  </div>
+</div>
+
+<%# ─── Hero stats ──────────────────────────────────────────────── %>
+<div class="stat-grid" style="margin-bottom:1.2rem;">
+  <div class="stat-card">
+    <div class="stat-label">Median at Retirement</div>
+    <div class="stat-value stat-value--lg"><%= aud(p50) %></div>
+    <div class="stat-sub">p50 projection</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">ASFA Comfortable Target</div>
+    <div class="stat-value stat-value--lg"><%= aud(target) %></div>
+    <div class="stat-sub"><%= maritalStatus === 'couple' ? 'Couple' : 'Single' %> · FY2024</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label"><%= onTrack ? 'Projected Surplus' : 'Projected Gap' %></div>
+    <div class="stat-value stat-value--lg" style="color: <%= onTrack ? 'var(--accent)' : 'var(--red,#e55)' %>">
+      <%= aud(Math.abs(gap)) %>
+    </div>
+    <div class="stat-sub"><%= onTrack ? 'Ahead of ASFA target' : 'Below ASFA target' %></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Success Rate</div>
+    <div class="stat-value stat-value--lg" style="color: <%= sr >= 70 ? 'var(--accent)' : sr >= 50 ? 'var(--gold)' : 'var(--red,#e55)' %>"><%= sr %>%</div>
+    <div class="stat-sub">paths reaching ASFA target</div>
+  </div>
+</div>
+
+<%# ─── Fan chart ──────────────────────────────────────────────── %>
+<div class="panel" style="margin-bottom:1.2rem;">
+  <div class="panel-title">
+    Retirement Fan Chart
+    <span class="chip chip-muted" style="font-size:0.72rem;font-weight:400;">age <%= age %> → <%= retirementAge %></span>
+  </div>
+  <canvas id="fan-chart" style="width:100%;height:260px;" aria-label="Retirement fan chart"></canvas>
+  <div style="display:flex;gap:1.2rem;flex-wrap:wrap;margin-top:0.8rem;font-size:0.78rem;color:var(--muted);">
+    <span><span style="display:inline-block;width:28px;height:3px;background:var(--accent);vertical-align:middle;margin-right:4px;border-radius:2px;"></span>Median (p50)</span>
+    <span><span style="display:inline-block;width:28px;height:10px;background:rgba(18,181,166,0.15);vertical-align:middle;margin-right:4px;border-radius:2px;border:1px solid rgba(18,181,166,0.3);"></span>p25–p75 band</span>
+    <span><span style="display:inline-block;width:28px;height:10px;background:rgba(18,181,166,0.07);vertical-align:middle;margin-right:4px;border-radius:2px;border:1px dashed rgba(18,181,166,0.2);"></span>p10–p90 band</span>
+    <span><span style="display:inline-block;width:28px;height:2px;background:var(--gold,#C2701E);vertical-align:middle;margin-right:4px;border-radius:2px;opacity:0.8;"></span>ASFA target</span>
+  </div>
+</div>
+
+<%# ─── What-if slider ─────────────────────────────────────────── %>
+<div class="panel" style="margin-bottom:1.2rem;">
+  <div class="panel-title">What-if: Extra Contributions</div>
+  <p style="font-size:0.88rem;color:var(--muted);margin:0 0 0.8rem;">See how additional voluntary super contributions change your projected outcome.</p>
+  <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+    <div style="flex:1;min-width:200px;">
+      <label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:0.3rem;">Extra per year</label>
+      <input type="range" id="extra-slider" min="0" max="25000" step="500" value="0"
+             style="width:100%;accent-color:var(--accent);">
+    </div>
+    <div style="min-width:80px;text-align:center;">
+      <div style="font-size:0.75rem;color:var(--muted);">Amount</div>
+      <div id="extra-label" style="font-size:1.1rem;font-weight:700;">$0</div>
+    </div>
+  </div>
+  <div id="whatif-results" style="margin-top:1rem;display:none;">
+    <div class="stat-grid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.6rem;">
+      <div class="stat-card" style="padding:0.7rem;">
+        <div class="stat-label" style="font-size:0.72rem;">New Median</div>
+        <div id="wi-median" class="stat-value" style="font-size:1.1rem;">—</div>
+      </div>
+      <div class="stat-card" style="padding:0.7rem;">
+        <div class="stat-label" style="font-size:0.72rem;">New Gap / Surplus</div>
+        <div id="wi-gap" class="stat-value" style="font-size:1.1rem;">—</div>
+      </div>
+      <div class="stat-card" style="padding:0.7rem;">
+        <div class="stat-label" style="font-size:0.72rem;">New Success Rate</div>
+        <div id="wi-sr" class="stat-value" style="font-size:1.1rem;">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%# ─── LLM narration ──────────────────────────────────────────── %>
+<% if (narration) { %>
+<div class="panel" style="margin-bottom:1.2rem;border-left:3px solid var(--accent);">
+  <div class="panel-title" style="margin-bottom:0.5rem;">
+    <svg style="width:16px;height:16px;vertical-align:-2px;margin-right:5px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-8 8H5l-2 2V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8z"/></svg>
+    Maal Analysis
+  </div>
+  <p style="font-size:0.9rem;line-height:1.6;color:var(--fg);margin:0;"><%= narration %></p>
+</div>
+<% } %>
+
+<%# ─── Year-by-year table ─────────────────────────────────────── %>
+<div class="panel" style="margin-bottom:1.2rem;">
+  <div class="panel-title" style="cursor:pointer;" id="yby-toggle">
+    Year-by-Year Breakdown
+    <span id="yby-icon" style="float:right;transition:transform 0.2s;">▸</span>
+  </div>
+  <div id="yby-body" style="display:none;margin-top:0.8rem;overflow-x:auto;">
+    <table style="width:100%;font-size:0.82rem;border-collapse:collapse;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);color:var(--muted);">
+          <th style="text-align:left;padding:0.4rem 0.6rem;">Age</th>
+          <th style="text-align:right;padding:0.4rem 0.6rem;">Balance</th>
+          <th style="text-align:right;padding:0.4rem 0.6rem;">Employer</th>
+          <th style="text-align:right;padding:0.4rem 0.6rem;">Voluntary</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% projection.yearByYear.forEach(function(row) { %>
+        <tr style="border-bottom:1px solid var(--border);opacity:0.85;">
+          <td style="padding:0.35rem 0.6rem;"><%= row.age %></td>
+          <td style="text-align:right;padding:0.35rem 0.6rem;font-variant-numeric:tabular-nums;"><%= aud(row.balance) %></td>
+          <td style="text-align:right;padding:0.35rem 0.6rem;font-variant-numeric:tabular-nums;color:var(--muted);"><%= aud(row.employerContrib) %></td>
+          <td style="text-align:right;padding:0.35rem 0.6rem;font-variant-numeric:tabular-nums;color:var(--muted);"><%= aud(row.voluntaryContrib) %></td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%# ─── Disclaimer ─────────────────────────────────────────────── %>
+<p style="font-size:0.75rem;color:var(--muted);line-height:1.5;margin-top:0.5rem;">
+  Projections assume a 7% mean annual return (balanced fund), 12% SG rate, and log-normal return distribution.
+  Past performance does not guarantee future results. This is educational modelling only — not financial advice.
+  Consult a licensed financial adviser for personal guidance.
+</p>
+
+<script>
+(function () {
+  // ─── Fan chart ─────────────────────────────────────────────────────────────
+  const yearByYear = <%- JSON.stringify(projection.yearByYear) %>;
+  const mc = <%- JSON.stringify({ p10: mc.p10, p25: mc.p25, p50: mc.p50, p75: mc.p75, p90: mc.p90 }) %>;
+  const asfaTarget = <%= target %>;
+  const startAge = <%= age %>;
+
+  function drawFanChart(canvas, yby, mcData, asfa) {
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.offsetWidth, H = canvas.offsetHeight || 260;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    const pad = { top: 20, right: 20, bottom: 36, left: 64 };
+    const cw = W - pad.left - pad.right;
+    const ch = H - pad.top - pad.bottom;
+
+    const ages = yby.map(r => r.age);
+    const balances = yby.map(r => r.balance);
+
+    // Scale: fan goes up to p90; also show ASFA line
+    const maxVal = Math.max(mcData.p90 * 1.05, asfa * 1.1);
+    const minVal = 0;
+
+    function xOf(i) { return pad.left + (i / (ages.length - 1)) * cw; }
+    function yOf(v) { return pad.top + ch - ((v - minVal) / (maxVal - minVal)) * ch; }
+
+    // Interpolate fan bands across years (linear from start balance to percentiles)
+    const startBal = yby[0] ? yby[0].balance : 0;
+    function fanY(pctVal, i) {
+      const t = i / (ages.length - 1);
+      return yOf(startBal + (pctVal - startBal) * t);
+    }
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#12B5A6';
+    const mutedColor = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)';
+
+    // Grid lines
+    ctx.strokeStyle = mutedColor;
+    ctx.lineWidth = 1;
+    const steps = 4;
+    for (let s = 0; s <= steps; s++) {
+      const v = minVal + (maxVal - minVal) * (s / steps);
+      const y = yOf(v);
+      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + cw, y);
+      ctx.setLineDash([3, 5]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)';
+      ctx.font = '10px system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('$' + Math.round(v / 1000) + 'k', pad.left - 6, y + 3.5);
+    }
+
+    // X axis labels (every 5 years)
+    ctx.fillStyle = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)';
+    ctx.font = '10px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ages.forEach((a, i) => {
+      if (a % 5 === 0) {
+        ctx.fillText(a, xOf(i), H - pad.bottom + 14);
+      }
+    });
+
+    const n = ages.length;
+
+    // p10–p90 outer band
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) ctx[i === 0 ? 'moveTo' : 'lineTo'](xOf(i), fanY(mcData.p90, i));
+    for (let i = n - 1; i >= 0; i--) ctx.lineTo(xOf(i), fanY(mcData.p10, i));
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(18,181,166,0.07)';
+    ctx.fill();
+
+    // p25–p75 inner band
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) ctx[i === 0 ? 'moveTo' : 'lineTo'](xOf(i), fanY(mcData.p75, i));
+    for (let i = n - 1; i >= 0; i--) ctx.lineTo(xOf(i), fanY(mcData.p25, i));
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(18,181,166,0.15)';
+    ctx.fill();
+
+    // ASFA target line
+    const asfaY = yOf(asfa);
+    if (asfaY > pad.top && asfaY < pad.top + ch) {
+      ctx.beginPath(); ctx.moveTo(pad.left, asfaY); ctx.lineTo(pad.left + cw, asfaY);
+      ctx.strokeStyle = 'rgba(194,112,30,0.7)'; ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(194,112,30,0.85)';
+      ctx.font = '10px system-ui, sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText('ASFA target', pad.left + 4, asfaY - 4);
+    }
+
+    // Median (p50) line
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) ctx[i === 0 ? 'moveTo' : 'lineTo'](xOf(i), fanY(mcData.p50, i));
+    ctx.strokeStyle = accentColor; ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Deterministic path
+    ctx.beginPath();
+    yby.forEach((r, i) => ctx[i === 0 ? 'moveTo' : 'lineTo'](xOf(i), yOf(r.balance)));
+    ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  const canvas = document.getElementById('fan-chart');
+  if (canvas && yearByYear.length) {
+    drawFanChart(canvas, yearByYear, mc, asfaTarget);
+    window.addEventListener('resize', () => drawFanChart(canvas, yearByYear, mc, asfaTarget));
+  }
+
+  // ─── Year-by-year toggle ───────────────────────────────────────────────────
+  const toggle = document.getElementById('yby-toggle');
+  const body   = document.getElementById('yby-body');
+  const icon   = document.getElementById('yby-icon');
+  if (toggle && body) {
+    toggle.addEventListener('click', () => {
+      const open = body.style.display !== 'none';
+      body.style.display = open ? 'none' : 'block';
+      icon.textContent = open ? '▸' : '▾';
+    });
+  }
+
+  // ─── What-if slider ────────────────────────────────────────────────────────
+  const slider   = document.getElementById('extra-slider');
+  const label    = document.getElementById('extra-label');
+  const wiBox    = document.getElementById('whatif-results');
+  const wiMedian = document.getElementById('wi-median');
+  const wiGap    = document.getElementById('wi-gap');
+  const wiSr     = document.getElementById('wi-sr');
+
+  let wiTimer = null;
+
+  function aud(n) {
+    return '$' + Math.round(n).toLocaleString('en-AU');
+  }
+
+  if (slider) {
+    slider.addEventListener('input', () => {
+      const val = Number(slider.value);
+      label.textContent = aud(val) + '/yr';
+      clearTimeout(wiTimer);
+      if (val === 0) { wiBox.style.display = 'none'; return; }
+      wiTimer = setTimeout(async () => {
+        try {
+          const r = await fetch('/dashboard/projections/what-if?extra=' + val);
+          const data = await r.json();
+          if (!data.ok) return;
+          const newGap = data.mc.asfaTarget - data.mc.p50;
+          wiMedian.textContent = aud(data.mc.p50);
+          wiGap.textContent = aud(Math.abs(newGap));
+          wiGap.style.color = newGap <= 0 ? 'var(--accent)' : 'var(--red,#e55)';
+          wiSr.textContent = data.mc.successRate + '%';
+          wiBox.style.display = 'block';
+        } catch (_e) {}
+      }, 400);
+    });
+  }
+})();
+</script>
