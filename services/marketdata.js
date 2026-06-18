@@ -107,6 +107,74 @@ function normalizeNews(n) {
   };
 }
 
+// ─── Global indices ───────────────────────────────────────────────────────────
+// Major world indices with Finnhub symbols, display names, and regions.
+// Cached for 5 minutes — indices update continuously during market hours.
+const GLOBAL_INDICES = [
+  { symbol: '^AXJO',    name: 'ASX 200',         region: 'AU',  exchange: 'ASX' },
+  { symbol: '^GSPC',    name: 'S&P 500',          region: 'US',  exchange: 'NYSE' },
+  { symbol: '^IXIC',    name: 'NASDAQ Composite', region: 'US',  exchange: 'NASDAQ' },
+  { symbol: '^DJI',     name: 'Dow Jones',        region: 'US',  exchange: 'NYSE' },
+  { symbol: '^FTSE',    name: 'FTSE 100',         region: 'UK',  exchange: 'LSE' },
+  { symbol: '^GDAXI',   name: 'DAX',              region: 'DE',  exchange: 'XETRA' },
+  { symbol: '^FCHI',    name: 'CAC 40',           region: 'FR',  exchange: 'Euronext' },
+  { symbol: '^N225',    name: 'Nikkei 225',       region: 'JP',  exchange: 'TSE' },
+  { symbol: '^HSI',     name: 'Hang Seng',        region: 'HK',  exchange: 'HKEX' },
+  { symbol: '^STOXX50E',name: 'Euro Stoxx 50',    region: 'EU',  exchange: 'Euronext' },
+  { symbol: '^KS11',    name: 'KOSPI',            region: 'KR',  exchange: 'KRX' },
+  { symbol: '^BSESN',   name: 'Sensex',           region: 'IN',  exchange: 'BSE' },
+];
+
+// Fetch live quotes for all major global indices.
+// Returns array of { symbol, name, region, exchange, price, change, changePercent, open, high, low, prevClose }
+// Indices that fail (no Finnhub coverage, outside market hours) are skipped gracefully.
+async function getGlobalIndices() {
+  if (!hasMarketData()) {
+    return GLOBAL_INDICES.map(idx => ({ ...idx, price: null, change: null, changePercent: null }));
+  }
+  return cached('global-indices', 5 * 60 * 1000, async () => {
+    const results = [];
+    // Batch in groups of 4 to avoid hammering the API
+    for (let i = 0; i < GLOBAL_INDICES.length; i += 4) {
+      const batch = GLOBAL_INDICES.slice(i, i + 4);
+      await Promise.all(batch.map(async (idx) => {
+        try {
+          const q = await get(`/quote?symbol=${encodeURIComponent(idx.symbol)}`);
+          if (q && q.c) {
+            results.push({
+              ...idx,
+              price: q.c,
+              change: Math.round((q.c - q.pc) * 100) / 100,
+              changePercent: q.pc ? Math.round(((q.c - q.pc) / q.pc) * 10000) / 100 : 0,
+              open: q.o || null,
+              high: q.h || null,
+              low: q.l || null,
+              prevClose: q.pc || null,
+            });
+          } else {
+            results.push({ ...idx, price: null, change: null, changePercent: null });
+          }
+        } catch (_) {
+          results.push({ ...idx, price: null, change: null, changePercent: null });
+        }
+      }));
+    }
+    // Return in original order
+    return GLOBAL_INDICES.map(idx => results.find(r => r.symbol === idx.symbol) || { ...idx, price: null, change: null, changePercent: null });
+  });
+}
+
+// Format global indices as a compact prompt-ready string for AI context injection.
+function formatIndicesForPrompt(indices) {
+  const live = indices.filter(i => i.price !== null);
+  if (!live.length) return '';
+  const lines = live.map(i => {
+    const sign = i.changePercent >= 0 ? '+' : '';
+    return `${i.name} (${i.region}): ${i.price.toLocaleString()} ${sign}${i.changePercent}%`;
+  });
+  return 'Global markets right now:\n' + lines.join('\n');
+}
+
 module.exports = {
   hasMarketData,
   getQuote,
@@ -114,4 +182,7 @@ module.exports = {
   getCompanyNews,
   getMarketNews,
   resolveSymbol,
+  getGlobalIndices,
+  formatIndicesForPrompt,
+  GLOBAL_INDICES,
 };
