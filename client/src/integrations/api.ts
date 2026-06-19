@@ -115,6 +115,12 @@ class QueryBuilder<T = Record<string, unknown>> {
 
   select(cols: string) { this._select = cols; return this; }
   eq(col: string, val: unknown) { this._filters.push(`${col}=eq.${val}`); return this; }
+  neq(col: string, val: unknown) { this._filters.push(`${col}=neq.${val}`); return this; }
+  in(col: string, vals: unknown[]) { this._filters.push(`${col}=in.(${vals.join(",")})`); return this; }
+  gte(col: string, val: unknown) { this._filters.push(`${col}=gte.${val}`); return this; }
+  lte(col: string, val: unknown) { this._filters.push(`${col}=lte.${val}`); return this; }
+  is(col: string, val: unknown) { this._filters.push(`${col}=is.${val}`); return this; }
+  not(col: string, op: string, val: unknown) { this._filters.push(`${col}=not.${op}.${val}`); return this; }
   limit(n: number) { this._limit = n; return this; }
   order(col: string, opts?: { ascending?: boolean }) {
     this._order = `${col}.${opts?.ascending === false ? "desc" : "asc"}`;
