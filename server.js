@@ -126,6 +126,24 @@ app.use('/api/onboarding', require('./routes/onboarding'));
 app.use('/score', require('./routes/score'));
 app.use('/dashboard/tools', require('./routes/tools'));
 app.use('/dashboard/portfolio', require('./routes/portfolio'));
+app.use('/api/waitlist', require('./routes/waitlist'));
+
+// Public pages
+app.get('/pricing', (req, res) => {
+  const { buildAnalyticsSnippet } = require('./lib/landing-context');
+  res.render('pricing', { layout: false,
+    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || ''),
+    user: req.session && req.session.userId ? { id: req.session.userId } : null,
+  });
+});
+
+app.get('/waitlist', (req, res) => {
+  const { buildAnalyticsSnippet } = require('./lib/landing-context');
+  res.render('waitlist', { layout: false,
+    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || ''),
+    user: req.session && req.session.userId ? { id: req.session.userId } : null,
+  });
+});
 
 // Landing page must come AFTER auth routes (which redirect logged-in users)
 app.get('/', (_req, res) => {

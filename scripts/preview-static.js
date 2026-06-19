@@ -202,6 +202,31 @@ app.post('/dashboard/vault/extract/:id', (_req, res) => {
 });
 app.post('/dashboard/assets/update', (_req, res) => res.json({ ok: true }));
 
+// Additional public pages
+app.get('/score', (_req, res, next) => {
+  ejs.renderFile(path.join(VIEWS, 'score.ejs'), {
+    analyticsSnippet: '',
+    themeCSS: '<link rel="stylesheet" href="/css/theme.css">',
+    result: null, formData: null, error: null,
+  }).then(html => res.send(html)).catch(next);
+});
+app.get('/pricing', (_req, res, next) => {
+  ejs.renderFile(path.join(VIEWS, 'pricing.ejs'), {
+    analyticsSnippet: '',
+    user: null,
+  }).then(html => res.send(html)).catch(next);
+});
+app.get('/waitlist', (_req, res, next) => {
+  ejs.renderFile(path.join(VIEWS, 'waitlist.ejs'), {
+    analyticsSnippet: '',
+    user: null,
+  }).then(html => res.send(html)).catch(next);
+});
+app.get('/signup', (_req, res, next) => {
+  ejs.renderFile(path.join(VIEWS, 'auth-signup.ejs'), {
+    error: null, email: '',
+  }).then(html => res.send(html)).catch(next);
+});
 app.use((err, _req, res, _next) => {
   console.error(err);
   res.status(500).send('<pre>' + (err.stack || err.message) + '</pre>');

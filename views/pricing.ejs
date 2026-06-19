@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <title>Pricing — Maal</title>
+  <meta name="description" content="Free, Pro $20/mo, and Max $200/mo. Honest pricing for a CFO-level financial advisor built for Australians.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/theme.css">
+  <style>
+    body { background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
+    main { flex: 1; }
+    .pr-section { padding: 5rem 1.5rem 3rem; text-align: center; }
+    .pr-kicker { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .18em; color: var(--fg-muted); margin-bottom: 1rem; }
+    .pr-h1 { font-size: clamp(2.2rem,6vw,3.5rem); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; }
+    .pr-sub { margin: 1.25rem auto 0; font-size: 1rem; color: var(--fg-muted); max-width: 480px; line-height: 1.65; }
+    .tiers { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem 4rem; display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; }
+    @media (max-width: 800px) { .tiers { grid-template-columns: 1fr; } }
+    .tier { padding: 2rem; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); display: flex; flex-direction: column; }
+    .tier.featured { border-color: var(--fg); }
+    .tier-top { display: flex; align-items: center; justify-content: space-between; }
+    .tier-name { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--fg-muted); }
+    .tier-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .16em; color: var(--mint); }
+    .tier-price { margin-top: 1rem; display: flex; align-items: baseline; gap: .5rem; }
+    .tier-price-num { font-size: 2.75rem; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+    .tier-price-per { font-size: 12px; color: var(--fg-muted); }
+    .tier-desc { margin-top: .75rem; font-size: 13px; color: var(--fg-muted); line-height: 1.6; }
+    .tier-list { margin-top: 1.5rem; list-style: none; padding: 0; display: flex; flex-direction: column; gap: .625rem; flex: 1; }
+    .tier-list li { display: flex; align-items: flex-start; gap: .5rem; font-size: 13px; }
+    .tier-check { color: var(--mint); font-size: 14px; margin-top: .1rem; flex-shrink: 0; }
+    .tier-cta { margin-top: 1.75rem; display: flex; align-items: center; justify-content: center; padding: .625rem 1rem; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; transition: all .15s; }
+    .tier-cta.solid { background: var(--fg); color: #fff; }
+    .tier-cta.solid:hover { opacity: .88; }
+    .tier-cta.outline { border: 1px solid var(--border); color: var(--fg); }
+    .tier-cta.outline:hover { background: var(--surface-2); }
+    .compare { padding: 5rem 1.5rem; border-top: 1px solid var(--border); background: rgba(0,0,0,.02); }
+    html[data-theme="dark"] .compare { background: rgba(255,255,255,.015); }
+    .compare-inner { max-width: 1100px; margin: 0 auto; }
+    .compare h2 { font-size: clamp(1.5rem,3vw,1.75rem); font-weight: 700; letter-spacing: -.03em; margin-bottom: 2.5rem; }
+    .compare-table { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; width: 100%; border-collapse: collapse; }
+    .compare-table thead tr { border-bottom: 1px solid var(--border); }
+    .compare-table th { padding: 1rem 1.25rem; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--fg-muted); text-align: center; }
+    .compare-table th:first-child { text-align: left; }
+    .compare-table td { padding: .875rem 1.25rem; font-size: 13px; text-align: center; border-bottom: 1px solid var(--border); }
+    .compare-table td:first-child { text-align: left; }
+    .compare-table tbody tr:last-child td { border-bottom: none; }
+    .c-check { color: var(--mint); }
+    .c-dash { color: var(--fg-muted); opacity: .35; }
+    .disclaimer-block { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem 4rem; font-size: 11px; color: var(--fg-muted); line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <%- include('partials/navbar') %>
+
+  <main>
+    <section class="pr-section">
+      <p class="pr-kicker">Pricing</p>
+      <h1 class="pr-h1">Pay for clarity,<br>not for advice.</h1>
+      <p class="pr-sub">Maal replaces the spreadsheet and the awkward annual review. Cancel anytime. All amounts in AUD.</p>
+    </section>
+
+    <div class="tiers">
+      <div class="tier">
+        <div class="tier-top"><span class="tier-name">Free</span></div>
+        <div class="tier-price">
+          <span class="tier-price-num">$0</span>
+          <span class="tier-price-per">forever</span>
+        </div>
+        <p class="tier-desc">Get your score and try the dashboard.</p>
+        <ul class="tier-list">
+          <li><span class="tier-check">&#10003;</span> Maal Score</li>
+          <li><span class="tier-check">&#10003;</span> Manual entry</li>
+          <li><span class="tier-check">&#10003;</span> Basic dashboard</li>
+        </ul>
+        <a href="/signup" class="tier-cta outline">Start free</a>
+      </div>
+
+      <div class="tier featured">
+        <div class="tier-top">
+          <span class="tier-name">Pro</span>
+          <span class="tier-badge">Recommended</span>
+        </div>
+        <div class="tier-price">
+          <span class="tier-price-num">$20</span>
+          <span class="tier-price-per">AUD / month</span>
+        </div>
+        <p class="tier-desc">The full advisor — for every Australian household.</p>
+        <ul class="tier-list">
+          <li><span class="tier-check">&#10003;</span> Everything in Free</li>
+          <li><span class="tier-check">&#10003;</span> Open banking sync</li>
+          <li><span class="tier-check">&#10003;</span> Ethical screens</li>
+          <li><span class="tier-check">&#10003;</span> Ask Maal chat</li>
+          <li><span class="tier-check">&#10003;</span> Retirement projections</li>
+        </ul>
+        <a href="/signup" class="tier-cta solid">Get Pro</a>
+      </div>
+
+      <div class="tier">
+        <div class="tier-top"><span class="tier-name">Max</span></div>
+        <div class="tier-price">
+          <span class="tier-price-num">$200</span>
+          <span class="tier-price-per">AUD / month</span>
+        </div>
+        <p class="tier-desc">For complex finances and small business owners.</p>
+        <ul class="tier-list">
+          <li><span class="tier-check">&#10003;</span> Everything in Pro</li>
+          <li><span class="tier-check">&#10003;</span> Radar alerts (email + SMS)</li>
+          <li><span class="tier-check">&#10003;</span> Vault PDF extraction</li>
+          <li><span class="tier-check">&#10003;</span> Multi-entity</li>
+          <li><span class="tier-check">&#10003;</span> Priority reviews</li>
+        </ul>
+        <a href="/waitlist" class="tier-cta outline">Talk to us</a>
+      </div>
+    </div>
+
+    <section class="compare">
+      <div class="compare-inner">
+        <h2>Feature comparison</h2>
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Free</th>
+              <th>Pro</th>
+              <th>Max</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Maal Score (0–100)</td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
+            <tr><td>Manual asset &amp; debt entry</td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
+            <tr><td>Ethical Score (ESG + Islamic screens)</td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
+            <tr><td>Open banking sync</td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
+            <tr><td>Retirement projections (Monte Carlo)</td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
+            <tr><td>Ask Maal advisor chat</td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
+            <tr><td>Goals &amp; portfolio plan</td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
+            <tr><td>Radar alerts (email + SMS)</td><td><span class="c-dash">—</span></td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td></tr>
+            <tr><td>Vault PDF extraction</td><td><span class="c-dash">—</span></td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td></tr>
+            <tr><td>Multi-entity (trusts, companies)</td><td><span class="c-dash">—</span></td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td></tr>
+            <tr><td>Priority human-led reviews</td><td><span class="c-dash">—</span></td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="disclaimer-block">
+      DISCLAIMER: Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+  <%- analyticsSnippet %>
+</body>
+</html>

@@ -13,98 +13,392 @@
   <link rel="stylesheet" href="/css/app.css">
   <script src="/js/app.js" defer></script>
   <script>
-    // Apply saved theme before paint (default: light)
     (function() {
       try {
         var t = localStorage.getItem('maal-theme') || 'light';
         document.documentElement.setAttribute('data-theme', t);
+        if (t === 'dark') document.documentElement.classList.add('dark');
         if (localStorage.getItem('maal-privacy') === 'on') {
           document.documentElement.setAttribute('data-privacy', 'on');
         }
       } catch (e) {}
     })();
   </script>
+  <style>
+    /* App shell redesign — matches Lovable AppShell exactly */
+    :root { --shell-sidebar: 240px; }
+    body.app-body { display: flex; min-height: 100vh; background: var(--bg); }
+
+    /* Sidebar */
+    .lv-sidebar {
+      width: var(--shell-sidebar);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 200;
+    }
+    .lv-sidebar-header {
+      height: 56px;
+      padding: 0 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .lv-sidebar-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); flex-shrink: 0; }
+    .lv-sidebar-wordmark { font-size: 16px; font-weight: 700; letter-spacing: -.03em; color: var(--fg); text-decoration: none; }
+    .lv-sidebar-nav { flex: 1; padding: .75rem; overflow-y: auto; }
+    .lv-nav-item {
+      display: flex;
+      align-items: center;
+      gap: .625rem;
+      padding: .5rem .75rem;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--fg-muted);
+      text-decoration: none;
+      transition: background .12s, color .12s;
+      margin-bottom: 2px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      font-family: var(--font-body);
+    }
+    .lv-nav-item:hover { background: var(--surface-2); color: var(--fg); }
+    .lv-nav-item.active { background: rgba(18,181,166,.12); color: var(--mint); }
+    .lv-nav-item.sub { padding-left: 2rem; }
+    .lv-nav-ico { width: 16px; height: 16px; flex-shrink: 0; }
+    .lv-section-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .5rem .75rem;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      color: var(--fg-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-body);
+      margin-top: .75rem;
+      margin-bottom: 2px;
+    }
+    .lv-section-btn:hover { color: var(--fg); }
+    .lv-section-chevron { width: 12px; height: 12px; transition: transform .2s; }
+    .lv-section-chevron.collapsed { transform: rotate(-90deg); }
+    .lv-divider { height: 1px; background: var(--border); margin: .75rem .75rem; }
+    .lv-sidebar-footer {
+      padding: .75rem;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .lv-sidebar-footer-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .25rem .75rem .75rem;
+    }
+    .lv-user-email { font-size: 11px; color: var(--fg-muted); truncate; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
+    .lv-icon-btn {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--fg-muted); background: none; border: none; cursor: pointer;
+      transition: background .12s, color .12s;
+    }
+    .lv-icon-btn:hover { background: var(--surface-2); color: var(--fg); }
+    .lv-signout {
+      display: flex; align-items: center; gap: .625rem;
+      width: 100%; padding: .5rem .75rem; border-radius: 8px;
+      font-size: 12px; font-weight: 500; color: var(--fg-muted);
+      background: none; border: none; cursor: pointer; font-family: var(--font-body);
+      transition: background .12s, color .12s;
+    }
+    .lv-signout:hover { background: var(--surface-2); color: var(--fg); }
+
+    /* Main content area */
+    .lv-main-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .lv-topbar {
+      position: sticky; top: 3px; z-index: 30;
+      height: 48px;
+      background: rgba(var(--bg-rgb, 251,251,251), .9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 1.5rem;
+      gap: .5rem;
+    }
+    .lv-main { flex: 1; }
+    .lv-app-footer {
+      border-top: 1px solid var(--border);
+      padding: 1rem 1.5rem;
+      font-size: 11px;
+      color: var(--fg-muted);
+      line-height: 1.75;
+    }
+
+    /* Mobile */
+    .lv-mobile-bar {
+      display: none;
+      position: sticky; top: 3px; z-index: 30;
+      height: 56px;
+      background: rgba(var(--bg-rgb, 251,251,251), .9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1rem;
+    }
+    .lv-mobile-wordmark { font-size: 15px; font-weight: 700; letter-spacing: -.03em; color: var(--fg); text-decoration: none; }
+    .lv-mobile-select {
+      font-size: 12px; background: transparent; border: 1px solid var(--border);
+      border-radius: 6px; padding: .25rem .5rem; color: var(--fg);
+      font-family: var(--font-body);
+    }
+
+    @media (max-width: 768px) {
+      .lv-sidebar { display: none !important; }
+      .lv-topbar { display: none !important; }
+      .lv-mobile-bar { display: flex !important; }
+    }
+
+    /* Modal overlay */
+    .lv-modal-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,.5);
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+    .lv-modal {
+      width: 100%; max-width: 440px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 24px 48px -16px rgba(0,0,0,.3);
+    }
+    .lv-modal-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      padding: 1.25rem 1.25rem .5rem;
+    }
+    .lv-modal-title { font-size: 17px; font-weight: 700; letter-spacing: -.03em; }
+    .lv-modal-sub { font-size: 12px; color: var(--fg-muted); margin-top: .25rem; }
+    .lv-modal-body { padding: 1rem 1.25rem; }
+    .lv-modal-label { font-size: 12px; font-weight: 600; display: block; margin-bottom: .5rem; }
+    .lv-modal-textarea {
+      width: 100%; border: 1px solid var(--border); border-radius: 10px;
+      background: var(--bg); padding: .75rem; font-size: 13px;
+      font-family: var(--font-body); color: var(--fg); resize: vertical;
+      min-height: 120px; outline: none; box-sizing: border-box;
+    }
+    .lv-modal-textarea:focus { border-color: var(--fg); }
+    .lv-modal-footer {
+      display: flex; align-items: center; justify-content: flex-end;
+      gap: .5rem; padding: 1rem 1.25rem;
+      border-top: 1px solid var(--border);
+    }
+    .lv-modal-cancel {
+      padding: .5rem 1rem; border-radius: 8px; font-size: 13px; font-weight: 500;
+      border: 1px solid var(--border); background: none; color: var(--fg);
+      cursor: pointer; font-family: var(--font-body);
+    }
+    .lv-modal-cancel:hover { background: var(--surface-2); }
+    .lv-modal-submit {
+      padding: .5rem 1rem; border-radius: 8px; font-size: 13px; font-weight: 600;
+      background: var(--fg); color: #fff; border: none; cursor: pointer;
+      font-family: var(--font-body);
+    }
+    .lv-modal-submit:disabled { opacity: .5; cursor: default; }
+
+    html[data-theme="dark"] .lv-topbar,
+    html[data-theme="dark"] .lv-mobile-bar { background: rgba(10,10,11,.9); }
+  </style>
 </head>
 <body class="app-body">
-  <!-- Mobile top bar -->
-  <div class="mobile-topbar">
-    <button class="icon-btn" id="mobile-menu" title="Menu" aria-label="Open navigation menu">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-    </button>
-    <a href="/dashboard" class="sidebar-logo" style="margin:0; font-size:1.2rem;"><span class="mark">◈</span> Maal</a>
-    <span style="width:34px;"></span>
-  </div>
-  <div class="sidebar-overlay" id="sidebar-overlay"></div>
-  <div class="app">
-    <aside class="sidebar">
-      <a href="/dashboard" class="sidebar-logo"><span class="mark">◈</span> Maal</a>
 
-      <a href="/dashboard" class="side-item <%= pageTitle === 'Dashboard' ? 'active' : '' %>">
-        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+  <!-- Desktop sidebar -->
+  <aside class="lv-sidebar" id="lv-sidebar">
+    <div class="lv-sidebar-header">
+      <span class="lv-sidebar-dot"></span>
+      <a href="/" class="lv-sidebar-wordmark">Maal</a>
+    </div>
+
+    <nav class="lv-sidebar-nav">
+      <a href="/dashboard" class="lv-nav-item <%= pageTitle === 'Dashboard' ? 'active' : '' %>">
+        <svg class="lv-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
         Dashboard
       </a>
-      <a href="/dashboard/ask" class="side-item <%= pageTitle === 'Ask Maal' ? 'active' : '' %>">
-        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-8 8H5l-2 2V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8z"/></svg>
+      <a href="/dashboard/ask" class="lv-nav-item <%= pageTitle === 'Ask Maal' ? 'active' : '' %>">
+        <svg class="lv-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-8 8H5l-2 2V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8z"/></svg>
         Ask Maal
       </a>
-      <a href="/dashboard/research" class="side-item <%= pageTitle === 'Research' ? 'active' : '' %>">
-        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <a href="/dashboard/research" class="lv-nav-item <%= pageTitle === 'Research' ? 'active' : '' %>">
+        <svg class="lv-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
         Research
       </a>
-      <a href="/dashboard/radar" class="side-item <%= pageTitle === 'Radar' ? 'active' : '' %>">
-        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12 18 6"/></svg>
+      <a href="/dashboard/radar" class="lv-nav-item <%= pageTitle === 'Radar' ? 'active' : '' %>">
+        <svg class="lv-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12 18 6"/></svg>
         Radar
       </a>
 
-      <div class="side-group">My Portfolio</div>
-      <a href="/dashboard/assets" class="side-item side-sub <%= pageTitle === 'Assets & Liabilities' ? 'active' : '' %>">Assets &amp; Liabilities</a>
-      <a href="/dashboard/vault" class="side-item side-sub <%= pageTitle === 'Vault' ? 'active' : '' %>">Vault</a>
-      <a href="/dashboard/transactions" class="side-item side-sub <%= pageTitle === 'Transactions' ? 'active' : '' %>">Transactions</a>
-      <a href="/dashboard/accounts" class="side-item side-sub <%= pageTitle === 'Linked Accounts' ? 'active' : '' %>">Linked Accounts</a>
-      <a href="/dashboard/goals" class="side-item side-sub <%= pageTitle === 'Goals' ? 'active' : '' %>">Goals</a>
-      <a href="/dashboard/profile" class="side-item side-sub <%= pageTitle === 'Profile' ? 'active' : '' %>">Profile</a>
-
-      <div class="side-group">Insights</div>
-      <a href="/dashboard/scores" class="side-item side-sub <%= pageTitle === 'Scores' ? 'active' : '' %>">Scores</a>
-      <a href="/dashboard/projections" class="side-item side-sub <%= pageTitle === 'Projections' ? 'active' : '' %>">Projections</a>
-      <a href="/dashboard/recommendations" class="side-item side-sub <%= pageTitle === 'Recommendations' ? 'active' : '' %>">Action Plan</a>
-      <a href="/dashboard/portfolio" class="side-item side-sub <%= pageTitle === 'Portfolio' ? 'active' : '' %>">Portfolio Plan</a>
-      <a href="/dashboard/tools" class="side-item side-sub <%= pageTitle === 'Recommended Tools' ? 'active' : '' %>">Tools</a>
-
-      <div class="side-divider"></div>
-      <a href="#" class="side-item" id="feedback-open">Share Feedback</a>
-      <a href="/dashboard/roadmap" class="side-item <%= pageTitle === 'Roadmap' ? 'active' : '' %>">Roadmap</a>
-      <a href="mailto:support@hellomaal.com" class="side-item">Support</a>
-
-      <div class="sidebar-bottom">
-        <button type="button" class="icon-btn" id="theme-toggle" title="Toggle light/dark" aria-label="Toggle light or dark mode">
-          <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-        </button>
-        <button type="button" class="icon-btn" id="privacy-toggle" title="Privacy mode — blur balances" aria-label="Toggle privacy mode (blur balances)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-        <a href="/dashboard/settings" class="icon-btn" title="Settings" aria-label="Settings">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      <button class="lv-section-btn" id="portfolio-toggle" aria-expanded="true">
+        My Portfolio
+        <svg class="lv-section-chevron" id="portfolio-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div id="portfolio-items">
+        <a href="/dashboard/assets" class="lv-nav-item sub <%= pageTitle === 'Assets & Liabilities' ? 'active' : '' %>">
+          <svg class="lv-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 12V22H4V12"/><rect x="2" y="7" width="20" height="5" rx="1"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg>
+          Assets &amp; Liabilities
         </a>
-        <form action="/logout" method="POST" style="display:inline;">
-          <button type="submit" class="icon-btn" title="Sign out" aria-label="Sign out">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
-          </button>
-        </form>
+        <a href="/dashboard/vault" class="lv-nav-item sub <%= pageTitle === 'Vault' ? 'active' : '' %>">
+          <svg class="lv-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Vault
+        </a>
+        <a href="/dashboard/transactions" class="lv-nav-item sub <%= pageTitle === 'Transactions' ? 'active' : '' %>">
+          <svg class="lv-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 7 18 0M3 12l18 0M3 17l18 0"/></svg>
+          Transactions
+        </a>
+        <a href="/dashboard/goals" class="lv-nav-item sub <%= pageTitle === 'Goals' ? 'active' : '' %>">
+          <svg class="lv-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+          Goals
+        </a>
+        <a href="/dashboard/profile" class="lv-nav-item sub <%= pageTitle === 'Profile' || pageTitle === 'Onboarding' ? 'active' : '' %>">
+          <svg class="lv-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          Profile
+        </a>
       </div>
-    </aside>
 
-    <main class="main">
-      <%- body %>
-      <div class="disclaimer">
-        DISCLAIMER: Maal does not provide financial advice. Any information provided
-        by Maal is for educational purposes only. You should do your own research.
-        Investing is risky and you can lose all of your money.
+      <div class="lv-divider"></div>
+
+      <button class="lv-nav-item" id="lv-feedback-btn">
+        <svg class="lv-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Share Feedback
+      </button>
+      <button class="lv-nav-item" id="lv-support-btn">
+        <svg class="lv-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5" fill="currentColor"/></svg>
+        Support
+      </button>
+      <a href="/dashboard/roadmap" class="lv-nav-item <%= pageTitle === 'Roadmap' ? 'active' : '' %>">
+        <svg class="lv-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h18M3 6l9-3 9 3M3 18l9 3 9-3"/></svg>
+        Roadmap
+      </a>
+    </nav>
+
+    <div class="lv-sidebar-footer">
+      <div class="lv-sidebar-footer-top">
+        <span class="lv-user-email"><%= session.email || '' %></span>
+        <div style="display:flex;gap:4px;">
+          <button class="lv-icon-btn" id="lv-theme-toggle" title="Toggle theme" aria-label="Toggle light or dark mode">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          </button>
+          <button class="lv-icon-btn" id="lv-privacy-toggle" title="Privacy mode" aria-label="Toggle privacy mode">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <a href="/dashboard/settings" class="lv-icon-btn" title="Settings" aria-label="Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+          </a>
+        </div>
       </div>
-    </main>
+      <form action="/logout" method="POST">
+        <button type="submit" class="lv-signout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+          Sign out
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Mobile top bar -->
+  <div class="lv-mobile-bar">
+    <a href="/" class="lv-mobile-wordmark">Maal</a>
+    <select class="lv-mobile-select" onchange="window.location.href=this.value" aria-label="Navigate to page">
+      <option value="/dashboard" <%= pageTitle === 'Dashboard' ? 'selected' : '' %>>Dashboard</option>
+      <option value="/dashboard/ask" <%= pageTitle === 'Ask Maal' ? 'selected' : '' %>>Ask Maal</option>
+      <option value="/dashboard/research" <%= pageTitle === 'Research' ? 'selected' : '' %>>Research</option>
+      <option value="/dashboard/radar" <%= pageTitle === 'Radar' ? 'selected' : '' %>>Radar</option>
+      <option value="/dashboard/assets" <%= pageTitle === 'Assets & Liabilities' ? 'selected' : '' %>>Assets &amp; Liabilities</option>
+      <option value="/dashboard/vault" <%= pageTitle === 'Vault' ? 'selected' : '' %>>Vault</option>
+      <option value="/dashboard/transactions" <%= pageTitle === 'Transactions' ? 'selected' : '' %>>Transactions</option>
+      <option value="/dashboard/goals" <%= pageTitle === 'Goals' ? 'selected' : '' %>>Goals</option>
+      <option value="/dashboard/profile" <%= pageTitle === 'Profile' ? 'selected' : '' %>>Profile</option>
+      <option value="/dashboard/roadmap" <%= pageTitle === 'Roadmap' ? 'selected' : '' %>>Roadmap</option>
+    </select>
   </div>
 
-  <!-- Floating Maal chat -->
+  <!-- Main content -->
+  <div class="lv-main-wrap">
+    <header class="lv-topbar">
+      <!-- Right-side topbar items could go here (notifications etc.) -->
+    </header>
+    <main class="lv-main">
+      <%- body %>
+    </main>
+    <footer class="lv-app-footer">
+      DISCLAIMER: Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.
+    </footer>
+  </div>
+
+  <!-- Feedback Modal -->
+  <div class="lv-modal-overlay" id="lv-feedback-modal" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+    <div class="lv-modal">
+      <div class="lv-modal-head">
+        <div>
+          <p class="lv-modal-title">Share Your Feedback</p>
+          <p class="lv-modal-sub">We'd love to hear your thoughts on how we can improve Maal</p>
+        </div>
+        <button class="lv-icon-btn" onclick="document.getElementById('lv-feedback-modal').style.display='none'" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="lv-modal-body">
+        <label class="lv-modal-label" for="lv-feedback-text">Your Feedback</label>
+        <textarea class="lv-modal-textarea" id="lv-feedback-text" placeholder="Share your thoughts, ideas, or report an issue..." rows="5"></textarea>
+      </div>
+      <div class="lv-modal-footer">
+        <button class="lv-modal-cancel" onclick="document.getElementById('lv-feedback-modal').style.display='none'">Cancel</button>
+        <button class="lv-modal-submit" id="lv-feedback-submit">Submit Feedback</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Support Modal -->
+  <div class="lv-modal-overlay" id="lv-support-modal" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+    <div class="lv-modal">
+      <div class="lv-modal-head">
+        <div>
+          <p class="lv-modal-title">Report an Error</p>
+          <p class="lv-modal-sub">Please describe the issue you encountered so we can fix it</p>
+        </div>
+        <button class="lv-icon-btn" onclick="document.getElementById('lv-support-modal').style.display='none'" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="lv-modal-body">
+        <label class="lv-modal-label" for="lv-support-text">Error Description</label>
+        <textarea class="lv-modal-textarea" id="lv-support-text" placeholder="Please describe what went wrong..." rows="5"></textarea>
+        <p style="margin-top:.75rem;font-size:11px;color:var(--fg-muted)">You can also email us at <a href="mailto:support@hellomaal.com" style="color:var(--fg)">support@hellomaal.com</a></p>
+      </div>
+      <div class="lv-modal-footer">
+        <button class="lv-modal-cancel" onclick="document.getElementById('lv-support-modal').style.display='none'">Cancel</button>
+        <button class="lv-modal-submit" id="lv-support-submit">Submit Report</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating chat -->
   <div class="chat-panel" id="chat-panel">
     <div class="chat-head">
       <div class="avatar" style="width:34px;height:34px;font-size:0.85rem;">M</div>
@@ -115,7 +409,7 @@
       <button class="icon-btn chat-close" id="chat-close" title="Close" aria-label="Close chat">✕</button>
     </div>
     <div class="chat-body" id="chat-body">
-      <div class="chat-msg bot">Hey <%= (session.name || 'there').split(' ')[0] %>, how can I help you today? I can help you understand your portfolio, track expenses, and explain what's going on in your finances.</div>
+      <div class="chat-msg bot">Hey <%= (session.name || 'there').split(' ')[0] %>, how can I help you today?</div>
     </div>
     <div class="chat-input-row">
       <input type="text" id="chat-input" aria-label="Ask Maal a financial question" placeholder="Ask me anything about your finances">
@@ -128,104 +422,137 @@
   </button>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Floating chat open/close (messaging logic lives in /js/app.js)
-      var fab = document.getElementById('chat-fab');
-      var panel = document.getElementById('chat-panel');
-      var chatClose = document.getElementById('chat-close');
-      if (fab && panel) {
-        fab.addEventListener('click', function() {
-          panel.classList.toggle('open');
-          if (panel.classList.contains('open')) document.getElementById('chat-input').focus();
-        });
-        chatClose.addEventListener('click', function() { panel.classList.remove('open'); });
-      }
+  document.addEventListener('DOMContentLoaded', function() {
+    // Portfolio collapsible
+    var portfolioToggle = document.getElementById('portfolio-toggle');
+    var portfolioItems = document.getElementById('portfolio-items');
+    var portfolioChevron = document.getElementById('portfolio-chevron');
+    var portfolioOpen = true;
+    if (portfolioToggle) {
+      portfolioToggle.addEventListener('click', function() {
+        portfolioOpen = !portfolioOpen;
+        portfolioItems.style.display = portfolioOpen ? '' : 'none';
+        portfolioChevron.classList.toggle('collapsed', !portfolioOpen);
+        portfolioToggle.setAttribute('aria-expanded', String(portfolioOpen));
+      });
+    }
 
-      // Mobile sidebar
-      var menuBtn = document.getElementById('mobile-menu');
-      var sidebar = document.querySelector('.sidebar');
-      var overlay = document.getElementById('sidebar-overlay');
-      if (menuBtn && sidebar) {
-        menuBtn.addEventListener('click', function() {
-          sidebar.classList.toggle('open');
-          overlay.classList.toggle('show');
-        });
-        overlay.addEventListener('click', function() {
-          sidebar.classList.remove('open');
-          overlay.classList.remove('show');
-        });
-      }
+    // Theme toggle
+    var themeBtn = document.getElementById('lv-theme-toggle');
+    if (themeBtn) {
+      themeBtn.addEventListener('click', function() {
+        var cur = document.documentElement.getAttribute('data-theme') || 'light';
+        var next = cur === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', next);
+        document.documentElement.classList.toggle('dark', next === 'dark');
+        try { localStorage.setItem('maal-theme', next); } catch(e) {}
+      });
+    }
 
-      // Theme toggle
-      var toggle = document.getElementById('theme-toggle');
-      if (toggle) {
-        toggle.addEventListener('click', function() {
-          var cur = document.documentElement.getAttribute('data-theme') || 'light';
-          var next = cur === 'light' ? 'dark' : 'light';
-          document.documentElement.setAttribute('data-theme', next);
-          try { localStorage.setItem('maal-theme', next); } catch (e) {}
-        });
-      }
+    // Privacy toggle
+    var privacyBtn = document.getElementById('lv-privacy-toggle');
+    if (privacyBtn) {
+      privacyBtn.addEventListener('click', function() {
+        var on = document.documentElement.getAttribute('data-privacy') === 'on';
+        if (on) document.documentElement.removeAttribute('data-privacy');
+        else document.documentElement.setAttribute('data-privacy', 'on');
+        try { localStorage.setItem('maal-privacy', on ? 'off' : 'on'); } catch(e) {}
+      });
+    }
 
-      // Privacy mode — blur every balance on screen
-      var privacy = document.getElementById('privacy-toggle');
-      if (privacy) {
-        privacy.addEventListener('click', function() {
-          var on = document.documentElement.getAttribute('data-privacy') === 'on';
-          if (on) document.documentElement.removeAttribute('data-privacy');
-          else document.documentElement.setAttribute('data-privacy', 'on');
-          try { localStorage.setItem('maal-privacy', on ? 'off' : 'on'); } catch (e) {}
-        });
-      }
-
-      // Legacy: recommendation accept/dismiss
-      document.querySelectorAll('.rec-accept, .rec-dismiss').forEach(function(btn) {
-        btn.addEventListener('click', async function() {
-          var recId = btn.getAttribute('data-id');
-          var status = btn.classList.contains('rec-accept') ? 'accepted' : 'dismissed';
-          try {
-            var res = await fetch('/dashboard/recommendations/' + recId + '/status', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ status: status })
-            });
-            if (res.ok) {
-              var item = btn.closest('.rec-item');
-              item.style.opacity = '0.5';
-              item.style.pointerEvents = 'none';
-            }
-          } catch(e) { console.error(e); }
+    // Feedback modal
+    var feedbackBtn = document.getElementById('lv-feedback-btn');
+    if (feedbackBtn) {
+      feedbackBtn.addEventListener('click', function() {
+        document.getElementById('lv-feedback-modal').style.display = 'flex';
+      });
+    }
+    var feedbackSubmit = document.getElementById('lv-feedback-submit');
+    if (feedbackSubmit) {
+      feedbackSubmit.addEventListener('click', function() {
+        var text = document.getElementById('lv-feedback-text').value.trim();
+        if (!text) return;
+        feedbackSubmit.disabled = true;
+        feedbackSubmit.textContent = 'Submitting...';
+        fetch('/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text })
+        }).catch(function() {}).finally(function() {
+          document.getElementById('lv-feedback-modal').style.display = 'none';
+          document.getElementById('lv-feedback-text').value = '';
+          feedbackSubmit.disabled = false;
+          feedbackSubmit.textContent = 'Submit Feedback';
         });
       });
+    }
 
-      // Legacy: delete linked account
-      document.querySelectorAll('.delete-account').forEach(function(btn) {
-        btn.addEventListener('click', async function() {
-          if (!confirm('Remove this linked account?')) return;
-          var id = btn.getAttribute('data-id');
-          try {
-            var res = await fetch('/dashboard/accounts/' + id, { method: 'DELETE' });
-            if (res.ok) btn.closest('.account-item').remove();
-          } catch(e) { console.error(e); }
+    // Support modal
+    var supportBtn = document.getElementById('lv-support-btn');
+    if (supportBtn) {
+      supportBtn.addEventListener('click', function() {
+        document.getElementById('lv-support-modal').style.display = 'flex';
+      });
+    }
+    var supportSubmit = document.getElementById('lv-support-submit');
+    if (supportSubmit) {
+      supportSubmit.addEventListener('click', function() {
+        var text = document.getElementById('lv-support-text').value.trim();
+        if (!text) return;
+        supportSubmit.disabled = true;
+        supportSubmit.textContent = 'Submitting...';
+        fetch('/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: '[SUPPORT] ' + text })
+        }).catch(function() {}).finally(function() {
+          document.getElementById('lv-support-modal').style.display = 'none';
+          document.getElementById('lv-support-text').value = '';
+          supportSubmit.disabled = false;
+          supportSubmit.textContent = 'Submit Report';
         });
       });
+    }
 
-      // Legacy: add account modal
-      var addBtn = document.getElementById('add-account-btn');
-      var modal = document.getElementById('add-account-modal');
-      if (addBtn && modal) {
-        addBtn.addEventListener('click', function() { modal.style.display = 'flex'; });
-        modal.querySelector('.modal-cancel').addEventListener('click', function() { modal.style.display = 'none'; });
-        modal.querySelector('.modal-submit').addEventListener('click', async function() {
-          var form = modal.querySelector('form');
-          var data = new FormData(form);
-          var obj = {};
-          data.forEach(function(v, k) { obj[k] = v; });
-          var res = await fetch('/dashboard/accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
-          if (res.ok) { modal.style.display = 'none'; form.reset(); location.reload(); }
-        });
-      }
+    // Chat panel
+    var fab = document.getElementById('chat-fab');
+    var panel = document.getElementById('chat-panel');
+    var chatClose = document.getElementById('chat-close');
+    if (fab && panel) {
+      fab.addEventListener('click', function() {
+        panel.classList.toggle('open');
+        if (panel.classList.contains('open')) {
+          var inp = document.getElementById('chat-input');
+          if (inp) inp.focus();
+        }
+      });
+      if (chatClose) chatClose.addEventListener('click', function() { panel.classList.remove('open'); });
+    }
+
+    // Legacy handlers — kept for existing dashboard pages
+    document.querySelectorAll('.rec-accept, .rec-dismiss').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var recId = btn.getAttribute('data-id');
+        var status = btn.classList.contains('rec-accept') ? 'accepted' : 'dismissed';
+        fetch('/dashboard/recommendations/' + recId + '/status', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: status })
+        }).then(function(r) {
+          if (r.ok) { var item = btn.closest('.rec-item'); if (item) { item.style.opacity = '0.5'; item.style.pointerEvents = 'none'; } }
+        }).catch(function(e) { console.error(e); });
+      });
     });
+
+    document.querySelectorAll('.delete-account').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        if (!confirm('Remove this linked account?')) return;
+        var id = btn.getAttribute('data-id');
+        fetch('/dashboard/accounts/' + id, { method: 'DELETE' }).then(function(r) {
+          if (r.ok) { var item = btn.closest('.account-item'); if (item) item.remove(); }
+        }).catch(function(e) { console.error(e); });
+      });
+    });
+  });
   </script>
 </body>
 </html>

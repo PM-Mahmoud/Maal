@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <title>Join the waitlist — Maal</title>
+  <meta name="description" content="Be first to use Maal — a CFO-level financial clarity platform for every Australian.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/theme.css">
+  <style>
+    body { background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
+    main { flex: 1; display: flex; align-items: center; }
+    .wl-inner { max-width: 560px; margin: 0 auto; padding: 5rem 1.5rem; width: 100%; }
+    .wl-kicker { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .18em; color: var(--fg-muted); margin-bottom: 1rem; }
+    .wl-h1 { font-size: clamp(2.2rem,6vw,3.25rem); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; }
+    .wl-sub { margin-top: 1.25rem; font-size: 15px; color: var(--fg-muted); line-height: 1.65; }
+    .wl-success { margin-top: 2rem; padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(18,181,166,.3); background: rgba(18,181,166,.05); }
+    .wl-success-title { font-size: 14px; font-weight: 600; }
+    .wl-success-body { font-size: 13px; color: var(--fg-muted); margin-top: .25rem; }
+    .wl-form { margin-top: 2rem; display: flex; flex-direction: column; gap: .5rem; }
+    @media (min-width: 500px) { .wl-form { flex-direction: row; } }
+    .wl-input { flex: 1; height: 44px; padding: 0 .875rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); font-size: 14px; font-family: var(--font-body); color: var(--fg); outline: none; box-sizing: border-box; transition: border-color .15s; }
+    .wl-input:focus { border-color: var(--fg); }
+    .wl-input::placeholder { color: var(--fg-muted); }
+    .wl-submit { height: 44px; padding: 0 1.25rem; border-radius: 8px; background: var(--fg); color: #fff; font-size: 13px; font-weight: 600; border: none; cursor: pointer; font-family: var(--font-body); transition: opacity .15s; white-space: nowrap; }
+    .wl-submit:hover { opacity: .88; }
+    .wl-submit:disabled { opacity: .5; cursor: default; }
+    .wl-alert { margin-top: .75rem; font-size: 12px; color: #dc2626; }
+  </style>
+</head>
+<body>
+  <%- include('partials/navbar') %>
+
+  <main>
+    <div class="wl-inner">
+      <p class="wl-kicker">Waitlist</p>
+      <h1 class="wl-h1">Be first to use Maal.</h1>
+      <p class="wl-sub">We're opening access in waves. Drop your email and we'll send your invite when your wave goes live.</p>
+
+      <div id="wl-success" class="wl-success" style="display:none">
+        <p class="wl-success-title">You're on the list.</p>
+        <p class="wl-success-body">We'll email you the moment your invite is ready.</p>
+      </div>
+
+      <form id="wl-form" class="wl-form">
+        <input id="wl-email" class="wl-input" type="email" required placeholder="you@example.com" autocomplete="email">
+        <button id="wl-btn" class="wl-submit" type="submit">Join waitlist</button>
+      </form>
+      <p id="wl-error" class="wl-alert" style="display:none"></p>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+  <%- analyticsSnippet %>
+
+  <script>
+  (function() {
+    var form = document.getElementById('wl-form');
+    var btn = document.getElementById('wl-btn');
+    var successEl = document.getElementById('wl-success');
+    var errorEl = document.getElementById('wl-error');
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var email = document.getElementById('wl-email').value.trim();
+      if (!email) return;
+      btn.disabled = true;
+      btn.textContent = 'Joining\u2026';
+      errorEl.style.display = 'none';
+      fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email })
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.ok) {
+          form.style.display = 'none';
+          successEl.style.display = 'block';
+        } else {
+          errorEl.textContent = data.error || 'Something went wrong.';
+          errorEl.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Join waitlist';
+        }
+      }).catch(function() {
+        errorEl.textContent = 'Something went wrong. Please try again.';
+        errorEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Join waitlist';
+      });
+    });
+  })();
+  </script>
+</body>
+</html>

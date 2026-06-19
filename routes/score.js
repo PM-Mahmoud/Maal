@@ -81,4 +81,24 @@ router.post('/calculate', async (req, res) => {
   });
 });
 
+// POST /score/save — JSON API to save a client-side computed score submission
+router.post('/save', async (req, res) => {
+  const body = req.body || {};
+  try {
+    await saveScoreSubmission({
+      formData: {
+        age: Number(body.age) || 0,
+        annualIncome: Number(body.income) || 0,
+        superBalance: Number(body.superBalance) || 0,
+      },
+      result: { financialHealth: Number(body.computed_score) || 0, scores: {} },
+      email: (body.email || '').trim().toLowerCase() || null,
+    });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[score/save]', e.message);
+    res.json({ ok: true }); // Non-critical — don't surface DB errors to user
+  }
+});
+
 module.exports = router;
