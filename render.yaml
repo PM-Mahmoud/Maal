@@ -2,7 +2,7 @@ services:
   - type: web
     runtime: node
     name: app
-    buildCommand: npm install && npm run migrate
+    buildCommand: npm install && npm run migrate && npm run build:client
     startCommand: npm start
     healthCheckPath: /health
     envVars:
