@@ -323,12 +323,14 @@ function KpiSparkline({
   data,
   labels,
   positive,
+  markerIndices,
   width = 220,
   height = 56,
 }: {
   data: number[];
   labels: string[];
   positive: boolean;
+  markerIndices?: number[];
   width?: number;
   height?: number;
 }) {
@@ -379,6 +381,17 @@ function KpiSparkline({
         </defs>
         <path d={area} fill={`url(#spk-${positive ? "p" : "n"})`} />
         <path d={line} fill="none" stroke={stroke} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+        {/* Entry-marker dots */}
+        {markerIndices?.map((idx) => {
+          const p = pts[idx];
+          if (!p) return null;
+          return (
+            <g key={idx} pointerEvents="none">
+              <circle cx={p.x} cy={p.y} r={3.5} fill="var(--background)" stroke={stroke} strokeWidth={1.5} />
+              <circle cx={p.x} cy={p.y} r={1.25} fill={stroke} />
+            </g>
+          );
+        })}
         {sel && (
           <g pointerEvents="none">
             <line x1={sel.x} x2={sel.x} y1={0} y2={height} stroke="var(--foreground)" strokeOpacity={0.25} strokeDasharray="2 3" />
@@ -431,12 +444,17 @@ function KpiTile({ kind, portfolio }: { kind: string; portfolio: Portfolio | nul
       <div className="-mx-1 mb-2 relative">
         {series ? (
           <div className="relative">
-            <KpiSparkline data={series.data} labels={series.labels} positive={meta.positive} />
+            <KpiSparkline
+              data={series.data}
+              labels={series.labels}
+              positive={meta.positive}
+              markerIndices={[series.data.length - 1]}
+            />
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setOpen(true); }}
               aria-label={`Expand ${meta.title} chart`}
-              className="absolute top-0 right-0 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary opacity-0 group-hover:opacity-100 transition"
+              className="absolute top-0 right-0 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary opacity-40 hover:opacity-100 transition"
             >
               <Maximize2 className="size-3.5" />
             </button>
