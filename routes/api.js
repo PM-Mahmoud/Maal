@@ -109,10 +109,11 @@ router.post('/v1/notifications/read', (req, res) => res.json({ ok: true }));
 // ─── Generic v1 CRUD (catch-all stub) ────────────────────────────────────
 
 router.all('/v1/*', (req, res) => {
-  // Return empty data for unimplemented endpoints
-  const method = req.method;
-  if (method === 'GET') return res.json([]);
-  res.json({ ok: true });
+  // Always return [] for GETs (list endpoints), { ok: true } for mutations
+  if (req.method === 'GET') return res.json([]);
+  if (req.method === 'DELETE') return res.json({ ok: true });
+  // POST/PATCH — return object with id so creates work
+  return res.json({ ok: true, id: `stub-${Date.now()}` });
 });
 
 module.exports = router;
