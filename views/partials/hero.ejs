@@ -1,40 +1,48 @@
-<section class="hero">
-  <div class="hero-bg">
-    <div class="hero-glow"></div>
-  </div>
-  <div class="hero-content">
-    <div class="hero-left">
-      <div class="hero-badge">
-        <span class="badge-dot"></span>
-        Built for Australia
-      </div>
-      <h1 class="hero-headline">Your money,<br>in <em>balance</em>.</h1>
-      <p class="hero-sub">
-        Maal is the CFO in your pocket — it reads your accounts, income, spending and super, then gives you one clear number that shows exactly where your finances stand.
-      </p>
-      <div class="hero-actions">
-        <a href="/signup" class="hero-cta">Get your score free</a>
-        <a href="/login" class="hero-cta-secondary">Log in →</a>
-      </div>
-      <p class="hero-note">Free to start. No card required. Read-only bank connections via Basiq.</p>
+<section class="lv-hero">
+  <div class="lv-hero-inner">
+    <p class="lv-hero-kicker">Built for Australia</p>
+    <h1 class="lv-hero-h1">Your money,<br>in balance.</h1>
+    <p class="lv-hero-sub">
+      Maal is the all-in-one for ethical investing — a CFO-level advisor that reads your statements,
+      bank accounts and transactions, then explains your financial situation in plain language.
+      Super, HECS, portfolio, spending: one clear picture.
+    </p>
+    <div class="lv-hero-actions">
+      <a href="/signup" class="lv-hero-primary">Get your score free</a>
+      <a href="/login" class="lv-hero-secondary">Log in →</a>
     </div>
-    <div class="hero-score-preview">
-      <div class="score-card">
-        <div class="score-header">
-          <span class="score-label">Financial Wellbeing Score</span>
-          <span class="score-pill pass">✓ On track</span>
-        </div>
-        <div class="score-main">
-          <div class="score-number">82</div>
-          <div class="score-out-of">/ 100</div>
-        </div>
-        <div class="score-bar">
-          <div class="score-fill" style="width:82%"></div>
-        </div>
-        <p class="score-caption" style="margin:0.8rem 0 0; font-size:0.8rem; color:var(--fg-faint); line-height:1.6;">
-          Calculated from all your financial data — accounts, income, spending, super and more.
-        </p>
+    <p class="lv-hero-note">Free to start. No card required. Read-only bank connections via Basiq.</p>
+  </div>
+</section>
+
+<section class="lv-score-section">
+  <div class="lv-score-section-inner">
+    <div class="shimmer-overlay hover-lift lv-score-card">
+      <div class="lv-score-card-header">
+        <p class="lv-score-card-label">Financial wellbeing score</p>
+        <span class="lv-score-on-track">
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.5l2.5 2.5L9.5 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          On track
+        </span>
       </div>
+      <div class="lv-score-number-row">
+        <span class="lv-score-big">82</span>
+        <span class="lv-score-out-of">/ 100</span>
+      </div>
+      <div class="lv-score-bar-wrap">
+        <div class="lv-score-bar-fill" id="landing-score-fill"></div>
+      </div>
+      <p class="lv-score-caption">
+        Calculated from all your financial data — accounts, income, spending, super and more.
+      </p>
     </div>
   </div>
 </section>
+<script>
+requestAnimationFrame(function() {
+  requestAnimationFrame(function() {
+    var fill = document.getElementById('landing-score-fill');
+    if (fill) fill.style.width = '82%';
+  });
+});
+</script>

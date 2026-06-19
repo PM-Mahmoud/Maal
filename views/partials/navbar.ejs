@@ -1,17 +1,48 @@
-<nav class="navbar">
-  <div class="nav-inner">
-    <a href="/" class="nav-logo">
-      <span class="logo-mark">◈</span>
-      <span class="logo-text">Maal</span>
-    </a>
-    <div class="nav-links">
-      <a href="#features">Features</a>
-      <a href="#how">How it works</a>
-      <a href="#why">Why Maal</a>
-      <a href="#pricing">Pricing</a>
-      <a href="/score">Score Calculator</a>
-      <a href="/login" class="nav-login">Log in</a>
-      <a href="/signup" class="nav-cta">Get started</a>
+<header class="lv-header">
+  <div class="lv-header-inner">
+    <div class="lv-header-left">
+      <a href="/" class="lv-wordmark">
+        <span class="lv-wordmark-dot"></span>
+        <span class="lv-wordmark-text">Maal</span>
+      </a>
+      <nav class="lv-nav">
+        <a href="/score">Score Calculator</a>
+        <a href="#pricing">Pricing</a>
+        <a href="/waitlist">Waitlist</a>
+      </nav>
+    </div>
+    <div class="lv-header-right">
+      <% if (locals.user) { %>
+        <a href="/dashboard" class="lv-header-login">Dashboard</a>
+        <a href="/logout" class="lv-header-login">Sign out</a>
+      <% } else { %>
+        <a href="/login" class="lv-header-login">Log in</a>
+        <a href="/score" class="lv-header-cta">Calculate your score</a>
+      <% } %>
+      <button class="lv-hamburger" onclick="toggleMobileNav()" aria-label="Toggle menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
     </div>
   </div>
-</nav>
+</header>
+<div class="lv-mobile-menu" id="lv-mobile-nav">
+  <a href="/score">Score Calculator</a>
+  <a href="#pricing">Pricing</a>
+  <a href="/waitlist">Waitlist</a>
+  <% if (locals.user) { %>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/logout">Sign out</a>
+  <% } else { %>
+    <a href="/login">Log in</a>
+    <a href="/signup">Sign up free</a>
+  <% } %>
+</div>
+<script>
+function toggleMobileNav() {
+  document.getElementById('lv-mobile-nav').classList.toggle('open');
+}
+</script>

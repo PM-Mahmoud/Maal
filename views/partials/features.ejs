@@ -1,87 +1,113 @@
-<section class="section products" id="features">
-  <div class="products-inner">
-    <div class="section-kicker">Products</div>
-    <h2 class="section-title">Financial clarity, out of the box.</h2>
-    <p class="section-sub">
-      Not another budgeting app. Maal reads your statements, accounts and transactions —
+<section class="lv-products reveal">
+  <div class="lv-products-inner">
+    <p class="lv-products-kicker">Products</p>
+    <h2 class="lv-products-h2">Financial clarity, out of the box.</h2>
+    <p class="lv-products-sub">
+      Not another budgeting app. Maal reads your statements, accounts and transactions &mdash;
       then turns them into education you can act on.
     </p>
 
-    <div class="product-grid">
+    <div class="lv-products-grid">
 
-      <!-- 1 · Maal Score -->
-      <a href="/signup" class="product-card span2 pc-1">
-        <h3 class="pc-title">Your money in one number.</h3>
-        <div class="pc-mock">
-          <div class="pc-glass" style="padding:1.1rem 1.3rem; display:flex; align-items:center; gap:0.9rem;">
-            <svg class="pc-ring" viewBox="0 0 90 90" width="82" height="82">
-              <circle cx="45" cy="45" r="38" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="7"/>
-              <circle cx="45" cy="45" r="38" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"
-                      stroke-dasharray="172 239" transform="rotate(-90 45 45)"/>
-              <text x="45" y="50" text-anchor="middle" fill="#fff" font-size="22" font-weight="700">72</text>
+      <a href="/signup" class="lv-product-card surface-forest">
+        <div class="lv-product-header">
+          <span class="lv-product-eyebrow">Scores</span>
+          <h3 class="lv-product-title">Your money in one number.</h3>
+        </div>
+        <div class="lv-product-mock">
+          <div class="inner-pill" style="border-radius:14px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;width:100%;max-width:280px;">
+            <svg viewBox="0 0 90 90" width="68" height="68" style="flex-shrink:0;">
+              <circle cx="45" cy="45" r="38" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="7"/>
+              <circle cx="45" cy="45" r="38" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-dasharray="172 239" transform="rotate(-90 45 45)"/>
+              <text x="45" y="51" text-anchor="middle" fill="#fff" font-size="22" font-weight="700" font-family="Geist,sans-serif">72</text>
             </svg>
             <div>
-              <div style="font-weight:600; font-size:0.92rem;">Maal Score</div>
-              <div class="pc-sub">Strong · tracked daily</div>
+              <p style="font-weight:600;font-size:13px;">Maal Score</p>
+              <p style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px;">Strong &middot; tracked daily</p>
             </div>
           </div>
         </div>
-        <div class="pc-label">Scores <span class="pc-arrow">→</span></div>
+        <div class="lv-product-footer"><span>Scores</span><span>&rarr;</span></div>
       </a>
 
-      <!-- 2 · Ask Maal -->
-      <a href="/signup" class="product-card span2 pc-2">
-        <h3 class="pc-title">Ask anything, grounded in your data.</h3>
-        <div class="pc-mock">
-          <div class="pc-chat">
-            <div class="pc-bubble them">Is my super on track for 60?</div>
-            <div class="pc-bubble me">On your trajectory you're tracking ~$46k ahead of the ASFA comfortable benchmark.</div>
-          </div>
+      <a href="/signup" class="lv-product-card surface-taupe">
+        <div class="lv-product-header">
+          <span class="lv-product-eyebrow">Ask Maal</span>
+          <h3 class="lv-product-title">Ask anything, grounded in your data.</h3>
         </div>
-        <div class="pc-label">Ask Maal <span class="pc-arrow">→</span></div>
-      </a>
-
-      <!-- 3 · Radar -->
-      <a href="/signup" class="product-card span2 pc-3">
-        <h3 class="pc-title">Catch what's changing.</h3>
-        <div class="pc-mock">
-          <div class="pc-glass" style="width:100%; max-width:240px;">
-            <div class="pc-row"><span>📡 NVDA moved +11% today</span></div>
-            <div class="pc-row"><span class="pc-sub" style="color:rgba(255,255,255,0.8);">We flagged it — here's what drove it.</span></div>
-          </div>
-        </div>
-        <div class="pc-label">Radar <span class="pc-arrow">→</span></div>
-      </a>
-
-      <!-- 4 · Net worth trend (wide) -->
-      <a href="/signup" class="product-card span3 pc-4">
-        <h3 class="pc-title">See your wealth move over time.</h3>
-        <div class="pc-mock" style="align-items:stretch;">
-          <div class="pc-glass" style="width:100%; padding:1rem 1.2rem;">
-            <div style="display:flex; align-items:baseline; justify-content:space-between;">
-              <div class="pc-stat">$39,550</div>
-              <span class="pc-pill">▲ +7.5% · 1M</span>
+        <div class="lv-product-mock">
+          <div style="display:flex;flex-direction:column;gap:0.625rem;width:100%;">
+            <div class="inner-pill" style="border-radius:9999px;padding:0.5rem 1rem;font-size:12px;display:inline-block;width:fit-content;">
+              Is my super on track for 60?
             </div>
-            <svg viewBox="0 0 280 56" preserveAspectRatio="none" width="100%" height="50" style="margin-top:0.5rem; display:block;">
-              <path d="M0,46 C40,42 70,34 110,32 S190,18 280,8 L280,56 L0,56 Z" fill="rgba(255,255,255,0.16)"/>
-              <path d="M0,46 C40,42 70,34 110,32 S190,18 280,8" fill="none" stroke="#fff" stroke-width="2.2"/>
+            <div class="inner-pill" style="border-radius:14px;padding:0.75rem 1rem;font-size:12.5px;line-height:1.55;max-width:300px;">
+              On your trajectory you're tracking ~$46k ahead of the ASFA comfortable benchmark.
+            </div>
+          </div>
+        </div>
+        <div class="lv-product-footer"><span>Ask Maal</span><span>&rarr;</span></div>
+      </a>
+
+      <a href="/signup" class="lv-product-card surface-olive">
+        <div class="lv-product-header">
+          <span class="lv-product-eyebrow">Radar</span>
+          <h3 class="lv-product-title">Catch what's changing.</h3>
+        </div>
+        <div class="lv-product-mock">
+          <div style="display:flex;flex-direction:column;gap:0.625rem;width:100%;">
+            <div class="inner-pill" style="border-radius:12px;padding:0.625rem 1rem;font-size:12.5px;display:flex;align-items:center;gap:0.5rem;">
+              &#x1F4C8; NVDA moved +11% today
+            </div>
+            <div class="inner-pill" style="border-radius:12px;padding:0.625rem 1rem;font-size:12px;">
+              We flagged it &mdash; here's what drove it.
+            </div>
+          </div>
+        </div>
+        <div class="lv-product-footer"><span>Radar</span><span>&rarr;</span></div>
+      </a>
+
+      <a href="/signup" class="lv-product-card surface-amber">
+        <div class="lv-product-header">
+          <span class="lv-product-eyebrow">Portfolio</span>
+          <h3 class="lv-product-title">See your wealth move over time.</h3>
+        </div>
+        <div class="lv-product-mock">
+          <div class="inner-pill" style="border-radius:14px;padding:1.25rem;width:100%;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;">
+              <span style="font-size:24px;font-weight:700;letter-spacing:-0.03em;">$39,550</span>
+              <span class="inner-pill" style="border-radius:9999px;padding:0.25rem 0.625rem;font-size:11px;font-weight:600;">&#x25b2; +7.5% &middot; 1M</span>
+            </div>
+            <svg viewBox="0 0 200 60" style="margin-top:0.75rem;width:100%;height:60px;display:block;">
+              <defs><linearGradient id="sp-g" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="rgba(255,255,255,0.5)"/><stop offset="100%" stop-color="rgba(255,255,255,0)"/></linearGradient></defs>
+              <path d="M0,50 C30,45 60,40 90,35 C120,30 150,25 200,12" fill="none" stroke="white" stroke-width="1.5"/>
+              <path d="M0,50 C30,45 60,40 90,35 C120,30 150,25 200,12 L200,60 L0,60 Z" fill="url(#sp-g)" opacity="0.4"/>
             </svg>
           </div>
         </div>
-        <div class="pc-label">Portfolio <span class="pc-arrow">→</span></div>
+        <div class="lv-product-footer"><span>Portfolio</span><span>&rarr;</span></div>
       </a>
 
-      <!-- 5 · Connections (wide) -->
-      <a href="/signup" class="product-card span3 pc-5">
-        <h3 class="pc-title">Every account, one clear picture.</h3>
-        <div class="pc-mock" style="align-items:stretch;">
-          <div class="pc-glass" style="width:100%;">
-            <div class="pc-row"><span>CommBank · transactions</span><span><span class="pc-dot"></span></span></div>
-            <div class="pc-row"><span>AustralianSuper · super</span><span><span class="pc-dot"></span></span></div>
-            <div class="pc-row"><span class="pc-sub" style="color:rgba(255,255,255,0.8);">Read-only via Basiq · revoke anytime</span></div>
+      <a href="/signup" class="lv-product-card surface-cocoa wide">
+        <div class="lv-product-header">
+          <span class="lv-product-eyebrow">Accounts</span>
+          <h3 class="lv-product-title">Every account, one clear picture.</h3>
+        </div>
+        <div class="lv-product-mock">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;width:100%;max-width:600px;">
+            <div class="inner-pill" style="border-radius:12px;padding:0.75rem 1rem;display:flex;align-items:center;justify-content:space-between;font-size:12.5px;">
+              <span>CommBank &middot; transactions</span>
+              <span style="width:6px;height:6px;border-radius:50%;background:#5FE3D1;flex-shrink:0;"></span>
+            </div>
+            <div class="inner-pill" style="border-radius:12px;padding:0.75rem 1rem;display:flex;align-items:center;justify-content:space-between;font-size:12.5px;">
+              <span>AustralianSuper &middot; super</span>
+              <span style="width:6px;height:6px;border-radius:50%;background:#5FE3D1;flex-shrink:0;"></span>
+            </div>
+            <div class="inner-pill" style="border-radius:12px;padding:0.75rem 1rem;font-size:12px;color:rgba(255,255,255,0.75);grid-column:span 2;">
+              Read-only via Basiq &middot; revoke anytime
+            </div>
           </div>
         </div>
-        <div class="pc-label">Accounts <span class="pc-arrow">→</span></div>
+        <div class="lv-product-footer"><span>Accounts</span><span>&rarr;</span></div>
       </a>
 
     </div>

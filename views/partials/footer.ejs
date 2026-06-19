@@ -1,33 +1,44 @@
-<footer class="footer">
-  <div class="footer-inner">
-    <div class="footer-brand">
-      <span class="footer-logo">
-        <span style="font-size:1.2rem;color:var(--accent);vertical-align:middle;margin-right:0.35rem;">◈</span>
-        <span style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;">Maal</span>
-      </span>
-      <p>The all-in-one for ethical investing. A CFO-level advisor that reads your finances and keeps your money in balance — built for Australia.</p>
+<footer class="lv-footer">
+  <div class="lv-footer-main">
+    <div>
+      <a href="/" style="display:flex;align-items:center;gap:0.5rem;text-decoration:none;color:var(--fg);">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--mint);flex-shrink:0;"></span>
+        <span style="font-size:17px;font-weight:700;letter-spacing:-0.03em;">Maal</span>
+      </a>
+      <p class="lv-footer-brand-desc">A CFO-level advisor for every Australian. One score. One plan. No spreadsheets.</p>
     </div>
-    <div class="footer-links">
-      <a href="#features">Features</a>
-      <a href="#how">How it works</a>
-      <a href="#why">Why Maal</a>
-      <a href="#pricing">Pricing</a>
-      <a href="/score">Score Calculator</a>
-      <a href="/login">Log in</a>
-      <a href="/signup">Sign up</a>
+    <div class="lv-footer-col">
+      <p class="lv-footer-col-title">Product</p>
+      <ul>
+        <li><a href="/score">Score Calculator</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="/waitlist">Waitlist</a></li>
+      </ul>
+    </div>
+    <div class="lv-footer-col">
+      <p class="lv-footer-col-title">Company</p>
+      <ul>
+        <li><a href="/">About</a></li>
+        <li><a href="/">Privacy</a></li>
+        <li><a href="/">Terms</a></li>
+      </ul>
+    </div>
+    <div class="lv-footer-col">
+      <p class="lv-footer-col-title">Account</p>
+      <ul>
+        <li><a href="/login">Log in</a></li>
+        <li><a href="/signup">Sign up</a></li>
+      </ul>
     </div>
   </div>
-  <div class="footer-bottom">
-    <p>
-      DISCLAIMER: Maal does not provide financial advice. Any information provided by Maal is for
-      educational purposes only. You should do your own research. Investing is risky and you can lose
-      all of your money.
-    </p>
-    <p style="margin-top:0.6rem;">
-      Maal Pty Ltd is not an Australian Financial Services Licensee. Information provided is general
-      in nature and does not take into account your individual objectives, financial situation, or needs.
-      Always consider seeking advice from a qualified financial adviser before making investment decisions.
-      Past performance is not a reliable indicator of future performance.
-    </p>
+  <div class="lv-disclaimer">
+    <p>DISCLAIMER: Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.</p>
+    <p>Maal Pty Ltd is not an Australian Financial Services Licensee. Information provided is general in nature and does not take into account your individual objectives, financial situation, or needs. Always consider seeking advice from a qualified financial adviser before making investment decisions. Past performance is not a reliable indicator of future performance.</p>
+  </div>
+  <div class="lv-footer-bottom">
+    <div class="lv-footer-bottom-inner">
+      <span>&copy; <%= new Date().getFullYear() %> Maal Pty Ltd. Built in Australia.</span>
+      <span style="text-transform:uppercase;letter-spacing:0.1em;">All amounts in AUD</span>
+    </div>
   </div>
 </footer>
