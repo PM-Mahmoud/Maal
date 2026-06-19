@@ -53,9 +53,11 @@ function RadarPage() {
 
   async function refresh() {
     const [r, t, ready]: any = await Promise.all([list(), listT(), readinessFn()]);
-    setAlerts(r.alerts); setEvents(r.events);
-    setTemplates(t.templates ?? []);
-    setReadiness(ready);
+    // Guard: r may be [] (stub) or { alerts, events }
+    setAlerts(Array.isArray(r?.alerts) ? r.alerts : Array.isArray(r) ? [] : []);
+    setEvents(Array.isArray(r?.events) ? r.events : Array.isArray(r) ? [] : []);
+    setTemplates(Array.isArray(t?.templates) ? t.templates : Array.isArray(t) ? [] : []);
+    setReadiness(ready && typeof ready === 'object' && !Array.isArray(ready) ? ready : null);
   }
   useEffect(() => {
     refresh();
