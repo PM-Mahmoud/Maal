@@ -1,0 +1,324 @@
+@import "tailwindcss" source(none);
+@source "./";
+@import "tw-animate-css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design system definition.
+ *
+ * The @theme inline block maps CSS custom properties to Tailwind utility
+ * classes (e.g. --color-primary -> bg-primary, text-primary).
+ *
+ * The :root and .dark blocks define the actual color values using oklch.
+ * All colors MUST use oklch format.
+ *
+ * To add a new semantic color:
+ * 1. Add the variable to :root (light value) and .dark (dark value)
+ * 2. Register it in @theme inline as --color-<name>: var(--<name>)
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-mint: var(--mint);
+  --color-gold: var(--gold);
+  --color-surface: var(--surface);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.5rem;
+  /* Maal palette - light */
+  --background: #FBFBFB;
+  --surface: #FFFFFF;
+  --foreground: #0E0E10;
+  --card: #FFFFFF;
+  --card-foreground: #0E0E10;
+  --popover: #FFFFFF;
+  --popover-foreground: #0E0E10;
+  --primary: #0E0E10;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F4F4F5;
+  --secondary-foreground: #0E0E10;
+  --muted: #F4F4F5;
+  --muted-foreground: #6B6F76;
+  --accent: #F4F4F5;
+  --accent-foreground: #0E0E10;
+  --destructive: #C2701E;
+  --destructive-foreground: #FFFFFF;
+  --border: #E8E8EA;
+  --input: #E8E8EA;
+  --ring: #12B5A6;
+  --mint: #12B5A6;
+  --gold: #C2701E;
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: #FBFBFB;
+  --sidebar-foreground: #0E0E10;
+  --sidebar-primary: #0E0E10;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F4F4F5;
+  --sidebar-accent-foreground: #0E0E10;
+  --sidebar-border: #E8E8EA;
+  --sidebar-ring: #12B5A6;
+}
+
+.dark {
+  --background: #0A0A0B;
+  --surface: #141416;
+  --foreground: #FAFAFA;
+  --card: #141416;
+  --card-foreground: #FAFAFA;
+  --popover: #141416;
+  --popover-foreground: #FAFAFA;
+  --primary: #FAFAFA;
+  --primary-foreground: #0A0A0B;
+  --secondary: #1C1C1F;
+  --secondary-foreground: #FAFAFA;
+  --muted: #1C1C1F;
+  --muted-foreground: #8A8F98;
+  --accent: #1C1C1F;
+  --accent-foreground: #FAFAFA;
+  --destructive: #C2701E;
+  --destructive-foreground: #FAFAFA;
+  --border: #232328;
+  --input: #232328;
+  --ring: #2DD4C4;
+  --mint: #2DD4C4;
+  --gold: #C2701E;
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: #0A0A0B;
+  --sidebar-foreground: #FAFAFA;
+  --sidebar-primary: #FAFAFA;
+  --sidebar-primary-foreground: #0A0A0B;
+  --sidebar-accent: #1C1C1F;
+  --sidebar-accent-foreground: #FAFAFA;
+  --sidebar-border: #232328;
+  --sidebar-ring: #2DD4C4;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.03em;
+    font-weight: 700;
+  }
+}
+
+@layer utilities {
+  .tracking-display { letter-spacing: -0.03em; }
+}
+
+@layer utilities {
+  /* Glossy gradient surfaces — hellomaal-style premium cards */
+  .surface-forest {
+    background:
+      radial-gradient(120% 80% at 85% 10%, rgba(120, 180, 150, 0.35), transparent 55%),
+      radial-gradient(140% 100% at 10% 100%, rgba(20, 30, 25, 0.9), transparent 60%),
+      linear-gradient(155deg, #1f3a2f 0%, #15231d 55%, #0c1310 100%);
+  }
+  .surface-taupe {
+    background:
+      radial-gradient(120% 80% at 85% 10%, rgba(220, 200, 220, 0.5), transparent 55%),
+      radial-gradient(140% 100% at 10% 100%, rgba(60, 50, 70, 0.75), transparent 60%),
+      linear-gradient(155deg, #6b5d6e 0%, #3d3543 55%, #221f2a 100%);
+  }
+  .surface-olive {
+    background:
+      radial-gradient(120% 80% at 85% 10%, rgba(200, 200, 170, 0.18), transparent 55%),
+      radial-gradient(140% 100% at 10% 100%, rgba(15, 18, 14, 0.9), transparent 60%),
+      linear-gradient(155deg, #2a2d22 0%, #1a1c16 55%, #0d0e0b 100%);
+  }
+  .surface-amber {
+    background:
+      radial-gradient(120% 80% at 85% 10%, rgba(255, 220, 160, 0.55), transparent 55%),
+      radial-gradient(140% 100% at 10% 100%, rgba(120, 60, 20, 0.65), transparent 60%),
+      linear-gradient(155deg, #d68a3a 0%, #a85e22 55%, #5d3010 100%);
+  }
+  .surface-cocoa {
+    background:
+      radial-gradient(120% 80% at 85% 10%, rgba(180, 130, 90, 0.35), transparent 55%),
+      radial-gradient(140% 100% at 10% 100%, rgba(20, 12, 8, 0.9), transparent 60%),
+      linear-gradient(155deg, #3a2418 0%, #25160e 55%, #120a06 100%);
+  }
+  .gloss-card {
+    position: relative;
+    isolation: isolate;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+      0 30px 60px -30px rgba(0, 0, 0, 0.45);
+  }
+  .gloss-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(120% 60% at 50% -10%, rgba(255, 255, 255, 0.12), transparent 60%);
+    mix-blend-mode: screen;
+  }
+  .inner-pill {
+    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+    backdrop-filter: blur(6px);
+  }
+}
+
+@layer utilities {
+  /* Premium animations */
+  @keyframes maal-shimmer {
+    0% { transform: translateX(-120%) skewX(-12deg); }
+    100% { transform: translateX(220%) skewX(-12deg); }
+  }
+  @keyframes maal-reveal {
+    0% { opacity: 0; transform: translateY(14px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes maal-ring-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(18,181,166,0.0); }
+    50% { box-shadow: 0 0 0 8px rgba(18,181,166,0.08); }
+  }
+
+  .shimmer-overlay {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .shimmer-overlay::before {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 0;
+    width: 40%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0.0) 20%,
+      rgba(18,181,166,0.18) 50%,
+      rgba(255,255,255,0.0) 80%,
+      transparent 100%
+    );
+    transform: translateX(-120%) skewX(-12deg);
+    animation: maal-shimmer 3.8s ease-in-out 1.2s infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .dark .shimmer-overlay::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0.0) 20%,
+      rgba(45,212,196,0.22) 50%,
+      rgba(255,255,255,0.0) 80%,
+      transparent 100%
+    );
+  }
+  .shimmer-overlay > * { position: relative; z-index: 2; }
+
+  .ring-pulse { animation: maal-ring-pulse 3.2s ease-in-out infinite; border-radius: 9999px; }
+
+  /* Hover glow — neutral surface lift */
+  .hover-lift {
+    transition: transform 400ms cubic-bezier(.2,.7,.2,1), box-shadow 400ms ease, border-color 400ms ease;
+    will-change: transform;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 24px 48px -28px rgba(14,14,16,0.18), 0 0 0 1px rgba(18,181,166,0.12);
+  }
+  .dark .hover-lift:hover {
+    box-shadow: 0 24px 48px -24px rgba(0,0,0,0.6), 0 0 0 1px rgba(45,212,196,0.18);
+  }
+
+  /* Hover glow — glossy dark surface */
+  .hover-glow {
+    transition: transform 500ms cubic-bezier(.2,.7,.2,1), box-shadow 500ms ease, filter 500ms ease;
+    will-change: transform;
+  }
+  .hover-glow:hover {
+    transform: translateY(-3px);
+    filter: saturate(1.08) brightness(1.04);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.10),
+      0 40px 70px -30px rgba(0,0,0,0.55),
+      0 0 0 1px rgba(255,255,255,0.06),
+      0 0 60px -10px rgba(18,181,166,0.18);
+  }
+
+  /* Scroll reveal — triggered by .is-visible (IntersectionObserver) */
+  .reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 700ms cubic-bezier(.2,.7,.2,1), transform 700ms cubic-bezier(.2,.7,.2,1);
+    will-change: opacity, transform;
+  }
+  .reveal.is-visible { opacity: 1; transform: translateY(0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shimmer-overlay::before,
+    .ring-pulse { animation: none !important; }
+    .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+    .hover-lift:hover, .hover-glow:hover { transform: none !important; }
+  }
+}

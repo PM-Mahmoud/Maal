@@ -5,9 +5,10 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "build": "npm run migrate",
+    "build": "npm run migrate && npm run build:client",
     "migrate": "node migrate.js",
-    "test": "node test/calc.test.js"
+    "test": "node test/calc.test.js",
+    "build:client": "cd client && npm install && npm run build"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

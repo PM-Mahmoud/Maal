@@ -13,6 +13,10 @@ const port = process.env.PORT || 4173;
 
 app.use(express.static(path.join(__dirname, '..', 'public'), { index: false }));
 
+// Serve React build assets at /assets/ (Vite builds here but Express serves from public/)
+app.use('/assets', express.static(path.join(__dirname, '..', 'public', 'app', 'assets')));
+
+
 const session = { userId: 1, name: 'Mahmoud Sair', email: 'preview@example.com' };
 const user = {
   id: 1, email: 'preview@example.com', name: 'Mahmoud Sair', provider: 'credentials',
@@ -230,6 +234,18 @@ app.get('/signup', (_req, res, next) => {
 app.use((err, _req, res, _next) => {
   console.error(err);
   res.status(500).send('<pre>' + (err.stack || err.message) + '</pre>');
+});
+
+
+// React SPA — serve public/app/index.html for all unmatched routes
+const reactIndex = path.join(__dirname, '..', 'public', 'app', 'index.html');
+const fs = require('fs');
+app.use('*', (req, res) => {
+  if (fs.existsSync(reactIndex)) {
+    res.sendFile(reactIndex);
+  } else {
+    res.status(404).send('404 - React build not found. Run: cd client && npm run build');
+  }
 });
 
 app.listen(port, () => console.log(`Preview on http://localhost:${port}`));

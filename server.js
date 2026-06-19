@@ -109,6 +109,8 @@ app.get('/internal/ingest-knowledge', (req, res) => {
 // ─── Static assets ────────────────────────────────────────────────────────
 
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
+// Serve React SPA assets from /assets (Vite build output)
+app.use('/assets', express.static(path.join(__dirname, 'public', 'app', 'assets')));
 
 // ─── Route mounts ──────────────────────────────────────────────────────────
 
@@ -145,8 +147,21 @@ app.get('/waitlist', (req, res) => {
   });
 });
 
-// Landing page must come AFTER auth routes (which redirect logged-in users)
-app.get('/', (_req, res) => {
+// ─── JSON API for React SPA ──────────────────────────────────────────────
+app.use('/api', require('./routes/api'));
+
+// ─── React SPA catch-all ──────────────────────────────────────────────────
+// Serve React app for all routes not already handled by Express
+const reactBuild = path.join(__dirname, 'public', 'app', 'index.html');
+const fs = require('fs');
+app.use('*', (req, res, next) => {
+  // Skip API, dashboard (EJS), billing, basiq, score, onboarding, admin paths
+  const skip = ['/api/', '/dashboard', '/billing', '/basiq', '/onboarding', '/score', '/login', '/signup', '/logout', '/forgot-password', '/reset-password', '/verify-email', '/admin', '/health', '/feedback', '/internal'];
+  if (skip.some(p => req.originalUrl.startsWith(p))) return next();
+  if (fs.existsSync(reactBuild)) {
+    return res.sendFile(reactBuild);
+  }
+  // Fallback: render EJS landing if no React build
   res.render('layout', { layout: false, ...buildLandingContext() });
 });
 
