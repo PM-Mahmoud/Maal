@@ -1,14 +1,8 @@
-
-
-export type MissingInput = {
-  key: string;
-  label: string;
-  why: string;
-  href: string;
-};
-
-export async function getRadarReadiness(data?: unknown): Promise<unknown> {
-  const r = await fetch('/api/v1/radar-readiness', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data ?? {}) });
+export async function getRadarReadiness(): Promise<{ score: number; missing: unknown[]; ready: boolean } | null> {
+  const r = await fetch('/api/v1/radar/readiness', { credentials: 'include' });
   if (!r.ok) return null;
-  return r.json();
+  const j = await r.json();
+  // Stub returns [] — treat as null (no readiness data)
+  if (Array.isArray(j)) return null;
+  return j ?? null;
 }
