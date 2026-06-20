@@ -432,37 +432,99 @@ const INSTITUTIONS: { name: string; bg: string; fg: string; initials: string }[]
 ];
 
 function ConnectPanel() {
+  const [status, setStatus] = useState<{ connected: boolean; live: boolean } | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/v1/basiq/status", { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => j && setStatus(j))
+      .catch(() => {});
+  }, []);
+
+  async function handleSync() {
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const r = await fetch("/api/v1/basiq/sync", { method: "POST", credentials: "include" });
+      const j = await r.json();
+      setSyncMsg(r.ok ? `Synced ${j.accounts ?? 0} account${j.accounts === 1 ? "" : "s"} — balances updated.` : j.error || "Sync failed.");
+      if (r.ok) window.location.reload();
+    } catch {
+      setSyncMsg("Sync failed — check your connection.");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   return (
     <div className="rounded-[14px] border border-border bg-[var(--surface)] p-4">
       <h3 className="text-[14px] font-bold tracking-tight mb-3">Connect Accounts</h3>
 
-      <div className="relative mb-3">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-        <input
-          disabled
-          placeholder="Coming soon — Basiq integration"
-          className="w-full h-9 pl-9 pr-3 rounded-[10px] border border-border bg-transparent text-[12px] placeholder:text-muted-foreground/70 focus:outline-none"
-        />
-      </div>
+      {status?.live ? (
+        <div className="space-y-3">
+          {status.connected ? (
+            <>
+              <div className="flex items-center gap-2 text-[12px] text-[var(--mint)] font-medium">
+                <span className="size-2 rounded-full bg-[var(--mint)]" />
+                Open Banking connected
+              </div>
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="w-full py-2 rounded-[10px] bg-foreground text-background text-[12px] font-semibold disabled:opacity-50 transition"
+              >
+                {syncing ? "Syncing…" : "Sync now"}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-[12px] text-muted-foreground mb-2">Connect your bank to auto-import balances and transactions via Open Banking (CDR).</p>
+              <a
+                href="/basiq/connect"
+                className="block w-full py-2 rounded-[10px] bg-foreground text-background text-[12px] font-semibold text-center transition hover:opacity-90"
+              >
+                Connect your bank
+              </a>
+            </>
+          )}
+          {syncMsg && <p className="text-[11px] text-muted-foreground mt-2">{syncMsg}</p>}
 
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        {INSTITUTIONS.map((b) => (
-          <div
-            key={b.name}
-            title={b.name + " — coming soon"}
-            className="aspect-square rounded-[10px] flex items-center justify-center text-[10px] font-bold tracking-tight opacity-50 cursor-not-allowed"
-            style={{ background: b.bg, color: b.fg }}
-          >
-            {b.initials}
+          <div className="grid grid-cols-3 gap-2 mt-2">
+            {INSTITUTIONS.slice(0, 9).map((b) => (
+              <div
+                key={b.name}
+                title={b.name}
+                className="aspect-square rounded-[10px] flex items-center justify-center text-[10px] font-bold tracking-tight"
+                style={{ background: b.bg, color: b.fg }}
+              >
+                {b.initials}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            {INSTITUTIONS.map((b) => (
+              <div
+                key={b.name}
+                title={b.name}
+                className="aspect-square rounded-[10px] flex items-center justify-center text-[10px] font-bold tracking-tight opacity-40"
+                style={{ background: b.bg, color: b.fg }}
+              >
+                {b.initials}
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground">Open Banking not configured — set BASIQ_API_KEY in Render to enable.</p>
+        </>
+      )}
 
-      <div className="flex items-start gap-2 text-[11px] text-muted-foreground border-t border-border pt-3">
+      <div className="flex items-start gap-2 text-[11px] text-muted-foreground border-t border-border pt-3 mt-3">
         <Lock className="h-3 w-3 mt-0.5 shrink-0 text-[color:var(--accent)]" />
-        <p>
-          <span className="font-semibold text-foreground">Your data is secure.</span> Bank connections via Basiq are coming soon — manual entry only for now.
-        </p>
+        <p><span className="font-semibold text-foreground">Your data is secure.</span> Bank connections use CDR-regulated Basiq infrastructure. Read-only access only.</p>
       </div>
     </div>
   );

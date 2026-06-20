@@ -56,7 +56,7 @@ export async function sendAdvisorMessage(data?: unknown): Promise<{ reply: strin
 
   // Proxy to existing Express advisor endpoint
   try {
-    const r = await fetch("/dashboard/ask/message", {
+    const r = await fetch("/api/v1/advisor/message", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },

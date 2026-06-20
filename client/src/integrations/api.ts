@@ -159,7 +159,7 @@ class QueryBuilder<T = Record<string, unknown>> {
   async _execute(): Promise<QueryResult<T> | ManyResult<T>> {
     const params = new URLSearchParams();
     if (this._select !== "*") params.set("select", this._select);
-    this._filters.forEach((f) => params.set("filter", f));
+    this._filters.forEach((f) => params.append("filter", f));
     if (this._limit) params.set("limit", String(this._limit));
     if (this._order) params.set("order", this._order);
     if (this._single) params.set("single", "1");
