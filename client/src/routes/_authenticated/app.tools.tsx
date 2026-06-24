@@ -1,6 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/app/tools")({ component: ToolsPage });
+
+const CALCULATORS = [
+  { to: "/app/super-optimizer", name: "Super Optimizer", cat: "Super", desc: "See how salary sacrificing compounds over your career." },
+  { to: "/app/tax-optimizer", name: "Tax Optimizer", cat: "Tax", desc: "Estimate FY25-26 tax, Medicare, MLS and HECS, then find deductions." },
+  { to: "/app/tax-bracket-visualizer", name: "Tax Brackets", cat: "Tax", desc: "Visualise marginal vs effective rates across the stage-3 brackets." },
+  { to: "/app/debt-payoff", name: "Debt Payoff", cat: "Debt", desc: "Compare snowball vs avalanche and see your debt-free date." },
+  { to: "/app/scenarios-simulator", name: "Scenarios", cat: "Retirement", desc: "Monte Carlo range for your retirement balance to age 60." },
+  { to: "/app/insurance-gap", name: "Insurance Gap", cat: "Protection", desc: "Estimate the life/TPD cover gap for clinicians." },
+  { to: "/app/net-worth-flow", name: "Net Worth Flow", cat: "Cashflow", desc: "Monthly cashflow and net-worth composition." },
+  { to: "/app/cost-of-living", name: "Cost of Living", cat: "Planning", desc: "Compare AU cities for relocating clinicians." },
+] as const;
 
 const TOOLS = [
   { name: "ATO myTax", cat: "Tax", url: "https://my.gov.au", desc: "Lodge your Australian tax return directly with the ATO." },
@@ -20,6 +31,22 @@ function ToolsPage() {
     <div className="max-w-5xl mx-auto px-6 md:px-10 py-10">
       <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-2">Tools</p>
       <h1 className="text-[32px] tracking-display font-bold mb-8">Curated for Australians.</h1>
+
+      <h2 className="text-[18px] font-bold tracking-display mb-3">Calculators</h2>
+      <div className="grid md:grid-cols-2 gap-3 mb-10">
+        {CALCULATORS.map((t) => (
+          <Link key={t.to} to={t.to}
+            className="block p-5 border border-border rounded-[12px] bg-[var(--surface)] hover:border-foreground transition-colors">
+            <div className="flex items-baseline justify-between mb-1">
+              <p className="text-[14px] font-semibold">{t.name}</p>
+              <span className="text-[10px] uppercase tracking-[0.1em] text-[var(--mint)]">{t.cat}</span>
+            </div>
+            <p className="text-[13px] text-muted-foreground">{t.desc}</p>
+          </Link>
+        ))}
+      </div>
+
+      <h2 className="text-[18px] font-bold tracking-display mb-3">External tools</h2>
       <div className="grid md:grid-cols-2 gap-3">
         {TOOLS.map((t) => (
           <a key={t.name} href={t.url} target="_blank" rel="noreferrer noopener"

@@ -322,3 +322,38 @@
     .hover-lift:hover, .hover-glow:hover { transform: none !important; }
   }
 }
+
+/* G6 — Calculator port utilities (source Tailwind-ish classes mapped to our tokens) */
+@layer utilities {
+  .border-hairline { border-color: var(--border); }
+  .bg-surface-2    { background-color: var(--secondary); }
+  .bg-surface-2\/40 { background-color: color-mix(in oklab, var(--secondary) 40%, transparent); }
+  .bg-surface-2\/60 { background-color: color-mix(in oklab, var(--secondary) 60%, transparent); }
+  .bg-mint-soft    { background-color: color-mix(in oklab, var(--mint) 12%, transparent); }
+  .bg-mint-soft\/50 { background-color: color-mix(in oklab, var(--mint) 8%, transparent); }
+  .bg-mint-soft\/30 { background-color: color-mix(in oklab, var(--mint) 6%, transparent); }
+  .text-mint       { color: var(--mint); }
+  .bg-mint         { background-color: var(--mint); }
+  .border-mint\/30 { border-color: color-mix(in oklab, var(--mint) 30%, transparent); }
+  .text-gold       { color: var(--gold); }
+  .text-gradient-mint {
+    background: linear-gradient(90deg, var(--mint), #5FE3D1);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .eyebrow-bullet  { font-size: .75rem; font-weight: 500; text-transform: uppercase;
+                     letter-spacing: .12em; color: var(--mint); }
+  .section-number  { font-size: 1.25rem; }
+  .kpi-tile        { transition: border-color .2s ease; }
+  .soft-glow       { box-shadow: 0 0 0 1px color-mix(in oklab, var(--mint) 30%, transparent),
+                     0 8px 30px -12px color-mix(in oklab, var(--mint) 40%, transparent); }
+  .dot-pulse       { animation: dot-pulse 1.6s ease-in-out infinite; }
+  .pill-group-item {
+    border-radius: 9999px; padding: .25rem .6rem; font-weight: 500;
+    background-color: var(--secondary); color: var(--muted-foreground);
+    transition: background-color .15s ease, color .15s ease;
+  }
+  .pill-group-item-active {
+    background-color: var(--mint); color: #fff; border-color: transparent;
+  }
+}
+@keyframes dot-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }

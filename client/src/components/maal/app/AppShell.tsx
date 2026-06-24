@@ -9,6 +9,8 @@ import {
   Wallet, FolderLock, ArrowLeftRight, Target, UserCircle2,
   MessageSquarePlus, Map, LifeBuoy, ChevronDown, LogOut,
   X, Upload, Lightbulb,
+  PiggyBank, Receipt, Calculator, TrendingDown, Dices, Shield,
+  BarChart3, MapPin,
 } from "lucide-react";
 
 type Item = { to: string; label: string; icon: any; soon?: boolean };
@@ -28,6 +30,17 @@ const PORTFOLIO: Item[] = [
   { to: "/app/onboarding", label: "Profile", icon: UserCircle2 },
 ];
 
+const TOOLS: Item[] = [
+  { to: "/app/super-optimizer", label: "Super Optimizer", icon: PiggyBank },
+  { to: "/app/tax-optimizer", label: "Tax Optimizer", icon: Receipt },
+  { to: "/app/tax-bracket-visualizer", label: "Tax Brackets", icon: Calculator },
+  { to: "/app/debt-payoff", label: "Debt Payoff", icon: TrendingDown },
+  { to: "/app/scenarios-simulator", label: "Scenarios", icon: Dices },
+  { to: "/app/insurance-gap", label: "Insurance Gap", icon: Shield },
+  { to: "/app/net-worth-flow", label: "Net Worth Flow", icon: BarChart3 },
+  { to: "/app/cost-of-living", label: "Cost of Living", icon: MapPin },
+];
+
 const BOTTOM: { label: string; href: string; icon: any }[] = [
   { label: "Roadmap", href: "/app/roadmap", icon: Map },
 ];
@@ -37,6 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState<string>("");
   const [portfolioOpen, setPortfolioOpen] = useState(true);
+  const [toolsOpen, setToolsOpen] = useState(true);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
 
@@ -84,6 +98,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <ChevronDown className={`size-3 transition-transform ${portfolioOpen ? "" : "-rotate-90"}`} />
           </button>
           {portfolioOpen && PORTFOLIO.map((n) => <NavLink key={n.to} item={n} indent />)}
+
+          <button
+            onClick={() => setToolsOpen((v) => !v)}
+            className="mt-3 w-full flex items-center justify-between px-3 py-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground hover:text-foreground"
+            aria-expanded={toolsOpen}
+          >
+            Calculators
+            <ChevronDown className={`size-3 transition-transform ${toolsOpen ? "" : "-rotate-90"}`} />
+          </button>
+          {toolsOpen && TOOLS.map((n) => <NavLink key={n.to} item={n} indent />)}
 
           <div className="mt-5 pt-3 border-t border-border space-y-0.5">
             <button
@@ -140,7 +164,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onChange={(e) => navigate({ to: e.target.value as "/app" })}
               className="text-[12px] bg-transparent border border-border rounded-[6px] px-2 py-1"
             >
-              {[...TOP, ...PORTFOLIO].map((n) => <option key={n.to} value={n.to}>{n.label}</option>)}
+              {[...TOP, ...PORTFOLIO, ...TOOLS].map((n) => <option key={n.to} value={n.to}>{n.label}</option>)}
             </select>
           </div>
         </header>

@@ -20,6 +20,10 @@ import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppVaultRouteImport } from './routes/_authenticated/app.vault'
 import { Route as AuthenticatedAppTransactionsRouteImport } from './routes/_authenticated/app.transactions'
 import { Route as AuthenticatedAppToolsRouteImport } from './routes/_authenticated/app.tools'
+import { Route as AuthenticatedAppTaxOptimizerRouteImport } from './routes/_authenticated/app.tax-optimizer'
+import { Route as AuthenticatedAppTaxBracketVisualizerRouteImport } from './routes/_authenticated/app.tax-bracket-visualizer'
+import { Route as AuthenticatedAppSuperOptimizerRouteImport } from './routes/_authenticated/app.super-optimizer'
+import { Route as AuthenticatedAppScenariosSimulatorRouteImport } from './routes/_authenticated/app.scenarios-simulator'
 import { Route as AuthenticatedAppRoadmapRouteImport } from './routes/_authenticated/app.roadmap'
 import { Route as AuthenticatedAppRetirementRouteImport } from './routes/_authenticated/app.retirement'
 import { Route as AuthenticatedAppResearchRouteImport } from './routes/_authenticated/app.research'
@@ -27,7 +31,11 @@ import { Route as AuthenticatedAppReportRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
 import { Route as AuthenticatedAppPortfolioPlanRouteImport } from './routes/_authenticated/app.portfolio-plan'
 import { Route as AuthenticatedAppOnboardingRouteImport } from './routes/_authenticated/app.onboarding'
+import { Route as AuthenticatedAppNetWorthFlowRouteImport } from './routes/_authenticated/app.net-worth-flow'
+import { Route as AuthenticatedAppInsuranceGapRouteImport } from './routes/_authenticated/app.insurance-gap'
 import { Route as AuthenticatedAppGoalsRouteImport } from './routes/_authenticated/app.goals'
+import { Route as AuthenticatedAppDebtPayoffRouteImport } from './routes/_authenticated/app.debt-payoff'
+import { Route as AuthenticatedAppCostOfLivingRouteImport } from './routes/_authenticated/app.cost-of-living'
 import { Route as AuthenticatedAppAssetsRouteImport } from './routes/_authenticated/app.assets'
 import { Route as AuthenticatedAppAdvisorIndexRouteImport } from './routes/_authenticated/app.advisor.index'
 import { Route as AuthenticatedAppAdvisorThreadIdRouteImport } from './routes/_authenticated/app.advisor.$threadId'
@@ -87,6 +95,30 @@ const AuthenticatedAppToolsRoute = AuthenticatedAppToolsRouteImport.update({
   path: '/tools',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppTaxOptimizerRoute =
+  AuthenticatedAppTaxOptimizerRouteImport.update({
+    id: '/tax-optimizer',
+    path: '/tax-optimizer',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppTaxBracketVisualizerRoute =
+  AuthenticatedAppTaxBracketVisualizerRouteImport.update({
+    id: '/tax-bracket-visualizer',
+    path: '/tax-bracket-visualizer',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppSuperOptimizerRoute =
+  AuthenticatedAppSuperOptimizerRouteImport.update({
+    id: '/super-optimizer',
+    path: '/super-optimizer',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppScenariosSimulatorRoute =
+  AuthenticatedAppScenariosSimulatorRouteImport.update({
+    id: '/scenarios-simulator',
+    path: '/scenarios-simulator',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppRoadmapRoute = AuthenticatedAppRoadmapRouteImport.update({
   id: '/roadmap',
   path: '/roadmap',
@@ -126,11 +158,35 @@ const AuthenticatedAppOnboardingRoute =
     path: '/onboarding',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppNetWorthFlowRoute =
+  AuthenticatedAppNetWorthFlowRouteImport.update({
+    id: '/net-worth-flow',
+    path: '/net-worth-flow',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppInsuranceGapRoute =
+  AuthenticatedAppInsuranceGapRouteImport.update({
+    id: '/insurance-gap',
+    path: '/insurance-gap',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppGoalsRoute = AuthenticatedAppGoalsRouteImport.update({
   id: '/goals',
   path: '/goals',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppDebtPayoffRoute =
+  AuthenticatedAppDebtPayoffRouteImport.update({
+    id: '/debt-payoff',
+    path: '/debt-payoff',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppCostOfLivingRoute =
+  AuthenticatedAppCostOfLivingRouteImport.update({
+    id: '/cost-of-living',
+    path: '/cost-of-living',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppAssetsRoute = AuthenticatedAppAssetsRouteImport.update({
   id: '/assets',
   path: '/assets',
@@ -157,7 +213,11 @@ export interface FileRoutesByFullPath {
   '/waitlist': typeof WaitlistRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/app/assets': typeof AuthenticatedAppAssetsRoute
+  '/app/cost-of-living': typeof AuthenticatedAppCostOfLivingRoute
+  '/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
   '/app/goals': typeof AuthenticatedAppGoalsRoute
+  '/app/insurance-gap': typeof AuthenticatedAppInsuranceGapRoute
+  '/app/net-worth-flow': typeof AuthenticatedAppNetWorthFlowRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
@@ -165,6 +225,10 @@ export interface FileRoutesByFullPath {
   '/app/research': typeof AuthenticatedAppResearchRoute
   '/app/retirement': typeof AuthenticatedAppRetirementRoute
   '/app/roadmap': typeof AuthenticatedAppRoadmapRoute
+  '/app/scenarios-simulator': typeof AuthenticatedAppScenariosSimulatorRoute
+  '/app/super-optimizer': typeof AuthenticatedAppSuperOptimizerRoute
+  '/app/tax-bracket-visualizer': typeof AuthenticatedAppTaxBracketVisualizerRoute
+  '/app/tax-optimizer': typeof AuthenticatedAppTaxOptimizerRoute
   '/app/tools': typeof AuthenticatedAppToolsRoute
   '/app/transactions': typeof AuthenticatedAppTransactionsRoute
   '/app/vault': typeof AuthenticatedAppVaultRoute
@@ -179,7 +243,11 @@ export interface FileRoutesByTo {
   '/score': typeof ScoreRoute
   '/waitlist': typeof WaitlistRoute
   '/app/assets': typeof AuthenticatedAppAssetsRoute
+  '/app/cost-of-living': typeof AuthenticatedAppCostOfLivingRoute
+  '/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
   '/app/goals': typeof AuthenticatedAppGoalsRoute
+  '/app/insurance-gap': typeof AuthenticatedAppInsuranceGapRoute
+  '/app/net-worth-flow': typeof AuthenticatedAppNetWorthFlowRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
@@ -187,6 +255,10 @@ export interface FileRoutesByTo {
   '/app/research': typeof AuthenticatedAppResearchRoute
   '/app/retirement': typeof AuthenticatedAppRetirementRoute
   '/app/roadmap': typeof AuthenticatedAppRoadmapRoute
+  '/app/scenarios-simulator': typeof AuthenticatedAppScenariosSimulatorRoute
+  '/app/super-optimizer': typeof AuthenticatedAppSuperOptimizerRoute
+  '/app/tax-bracket-visualizer': typeof AuthenticatedAppTaxBracketVisualizerRoute
+  '/app/tax-optimizer': typeof AuthenticatedAppTaxOptimizerRoute
   '/app/tools': typeof AuthenticatedAppToolsRoute
   '/app/transactions': typeof AuthenticatedAppTransactionsRoute
   '/app/vault': typeof AuthenticatedAppVaultRoute
@@ -204,7 +276,11 @@ export interface FileRoutesById {
   '/waitlist': typeof WaitlistRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/_authenticated/app/assets': typeof AuthenticatedAppAssetsRoute
+  '/_authenticated/app/cost-of-living': typeof AuthenticatedAppCostOfLivingRoute
+  '/_authenticated/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
   '/_authenticated/app/goals': typeof AuthenticatedAppGoalsRoute
+  '/_authenticated/app/insurance-gap': typeof AuthenticatedAppInsuranceGapRoute
+  '/_authenticated/app/net-worth-flow': typeof AuthenticatedAppNetWorthFlowRoute
   '/_authenticated/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/_authenticated/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
   '/_authenticated/app/radar': typeof AuthenticatedAppRadarRoute
@@ -212,6 +288,10 @@ export interface FileRoutesById {
   '/_authenticated/app/research': typeof AuthenticatedAppResearchRoute
   '/_authenticated/app/retirement': typeof AuthenticatedAppRetirementRoute
   '/_authenticated/app/roadmap': typeof AuthenticatedAppRoadmapRoute
+  '/_authenticated/app/scenarios-simulator': typeof AuthenticatedAppScenariosSimulatorRoute
+  '/_authenticated/app/super-optimizer': typeof AuthenticatedAppSuperOptimizerRoute
+  '/_authenticated/app/tax-bracket-visualizer': typeof AuthenticatedAppTaxBracketVisualizerRoute
+  '/_authenticated/app/tax-optimizer': typeof AuthenticatedAppTaxOptimizerRoute
   '/_authenticated/app/tools': typeof AuthenticatedAppToolsRoute
   '/_authenticated/app/transactions': typeof AuthenticatedAppTransactionsRoute
   '/_authenticated/app/vault': typeof AuthenticatedAppVaultRoute
@@ -229,7 +309,11 @@ export interface FileRouteTypes {
     | '/waitlist'
     | '/app'
     | '/app/assets'
+    | '/app/cost-of-living'
+    | '/app/debt-payoff'
     | '/app/goals'
+    | '/app/insurance-gap'
+    | '/app/net-worth-flow'
     | '/app/onboarding'
     | '/app/portfolio-plan'
     | '/app/radar'
@@ -237,6 +321,10 @@ export interface FileRouteTypes {
     | '/app/research'
     | '/app/retirement'
     | '/app/roadmap'
+    | '/app/scenarios-simulator'
+    | '/app/super-optimizer'
+    | '/app/tax-bracket-visualizer'
+    | '/app/tax-optimizer'
     | '/app/tools'
     | '/app/transactions'
     | '/app/vault'
@@ -251,7 +339,11 @@ export interface FileRouteTypes {
     | '/score'
     | '/waitlist'
     | '/app/assets'
+    | '/app/cost-of-living'
+    | '/app/debt-payoff'
     | '/app/goals'
+    | '/app/insurance-gap'
+    | '/app/net-worth-flow'
     | '/app/onboarding'
     | '/app/portfolio-plan'
     | '/app/radar'
@@ -259,6 +351,10 @@ export interface FileRouteTypes {
     | '/app/research'
     | '/app/retirement'
     | '/app/roadmap'
+    | '/app/scenarios-simulator'
+    | '/app/super-optimizer'
+    | '/app/tax-bracket-visualizer'
+    | '/app/tax-optimizer'
     | '/app/tools'
     | '/app/transactions'
     | '/app/vault'
@@ -275,7 +371,11 @@ export interface FileRouteTypes {
     | '/waitlist'
     | '/_authenticated/app'
     | '/_authenticated/app/assets'
+    | '/_authenticated/app/cost-of-living'
+    | '/_authenticated/app/debt-payoff'
     | '/_authenticated/app/goals'
+    | '/_authenticated/app/insurance-gap'
+    | '/_authenticated/app/net-worth-flow'
     | '/_authenticated/app/onboarding'
     | '/_authenticated/app/portfolio-plan'
     | '/_authenticated/app/radar'
@@ -283,6 +383,10 @@ export interface FileRouteTypes {
     | '/_authenticated/app/research'
     | '/_authenticated/app/retirement'
     | '/_authenticated/app/roadmap'
+    | '/_authenticated/app/scenarios-simulator'
+    | '/_authenticated/app/super-optimizer'
+    | '/_authenticated/app/tax-bracket-visualizer'
+    | '/_authenticated/app/tax-optimizer'
     | '/_authenticated/app/tools'
     | '/_authenticated/app/transactions'
     | '/_authenticated/app/vault'
@@ -379,6 +483,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppToolsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/tax-optimizer': {
+      id: '/_authenticated/app/tax-optimizer'
+      path: '/tax-optimizer'
+      fullPath: '/app/tax-optimizer'
+      preLoaderRoute: typeof AuthenticatedAppTaxOptimizerRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/tax-bracket-visualizer': {
+      id: '/_authenticated/app/tax-bracket-visualizer'
+      path: '/tax-bracket-visualizer'
+      fullPath: '/app/tax-bracket-visualizer'
+      preLoaderRoute: typeof AuthenticatedAppTaxBracketVisualizerRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/super-optimizer': {
+      id: '/_authenticated/app/super-optimizer'
+      path: '/super-optimizer'
+      fullPath: '/app/super-optimizer'
+      preLoaderRoute: typeof AuthenticatedAppSuperOptimizerRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/scenarios-simulator': {
+      id: '/_authenticated/app/scenarios-simulator'
+      path: '/scenarios-simulator'
+      fullPath: '/app/scenarios-simulator'
+      preLoaderRoute: typeof AuthenticatedAppScenariosSimulatorRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/roadmap': {
       id: '/_authenticated/app/roadmap'
       path: '/roadmap'
@@ -428,11 +560,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppOnboardingRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/net-worth-flow': {
+      id: '/_authenticated/app/net-worth-flow'
+      path: '/net-worth-flow'
+      fullPath: '/app/net-worth-flow'
+      preLoaderRoute: typeof AuthenticatedAppNetWorthFlowRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/insurance-gap': {
+      id: '/_authenticated/app/insurance-gap'
+      path: '/insurance-gap'
+      fullPath: '/app/insurance-gap'
+      preLoaderRoute: typeof AuthenticatedAppInsuranceGapRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/goals': {
       id: '/_authenticated/app/goals'
       path: '/goals'
       fullPath: '/app/goals'
       preLoaderRoute: typeof AuthenticatedAppGoalsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/debt-payoff': {
+      id: '/_authenticated/app/debt-payoff'
+      path: '/debt-payoff'
+      fullPath: '/app/debt-payoff'
+      preLoaderRoute: typeof AuthenticatedAppDebtPayoffRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/cost-of-living': {
+      id: '/_authenticated/app/cost-of-living'
+      path: '/cost-of-living'
+      fullPath: '/app/cost-of-living'
+      preLoaderRoute: typeof AuthenticatedAppCostOfLivingRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/assets': {
@@ -461,7 +621,11 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAssetsRoute: typeof AuthenticatedAppAssetsRoute
+  AuthenticatedAppCostOfLivingRoute: typeof AuthenticatedAppCostOfLivingRoute
+  AuthenticatedAppDebtPayoffRoute: typeof AuthenticatedAppDebtPayoffRoute
   AuthenticatedAppGoalsRoute: typeof AuthenticatedAppGoalsRoute
+  AuthenticatedAppInsuranceGapRoute: typeof AuthenticatedAppInsuranceGapRoute
+  AuthenticatedAppNetWorthFlowRoute: typeof AuthenticatedAppNetWorthFlowRoute
   AuthenticatedAppOnboardingRoute: typeof AuthenticatedAppOnboardingRoute
   AuthenticatedAppPortfolioPlanRoute: typeof AuthenticatedAppPortfolioPlanRoute
   AuthenticatedAppRadarRoute: typeof AuthenticatedAppRadarRoute
@@ -469,6 +633,10 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppResearchRoute: typeof AuthenticatedAppResearchRoute
   AuthenticatedAppRetirementRoute: typeof AuthenticatedAppRetirementRoute
   AuthenticatedAppRoadmapRoute: typeof AuthenticatedAppRoadmapRoute
+  AuthenticatedAppScenariosSimulatorRoute: typeof AuthenticatedAppScenariosSimulatorRoute
+  AuthenticatedAppSuperOptimizerRoute: typeof AuthenticatedAppSuperOptimizerRoute
+  AuthenticatedAppTaxBracketVisualizerRoute: typeof AuthenticatedAppTaxBracketVisualizerRoute
+  AuthenticatedAppTaxOptimizerRoute: typeof AuthenticatedAppTaxOptimizerRoute
   AuthenticatedAppToolsRoute: typeof AuthenticatedAppToolsRoute
   AuthenticatedAppTransactionsRoute: typeof AuthenticatedAppTransactionsRoute
   AuthenticatedAppVaultRoute: typeof AuthenticatedAppVaultRoute
@@ -479,7 +647,11 @@ interface AuthenticatedAppRouteChildren {
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAssetsRoute: AuthenticatedAppAssetsRoute,
+  AuthenticatedAppCostOfLivingRoute: AuthenticatedAppCostOfLivingRoute,
+  AuthenticatedAppDebtPayoffRoute: AuthenticatedAppDebtPayoffRoute,
   AuthenticatedAppGoalsRoute: AuthenticatedAppGoalsRoute,
+  AuthenticatedAppInsuranceGapRoute: AuthenticatedAppInsuranceGapRoute,
+  AuthenticatedAppNetWorthFlowRoute: AuthenticatedAppNetWorthFlowRoute,
   AuthenticatedAppOnboardingRoute: AuthenticatedAppOnboardingRoute,
   AuthenticatedAppPortfolioPlanRoute: AuthenticatedAppPortfolioPlanRoute,
   AuthenticatedAppRadarRoute: AuthenticatedAppRadarRoute,
@@ -487,6 +659,12 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppResearchRoute: AuthenticatedAppResearchRoute,
   AuthenticatedAppRetirementRoute: AuthenticatedAppRetirementRoute,
   AuthenticatedAppRoadmapRoute: AuthenticatedAppRoadmapRoute,
+  AuthenticatedAppScenariosSimulatorRoute:
+    AuthenticatedAppScenariosSimulatorRoute,
+  AuthenticatedAppSuperOptimizerRoute: AuthenticatedAppSuperOptimizerRoute,
+  AuthenticatedAppTaxBracketVisualizerRoute:
+    AuthenticatedAppTaxBracketVisualizerRoute,
+  AuthenticatedAppTaxOptimizerRoute: AuthenticatedAppTaxOptimizerRoute,
   AuthenticatedAppToolsRoute: AuthenticatedAppToolsRoute,
   AuthenticatedAppTransactionsRoute: AuthenticatedAppTransactionsRoute,
   AuthenticatedAppVaultRoute: AuthenticatedAppVaultRoute,
