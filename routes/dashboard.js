@@ -67,7 +67,8 @@ async function autoRecalcScores(userId, profile) {
       : Infinity;
     if (age < 60 * 60 * 1000) return; // fresh enough — skip
     const scoreData = {
-      age: profile.years_in_practice ? 30 + (Number(profile.years_in_practice) || 0) : 30,
+      // age proxy: graduated ~25, years_in_practice added (legacy field; prefer DOB from onboarding_data)
+      age: profile.years_in_practice ? 25 + (Number(profile.years_in_practice) || 0) : 30,
       annualIncome: profile.annual_income,
       hecsBalance: profile.hecs_balance,
       superBalance: profile.super_balance,
@@ -128,8 +129,6 @@ router.get('/', async (req, res) => {
     const { user, profile: rawProfile, session } = await dashboardContext(req);
     const scores = await getScoresByUserId(req.session.userId, 3);
     const fhs = scores.find(s => s.score_type === 'financial_health');
-    const shs = scores.find(s => s.score_type === 'super_health');
-    const ehs = scores.find(s => s.score_type === 'ethical_score');
 
     // Fold live Basiq balances into the manual entries — score, stats,
     // snapshots and templates all see the combined picture.
@@ -191,8 +190,6 @@ router.get('/', async (req, res) => {
     res.render('dashboard-overview', {
       user, profile, session,
       financialScore: fhs,
-      superScore: shs,
-      ethicalScore: ehs,
       maalScore,
       snapshots,
       connected,
@@ -661,17 +658,14 @@ router.get('/scores', async (req, res) => {
     const scores = await getScoresByUserId(req.session.userId, 50);
     const fhs = scores.find(s => s.score_type === 'financial_health');
     const shs = scores.find(s => s.score_type === 'super_health');
-    const ehs = scores.find(s => s.score_type === 'ethical_score');
 
-    // Historical scores for chart (last 20 per type)
+    // Historical scores for chart (last 20 entries)
     const fhsHistory = scores.filter(s => s.score_type === 'financial_health').slice(0, 20).reverse();
-    const shsHistory = scores.filter(s => s.score_type === 'super_health').slice(0, 20).reverse();
-    const ehsHistory = scores.filter(s => s.score_type === 'ethical_score').slice(0, 20).reverse();
 
     res.render('dashboard-scores', {
       user, profile, session,
-      financialScore: fhs, superScore: shs, ethicalScore: ehs,
-      fhsHistory, shsHistory, ehsHistory,
+      financialScore: fhs, superScore: shs,
+      fhsHistory,
       pageTitle: 'Scores'
     });
   } catch (err) {
@@ -691,7 +685,8 @@ router.post('/scores/recalculate', async (req, res) => {
     }
 
     const scoreData = {
-      age: profile.years_in_practice ? 30 + (profile.years_in_practice || 0) : 30,
+      // age proxy: graduated ~25, years_in_practice added (legacy field; prefer DOB from onboarding_data)
+      age: profile.years_in_practice ? 25 + (profile.years_in_practice || 0) : 30,
       annualIncome: profile.annual_income,
       hecsBalance: profile.hecs_balance,
       superBalance: profile.super_balance,
@@ -737,7 +732,7 @@ router.post('/scores/recalculate', async (req, res) => {
     res.redirect('/dashboard/scores');
   } catch (err) {
     console.error('recalculate error:', err.message);
-    res.status(500).send('Recalculation failed: ' + err.message);
+    res.status(500).render('error', { layout: false, message: 'Recalculation failed.' });
   }
 });
 

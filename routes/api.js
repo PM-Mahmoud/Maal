@@ -216,12 +216,6 @@ function parseFilters(raw) {
   return { where: clauses.length ? ' AND ' + clauses.join(' AND ') : '', vals };
 }
 
-// Determine the user-id column name for a given table
-function userCol(table) {
-  if (table === 'profiles') return 'user_id';
-  return 'user_id';
-}
-
 router.all('/v1/:table', async (req, res) => {
   const { table } = req.params;
   if (!ASSET_TABLES.has(table)) {
@@ -233,7 +227,7 @@ router.all('/v1/:table', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   const uid = req.session.userId;
-  const ucol = userCol(table);
+  const ucol = 'user_id';
   const raw = req.query.filter;
   const { where, vals } = parseFilters(raw);
   const isSingle = req.query.single === '1';

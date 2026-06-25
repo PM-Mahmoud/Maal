@@ -46,6 +46,7 @@ async function findUserByProvider(provider, providerId) {
   return result.rows[0] || null;
 }
 
+// TODO: verify unused — OTP flow replaced verify_token; this is retained for potential link-based fallback
 async function findUserByVerifyToken(token) {
   const result = await pool.query(
     `SELECT id, email, name, email_verified
@@ -68,6 +69,7 @@ async function findUserByResetToken(token) {
 
 // ─── Update ────────────────────────────────────────────────────────────────
 
+// TODO: verify unused — see findUserByVerifyToken note above
 async function setVerifyToken(userId, token, expiresAt) {
   await pool.query(
     `UPDATE users SET verify_token = $2, verify_token_exp = $3, updated_at = NOW()

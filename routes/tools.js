@@ -37,8 +37,8 @@ router.get('/', async (req, res) => {
 
     const tools = await getToolsForUser({ tier, prefersHalal, hasSmsf, hasProperty });
 
-    // Group by category for display
-    const categories = ['Screening', 'Equities', 'Sukuk', 'Precious Metals', 'Commodities', 'Alternatives', 'Startups'];
+    // Group by category for display (Sukuk removed — values-agnostic rebrand)
+    const categories = ['Screening', 'Equities', 'Precious Metals', 'Commodities', 'Alternatives', 'Startups'];
     const grouped = {};
     for (const cat of categories) {
       grouped[cat] = tools.filter(t => t.category === cat);

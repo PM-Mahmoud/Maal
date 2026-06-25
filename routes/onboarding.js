@@ -287,7 +287,6 @@ router.post('/complete', requireAuth, async (req, res) => {
 
       sendEmail({
         to: req.session.email,
-        from: 'noreply@maal-2.polsia.app',
         subject: 'Your Financial Health Score is ready — Maal',
         html,
         text: `Your Financial Health Score is ${result.score}/100 (${result.grade}). View your dashboard: ${baseUrl}/dashboard`

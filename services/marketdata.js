@@ -84,6 +84,7 @@ async function getMarketNews(category = 'general') {
 }
 
 // Resolve a free-text name/ticker to a tradable symbol → 'AAPL' or null
+// TODO: verify unused — exported but not called by any route or service yet
 async function resolveSymbol(query) {
   const q = String(query || '').trim();
   if (!q) return null;
@@ -165,6 +166,7 @@ async function getGlobalIndices() {
 }
 
 // Format global indices as a compact prompt-ready string for AI context injection.
+// TODO: verify unused — exported but not called by any route or service yet
 function formatIndicesForPrompt(indices) {
   const live = indices.filter(i => i.price !== null);
   if (!live.length) return '';

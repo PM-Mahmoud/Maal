@@ -50,7 +50,7 @@ async function getToolsForUser({ tier = 'basic', prefersHalal = false, hasSmsf =
      ORDER BY
        -- Screening tools always first
        CASE WHEN category = 'Screening' THEN 0 ELSE 1 END,
-       -- Halal-relevant first for halal users
+       -- halal_relevant column retained for DB compat; ordering by it is a no-op (prefersHalal always false)
        CASE WHEN $3 AND halal_relevant = true THEN 0 ELSE 1 END,
        -- AU region first
        CASE WHEN region = 'AU' THEN 0 WHEN region = 'Global' THEN 1 ELSE 2 END,
@@ -61,7 +61,7 @@ async function getToolsForUser({ tier = 'basic', prefersHalal = false, hasSmsf =
   return result.rows;
 }
 
-/** All tools — admin/debug only */
+/** All tools — admin/debug only. TODO: verify unused — not called from any live route */
 async function getAllTools() {
   const result = await pool.query(
     `SELECT * FROM recommended_tools ORDER BY display_order ASC`

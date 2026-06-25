@@ -397,7 +397,7 @@ document.addEventListener('DOMContentLoaded', function() {
       f.alloc === 'Equities' || f.alloc === 'AU Equities' || f.alloc === 'Intl Equities'
     );
     const fixedFunds  = result.fundPicks.filter(f =>
-      f.alloc === 'Sukuk' || f.alloc === 'Fixed Income'
+      f.alloc === 'Fixed Income' || f.alloc === 'Cash'
     );
     const metalFunds  = result.fundPicks.filter(f =>
       f.alloc === 'Precious Metals'
@@ -437,7 +437,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   <% if (fixedFunds.length > 0) { %>
   <div class="alloc-section">
-    <div class="alloc-section-title">◈ Fixed Income / Sukuk (<%= result.alloc.fixed %>%)</div>
+    <div class="alloc-section-title">◈ Fixed Income (<%= result.alloc.fixed %>%)</div>
     <div class="card" style="padding:0 0 0.5rem;overflow:hidden;">
       <table class="fund-table">
         <thead>
