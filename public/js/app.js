@@ -352,28 +352,109 @@
   }
 
   // ── In-place DOM update after save/remove ────────────────────────────────
-  var TILE_IDS = {
-    investment_portfolio: 'ov-tile-invest',
-    cash_savings:         'ov-tile-cash',
-    super_balance:        null,
-    property_value:       null,
-  };
-  var DEBT_FIELDS = { hecs_balance: true, total_debt: true };
-
+  // Comprehensive live recalculation — called after every asset/liability save or remove.
+  // Updates every DOM element that depends on the changed value without a page reload.
   function updateTileValues(field, newVal) {
-    var fmt = newVal > 0 ? '$' + Math.round(newVal).toLocaleString('en-AU') : '$0';
-    // Main stat tile
-    var tileId = TILE_IDS[field];
-    if (tileId) {
-      var tile = document.getElementById(tileId);
-      if (tile) tile.textContent = fmt;
+    // 1. Keep the tracked numeric state in sync
+    var nums = window.MAAL_NUMS || {};
+    nums[field] = newVal;
+    window.MAAL_NUMS = nums;
+
+    // 2. Derive all totals
+    var superBal   = Number(nums.super_balance)        || 0;
+    var investBal  = Number(nums.investment_portfolio) || 0;
+    var propVal    = Number(nums.property_value)       || 0;
+    var cashBal    = Number(nums.cash_savings)         || 0;
+    var monthlyExp = Number(nums.monthly_expenses)     || 0;
+    var hecs       = Number(nums.hecs_balance)         || 0;
+    var otherDebt  = Number(nums.total_debt)           || 0;
+    var totalAssets = superBal + investBal + propVal + cashBal;
+    var totalDebts  = hecs + otherDebt;
+    var netWorth    = totalAssets - totalDebts;
+    var runwayMonths = (cashBal > 0 && monthlyExp > 0)
+      ? Math.round(cashBal / monthlyExp * 10) / 10 : null;
+
+    // 3. Formatting helpers
+    function fmt(n) {
+      if (!n) return '$0';
+      return '$' + Math.round(n).toLocaleString('en-AU');
     }
-    // Breakdown row value
-    var rowVal = document.getElementById('ov-val-' + field);
-    if (rowVal) rowVal.textContent = fmt;
-    // Update edit-value attr on edit buttons so next open shows correct value
-    document.querySelectorAll('[data-edit-asset="' + field + '"]').forEach(function (b) {
-      b.setAttribute('data-edit-value', newVal || 0);
+    function fmtNW(n) {
+      if (!n) return '$0';
+      return (n < 0 ? '-$' : '$') + Math.round(Math.abs(n)).toLocaleString('en-AU');
+    }
+    function set(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
+    function show(id, visible) { var el = document.getElementById(id); if (el) el.style.display = visible ? '' : 'none'; }
+    function pct(val, total) { return (total > 0 ? Math.round(val / total * 100) : 0) + '%'; }
+
+    // 4. Four headline stat tiles
+    set('ov-tile-networth', fmtNW(netWorth));
+    set('ov-tile-invest',   fmt(investBal));
+    set('ov-tile-cash',     fmt(cashBal));
+    set('ov-tile-debts',    fmt(totalDebts));
+
+    // 5. Panel totals in the breakdown headers
+    set('ov-panel-assets', fmt(totalAssets));
+    set('ov-panel-debts',  fmt(totalDebts));
+
+    // 6. Breakdown row values
+    set('ov-val-super_balance',        fmt(superBal));
+    set('ov-val-investment_portfolio', fmt(investBal));
+    set('ov-val-property_value',       fmt(propVal));
+    set('ov-val-hecs_balance',         fmt(hecs));
+    set('ov-val-total_debt',           fmt(otherDebt));
+
+    // 7. Show/hide breakdown rows and empty-state panels
+    show('ov-row-super_balance',        superBal  > 0);
+    show('ov-row-investment_portfolio', investBal > 0);
+    show('ov-row-property_value',       propVal   > 0);
+    show('ov-row-hecs_balance',         hecs      > 0);
+    show('ov-row-total_debt',           otherDebt > 0);
+    show('ov-assets-empty', totalAssets === 0);
+    show('ov-debts-empty',  totalDebts  === 0);
+
+    // 8. Asset proportion bars
+    var barSuper  = document.getElementById('ov-bar-super_balance');
+    var barInvest = document.getElementById('ov-bar-investment_portfolio');
+    var barProp   = document.getElementById('ov-bar-property_value');
+    if (barSuper)  barSuper.style.width  = pct(superBal,  totalAssets);
+    if (barInvest) barInvest.style.width = pct(investBal, totalAssets);
+    if (barProp)   barProp.style.width   = pct(propVal,   totalAssets);
+
+    // 9. Delta texts below each tile
+    var dInvest = document.querySelector('[data-delta="invest"]');
+    if (dInvest) dInvest.textContent = investBal > 0
+      ? 'Across your portfolios' : 'No investments added yet';
+
+    var dCash = document.querySelector('[data-delta="cash"]');
+    if (dCash) dCash.textContent = cashBal > 0
+      ? (runwayMonths ? runwayMonths + ' months of runway' : 'Set monthly spend for runway')
+      : 'Add cash & savings';
+
+    var dDebt = document.querySelector('[data-delta="debts"]');
+    if (dDebt) dDebt.textContent = totalDebts > 0
+      ? 'HECS indexation applies 1 June' : 'No liabilities recorded';
+
+    // 10. Cash Runway widget
+    set('ov-runway-months', runwayMonths !== null ? String(runwayMonths) : '—');
+    set('ov-runway-burn',   monthlyExp > 0 ? fmt(monthlyExp) : 'Set');
+    set('ov-runway-cash',   cashBal    > 0 ? fmt(cashBal)    : 'Set');
+
+    // 11. Tile remove buttons (show only when the field has a value)
+    document.querySelectorAll('[data-remove-asset="' + field + '"]').forEach(function(b) {
+      b.style.display = newVal > 0 ? 'inline-block' : 'none';
+    });
+
+    // 12. Edit button data-edit-value attrs (all fields, for correct pre-fill on next open)
+    var allNums = {
+      super_balance: superBal, investment_portfolio: investBal,
+      property_value: propVal, cash_savings: cashBal,
+      monthly_expenses: monthlyExp, hecs_balance: hecs, total_debt: otherDebt
+    };
+    Object.keys(allNums).forEach(function(f) {
+      document.querySelectorAll('[data-edit-asset="' + f + '"]').forEach(function(b) {
+        b.setAttribute('data-edit-value', allNums[f] || 0);
+      });
     });
   }
 

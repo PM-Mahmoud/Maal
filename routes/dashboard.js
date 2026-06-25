@@ -576,8 +576,8 @@ router.post('/assets/update', async (req, res) => {
     const existing = (await getProfileByUserId(req.session.userId)) || {};
     const merged = { ...existing, [field]: value };
     await updateProfile(req.session.userId, merged);
-    // Refresh scores to reflect the updated asset value
-    autoRecalcScores(req.session.userId, merged).catch(() => {});
+    // Await score recalc so refreshMaalScore() on the client always gets the fresh score
+    await autoRecalcScores(req.session.userId, merged).catch(() => {});
     res.json({ ok: true });
   } catch (err) {
     console.error('assets/update error:', err.message);
@@ -594,6 +594,7 @@ router.post('/assets/remove', async (req, res) => {
     const existing = (await getProfileByUserId(req.session.userId)) || {};
     const merged = { ...existing, [field]: null };
     await updateProfile(req.session.userId, merged);
+    await autoRecalcScores(req.session.userId, merged).catch(() => {});
     res.json({ ok: true });
   } catch (err) {
     console.error('assets/remove error:', err.message);

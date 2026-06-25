@@ -46,6 +46,16 @@
   window.MAAL_TXNS = <%- JSON.stringify((typeof chartTxns !== 'undefined' && chartTxns ? chartTxns : []).map(function(t) {
     return { d: t.post_date, amt: Number(t.amount) };
   })) %>;
+  // Raw numeric profile values for client-side live recalculation after asset saves
+  window.MAAL_NUMS = {
+    super_balance:        <%- superBal %>,
+    investment_portfolio: <%- investBal %>,
+    property_value:       <%- propertyV %>,
+    cash_savings:         <%- cashBal %>,
+    monthly_expenses:     <%- monthlyExp %>,
+    hecs_balance:         <%- hecs %>,
+    total_debt:           <%- otherDebt %>
+  };
 </script>
 
 <div class="page-head">
@@ -65,14 +75,14 @@
 <div class="stat-grid">
   <div class="panel stat-card" data-trend="networth" data-trend-label="Net Worth" tabindex="0" role="button" title="View trend">
     <div class="stat-label">Net Worth <span class="chip chip-muted range-chip">1M</span></div>
-    <div class="stat-value"><%= aud(netWorth) %></div>
+    <div class="stat-value" id="ov-tile-networth"><%= aud(netWorth) %></div>
     <div class="stat-delta <%= hasData ? 'up' : '' %>" data-delta="networth"><%= hasData ? (conn.count ? 'Manual entries + live balances' : 'Tracked daily from your data') : 'Add assets to start tracking' %></div>
     <svg class="sparkline" id="spark-networth" viewBox="0 0 200 36" preserveAspectRatio="none"><path class="fill" d=""/><path class="line" d=""/></svg>
   </div>
   <div class="panel stat-card" data-trend="invest" data-trend-label="Investments" tabindex="0" role="button" title="View trend">
     <div class="stat-label" id="ov-label-invest">Investments <span class="chip chip-muted range-chip">1M</span>
       <button class="tile-edit-btn" data-edit-asset="investment_portfolio" data-edit-value="<%= investBal %>" title="Edit" onclick="event.stopPropagation()">✎</button>
-      <% if (investBal > 0) { %><button class="tile-edit-btn tile-edit-btn--remove" data-remove-asset="investment_portfolio" title="Clear" onclick="event.stopPropagation()">✕</button><% } %>
+      <button class="tile-edit-btn tile-edit-btn--remove" data-remove-asset="investment_portfolio" title="Clear" onclick="event.stopPropagation()" style="<%= investBal > 0 ? 'display:inline-block' : 'display:none' %>">✕</button>
     </div>
     <div class="stat-value" id="ov-tile-invest"><%= aud(investBal) %></div>
     <div class="stat-delta" data-delta="invest"><%= investBal > 0 ? 'Across your portfolios' : 'No investments added yet' %></div>
@@ -81,7 +91,7 @@
   <div class="panel stat-card" data-trend="cash" data-trend-label="Total Cash" tabindex="0" role="button" title="View trend">
     <div class="stat-label">Total Cash <span class="chip chip-accent"><%= conn.count ? '● ' + conn.count + ' live' : 'Liquidity' %></span>
       <button class="tile-edit-btn" data-edit-asset="cash_savings" data-edit-value="<%= cashBal %>" title="Edit" onclick="event.stopPropagation()">✎</button>
-      <% if (cashBal > 0) { %><button class="tile-edit-btn tile-edit-btn--remove" data-remove-asset="cash_savings" title="Clear" onclick="event.stopPropagation()">✕</button><% } %>
+      <button class="tile-edit-btn tile-edit-btn--remove" data-remove-asset="cash_savings" title="Clear" onclick="event.stopPropagation()" style="<%= cashBal > 0 ? 'display:inline-block' : 'display:none' %>">✕</button>
     </div>
     <div class="stat-value" id="ov-tile-cash"><%= aud(cashBal) %></div>
     <div class="stat-delta" data-delta="cash"><%= cashBal > 0 ? (runwayMonths ? runwayMonths + ' months of runway' : 'Set monthly spend for runway') : 'Add cash & savings' %></div>
@@ -90,7 +100,7 @@
   <div class="panel stat-card" data-trend="debts" data-trend-label="Total Debts" tabindex="0" role="button" title="View trend">
     <div class="stat-label">Total Debts <span class="chip chip-muted">incl. HECS</span>
       <button class="tile-edit-btn" data-edit-asset="hecs_balance" data-edit-value="<%= hecs %>" title="Edit HECS" onclick="event.stopPropagation()">✎</button>
-      <% if (totalDebts > 0) { %><button class="tile-edit-btn tile-edit-btn--remove" data-remove-asset="hecs_balance" title="Clear HECS" onclick="event.stopPropagation()">✕</button><% } %>
+      <button class="tile-edit-btn tile-edit-btn--remove" data-remove-asset="hecs_balance" title="Clear HECS" onclick="event.stopPropagation()" style="<%= totalDebts > 0 ? 'display:inline-block' : 'display:none' %>">✕</button>
     </div>
     <div class="stat-value" id="ov-tile-debts"><%= aud(totalDebts) %></div>
     <div class="stat-delta" data-delta="debts"><%= totalDebts > 0 ? 'HECS indexation applies 1 June' : 'No liabilities recorded' %></div>
@@ -182,34 +192,42 @@
   </div>
 
   <div class="panel col-4">
-    <div class="panel-title">Assets <span class="more"><%= aud(totalAssets) %></span></div>
-    <% if (totalAssets > 0) { %>
-      <% if (superBal > 0) { %>
-      <div class="row-item"><div><div class="row-main">Superannuation</div><div class="bar-track" style="width:140px;"><div class="bar-fill" style="width:<%= Math.round(superBal/totalAssets*100) %>%;"></div></div></div><div class="row-val" id="ov-val-super_balance"><%= aud(superBal) %></div><div class="row-actions"><button class="tile-edit-btn" style="display:inline-block;" data-edit-asset="super_balance" data-edit-value="<%= superBal %>">✎</button><button class="tile-edit-btn tile-edit-btn--remove" style="display:inline-block;" data-remove-asset="super_balance">✕</button></div></div>
-      <% } %>
-      <% if (investBal > 0) { %>
-      <div class="row-item"><div><div class="row-main">Investments</div><div class="bar-track" style="width:140px;"><div class="bar-fill" style="width:<%= Math.round(investBal/totalAssets*100) %>%;"></div></div></div><div class="row-val" id="ov-val-investment_portfolio"><%= aud(investBal) %></div><div class="row-actions"><button class="tile-edit-btn" style="display:inline-block;" data-edit-asset="investment_portfolio" data-edit-value="<%= investBal %>">✎</button><button class="tile-edit-btn tile-edit-btn--remove" style="display:inline-block;" data-remove-asset="investment_portfolio">✕</button></div></div>
-      <% } %>
-      <% if (propertyV > 0) { %>
-      <div class="row-item"><div><div class="row-main">Property</div><div class="bar-track" style="width:140px;"><div class="bar-fill" style="width:<%= Math.round(propertyV/totalAssets*100) %>%;"></div></div></div><div class="row-val" id="ov-val-property_value"><%= aud(propertyV) %></div><div class="row-actions"><button class="tile-edit-btn" style="display:inline-block;" data-edit-asset="property_value" data-edit-value="<%= propertyV %>">✎</button><button class="tile-edit-btn tile-edit-btn--remove" style="display:inline-block;" data-remove-asset="property_value">✕</button></div></div>
-      <% } %>
-    <% } else { %>
-      <div class="empty"><h3>No assets yet</h3><p>Add your super, savings, shares or property.</p><button class="btn btn-accent btn-sm" data-add-asset="investment_portfolio">+ Add Asset</button></div>
-    <% } %>
+    <div class="panel-title">Assets <span class="more" id="ov-panel-assets"><%= aud(totalAssets) %></span></div>
+    <div id="ov-row-super_balance" class="row-item"<%= superBal > 0 ? '' : ' style="display:none"' %>>
+      <div><div class="row-main">Superannuation</div><div class="bar-track" style="width:140px;"><div class="bar-fill" id="ov-bar-super_balance" style="width:<%= Math.round(superBal/Math.max(totalAssets,1)*100) %>%;"></div></div></div>
+      <div class="row-val" id="ov-val-super_balance"><%= aud(superBal) %></div>
+      <div class="row-actions"><button class="tile-edit-btn" style="display:inline-block;" data-edit-asset="super_balance" data-edit-value="<%= superBal %>">✎</button><button class="tile-edit-btn tile-edit-btn--remove" style="display:inline-block;" data-remove-asset="super_balance">✕</button></div>
+    </div>
+    <div id="ov-row-investment_portfolio" class="row-item"<%= investBal > 0 ? '' : ' style="display:none"' %>>
+      <div><div class="row-main">Investments</div><div class="bar-track" style="width:140px;"><div class="bar-fill" id="ov-bar-investment_portfolio" style="width:<%= Math.round(investBal/Math.max(totalAssets,1)*100) %>%;"></div></div></div>
+      <div class="row-val" id="ov-val-investment_portfolio"><%= aud(investBal) %></div>
+      <div class="row-actions"><button class="tile-edit-btn" style="display:inline-block;" data-edit-asset="investment_portfolio" data-edit-value="<%= investBal %>">✎</button><button class="tile-edit-btn tile-edit-btn--remove" style="display:inline-block;" data-remove-asset="investment_portfolio">✕</button></div>
+    </div>
+    <div id="ov-row-property_value" class="row-item"<%= propertyV > 0 ? '' : ' style="display:none"' %>>
+      <div><div class="row-main">Property</div><div class="bar-track" style="width:140px;"><div class="bar-fill" id="ov-bar-property_value" style="width:<%= Math.round(propertyV/Math.max(totalAssets,1)*100) %>%;"></div></div></div>
+      <div class="row-val" id="ov-val-property_value"><%= aud(propertyV) %></div>
+      <div class="row-actions"><button class="tile-edit-btn" style="display:inline-block;" data-edit-asset="property_value" data-edit-value="<%= propertyV %>">✎</button><button class="tile-edit-btn tile-edit-btn--remove" style="display:inline-block;" data-remove-asset="property_value">✕</button></div>
+    </div>
+    <div id="ov-assets-empty" class="empty"<%= totalAssets > 0 ? ' style="display:none"' : '' %>>
+      <h3>No assets yet</h3><p>Add your super, savings, shares or property.</p><button class="btn btn-accent btn-sm" data-add-asset="investment_portfolio">+ Add Asset</button>
+    </div>
   </div>
 
   <div class="panel col-4">
-    <div class="panel-title">Liabilities <span class="more"><%= aud(totalDebts) %></span></div>
-    <% if (totalDebts > 0) { %>
-      <% if (hecs > 0) { %>
-      <div class="row-item"><div class="row-main">HECS-HELP</div><div class="row-val" id="ov-val-hecs_balance"><%= aud(hecs) %></div><div class="row-actions"><button class="tile-edit-btn" style="display:inline-block;" data-edit-asset="hecs_balance" data-edit-value="<%= hecs %>">✎</button><button class="tile-edit-btn tile-edit-btn--remove" style="display:inline-block;" data-remove-asset="hecs_balance">✕</button></div></div>
-      <% } %>
-      <% if (otherDebt > 0) { %>
-      <div class="row-item"><div class="row-main">Other debt</div><div class="row-val" id="ov-val-total_debt"><%= aud(otherDebt) %></div><div class="row-actions"><button class="tile-edit-btn" style="display:inline-block;" data-edit-asset="total_debt" data-edit-value="<%= otherDebt %>">✎</button><button class="tile-edit-btn tile-edit-btn--remove" style="display:inline-block;" data-remove-asset="total_debt">✕</button></div></div>
-      <% } %>
-    <% } else { %>
-      <div class="empty"><h3>No liabilities</h3><p>Track HECS, mortgages, cards and loans here.</p><button class="btn btn-danger-soft btn-sm" data-add-asset="hecs_balance">+ Add Liability</button></div>
-    <% } %>
+    <div class="panel-title">Liabilities <span class="more" id="ov-panel-debts"><%= aud(totalDebts) %></span></div>
+    <div id="ov-row-hecs_balance" class="row-item"<%= hecs > 0 ? '' : ' style="display:none"' %>>
+      <div class="row-main">HECS-HELP</div>
+      <div class="row-val" id="ov-val-hecs_balance"><%= aud(hecs) %></div>
+      <div class="row-actions"><button class="tile-edit-btn" style="display:inline-block;" data-edit-asset="hecs_balance" data-edit-value="<%= hecs %>">✎</button><button class="tile-edit-btn tile-edit-btn--remove" style="display:inline-block;" data-remove-asset="hecs_balance">✕</button></div>
+    </div>
+    <div id="ov-row-total_debt" class="row-item"<%= otherDebt > 0 ? '' : ' style="display:none"' %>>
+      <div class="row-main">Other debt</div>
+      <div class="row-val" id="ov-val-total_debt"><%= aud(otherDebt) %></div>
+      <div class="row-actions"><button class="tile-edit-btn" style="display:inline-block;" data-edit-asset="total_debt" data-edit-value="<%= otherDebt %>">✎</button><button class="tile-edit-btn tile-edit-btn--remove" style="display:inline-block;" data-remove-asset="total_debt">✕</button></div>
+    </div>
+    <div id="ov-debts-empty" class="empty"<%= totalDebts > 0 ? ' style="display:none"' : '' %>>
+      <h3>No liabilities</h3><p>Track HECS, mortgages, cards and loans here.</p><button class="btn btn-danger-soft btn-sm" data-add-asset="hecs_balance">+ Add Liability</button>
+    </div>
   </div>
 
   <div class="panel col-4">
@@ -300,11 +318,11 @@
   <div class="panel col-3">
     <div class="panel-title">Cash Runway</div>
     <div style="text-align:center; padding:0.6rem 0;">
-      <div style="font-size:2.2rem; font-weight:800;"><%= runwayMonths !== null ? runwayMonths : '—' %></div>
+      <div id="ov-runway-months" style="font-size:2.2rem; font-weight:800;"><%= runwayMonths !== null ? runwayMonths : '—' %></div>
       <div style="font-size:0.78rem; color:var(--fg-muted);">months</div>
     </div>
-    <div class="row-item"><div class="row-sub">Monthly burn</div><div class="row-val" data-add-asset="monthly_expenses" title="Click to set"><%= monthlyExp > 0 ? aud(monthlyExp) : 'Set' %></div></div>
-    <div class="row-item"><div class="row-sub">Cash on hand</div><div class="row-val" data-add-asset="cash_savings" title="Click to set"><%= cashBal > 0 ? aud(cashBal) : 'Set' %></div></div>
+    <div class="row-item"><div class="row-sub">Monthly burn</div><div id="ov-runway-burn" class="row-val" data-add-asset="monthly_expenses" title="Click to set"><%= monthlyExp > 0 ? aud(monthlyExp) : 'Set' %></div></div>
+    <div class="row-item"><div class="row-sub">Cash on hand</div><div id="ov-runway-cash" class="row-val" data-add-asset="cash_savings" title="Click to set"><%= cashBal > 0 ? aud(cashBal) : 'Set' %></div></div>
   </div>
 
   <div class="panel col-3">
