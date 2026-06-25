@@ -24,9 +24,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // parse HTML form POST bodies
 
 // Session — 30-day persistence, stored in Postgres
+// Fail fast in production if no secret is configured — a hardcoded fallback
+// would let anyone forge session cookies. Dev keeps a throwaway default.
+if (!process.env.SESSION_SECRET && process.env.NODE_ENV === 'production') {
+  console.error('FATAL: SESSION_SECRET is not set in production. Refusing to start.');
+  process.exit(1);
+}
 const sessionMiddleware = require('express-session')({
   store: sessionStore,
-  secret: process.env.SESSION_SECRET || 'REDACTED',
+  secret: process.env.SESSION_SECRET || 'maal-dev-insecure-secret-change-me',
   resave: false,
   saveUninitialized: false,
   cookie: {

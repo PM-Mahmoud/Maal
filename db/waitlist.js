@@ -2,13 +2,8 @@
  * DB module — owns: waitlist_emails table queries
  * Does NOT own: user auth tables, route logic, email sending
  */
-const { Pool } = require('pg');
-
-// Single pool instance for this module — only db/ may construct Pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('localhost') ? false : { rejectUnauthorized: false }
-});
+// Shared pool singleton (db/pool.js)
+const pool = require('./pool');
 
 /**
  * Insert email into waitlist. Returns true if newly inserted, false if duplicate.

@@ -43,7 +43,7 @@ router.post('/auth/signup', async (req, res) => {
     const { findUserByEmail } = require('../db/users');
     const existing = await findUserByEmail(email.toLowerCase().trim());
     if (existing) return res.status(409).json({ error: 'Email already in use' });
-    const hash = await bcrypt.hash(password, 10);
+    const hash = await bcrypt.hash(password, 12);
     const user = await createUser({ email: email.toLowerCase().trim(), passwordHash: hash, provider: 'email' });
     req.session.userId = user.id;
     req.session.userEmail = user.email;

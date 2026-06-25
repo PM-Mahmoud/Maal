@@ -533,11 +533,11 @@ router.get('/goals', async (req, res) => {
 router.post('/goals', async (req, res) => {
   try {
     const name = String(req.body.name || '').trim().slice(0, 120);
-    const target = parseInt(req.body.target, 10);
+    const target = Number(req.body.target);
     if (!name || isNaN(target) || target <= 0) return res.status(400).json({ error: 'Add a name and a target amount.' });
     const types = ['Grow', 'Save', 'Pay Off', 'Invest'];
     const type = types.includes(req.body.type) ? req.body.type : 'Save';
-    const id = await goalsDb.createGoal(req.session.userId, { name, type, target, current: parseInt(req.body.current, 10) || 0 });
+    const id = await goalsDb.createGoal(req.session.userId, { name, type, target, current: Number(req.body.current) || 0 });
     res.json({ ok: true, id });
   } catch (err) {
     console.error('goal create error:', err.message);
@@ -547,7 +547,7 @@ router.post('/goals', async (req, res) => {
 
 router.post('/goals/:id/progress', async (req, res) => {
   try {
-    await goalsDb.updateGoalProgress(req.params.id, req.session.userId, parseInt(req.body.current, 10) || 0);
+    await goalsDb.updateGoalProgress(req.params.id, req.session.userId, Number(req.body.current) || 0);
     res.json({ ok: true });
   } catch (err) {
     console.error('goal progress error:', err.message);
@@ -573,7 +573,7 @@ router.post('/assets/update', async (req, res) => {
   try {
     const { field, amount } = req.body;
     if (!ASSET_FIELDS.includes(field)) return res.status(400).json({ error: 'Unknown field.' });
-    const value = parseInt(amount, 10);
+    const value = Number(amount);
     if (isNaN(value) || value < 0) return res.status(400).json({ error: 'Invalid amount.' });
 
     const existing = (await getProfileByUserId(req.session.userId)) || {};
@@ -798,7 +798,7 @@ router.post('/accounts', async (req, res) => {
     if (!institution_name) return res.status(400).json({ error: 'Institution name required.' });
     await addAccount(req.session.userId, {
       institution_name, institution_type, account_reference,
-      balance: parseInt(balance, 10) || 0
+      balance: Number(balance) || 0
     });
     res.json({ ok: true });
   } catch (err) {
@@ -849,9 +849,9 @@ router.get('/profile', async (req, res) => {
 
 // ─── API: update profile ──────────────────────────────────────────────────────
 
-// Strip "$", commas and spaces from money inputs → integer
+// Strip "$", commas and spaces from money inputs → number (keeps cents)
 function parseMoney(v) {
-  const n = parseInt(String(v == null ? '' : v).replace(/[^0-9.-]/g, ''), 10);
+  const n = Number(String(v == null ? '' : v).replace(/[^0-9.-]/g, ''));
   return isNaN(n) ? 0 : n;
 }
 

@@ -2,11 +2,7 @@
 // Query functions for onboarding_responses and onboarding_sessions tables.
 // Does NOT own Pool construction — pool is required at module load.
 
-const { Pool } = require('pg');
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
+const pool = require('./pool');
 
 // ─── Sessions ─────────────────────────────────────────────────────────────────
 
@@ -52,13 +48,47 @@ async function completeSession(sessionId) {
 
 // ─── Responses ─────────────────────────────────────────────────────────────────
 
+// Whitelist of column names that upsertResponse may write to. Column names are
+// interpolated into SQL (they cannot be parameterised), so any key not in this
+// set is silently dropped to prevent SQL injection via crafted form fields.
+// Keep in sync with migrations/1747996000000_onboarding.js (onboarding_responses).
+const RESPONSE_COLUMNS = new Set([
+  'user_id',
+  'role', 'employment_type', 'years_in_practice',
+  'income_range', 'hecs_balance', 'hecs_remaining', 'other_personal_debt',
+  'super_balance', 'super_fund_type', 'employer_contrib_rate', 'monthly_savings', 'emergency_months',
+  'investment_balance', 'brokerage_accounts', 'brokerageAccounts',
+  'mortgage_balance', 'investment_property_debt', 'property_value',
+  'target_retirement_age', 'goals', 'risk_tolerance',
+  'is_muslim', 'prefers_halal', 'prefers_esg',
+  'is_complete', 'completed_at',
+]);
+
+// Column names that are double-quoted in SQL because they are mixed-case
+// (Postgres folds unquoted identifiers to lower-case).
+const QUOTED_COLUMNS = new Set(['brokerageAccounts']);
+const quoteCol = (c) => (QUOTED_COLUMNS.has(c) ? `"${c}"` : c);
+
 async function upsertResponse(sessionId, step, data) {
-  const fields = Object.keys(data);
-  const values = Object.values(data);
-  const assignments = fields.map((f, i) => `${f} = $${i + 3}`).join(', ');
+  const fields = Object.keys(data).filter((f) => RESPONSE_COLUMNS.has(f));
+  const values = fields.map((f) => data[f]);
+  if (fields.length === 0) {
+    // Nothing valid to write — still upsert the (session_id, step) skeleton row.
+    const result = await pool.query(
+      `INSERT INTO onboarding_responses (session_id, step, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (session_id, step)
+       DO UPDATE SET updated_at = NOW()
+       RETURNING id`,
+      [sessionId, step]
+    );
+    return result.rows[0];
+  }
+  const cols = fields.map(quoteCol);
+  const assignments = cols.map((c, i) => `${c} = $${i + 3}`).join(', ');
 
   const result = await pool.query(
-    `INSERT INTO onboarding_responses (session_id, step, ${fields.join(', ')}, updated_at)
+    `INSERT INTO onboarding_responses (session_id, step, ${cols.join(', ')}, updated_at)
      VALUES ($1, $2, ${values.map((_, i) => `$${i + 3}`).join(', ')}, NOW())
      ON CONFLICT (session_id, step)
      DO UPDATE SET ${assignments}, updated_at = NOW()
