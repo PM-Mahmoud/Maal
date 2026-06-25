@@ -299,11 +299,12 @@ function hashKey(s: string) {
   return h >>> 0;
 }
 function buildKpiSeries(seedKey: string, months: number, current: number, positive: boolean) {
+  if (!current) return new Array(months).fill(0);
   const rng = mulberry32(hashKey(seedKey));
   const annualGrowth = positive ? 0.06 : 0.03;
   const monthlyDrift = Math.pow(1 + annualGrowth, 1 / 12);
   const values: number[] = new Array(months);
-  let v = current || 1;
+  let v = current;
   values[months - 1] = v;
   for (let i = months - 2; i >= 0; i--) {
     const noise = 1 + (rng() - 0.5) * 0.04;
@@ -428,7 +429,7 @@ function KpiTile({ kind, portfolio }: { kind: string; portfolio: Portfolio | nul
   const series = useMemo(() => {
     if (value === null) return null;
     const months = 12;
-    const data = buildKpiSeries(`${kind}:1Y`, months, value || 1, meta.positive);
+    const data = buildKpiSeries(`${kind}:1Y`, months, value ?? 0, meta.positive);
     const labels = data.map((_, i) => monthLabel(months - 1 - i));
     return { data, labels };
   }, [kind, value, meta.positive]);
@@ -465,7 +466,7 @@ function KpiTile({ kind, portfolio }: { kind: string; portfolio: Portfolio | nul
       </div>
       <p className="text-[26px] font-bold tabular-nums">{value === null ? "—" : formatAUD(value)}</p>
       <p className={`text-[11px] mt-1 tabular-nums ${goodDirection ? "text-[var(--mint)]" : "text-muted-foreground"}`}>
-        {value === null ? "—" : <>{delta >= 0 ? "▲" : "▼"} {formatAUD(Math.abs(delta))} ({pct >= 0 ? "+" : ""}{pct.toFixed(1)}%) <span className="text-muted-foreground">1Y</span></>}
+        {value === null || value === 0 ? "—" : <>{delta >= 0 ? "▲" : "▼"} {formatAUD(Math.abs(delta))} ({pct >= 0 ? "+" : ""}{pct.toFixed(1)}%) <span className="text-muted-foreground est-label" title="Estimated from current value assuming 6% growth">est. 1Y</span></>}
       </p>
       {value !== null && (
         <ChartModal
