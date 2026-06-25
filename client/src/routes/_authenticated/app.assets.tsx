@@ -591,7 +591,7 @@ function specFor(cat: Cat): FormSpec {
         ],
         buildPayload: (v) => ({
           label: v.label,
-          kind: v.kind || "ppor",
+          property_type: v.kind || "ppor",
           value: Number(v.value || 0),
           mortgage_balance: Number(v.mortgage_balance || 0),
           mortgage_rate: Number(v.mortgage_rate || 0),
@@ -640,8 +640,8 @@ function specFor(cat: Cat): FormSpec {
           { key: "purchase_date", label: "Investment date", type: "date" },
         ],
         buildPayload: (v) => ({
-          category: "private_investment",
-          name: v.name,
+          kind: "private_investment",
+          label: v.name,
           description: v.description || null,
           value: Number(v.value || 0),
           purchase_price: v.purchase_price ? Number(v.purchase_price) : null,
@@ -661,8 +661,8 @@ function specFor(cat: Cat): FormSpec {
           { key: "purchase_date", label: "Purchase date", type: "date" },
         ],
         buildPayload: (v) => ({
-          category: "vehicle",
-          name: v.name,
+          kind: "vehicle",
+          label: v.name,
           description: v.description || null,
           value: Number(v.value || 0),
           purchase_price: v.purchase_price ? Number(v.purchase_price) : null,
@@ -686,9 +686,9 @@ function specFor(cat: Cat): FormSpec {
           { key: "value", label: "Current value (AUD)", type: "number", required: true },
         ],
         buildPayload: (v) => ({
-          category: "metal",
-          name: v.name,
-          notes: v.notes || null,
+          kind: "metal",
+          label: v.name,
+          description: v.notes || null,
           value: Number(v.value || 0),
           purchase_price: v.purchase_price ? Number(v.purchase_price) : null,
         }),
@@ -706,8 +706,8 @@ function specFor(cat: Cat): FormSpec {
           { key: "purchase_date", label: "Purchase date", type: "date" },
         ],
         buildPayload: (v) => ({
-          category: "collectible",
-          name: v.name,
+          kind: "collectible",
+          label: v.name,
           description: v.description || null,
           value: Number(v.value || 0),
           purchase_price: v.purchase_price ? Number(v.purchase_price) : null,
@@ -727,8 +727,8 @@ function specFor(cat: Cat): FormSpec {
           { key: "value", label: "Current value (AUD)", type: "number", required: true, full: true },
         ],
         buildPayload: (v) => ({
-          category: "other",
-          name: v.name,
+          kind: "other",
+          label: v.name,
           description: v.description || null,
           value: Number(v.value || 0),
           purchase_price: v.purchase_price ? Number(v.purchase_price) : null,
@@ -745,7 +745,7 @@ function specFor(cat: Cat): FormSpec {
           { key: "balance", label: "Current balance (AUD)", type: "number", required: true },
           { key: "rate", label: "Interest rate %", type: "number", placeholder: "21.99" },
         ],
-        buildPayload: (v) => ({ label: v.label, balance: Number(v.balance || 0), rate: Number(v.rate || 0), kind: "credit_card" }),
+        buildPayload: (v) => ({ label: v.label, balance: Number(v.balance || 0), interest_rate: Number(v.rate || 0), kind: "credit_card" }),
       };
     case "loan":
       return {
@@ -763,7 +763,7 @@ function specFor(cat: Cat): FormSpec {
           { key: "balance", label: "Current balance (AUD)", type: "number", required: true },
           { key: "rate", label: "Interest rate %", type: "number", placeholder: "6.10" },
         ],
-        buildPayload: (v) => ({ label: v.label, balance: Number(v.balance || 0), rate: Number(v.rate || 0), kind: v.kind || "other" }),
+        buildPayload: (v) => ({ label: v.label, balance: Number(v.balance || 0), interest_rate: Number(v.rate || 0), kind: v.kind || "other" }),
       };
     case "other_liability":
       return {
@@ -774,7 +774,7 @@ function specFor(cat: Cat): FormSpec {
           { key: "label", label: "Liability name", placeholder: "e.g. Personal Loan, Medical Bill, Tax Liability", full: true, required: true },
           { key: "balance", label: "Balance (amount owed)", type: "number", required: true, full: true },
         ],
-        buildPayload: (v) => ({ label: v.label, balance: Number(v.balance || 0), rate: 0, kind: "other" }),
+        buildPayload: (v) => ({ label: v.label, balance: Number(v.balance || 0), interest_rate: 0, kind: "other" }),
       };
   }
 }
