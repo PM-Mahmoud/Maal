@@ -292,7 +292,7 @@ function CategoryCard({ cat, onAdd }: { cat: Cat; onAdd: (c: Cat) => void }) {
                     <p className="text-[13px] font-medium truncate">{r[cat.nameKey] || "Untitled"}</p>
                     <p className="text-[11px] text-muted-foreground truncate">
                       <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-[color:var(--accent)]/12 text-[color:var(--accent)] text-[10px] font-semibold mr-1.5">Manual</span>
-                      {r.bank || r.ticker || r.kind || cat.title}
+                      {r.institution || r.ticker || r.account_type || r.kind || cat.title}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -562,8 +562,8 @@ function specFor(cat: Cat): FormSpec {
         blurb: "Add a bank, savings, offset or brokerage account.",
         fields: [
           { key: "label", label: "Account name", placeholder: "e.g. CommBank Smart Access", full: true, required: true },
-          { key: "bank", label: "Institution", placeholder: "e.g. CommBank" },
-          { key: "kind", label: "Account type", type: "select", options: [
+          { key: "institution", label: "Institution", placeholder: "e.g. CommBank" },
+          { key: "account_type", label: "Account type", type: "select", options: [
             { value: "savings", label: "Savings" },
             { value: "transaction", label: "Transaction" },
             { value: "offset", label: "Offset" },
@@ -571,7 +571,7 @@ function specFor(cat: Cat): FormSpec {
           ]},
           { key: "balance", label: "Balance (AUD)", type: "number", placeholder: "0.00", required: true },
         ],
-        buildPayload: (v) => ({ label: v.label, bank: v.bank || null, kind: v.kind || "savings", balance: Number(v.balance || 0) }),
+        buildPayload: (v) => ({ label: v.label, institution: v.institution || null, account_type: v.account_type || "savings", balance: Number(v.balance || 0) }),
       };
     case "real_estate":
       return {
