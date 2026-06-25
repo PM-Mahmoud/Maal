@@ -1,5 +1,5 @@
 ## What this app does
-Maal is a landing page and waitlist for an AI-powered financial clarity platform built for Australian health professionals. It delivers a Financial Health Score, Portfolio Halal/ESG Compliance Score, and a personalised action plan — no human advisor needed. Serves both Muslim professionals (halal portfolio) and non-Muslim professionals (ESG/ethical) from one product.
+Maal is a landing page and waitlist for an AI-powered financial clarity and wealth-advisory platform built for everyday Australians — anyone who wants to understand their finances, grow their wealth, and plan with confidence. It delivers a Financial Health Score, a personalised action plan, and tools to track net worth, optimise tax & super, manage debt, and plan for retirement — no human advisor needed. Career-agnostic and values-agnostic, for all Australians.
 
 ## Stack
 Node.js + Express + EJS templates + PostgreSQL (Neon) + Tailwind-style custom CSS
@@ -17,13 +17,13 @@ Node.js + Express + EJS templates + PostgreSQL (Neon) + Tailwind-style custom CS
 - `users` — authenticated user accounts (email, password_hash, provider, verify_token, reset_token)
 - `session` — express-session storage via connect-pg-simple
 - `user_profiles` — onboarding data and financial preferences per user
-- `financial_scores` — score history (financial_health, super_health, ethical_score)
+- `financial_scores` — score history (financial_health, super_health, ethical_score [legacy column retained for non-destructive compat; now stores a neutral portfolio-diversification signal and is not surfaced in the UI])
 - `recommendations` — personalised action items with priority and status
 - `linked_accounts` — manually linked financial institutions
 - `waitlist_emails` — email waitlist signups
 - `score_submissions` — anonymous Financial Health Score calculator submissions
 - `onboarding_sessions` / `onboarding_responses` — 7-step onboarding wizard state
-- `recommended_tools` — curated third-party platform catalogue (category, region, tier_access, halal_relevant)
+- `recommended_tools` — curated third-party platform catalogue (category, region, tier_access, halal_relevant [legacy column retained; no longer used for filtering or display])
 
 ## External integrations
 - Polsia Email Proxy (`POLSIA_EMAIL_PROXY_URL`) — sends waitlist confirmation, verification, and reset emails via Bearer `POLSIA_API_KEY`
@@ -38,7 +38,7 @@ Node.js + Express + EJS templates + PostgreSQL (Neon) + Tailwind-style custom CS
 - Dashboard at `/dashboard` with sub-pages: scores, recommendations, accounts, profile, history
 
 ## Positioning
-Maal is "the all-in-one for ethical investing" — a CFO-level advisor (AI never overemphasised in UI copy) that reads statements, bank accounts and transactions so users understand their financial situation. Pricing: Free $0 / Pro $20/mo / Max $200/mo (AUD). Mandatory disclaimer on every page: "Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money."
+Maal is "the all-in-one for everyday Australians" — a CFO-level advisor (AI never overemphasised in UI copy) that reads statements, bank accounts and transactions so users understand their financial situation, grow their wealth, and plan with confidence. Career-agnostic and values-agnostic. Pricing: Free $0 / Pro $20/mo / Max $200/mo (AUD). Mandatory disclaimer on every page: "Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money."
 
 ## Design system
 - Light theme default, dark via `html[data-theme="dark"]` (localStorage key `maal-theme`)
@@ -78,7 +78,8 @@ DATABASE_URL, SESSION_SECRET, BASE_URL, RESEND_API_KEY/EMAIL_FROM, ADMIN_PASSWOR
 ## Recent changes
 - 2026-06-12: Bug sweep (Basiq findUserById columns, reset-password locals, missing error view, missing /api/account/delete, login lockout column) + spec features (tax impact, movers placeholder, roadmap voting, feedback, privacy mode, email 2FA, cash/runway) + UI polish layer + CFO-language login page
 - 2026-06-11: Full Silvia-inspired redesign (app shell + landing + auth), Maal Score engine, real net-worth charts, provider-agnostic advisor chat (Groq default), Basiq sandbox flow, Stripe checkout + persisted plans, mobile nav, favicon/OG images, all-buttons-functional pass
-- 2026-05-23: Portfolio recommendation engine at /dashboard/portfolio — 7-field intake form, allocation engine (age/risk/debt/super decision tree), SVG donut chart, fund tables with HLAL/SPUS/VESG/ETHI tickers, "Why this portfolio" explanation; routes/portfolio.js, views/dashboard-portfolio.ejs
+- 2026-06-25: Career-agnostic + values-agnostic rebrand — removed all health-professional and halal/ESG/ethical positioning across landing, auth, onboarding, dashboard, advisor/research prompts and knowledge base. Portfolio engine reframed to mainstream risk-based diversified portfolios (Conservative/Balanced/Growth/High Growth) from low-cost AU/global ETFs (VAS, VGS, VDHG, VDCO, VAF, AAA, GOLD); investorType halal/ESG split removed. ethical_score / prefers_halal / prefers_esg / halal_relevant DB columns retained (non-destructive) but no longer surfaced or set from the UI
+- 2026-05-23: Portfolio recommendation engine at /dashboard/portfolio — 7-field intake form, allocation engine (age/risk/debt/super decision tree), SVG donut chart, mainstream diversified ETF fund tables, "Why this portfolio" explanation; routes/portfolio.js, views/dashboard-portfolio.ejs
 - 2026-05-23: Recommended Tools feature — /dashboard/tools, recommended_tools table (30 tools), tier+profile-aware filtering, editorial disclaimer; routes/tools.js, db/recommended-tools.js, views/dashboard-tools.ejs, migration 1748004000000
 - 2026-05-23: Full auth system — login/signup/forgot-password/reset/verify, bcrypt passwords, Postgres sessions, protected dashboard with 5 sub-pages
 - 2026-05-23: Financial Health Score calculator at /score — 4-step form, 0-100 score, gauge, recommendations + waitlist CTA

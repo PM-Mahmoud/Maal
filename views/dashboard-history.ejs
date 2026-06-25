@@ -15,7 +15,7 @@
       <div class="timeline-item">
         <div class="timeline-date"><%= new Date(s.calculated_at).toLocaleDateString('en-AU', { weekday:'short', day:'numeric', month:'short', year:'numeric' }) %> at <%= new Date(s.calculated_at).toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit' }) %></div>
         <div class="timeline-title">
-          <%= s.score_type === 'financial_health' ? 'Financial Health Score' : s.score_type === 'ethical_score' ? 'Ethical Score' : s.score_type === 'super_health' ? 'Super Health Score' : s.score_type %>: <%= s.score_value %>/100
+          <%= s.score_type === 'financial_health' ? 'Financial Health Score' : s.score_type === 'super_health' ? 'Super Health Score' : s.score_type === 'ethical_score' ? 'Portfolio Score' : s.score_type %>: <%= s.score_value %>/100
           <% if (s.grade) { %> — <span class="grade-pill <%= s.grade.toLowerCase().replace(' ','-') %>" style="font-size:0.6rem;"><%= s.grade %></span><% } %>
         </div>
         <% if (s.diagnosis) { %>

@@ -8,7 +8,7 @@
 
 ## Overview
 
-The Financial Health Score is a 0–100 composite score for Australian health professionals. It evaluates the user's financial position across 7 weighted components and outputs a grade, diagnosis, personalised action plan, plus two supplementary scores: Halal/Ethical Compliance Score and Portfolio Health Score.
+The Financial Health Score is a 0–100 composite score for everyday Australians. It evaluates the user's financial position across 7 weighted components and outputs a grade, diagnosis, personalised action plan, plus two supplementary scores: a Portfolio Diversification signal (stored under the legacy `ethical_score` type for non-destructive DB compatibility; not surfaced in the UI) and Portfolio Health Score.
 
 The score is **explainable** — every point maps to a specific, auditable input. No black-box ML. The logic is fully documented and human-interpretable.
 
@@ -191,7 +191,7 @@ Three coverage dimensions, weighted:
 
 **User input:** `insuranceCover` enum — `'full'` | `'partial'` | `'none'`
 
-`'full'` = has income protection cover (the primary signal for health professionals).
+`'full'` = has income protection cover (the primary signal of adequate protection).
 
 This component is binary in the form but the scoring is granular — a future form update could expose the three sub-dimensions individually.
 
@@ -199,22 +199,24 @@ This component is binary in the form but the scoring is granular — a future fo
 
 ## Part 3 — Supplementary Scores
 
-### 3.1 Halal/Ethical Compliance Score (0–100)
+### 3.1 Portfolio Diversification signal (0–100)
 
-**Formula:** `sum(percentage where halal=true) / totalPercentage × 100`
+> **Note:** This is computed by `computeHalalComplianceScore()` and persisted under the legacy `ethical_score` score type for non-destructive DB compatibility. The function name and column are retained, but the concept is now a neutral diversification measure and is **not surfaced in the UI**.
 
-**Input:** `investmentAllocation` — JSON array of `{ assetClass, percentage, halal }`
+**Idea:** measures how well a non-super portfolio is spread across distinct asset classes; concentrated single holdings score low, spreads across several uncorrelated classes score high.
 
-**Asset classification rules:**
+**Input:** `investmentAllocation` — JSON array of `{ assetClass, percentage }`
 
-| Category | Keyword matches | Credit |
-|----------|-----------------|--------|
-| Halal/Ethical | `islamic`, `halal`, `shariah`, `ethical`, `esg`, `green`, `renewable`, `sustainable`, `gold` | 100% |
-| Non-compliant | `crypto`, `gambling`, `alcohol`, `pork`, `bank` (unscreened), `conventional` | 0% |
-| Ambiguous | anything not matching above | 50% |
-| No allocation entered | — | 50 (neutral) |
+**Scoring:**
 
-A separate `halal` boolean field on each allocation item allows precise classification when the user specifies it directly.
+| Distinct asset classes (≥5% each) | Approx. score |
+|-----------------------------------|---------------|
+| 1 | ~30 |
+| 3 | ~66 |
+| 5+ | ~100 |
+| No allocation entered | 50 (neutral) |
+
+A concentration penalty reduces the score when any single holding exceeds 60% of the portfolio.
 
 ---
 
@@ -335,12 +337,12 @@ The system falls back to generic financial hygiene recommendations (insurance re
     "investmentDiversity": 7,
     "retirementReadiness": 6
   },
-  "diagnosis": "As a Doctor earning $185,000, your Financial Health Score is 73/100 — good. You are on a solid trajectory with a few targeted improvements that could accelerate your wealth significantly. Your highest-priority area is improving your insurance protection, with retirement readiness at your target age as the next focus.",
+  "diagnosis": "Earning $185,000, your Financial Health Score is 73/100 — good. You are on a solid trajectory with a few targeted improvements that could accelerate your wealth significantly. Your highest-priority area is improving your insurance protection, with retirement readiness at your target age as the next focus.",
   "recommendations": [
     {
       "impact": 1,
       "title": "Protect your income with insurance cover",
-      "detail": "As a health professional, income protection is your most important financial safety net..."
+      "detail": "Your income is your most important financial safety net..."
     },
     {
       "impact": 2,
@@ -357,6 +359,8 @@ The system falls back to generic financial hygiene recommendations (insurance re
   "portfolioHealthScore": 68
 }
 ```
+
+> `halalComplianceScore` is a legacy field name — it now carries the neutral Portfolio Diversification signal (see Part 3.1) and is not surfaced in the UI.
 
 ---
 
@@ -386,7 +390,7 @@ The system falls back to generic financial hygiene recommendations (insurance re
 | — | — | 10% | 🆕 Retirement Readiness added |
 
 **New outputs in v2:**
-- `halalComplianceScore` (0–100)
+- `halalComplianceScore` (0–100) — legacy field name; now a neutral Portfolio Diversification signal, not surfaced in the UI
 - `portfolioHealthScore` (0–100)
 - 7-component breakdown (was 7, now different set)
 - MLS recommendation for earners > $105k

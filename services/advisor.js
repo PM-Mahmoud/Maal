@@ -153,7 +153,7 @@ function buildDocsSection(docs) {
 function buildSystemPrompt(user, profile, maal, docs) {
   const p = profile || {};
   const lines = [
-    'You are Maal, a warm, sharp CFO-level financial advisor inside the Maal app — the all-in-one for ethical investing, built for Australians.',
+    'You are Maal, a warm, sharp CFO-level financial advisor inside the Maal app — the all-in-one for everyday Australians.',
     'You provide EDUCATION ONLY, never personal financial advice. Do not tell the user what to do with their money; explain concepts, trade-offs and how things work so they can decide. Where relevant, gently remind them big decisions deserve their own research or a licensed adviser.',
     'You know Australian finance natively: superannuation (SG 12%), HECS-HELP (income-contingent, indexed 1 June), franking credits, EOFY (30 June), ATO, Medicare levy surcharge, CGT discount, ASX.',
     buildConstantsPrompt(),
@@ -163,15 +163,13 @@ function buildSystemPrompt(user, profile, maal, docs) {
   ];
   if (p.annual_income || p.super_balance || p.investment_portfolio || p.hecs_balance || p.total_debt) {
     lines.push('Their current financial snapshot (from their profile — use it to ground your answers):');
-    if (p.profession) lines.push('- Profession: ' + p.profession + (p.years_in_practice ? ', ' + p.years_in_practice + ' years in practice' : ''));
+    if (p.profession) lines.push('- Occupation: ' + p.profession + (p.years_in_practice ? ', ' + p.years_in_practice + ' years in the workforce' : ''));
     if (p.annual_income) lines.push('- Annual gross income: ' + aud(p.annual_income));
     if (p.super_balance) lines.push('- Super balance: ' + aud(p.super_balance));
     if (p.investment_portfolio) lines.push('- Investments (non-super): ' + aud(p.investment_portfolio));
     if (p.property_value) lines.push('- Property value: ' + aud(p.property_value));
     if (p.hecs_balance) lines.push('- HECS-HELP balance: ' + aud(p.hecs_balance));
     if (p.total_debt) lines.push('- Other debt: ' + aud(p.total_debt));
-    if (p.prefers_halal) lines.push('- Prefers halal-compliant investing (no riba/interest-based products, no prohibited sectors)');
-    if (p.prefers_esg) lines.push('- Prefers ESG/ethical investing');
   } else {
     lines.push('They have not added financial data yet — answer generally and suggest adding assets & liabilities in the app for personalised education.');
   }

@@ -6,19 +6,18 @@ import { buildPlan, type PlanInput } from "@/lib/portfolio-plan";
 export const Route = createFileRoute("/_authenticated/app/portfolio-plan")({ component: PortfolioPlanPage });
 
 function PortfolioPlanPage() {
-  const [input, setInput] = useState<PlanInput>({ age: 35, risk: "balanced", ethics: "none" });
+  const [input, setInput] = useState<PlanInput>({ age: 35, risk: "balanced" });
 
   useEffect(() => {
     (async () => {
       const [{ data: prof }, { data: prefs }] = await Promise.all([
-        supabase.from("profiles").select("age_band, ethical_preference").maybeSingle(),
+        supabase.from("profiles").select("age_band").maybeSingle(),
         supabase.from("preferences").select("risk").maybeSingle(),
       ]);
       const ageBand = prof?.age_band ?? "30-39";
       const age = ageBand === "under-30" ? 27 : ageBand === "30-39" ? 35 : ageBand === "40-49" ? 45 : ageBand === "50-59" ? 55 : 65;
-      const ethics = prof?.ethical_preference === "islamic" ? "islamic" : prof?.ethical_preference === "esg" ? "esg" : "none";
       const risk = (prefs?.risk ?? "balanced") as PlanInput["risk"];
-      setInput({ age, risk, ethics });
+      setInput({ age, risk });
     })();
   }, []);
 
@@ -29,7 +28,7 @@ function PortfolioPlanPage() {
       <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-2">Portfolio Plan</p>
       <h1 className="text-[32px] tracking-display font-bold mb-8">A starting allocation.</h1>
 
-      <div className="grid md:grid-cols-3 gap-3 mb-8">
+      <div className="grid md:grid-cols-2 gap-3 mb-8">
         <label className="p-4 border border-border rounded-[12px] bg-[var(--surface)]">
           <span className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">Age</span>
           <input type="number" value={input.age} onChange={(e) => setInput({ ...input, age: Number(e.target.value) })}
@@ -42,15 +41,7 @@ function PortfolioPlanPage() {
             <option value="conservative">Conservative</option>
             <option value="balanced">Balanced</option>
             <option value="growth">Growth</option>
-          </select>
-        </label>
-        <label className="p-4 border border-border rounded-[12px] bg-[var(--surface)]">
-          <span className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">Ethics</span>
-          <select value={input.ethics} onChange={(e) => setInput({ ...input, ethics: e.target.value as any })}
-            className="w-full bg-transparent text-[18px] font-semibold mt-1 focus:outline-none">
-            <option value="none">None</option>
-            <option value="esg">Ethical (ESG)</option>
-            <option value="islamic">Ethical (Islamic)</option>
+            <option value="high-growth">High Growth</option>
           </select>
         </label>
       </div>

@@ -47,9 +47,9 @@ Australians aged 55 or over who sell their principal residence can contribute up
 
 High-income earners (income + concessional contributions > $250,000) pay an additional 15% tax on concessional contributions, bringing the effective rate to 30%. Still lower than the 47% top marginal rate.
 
-## Strategies for Health Professionals
+## Strategies for variable or rising incomes
 
-Doctors and other health professionals often have variable income across employment arrangements (employed, contractor, locum). Key strategies include:
+Many Australians have income that varies year to year (employed, contractor, casual, or moving between roles). Key strategies include:
 - Maximising salary sacrifice during high-income years
-- Using carry-forward concessional contributions in lower-income years (e.g., training years)
+- Using carry-forward concessional contributions in lower-income years (e.g., study or part-time years)
 - Considering spouse contribution splitting to equalise balances

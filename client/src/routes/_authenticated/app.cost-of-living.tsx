@@ -58,7 +58,7 @@ const CITIES: CityCost[] = [
   { id: "darwin", name: "Darwin", state: "NT", emoji: "🐊", medianHouse: 520_000, rent2br: 470, groceries: 1_350, transport: 220, healthInsurance: 320, salaryMultiplier: 1.08, qol: 75 },
 ];
 
-const BASE_SALARY = 200_000; // median doctor salary
+const BASE_SALARY = 95_000; // median AU full-time salary
 
 /* -------------------------------------------------------------------------- */
 /*  Component                                                                  */
@@ -120,7 +120,7 @@ function CostOfLivingComparator() {
           </h2>
           <p className="mt-3 text-muted-foreground">
             Compare two AU cities side-by-side. Salary multipliers reflect local
-            doctor pay rates. Cost figures are illustrative 2024 estimates.
+            pay rates. Cost figures are illustrative 2024 estimates.
           </p>
         </Reveal>
 
@@ -172,7 +172,7 @@ function CostOfLivingComparator() {
 
               <div className="mt-5 space-y-2">
                 <div className="flex items-center justify-between rounded-lg bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2">
-                  <span className="text-xs text-muted-foreground">Doctor salary (est.)</span>
+                  <span className="text-xs text-muted-foreground">Local salary (est.)</span>
                   <span className="text-sm font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
                     {formatAUD(aSalary)}
                   </span>
@@ -256,7 +256,7 @@ function CostOfLivingComparator() {
 
               <div className="mt-5 space-y-2">
                 <div className="flex items-center justify-between rounded-lg bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2">
-                  <span className="text-xs text-muted-foreground">Doctor salary (est.)</span>
+                  <span className="text-xs text-muted-foreground">Local salary (est.)</span>
                   <span className="text-sm font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
                     {formatAUD(bSalary)}
                   </span>

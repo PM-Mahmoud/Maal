@@ -18,7 +18,7 @@ export const Route = createFileRoute("/pricing")({
 const features: Array<{ label: string; free: boolean | string; pro: boolean | string; max: boolean | string }> = [
   { label: "Maal Score (0–100)", free: true, pro: true, max: true },
   { label: "Manual asset & debt entry", free: true, pro: true, max: true },
-  { label: "Ethical Score (ESG + Islamic screens)", free: false, pro: true, max: true },
+  { label: "Tax & super optimiser tools", free: false, pro: true, max: true },
   { label: "Open banking sync", free: false, pro: true, max: true },
   { label: "Retirement projections (Monte Carlo)", free: false, pro: true, max: true },
   { label: "Ask Maal advisor chat", free: false, pro: true, max: true },
@@ -53,7 +53,7 @@ function PricingPage() {
               highlights={["Maal Score", "Manual entry", "Basic dashboard"]} />
             <Tier name="Pro" price="$20" per="AUD / month" cta="Get Pro" to="/auth" featured
               desc="The full advisor — for every Australian household."
-              highlights={["Everything in Free", "Open banking sync", "Ethical screens", "Ask Maal chat", "Retirement projections"]} />
+              highlights={["Everything in Free", "Open banking sync", "Tax & super tools", "Ask Maal chat", "Retirement projections"]} />
             <Tier name="Max" price="$200" per="AUD / month" cta="Talk to us" to="/waitlist"
               desc="For complex finances and small business owners."
               highlights={["Everything in Pro", "Radar alerts (email + SMS)", "Vault PDF extraction", "Multi-entity", "Priority reviews"]} />

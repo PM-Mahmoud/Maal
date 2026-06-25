@@ -8,9 +8,9 @@ const CALCULATORS = [
   { to: "/app/tax-bracket-visualizer", name: "Tax Brackets", cat: "Tax", desc: "Visualise marginal vs effective rates across the stage-3 brackets." },
   { to: "/app/debt-payoff", name: "Debt Payoff", cat: "Debt", desc: "Compare snowball vs avalanche and see your debt-free date." },
   { to: "/app/scenarios-simulator", name: "Scenarios", cat: "Retirement", desc: "Monte Carlo range for your retirement balance to age 60." },
-  { to: "/app/insurance-gap", name: "Insurance Gap", cat: "Protection", desc: "Estimate the life/TPD cover gap for clinicians." },
+  { to: "/app/insurance-gap", name: "Insurance Gap", cat: "Protection", desc: "Estimate your life/TPD cover gap." },
   { to: "/app/net-worth-flow", name: "Net Worth Flow", cat: "Cashflow", desc: "Monthly cashflow and net-worth composition." },
-  { to: "/app/cost-of-living", name: "Cost of Living", cat: "Planning", desc: "Compare AU cities for relocating clinicians." },
+  { to: "/app/cost-of-living", name: "Cost of Living", cat: "Planning", desc: "Compare the cost of living across AU cities." },
 ] as const;
 
 const TOOLS = [
@@ -20,8 +20,8 @@ const TOOLS = [
   { name: "APRA Super Fund Heatmap", cat: "Super", url: "https://www.apra.gov.au/heatmap", desc: "Compare super fund performance and fees." },
   { name: "ASX ETF Screener", cat: "Investing", url: "https://www.asx.com.au/products/etf.htm", desc: "Browse Australian-listed ETFs with fees and holdings." },
   { name: "Vanguard Australia", cat: "Investing", url: "https://www.vanguard.com.au", desc: "Low-cost index funds and ETFs." },
-  { name: "Hejaz Financial Services", cat: "Ethical (Islamic)", url: "https://www.hejazfs.com.au", desc: "Shariah-compliant super and investments." },
-  { name: "Australian Ethical Super", cat: "Ethical (ESG)", url: "https://www.australianethical.com.au", desc: "Ethically screened super and investments." },
+  { name: "Betashares", cat: "Investing", url: "https://www.betashares.com.au", desc: "Australian-listed ETFs across shares, bonds and cash." },
+  { name: "CommSec", cat: "Brokerage", url: "https://www.commsec.com.au", desc: "Australian share trading and investing platform." },
   { name: "Pearler", cat: "Brokerage", url: "https://pearler.com", desc: "Low-cost Australian brokerage for long-term ETF investors." },
   { name: "Sharesight", cat: "Tracking", url: "https://www.sharesight.com", desc: "Portfolio tracking and tax reporting." },
 ];

@@ -7,9 +7,9 @@
 
 ## What Maal Is
 
-Maal is an AI-powered financial clarity platform for Australian health professionals.  
-It delivers a **Financial Health Score**, **Halal/ESG Portfolio Compliance Score**, and a **personalised action plan** — no human advisor needed.  
-Serves both Muslim professionals (halal portfolio) and non-Muslim professionals (ESG/ethical) from one product.
+Maal is an AI-powered financial clarity and wealth-advisory platform for everyday Australians.  
+It delivers a **Financial Health Score**, a **personalised action plan**, and tools to track net worth, optimise tax & super, manage debt, and plan for retirement — no human advisor needed.  
+Career-agnostic and values-agnostic — built for all Australians.
 
 **Pricing:** Free / Pro $20/mo / Max $200/mo (AUD)  
 **Disclaimer (mandatory on every page):** "Maal does not provide financial advice. Any information provided by Maal is for educational purposes only."
@@ -70,7 +70,7 @@ app.use('*', (req, res) => res.sendFile('public/app/index.html'));
 
 ### User Data
 - `user_profiles` — onboarding data, financial preferences, age_band, cash_savings, monthly_expenses
-- `financial_scores` — score history (financial_health, super_health, ethical_score)
+- `financial_scores` — score history (financial_health, super_health, ethical_score [legacy column retained for non-destructive compat; not surfaced in UI])
 - `recommendations` — personalised action items
 - `linked_accounts` — Basiq-synced accounts (institution, balance, account_reference)
 
@@ -112,7 +112,7 @@ app.use('*', (req, res) => res.sendFile('public/app/index.html'));
 | `/app/transactions` | `app.transactions.tsx` | Transaction list + statement upload |
 | `/app/vault` | `app.vault.tsx` | Document vault (upload/download) |
 | `/app/retirement` | `app.retirement.tsx` | Retirement projections |
-| `/app/portfolio-plan` | `app.portfolio-plan.tsx` | Halal/ESG portfolio allocation |
+| `/app/portfolio-plan` | `app.portfolio-plan.tsx` | Risk-based diversified portfolio allocation |
 | `/app/tools` | `app.tools.tsx` | Recommended tools catalogue |
 | `/app/roadmap` | `app.roadmap.tsx` | Feature voting |
 | `/app/report` | `app.report.tsx` | Financial report export |
@@ -195,7 +195,7 @@ The KPI sparklines on the dashboard (`KpiSparkline` in `Dashboard.tsx`) mark the
 
 ### Phase 2 — Dashboard (June 2026 early)
 - Full dashboard with 5 sub-pages (scores, recommendations, accounts, profile, history)
-- Portfolio recommendation engine (halal/ESG allocation, SVG donut chart)
+- Portfolio recommendation engine (risk-based diversified allocation, SVG donut chart)
 - Recommended Tools catalogue (30 tools, tier/profile filtering)
 
 ### Phase 3 — Intelligence (June 2026)
@@ -268,7 +268,6 @@ The KPI sparklines on the dashboard (`KpiSparkline` in `Dashboard.tsx`) mark the
 - [ ] **Public landing page improvements** — testimonials, case studies, FAQ
 - [ ] **Referral system** — invite friends for plan credit
 - [ ] **CSV export** — assets, transactions, net worth history
-- [ ] **Halal screening** — per-holding compliance rating in portfolio page
 - [ ] **Statement parsing** — upload PDF bank statement → auto-extract transactions
 
 ---

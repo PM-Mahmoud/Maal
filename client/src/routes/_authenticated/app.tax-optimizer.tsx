@@ -466,7 +466,7 @@ function TaxOptimizer() {
             Find dollars hiding in your tax return.
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Built for Australian doctors. Estimate your FY 2025-26 income tax,
+            Built for everyday Australians. Estimate your FY 2025-26 income tax,
             Medicare Levy, surcharge and HECS repayment — then see how deductions
             and super contributions change the picture.
           </p>

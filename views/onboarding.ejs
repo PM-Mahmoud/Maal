@@ -365,31 +365,31 @@
     <!-- Step 1: About You -->
     <div class="step-section-tag">Section 1 of 7</div>
     <h2>About You</h2>
-    <p>Help us understand your professional background and financial situation.</p>
+    <p>Help us understand your background and financial situation.</p>
 
     <div class="field-group">
       <label class="field-label">
-        What best describes your role?
+        What best describes your employment?
         <button class="tooltip-btn" type="button" onclick="toggleTooltip(this)">?
-          <span class="tooltip-pop">Australian health professionals including specialists, GPs, nurses, pharmacists, and dentists.</span>
+          <span class="tooltip-pop">How you earn your income. This helps tailor your tax, super and cashflow guidance.</span>
         </button>
       </label>
       <select class="field-select" id="role" onchange="validateField('role')">
-        <option value="">Select your role…</option>
-        <option value="specialist">Specialist</option>
-        <option value="gp">GP / General Practitioner</option>
-        <option value="dentist">Dentist</option>
-        <option value="pharmacist">Pharmacist</option>
-        <option value="nurse">Nurse / Nurse Practitioner</option>
-        <option value="allied_health">Allied Health (Physio, OT, Psych)</option>
-        <option value="other">Other Health Professional</option>
+        <option value="">Select your employment…</option>
+        <option value="full_time">Employee — full-time</option>
+        <option value="part_time">Employee — part-time / casual</option>
+        <option value="self_employed">Self-employed / sole trader</option>
+        <option value="business_owner">Business owner</option>
+        <option value="contractor">Contractor / freelancer</option>
+        <option value="retired">Retired</option>
+        <option value="other">Other</option>
       </select>
-      <div class="field-error" id="roleError">Please select your role</div>
+      <div class="field-error" id="roleError">Please select an option</div>
     </div>
 
     <div class="field-row">
       <div class="field-group">
-        <label class="field-label">Years in practice</label>
+        <label class="field-label">Years in the workforce</label>
         <input class="field-input" type="number" id="yearsInPractice" min="0" max="50" placeholder="e.g. 8" onchange="validateField('yearsInPractice')" />
         <div class="field-error" id="yearsInPracticeError">Please enter a valid number</div>
       </div>
@@ -409,15 +409,15 @@
         </label>
         <label class="radio-item" onclick="selectRadio('incomeRange', this, '$120k–$200k')">
           <input type="radio" name="income_range" value="$120k–$200k" />
-          <div><div class="radio-text">$120k – $200k</div><div class="radio-sub">Established professional</div></div>
+          <div><div class="radio-text">$120k – $200k</div><div class="radio-sub">Established earner</div></div>
         </label>
         <label class="radio-item" onclick="selectRadio('incomeRange', this, '$200k–$350k')">
           <input type="radio" name="income_range" value="$200k–$350k" />
-          <div><div class="radio-text">$200k – $350k</div><div class="radio-sub">Senior or high-volume practice</div></div>
+          <div><div class="radio-text">$200k – $350k</div><div class="radio-sub">High income</div></div>
         </label>
         <label class="radio-item" onclick="selectRadio('incomeRange', this, '$350k+')">
           <input type="radio" name="income_range" value="$350k+" />
-          <div><div class="radio-text">$350k+</div><div class="radio-sub">Principal or specialist partner</div></div>
+          <div><div class="radio-text">$350k+</div><div class="radio-sub">Very high income</div></div>
         </label>
       </div>
       <div class="field-error" id="incomeRangeError">Please select your income range</div>
@@ -438,9 +438,9 @@
           <input type="radio" name="investment_goal" value="wealth_building" />
           <div><div class="radio-text">Wealth building</div><div class="radio-sub">Portfolio growth and financial independence</div></div>
         </label>
-        <label class="radio-item" onclick="selectRadio('investmentGoal', this, 'practice_setup')">
-          <input type="radio" name="investment_goal" value="practice_setup" />
-          <div><div class="radio-text">Practice setup</div><div class="radio-sub">Owning or expanding your clinic</div></div>
+        <label class="radio-item" onclick="selectRadio('investmentGoal', this, 'business')">
+          <input type="radio" name="investment_goal" value="business" />
+          <div><div class="radio-text">Starting a business</div><div class="radio-sub">Funding or growing your own venture</div></div>
         </label>
       </div>
       <div class="field-error" id="investmentGoalError">Please select an investment goal</div>
@@ -472,7 +472,7 @@
     { title: 'Debt & Liabilities', sub: 'Knowing your liabilities is essential for an accurate score.', section: '4 of 7' },
     { title: 'Assets & Investments', sub: 'What are you currently invested in?', section: '5 of 7' },
     { title: 'Your Goals', sub: 'Where are you trying to get to?', section: '6 of 7' },
-    { title: 'Ethical Preferences', sub: 'Configure your ethical investment preferences.', section: '7 of 7' },
+    { title: 'Investment Preferences', sub: 'Tell us how you like to invest so we can tailor your plan.', section: '7 of 7' },
   ];
 
   const STORAGE_KEY = 'maal_onboarding';
@@ -549,15 +549,15 @@
       <div class="radio-group" id="employmentType">
         <label class="radio-item" onclick="selectRadio('employmentType', this, 'employee')">
           <input type="radio" name="employment_type" value="employee" />
-          <div><div class="radio-text">Employee</div><div class="radio-sub">Salaried position in a clinic or hospital</div></div>
+          <div><div class="radio-text">Employee</div><div class="radio-sub">Salaried or wage-earning position</div></div>
         </label>
         <label class="radio-item" onclick="selectRadio('employmentType', this, 'contractor')">
           <input type="radio" name="employment_type" value="contractor" />
           <div><div class="radio-text">Contractor</div><div class="radio-sub">Billable hours, ABN-based work</div></div>
         </label>
-        <label class="radio-item" onclick="selectRadio('employmentType', this, 'practice_owner')">
-          <input type="radio" name="employment_type" value="practice_owner" />
-          <div><div class="radio-text">Practice owner / Partner</div><div class="radio-sub">Own or co-own a clinic</div></div>
+        <label class="radio-item" onclick="selectRadio('employmentType', this, 'business_owner')">
+          <input type="radio" name="employment_type" value="business_owner" />
+          <div><div class="radio-text">Business owner / Partner</div><div class="radio-sub">Own or co-own a business</div></div>
         </label>
       </div>
     </div>
@@ -567,7 +567,7 @@
         <label class="field-label">
           HECS/HELP balance
           <button class="tooltip-btn" type="button" onclick="toggleTooltip(this)">?
-            <span class="tooltip-pop">Higher Education Loan Program. Australian students who studied medicine or dentistry typically have a HELP debt. It is repaid via the tax system when your income exceeds ~$55k/year.</span>
+            <span class="tooltip-pop">Higher Education Loan Program. Many Australians who studied at university carry a HELP debt. It is repaid via the tax system once your income exceeds the repayment threshold.</span>
           </button>
           <span class="optional">(optional)</span>
         </label>
@@ -751,66 +751,31 @@
     </div>
   `;
 
-  // Step 7: Ethical Preferences
+  // Step 7: Investment Preferences
   STEP_CONTENT[7] = `
     <div class="step-section-tag">Section 7 of 7</div>
     <h2>Investment Preferences</h2>
-    <p>This is what sets Ethical apart. Tell us what matters to you.</p>
+    <p>Tell us how you like to invest so we can tailor your plan.</p>
 
     <div class="field-group">
-      <label class="field-label">Do you identify as Muslim?</label>
-      <div class="radio-group" id="isMuslim">
-        <label class="radio-item" onclick="selectRadio('isMuslim', this, 'yes'); showHalalSection()">
-          <input type="radio" name="is_muslim" value="yes" />
-          <div><div class="radio-text">Yes</div><div class="radio-sub">I want a faith-based ethical portfolio</div></div>
+      <label class="field-label">How would you describe your risk tolerance?</label>
+      <div class="radio-group" id="riskTolerance">
+        <label class="radio-item" onclick="selectRadio('riskTolerance', this, 'conservative')">
+          <input type="radio" name="risk_tolerance" value="conservative" />
+          <div><div class="radio-text">Conservative</div><div class="radio-sub">Prioritise stability — I'm uncomfortable with big swings in value</div></div>
         </label>
-        <label class="radio-item" onclick="selectRadio('isMuslim', this, 'no'); showEthicalSection()">
-          <input type="radio" name="is_muslim" value="no" />
-          <div><div class="radio-text">No</div><div class="radio-sub">I'm interested in ethical / ESG investing</div></div>
+        <label class="radio-item" onclick="selectRadio('riskTolerance', this, 'balanced')">
+          <input type="radio" name="risk_tolerance" value="balanced" />
+          <div><div class="radio-text">Balanced</div><div class="radio-sub">A mix of growth and defensive assets suits me</div></div>
         </label>
-      </div>
-    </div>
-
-    <div id="halalSection" style="display:none;">
-      <div class="field-group">
-        <label class="field-label">Ethical framework</label>
-        <div class="radio-group" id="halalPreference">
-          <label class="radio-item" onclick="selectRadio('halalPreference', this, 'strict')">
-            <input type="radio" name="halal_preference" value="strict" />
-            <div><div class="radio-text">Islamic (Shariah-compliant)</div><div class="radio-sub">Shariah-screened: excludes gambling, alcohol, pork, weapons, interest-based banking</div></div>
-          </label>
-          <label class="radio-item" onclick="selectRadio('halalPreference', this, 'halal_plus')">
-            <input type="radio" name="halal_preference" value="halal_plus" />
-            <div><div class="radio-text">Islamic + custom screening</div><div class="radio-sub">Shariah-compliant plus any additional sector exclusions you choose</div></div>
-          </label>
-        </div>
-      </div>
-
-      <div class="field-group" id="halalSectorsGroup" style="display:none;">
-        <label class="field-label">Also avoid <span class="optional">(select all that apply)</span></label>
-        <div class="inline-checkboxes" id="halalSectors">
-          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="gambling" />Gambling</span>
-          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="alcohol" />Alcohol</span>
-          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="tobacco" />Tobacco</span>
-          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="weapons" />Weapons</span>
-          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="gaming" />Gaming</span>
-          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="interest_banking" />Interest-based banking</span>
-        </div>
-      </div>
-    </div>
-
-    <div id="ethicalSection" style="display:none;">
-      <div class="field-group">
-        <label class="field-label">Ethical exclusions <span class="optional">(select all that apply)</span></label>
-        <div class="inline-checkboxes" id="ethicalExclusions">
-          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="fossil_fuels" />Fossil fuels</span>
-          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="weapons" />Weapons</span>
-          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="animal_testing" />Animal testing</span>
-          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="tobacco" />Tobacco</span>
-          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="gambling" />Gambling</span>
-          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="nuclear" />Nuclear</span>
-          <span class="inline-check" onclick="toggleInlineCheck(this)"><input type="checkbox" value="human_rights" />Human rights violations</span>
-        </div>
+        <label class="radio-item" onclick="selectRadio('riskTolerance', this, 'growth')">
+          <input type="radio" name="risk_tolerance" value="growth" />
+          <div><div class="radio-text">Growth</div><div class="radio-sub">I'm comfortable with volatility for higher long-term returns</div></div>
+        </label>
+        <label class="radio-item" onclick="selectRadio('riskTolerance', this, 'high_growth')">
+          <input type="radio" name="risk_tolerance" value="high_growth" />
+          <div><div class="radio-text">High growth</div><div class="radio-sub">Maximise long-term growth — I can ride out large swings</div></div>
+        </label>
       </div>
     </div>
   `;
@@ -833,31 +798,31 @@
     return `
       <div class="step-section-tag">Section 1 of 7</div>
       <h2>About You</h2>
-      <p>Help us understand your professional background and financial situation.</p>
+      <p>Help us understand your background and financial situation.</p>
 
       <div class="field-group">
         <label class="field-label">
-          What best describes your role?
+          What best describes your employment?
           <button class="tooltip-btn" type="button" onclick="toggleTooltip(this)">?
-            <span class="tooltip-pop">Australian health professionals including specialists, GPs, nurses, pharmacists, and dentists.</span>
+            <span class="tooltip-pop">How you earn your income. This helps tailor your tax, super and cashflow guidance.</span>
           </button>
         </label>
         <select class="field-select" id="role" onchange="validateField('role')">
-          <option value="">Select your role…</option>
-          <option value="specialist">Specialist</option>
-          <option value="gp">GP / General Practitioner</option>
-          <option value="dentist">Dentist</option>
-          <option value="pharmacist">Pharmacist</option>
-          <option value="nurse">Nurse / Nurse Practitioner</option>
-          <option value="allied_health">Allied Health (Physio, OT, Psych)</option>
-          <option value="other">Other Health Professional</option>
+          <option value="">Select your employment…</option>
+          <option value="full_time">Employee — full-time</option>
+          <option value="part_time">Employee — part-time / casual</option>
+          <option value="self_employed">Self-employed / sole trader</option>
+          <option value="business_owner">Business owner</option>
+          <option value="contractor">Contractor / freelancer</option>
+          <option value="retired">Retired</option>
+          <option value="other">Other</option>
         </select>
-        <div class="field-error" id="roleError">Please select your role</div>
+        <div class="field-error" id="roleError">Please select an option</div>
       </div>
 
       <div class="field-row">
         <div class="field-group">
-          <label class="field-label">Years in practice</label>
+          <label class="field-label">Years in the workforce</label>
           <input class="field-input" type="number" id="yearsInPractice" min="0" max="50" placeholder="e.g. 8" />
         </div>
         <div class="field-group">
@@ -875,15 +840,15 @@
           </label>
           <label class="radio-item" onclick="selectRadio('incomeRange', this, '$120k–$200k')">
             <input type="radio" name="income_range" value="$120k–$200k" />
-            <div><div class="radio-text">$120k – $200k</div><div class="radio-sub">Established professional</div></div>
+            <div><div class="radio-text">$120k – $200k</div><div class="radio-sub">Established earner</div></div>
           </label>
           <label class="radio-item" onclick="selectRadio('incomeRange', this, '$200k–$350k')">
             <input type="radio" name="income_range" value="$200k–$350k" />
-            <div><div class="radio-text">$200k – $350k</div><div class="radio-sub">Senior or high-volume practice</div></div>
+            <div><div class="radio-text">$200k – $350k</div><div class="radio-sub">High income</div></div>
           </label>
           <label class="radio-item" onclick="selectRadio('incomeRange', this, '$350k+')">
             <input type="radio" name="income_range" value="$350k+" />
-            <div><div class="radio-text">$350k+</div><div class="radio-sub">Principal or specialist partner</div></div>
+            <div><div class="radio-text">$350k+</div><div class="radio-sub">Very high income</div></div>
           </label>
         </div>
       </div>
@@ -903,9 +868,9 @@
             <input type="radio" name="investment_goal" value="wealth_building" />
             <div><div class="radio-text">Wealth building</div><div class="radio-sub">Portfolio growth and financial independence</div></div>
           </label>
-          <label class="radio-item" onclick="selectRadio('investmentGoal', this, 'practice_setup')">
-            <input type="radio" name="investment_goal" value="practice_setup" />
-            <div><div class="radio-text">Practice setup</div><div class="radio-sub">Owning or expanding your clinic</div></div>
+          <label class="radio-item" onclick="selectRadio('investmentGoal', this, 'business')">
+            <input type="radio" name="investment_goal" value="business" />
+            <div><div class="radio-text">Starting a business</div><div class="radio-sub">Funding or growing your own venture</div></div>
           </label>
         </div>
       </div>
@@ -1031,17 +996,6 @@
     }
   }
 
-  // ── Halal/Ethical sections ─────────────────────────────────────────────────────
-  function showHalalSection() {
-    document.getElementById('halalSection').style.display = 'block';
-    document.getElementById('ethicalSection').style.display = 'none';
-  }
-
-  function showEthicalSection() {
-    document.getElementById('halalSection').style.display = 'none';
-    document.getElementById('ethicalSection').style.display = 'block';
-  }
-
   // ── Save / load ───────────────────────────────────────────────────────────────
   function saveCurrentStep(step) {
     const data = collectFormData();
@@ -1079,13 +1033,6 @@
       provider: row.querySelector('select')?.value || '',
       balance: row.querySelector('input[type="number"]')?.value || ''
     })).filter(r => r.provider);
-
-    // Inline checkboxes
-    const selectedSectors = Array.from(document.querySelectorAll('#halalSectors input:checked')).map(i => i.value);
-    if (selectedSectors.length) data.sectorExclusions = selectedSectors;
-
-    const selectedEthics = Array.from(document.querySelectorAll('#ethicalExclusions input:checked')).map(i => i.value);
-    if (selectedEthics.length) data.ethicalExclusions = selectedEthics;
 
     return data;
   }
@@ -1130,30 +1077,9 @@
       const item = document.querySelector(`#superContribution .radio-item input[value="${stepData.super_contribution}"]`);
       if (item) { item.checked = true; item.closest('.radio-item').classList.add('selected'); }
     }
-    if (stepData.is_muslim) {
-      const item = document.querySelector(`#isMuslim .radio-item input[value="${stepData.is_muslim}"]`);
+    if (stepData.risk_tolerance) {
+      const item = document.querySelector(`#riskTolerance .radio-item input[value="${stepData.risk_tolerance}"]`);
       if (item) { item.checked = true; item.closest('.radio-item').classList.add('selected'); }
-      if (stepData.is_muslim === 'yes') showHalalSection();
-      else showEthicalSection();
-    }
-    if (stepData.halal_preference) {
-      const item = document.querySelector(`#halalPreference .radio-item input[value="${stepData.halal_preference}"]`);
-      if (item) { item.checked = true; item.closest('.radio-item').classList.add('selected'); }
-      if (stepData.halal_preference === 'halal_plus') document.getElementById('halalSectorsGroup').style.display = 'block';
-    }
-
-    // Restore inline checkboxes
-    if (stepData.sectorExclusions) {
-      stepData.sectorExclusions.forEach(v => {
-        const el = document.querySelector(`#halalSectors input[value="${v}"]`);
-        if (el) { el.checked = true; el.closest('.inline-check').classList.add('selected'); }
-      });
-    }
-    if (stepData.ethicalExclusions) {
-      stepData.ethicalExclusions.forEach(v => {
-        const el = document.querySelector(`#ethicalExclusions input[value="${v}"]`);
-        if (el) { el.checked = true; el.closest('.inline-check').classList.add('selected'); }
-      });
     }
 
     // Restore brokerage rows
@@ -1212,19 +1138,14 @@
     let scoreHTML = '';
     if (resultData && resultData.ok) {
       scoreHTML = `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin:1.5rem 0;">
+        <div style="margin:1.5rem 0;">
           <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:1.1rem;text-align:center;border:1px solid var(--border);">
             <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:#8A8D83;margin-bottom:0.5rem;">Financial Health Score</div>
             <div style="font-size:2rem;font-weight:700;color:${gc};">${resultData.score}<span style="font-size:1rem;color:#8A8D83;">/100</span></div>
             <div style="font-size:0.75rem;color:#7ED4A6;margin-top:0.3rem;">${resultData.grade}</div>
           </div>
-          <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:1.1rem;text-align:center;border:1px solid var(--border);">
-            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:#8A8D83;margin-bottom:0.5rem;">Ethical Score</div>
-            <div style="font-size:2rem;font-weight:700;color:#C9A84C;">${resultData.ethicalScore}<span style="font-size:1rem;color:#8A8D83;">/100</span></div>
-            <div style="font-size:0.75rem;color:#7ED4A6;margin-top:0.3rem;">Compliance</div>
-          </div>
         </div>
-        <p style="font-size:0.85rem;color:#8A8D83;margin-bottom:0.75rem;text-align:center;">Your scores are saved to your dashboard and the full breakdown is in your inbox.</p>
+        <p style="font-size:0.85rem;color:#8A8D83;margin-bottom:0.75rem;text-align:center;">Your score is saved to your dashboard and the full breakdown is in your inbox.</p>
       `;
     }
 

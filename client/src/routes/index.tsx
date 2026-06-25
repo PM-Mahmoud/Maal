@@ -45,7 +45,7 @@ function Hero() {
           Your money,<br />in balance.
         </h1>
         <p className="mt-7 text-[17px] md:text-[19px] text-muted-foreground leading-relaxed max-w-[58ch] text-pretty">
-          Maal is the all-in-one for ethical investing — a CFO-level advisor that reads your statements,
+          Maal is the all-in-one for everyday Australians — a CFO-level advisor that reads your statements,
           bank accounts and transactions, then explains your financial situation in plain language.
           Super, HECS, portfolio, spending: one clear picture.
         </p>
@@ -117,7 +117,7 @@ function PrinciplesStrip() {
   const items = [
     { big: "3 scores", small: "Credit, debt & financial wellbeing" },
     { big: "100+ institutions", small: "Connected via Basiq open banking" },
-    { big: "Ethically aware", small: "Ethical frameworks built in" },
+    { big: "Built for AU", small: "Super, HECS & ATO native" },
     { big: "Read-only", small: "Maal can never move your money" },
   ];
   return (
@@ -255,7 +255,7 @@ function Products() {
 
 function WhyMaal() {
   const points = [
-    { t: "Ethical by design", d: "Ethical and ESG frameworks are first-class citizens, not afterthoughts. Screening tools are on the roadmap — your values shape your scores today." },
+    { t: "Clarity by design", d: "Net worth, debt, super, spending and investments in one place — explained in plain language so you always know where you stand." },
     { t: "Australian to the core", d: "Superannuation, HECS-HELP, franking credits, EOFY, the ATO — Maal speaks Australian finance natively, not as a US import." },
     { t: "Secure and read-only", d: "Bank connections via Basiq under the Consumer Data Right. Maal can never move money. Credentials are never stored. Your data is never sold." },
     { t: "Education, not instructions", d: "Maal explains what’s happening in your finances and why it matters. The decisions stay yours." },
@@ -265,10 +265,10 @@ function WhyMaal() {
       <div className="max-w-5xl mx-auto px-6">
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-4">Why Maal</p>
         <h2 className="text-[28px] md:text-[36px] tracking-display font-bold leading-tight max-w-3xl">
-          Most platforms tell you what your money is doing. Almost none ask whether it reflects{" "}
-          <span className="text-[var(--mint)]">your values</span>. Maal is built for people who want
-          to grow wealth <span className="text-[var(--mint)]">and</span> sleep well — the all-in-one
-          for ethical investing.
+          Most platforms tell you what your money is doing. Almost none help you{" "}
+          <span className="text-[var(--mint)]">understand it</span>. Maal is built for everyday
+          Australians who want to grow wealth <span className="text-[var(--mint)]">and</span> plan
+          with confidence — the all-in-one for your money.
         </h2>
         <div className="mt-12 divide-y divide-border border-y border-border">
           {points.map((p) => (
@@ -290,7 +290,7 @@ function HowItWorks() {
   const steps = [
     { n: "01", title: "Tell Maal what you have", body: "Add your income, super balance, HECS, mortgage, savings, and any investments. Takes a few minutes — no bank login needed to start." },
     { n: "02", title: "Get your Maal Score", body: "A weighted 0–100 read of your financial health across five pillars: net worth, debt, super, diversification, and emergency buffer." },
-    { n: "03", title: "Follow your action plan", body: "A prioritised list of moves to lift your score, ranked by impact. Pick an ethical screen (ESG or Islamic) and the plan adapts." },
+    { n: "03", title: "Follow your action plan", body: "A prioritised list of moves to lift your score, ranked by impact — pay down debt, top up super, build your buffer. The plan adapts as your situation changes." },
   ];
   return (
     <section className="py-24 border-t border-border bg-[var(--secondary)]/30">
@@ -318,7 +318,7 @@ function HowItWorks() {
 function PricingStrip() {
   const tiers = [
     { name: "Free", price: "$0", per: "forever", desc: "Maal Score, basic dashboard, manual entry.", cta: "Start free", to: "/auth", featured: false },
-    { name: "Pro", price: "$20", per: "AUD / month", desc: "Open banking sync, ethical screens, retirement projections, Ask Maal.", cta: "Get Pro", to: "/pricing", featured: true },
+    { name: "Pro", price: "$20", per: "AUD / month", desc: "Open banking sync, retirement projections, tax & super tools, Ask Maal.", cta: "Get Pro", to: "/pricing", featured: true },
     { name: "Max", price: "$200", per: "AUD / month", desc: "Multi-entity, Radar alerts, Vault PDF extraction, priority advisor.", cta: "Talk to us", to: "/pricing", featured: false },
   ];
   return (

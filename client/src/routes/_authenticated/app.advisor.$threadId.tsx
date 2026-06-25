@@ -11,10 +11,10 @@ export const Route = createFileRoute("/_authenticated/app/advisor/$threadId")({
 type Msg = { id?: string; role: "user" | "assistant" | "system"; content: string };
 
 const SUGGESTIONS = [
-  "How is my Maal Score tracking?",
+  "Am I on track to retire?",
+  "How do I pay off debt faster?",
+  "Is my emergency fund big enough?",
   "Should I pay down my mortgage or invest more into super?",
-  "What's a sensible emergency buffer for my income?",
-  "Am I on track for an Ethical (Islamic) portfolio?",
 ];
 
 function ThreadPage() {

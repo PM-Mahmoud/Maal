@@ -19,34 +19,20 @@ router.use(requireAuth);
 // Set dashboard-layout for all pages in this router
 router.use(function(req, res, next) { res.locals.layout = 'app-layout'; next(); });
 
-// ── Fund library (Shariah-compliant / ESG) ─────────────────────────────────────
-// Halal: pure-play Shariah funds. Ethical: ESG-screened.
+// ── Fund library ────────────────────────────────────────────────────────────────
+// Mainstream, low-cost, broadly diversified AU/global ETFs across risk bands.
 
-const FUNDS = {
-  halal: [
-    { ticker: 'HLAL', name: 'iShares MSCI World Islamic',         alloc: 'Equities',       yld: '~1.5%',  exp: '0.40%' },
-    { ticker: 'SPUS', name: 'SPDR S&P 500 Islamic ETF',           alloc: 'Equities',       yld: '~1.2%',  exp: '0.15%' },
-    { ticker: 'IVAL', name: 'iShares MSCI World Islamic Value',    alloc: 'Equities',       yld: '~2.5%',  exp: '0.40%' },
-    { ticker: 'ISHP', name: 'iShares S&P 500 Shariah ETF',        alloc: 'Equities',       yld: '~1.0%',  exp: '0.45%' },
-    { ticker: 'UMTH', name: 'SPDR MSCI World Islamic Min Vol',     alloc: 'Equities',       yld: '~1.8%',  exp: '0.45%' },
-    { ticker: 'VLUE', name: 'iShares MSCI World Islamic Value',    alloc: 'Equities',       yld: '~2.3%',  exp: '0.40%' },
-    { ticker: 'DGS',  name: 'WisdomTree Emerging Markets Small Div', alloc: 'Intl Equities', yld: '~3.2%',  exp: '0.63%' },
-    { ticker: 'SUKU', name: 'iShares USD Short Term Sukuk',        alloc: 'Sukuk',          yld: '~4.5%',  exp: '0.18%' },
-    { ticker: 'GLDS', name: 'SPDR Bloomberg Gold Shares ETF',      alloc: 'Precious Metals',yld: 'N/A',    exp: '0.40%' },
-    { ticker: 'GBTC', name: 'iPath Bloomberg Gold Subindx',        alloc: 'Precious Metals',yld: 'N/A',    exp: '0.43%' },
-  ],
-  ethical: [
-    { ticker: 'ETHI', name: 'iShares MSCI World ESG Screened',     alloc: 'Equities',       yld: '~1.5%',  exp: '0.20%' },
-    { ticker: 'VESG', name: 'Vanguard MSCI Intl ESG Index',        alloc: 'Equities',       yld: '~1.8%',  exp: '0.24%' },
-    { ticker: 'RESP', name: 'iShares MSCI World SRI ETF',          alloc: 'Equities',       yld: '~2.1%',  exp: '0.25%' },
-    { ticker: 'CRED', name: 'Vanguard Global Aggregate Bond ESG',  alloc: 'Fixed Income',   yld: '~3.8%',  exp: '0.28%' },
-    { ticker: 'VAF',  name: 'Vanguard Australian Fixed Interest',  alloc: 'Fixed Income',   yld: '~4.2%',  exp: '0.24%' },
-    { ticker: 'GOLD', name: 'iShares Gold ETF (AU)',               alloc: 'Precious Metals',yld: 'N/A',    exp: '0.15%' },
-    { ticker: 'SGOT', name: 'SGX S-REIT ETF',                     alloc: 'Alternatives',   yld: '~5.5%',  exp: '0.60%' },
-    { ticker: 'VAS',  name: 'Vanguard Australian Shares',         alloc: 'AU Equities',    yld: '~3.8%',  exp: '0.10%' },
-    { ticker: 'VGS',  name: 'Vanguard MSCI Intl Shares',          alloc: 'Intl Equities',  yld: '~1.9%',  exp: '0.18%' },
-  ],
-};
+const FUNDS = [
+  { ticker: 'VAS',  name: 'Vanguard Australian Shares',          alloc: 'AU Equities',    yld: '~3.8%',  exp: '0.07%' },
+  { ticker: 'VGS',  name: 'Vanguard MSCI Intl Shares',           alloc: 'Intl Equities',  yld: '~1.9%',  exp: '0.18%' },
+  { ticker: 'VDHG', name: 'Vanguard Diversified High Growth',    alloc: 'Equities',       yld: '~2.5%',  exp: '0.27%' },
+  { ticker: 'VGE',  name: 'Vanguard FTSE Emerging Markets',      alloc: 'Intl Equities',  yld: '~2.8%',  exp: '0.48%' },
+  { ticker: 'VAF',  name: 'Vanguard Australian Fixed Interest',  alloc: 'Fixed Income',   yld: '~4.2%',  exp: '0.10%' },
+  { ticker: 'VGB',  name: 'Vanguard Australian Govt Bond',       alloc: 'Fixed Income',   yld: '~3.6%',  exp: '0.16%' },
+  { ticker: 'VDCO', name: 'Vanguard Diversified Conservative',   alloc: 'Fixed Income',   yld: '~3.9%',  exp: '0.27%' },
+  { ticker: 'AAA',  name: 'Betashares AU High Interest Cash',    alloc: 'Cash',           yld: '~4.3%',  exp: '0.18%' },
+  { ticker: 'GOLD', name: 'Global X Physical Gold',              alloc: 'Precious Metals',yld: 'N/A',    exp: '0.40%' },
+];
 
 // ── Allocation presets ──────────────────────────────────────────────────────────
 
@@ -60,7 +46,7 @@ const PRESETS = {
 // ── Allocation engine ───────────────────────────────────────────────────────────
 
 function computeAllocation(inputs) {
-  const { age, investorType, income, debtStatus, superBalance, goal, riskTolerance } = inputs;
+  const { age, income, debtStatus, superBalance, goal, riskTolerance } = inputs;
 
   // 1. Age-based base profile
   let profile, equitiesTarget;
@@ -106,24 +92,24 @@ function computeAllocation(inputs) {
   if (superBalance === 'below') {
     why += `Below-target superannuation increases your taxable account growth focus. `;
   }
-  why += `The ${investorType} portfolio uses ${investorType === 'Halal' ? 'Shariah-screened' : 'ESG-screened'} funds only.`;
+  why += `The portfolio is built from low-cost, broadly diversified AU and global ETFs.`;
 
   return { profile, alloc, why };
 }
 
 // ── Select funds from library ──────────────────────────────────────────────────
 
-function selectFunds(alloc, investorType) {
-  const lib = investorType === 'Halal' ? FUNDS.halal : FUNDS.ethical;
+function selectFunds(alloc) {
+  const lib = FUNDS;
 
   // Map each slice to fund picks
   const picks = [];
-  const equityCount = alloc.equities > 80 ? 5 : alloc.equities > 50 ? 4 : 3;
+  const equityCount = alloc.equities > 80 ? 4 : alloc.equities > 50 ? 3 : 2;
   const fixedCount  = alloc.fixed > 20 ? 2 : alloc.fixed > 0 ? 1 : 0;
   const metalCount  = alloc.metals > 0 ? (alloc.metals > 15 ? 2 : 1) : 0;
 
   const eqs  = lib.filter(f => f.alloc === 'Equities' || f.alloc === 'AU Equities' || f.alloc === 'Intl Equities').slice(0, equityCount);
-  const fds  = lib.filter(f => f.alloc === 'Sukuk' || f.alloc === 'Fixed Income').slice(0, fixedCount);
+  const fds  = lib.filter(f => f.alloc === 'Fixed Income' || f.alloc === 'Cash').slice(0, fixedCount);
   const mts  = lib.filter(f => f.alloc === 'Precious Metals').slice(0, metalCount);
 
   // Scale to allocation %
@@ -148,7 +134,6 @@ router.get('/', async (req, res) => {
   // Pre-fill from profile if available
   const prefill = profile ? {
     age: profile.age || '',
-    investorType: profile.prefers_halal ? 'Halal' : 'Ethical',
     income: '',
     debtStatus: '',
     superBalance: '',
@@ -172,11 +157,10 @@ router.post('/', async (req, res) => {
   const user = await findUserById(req.session.userId);
   const profile = await getProfileByUserId(req.session.userId);
 
-  const { age, investorType, income, debtStatus, superBalance, goal, riskTolerance } = req.body;
+  const { age, income, debtStatus, superBalance, goal, riskTolerance } = req.body;
 
   const inputs = {
     age:            parseInt(age, 10) || 35,
-    investorType:   investorType || 'Halal',
     income:         income || 'medium',
     debtStatus:     debtStatus || 'medium',
     superBalance:   superBalance || 'at',
@@ -185,14 +169,13 @@ router.post('/', async (req, res) => {
   };
 
   const { profile: allocProfile, alloc, why } = computeAllocation(inputs);
-  const fundPicks = selectFunds(alloc, inputs.investorType);
+  const fundPicks = selectFunds(alloc);
 
   const result = {
     allocProfile,
     alloc,
     why,
     fundPicks,
-    investorType: inputs.investorType,
     income: inputs.income,
     goal: inputs.goal,
     riskTolerance: inputs.riskTolerance,

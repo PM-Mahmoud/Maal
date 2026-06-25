@@ -183,20 +183,6 @@
   }
   .btn-ghost:hover { background: rgba(255,255,255,0.06); color: var(--fg); }
 
-  /* ── Investor type label ─────────────────────────────────────────────── */
-  .investor-type-badge {
-    display: inline-block;
-    font-size: 0.65rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding: 0.2rem 0.55rem;
-    border-radius: 4px;
-    margin-left: 0.5rem;
-  }
-  .investor-halal { background: rgba(126,212,166,0.15); color: #7ED4A6; }
-  .investor-ethical { background: rgba(80,100,220,0.18); color: #9AADF0; }
-
   @media (max-width: 600px) {
     .form-row { grid-template-columns: 1fr; }
     .donut-wrap { flex-direction: column; }
@@ -257,24 +243,6 @@
       <div class="step-item"><div class="step-num">2</div><span>Goals</span></div>
       <div class="step-line"></div>
       <div class="step-item"><div class="step-num">3</div><span>Result</span></div>
-    </div>
-
-    <!-- Investor type toggle -->
-    <div class="form-group" style="margin-bottom:1.5rem;">
-      <label>Investor type</label>
-      <div class="toggle-group">
-        <label class="toggle-btn <%= (prefill && prefill.investorType === 'Halal') || (!prefill) ? 'active' : '' %>">
-          <input type="radio" name="investorType" value="Halal" class="toggle-input"
-            <%= (prefill && prefill.investorType === 'Halal') || (!prefill) ? 'checked' : '' %>> Ethical (Islamic)
-        </label>
-        <label class="toggle-btn <%= prefill && prefill.investorType === 'Ethical' ? 'active' : '' %>">
-          <input type="radio" name="investorType" value="Ethical" class="toggle-input"
-            <%= prefill && prefill.investorType === 'Ethical' ? 'checked' : '' %>> Ethical (ESG)
-        </label>
-      </div>
-      <p style="font-size:0.75rem;color:var(--fg-muted);margin:0.25rem 0 0;">
-        Islamic option uses Shariah-screened funds. Ethical uses ESG-screened funds.
-      </p>
     </div>
 
     <div class="form-row">
@@ -360,15 +328,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // Investor type toggle
-  document.querySelectorAll('input[name="investorType"]').forEach(function(radio) {
-    radio.addEventListener('change', function() {
-      document.querySelectorAll('input[name="investorType"]').forEach(function(r) {
-        r.closest('.toggle-btn').classList.toggle('active', r.checked);
-      });
-    });
-  });
-
   // Form validation + submit loading state
   document.getElementById('portfolio-form').addEventListener('submit', function(e) {
     const age = document.getElementById('age').value.trim();
@@ -396,9 +355,6 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="result-profile-badge"><%= result.allocProfile %> profile</div>
     <h2 class="result-title">
       Your personalised allocation
-      <span class="investor-type-badge <%= result.investorType === 'Halal' ? 'investor-halal' : 'investor-ethical' %>">
-        <%= result.investorType %>
-      </span>
     </h2>
     <p class="result-subtitle">For a <%= result.age %>-year-old, <%= result.riskTolerance %> risk tolerance</p>
   </div>

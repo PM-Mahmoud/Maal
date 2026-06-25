@@ -73,7 +73,7 @@ Compulsory repayment rate based on Repayment Income (RI = taxable income + repor
 | $166,585 – $176,835 | 9.5% |
 | $176,836+ | 10.0% |
 
-**Note for health professionals**: A doctor earning $180,000 is repaying at 10% = $18,000/year towards HECS, on top of regular income tax. This is on gross repayment income, not net.
+**Worked example**: Someone earning $180,000 is repaying at 10% = $18,000/year towards HECS, on top of regular income tax. This is on gross repayment income, not net.
 
 **HECS marginal tax effect**: The ATO uses a "low income tax offset" reduction mechanism. Effectively, for each extra dollar earned between $67,000–$125,000, you pay 15c extra in HECS repayments (in addition to the marginal income tax rate of 32.5%). This creates an effective marginal rate of ~47.5% in this band for HECS holders.
 
@@ -98,7 +98,7 @@ Compulsory repayment rate based on Repayment Income (RI = taxable income + repor
 - **Short-term** (asset held < 12 months): Full capital gain included in taxable income, taxed at marginal rate
 - **Long-term** (asset held ≥ 12 months): 50% CGT discount — only half the gain is included in taxable income
 
-**CGT example**: Doctor, $200,000 income, sells shares for $100,000 gain after 2 years.
+**CGT example**: An investor on $200,000 income sells shares for $100,000 gain after 2 years.
 - Net gain after 50% discount: $50,000
 - Total taxable income: $250,000
 - CGT on that $50,000 at 45% marginal = $22,500 (+ 2% Medicare = $23,500 effective)
@@ -194,4 +194,4 @@ The government rebate reduces private health insurance premiums. Based on age an
 
 ## Division 293 — High Income Super Tax
 
-If your income + concessional contributions > $250,000, you pay an additional 15% tax on the concessional contributions that take you over (total 30%). Affects doctors, surgeons, specialists. ATO sends a Division 293 assessment after tax return processing.
+If your income + concessional contributions > $250,000, you pay an additional 15% tax on the concessional contributions that take you over (total 30%). Affects higher-income earners. ATO sends a Division 293 assessment after tax return processing.

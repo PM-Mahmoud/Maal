@@ -57,13 +57,14 @@ An ETF is a fund that trades on a stock exchange, typically tracking an index. U
 | IAF | iShares | Australian bonds composite | 0.26% |
 | BILL | iShares | Australian cash (T-bills) | 0.07% |
 
-### Thematic and Ethical
-| ETF | Provider | Theme | MER |
+### Diversified / Multi-asset (one-fund portfolios)
+| ETF | Provider | Mix | MER |
 |---|---|---|---|
-| ETHI | Betashares | Global ethical equities | 0.59% |
-| VESG | Vanguard | International ESG | 0.20% |
-| HLAL | Wealthsimple | Global halal equities | 0.50% |
-| SPUS | SPDR | S&P 500 ESG (US-listed) | 0.03% |
+| VDHG | Vanguard | High growth (~90% growth / 10% defensive) | 0.27% |
+| VDGR | Vanguard | Growth (~70/30) | 0.27% |
+| VDBA | Vanguard | Balanced (~50/50) | 0.27% |
+| VDCO | Vanguard | Conservative (~30/70) | 0.27% |
+| DHHF | Betashares | 100% diversified equities | 0.19% |
 
 ## Management Expense Ratio (MER)
 

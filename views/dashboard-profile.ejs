@@ -4,10 +4,6 @@
   var od = (profile && profile.onboarding_data) || {};
   function money(n) { n = Number(n) || 0; return n ? '$' + n.toLocaleString('en-AU') : ''; }
   function sel(a, b) { return String(a) === String(b) ? 'selected' : ''; }
-  var ethical = od.ethical_screening
-    || (profile && profile.prefers_halal && profile.prefers_esg ? 'Both'
-        : profile && profile.prefers_halal ? 'Halal framework'
-        : profile && profile.prefers_esg ? 'ESG / ethical framework' : 'No screening');
 %>
 <div class="page-head">
   <div>
@@ -31,7 +27,7 @@
       Tell Maal how to respond — it reads this before every answer. Tone, priorities, anything to keep top of mind.
     </p>
     <div class="field">
-      <textarea name="preferences" rows="3" placeholder='e.g. "Always explain in plain language. I prefer ethical investments and want to maximise super before anything else."'><%= od.preferences || '' %></textarea>
+      <textarea name="preferences" rows="3" placeholder='e.g. "Always explain in plain language. I want to pay down debt and maximise super before anything else."'><%= od.preferences || '' %></textarea>
     </div>
   </div>
 
@@ -77,8 +73,8 @@
       <div class="panel" style="margin-bottom:1rem;">
         <div class="panel-title">Work &amp; income</div>
         <div class="field-row">
-          <div class="field"><label>Profession</label><input type="text" name="profession" value="<%= (profile && profile.profession) || '' %>" placeholder="e.g. Doctor, Pharmacist"></div>
-          <div class="field"><label>Years in practice</label><input type="number" name="years_in_practice" value="<%= (profile && profile.years_in_practice) || '' %>" min="0"></div>
+          <div class="field"><label>Occupation</label><input type="text" name="profession" value="<%= (profile && profile.profession) || '' %>" placeholder="e.g. Teacher, Engineer"></div>
+          <div class="field"><label>Years in the workforce</label><input type="number" name="years_in_practice" value="<%= (profile && profile.years_in_practice) || '' %>" min="0"></div>
         </div>
         <div class="field-row">
           <div class="field"><label>Annual gross income (AUD)</label><input type="text" name="annual_income" value="<%= money(profile && profile.annual_income) %>" placeholder="$120,000"></div>
@@ -128,7 +124,7 @@
         </div>
         <div class="field"><label>Investment option</label>
           <select name="super_option">
-            <% ['Balanced','Growth','High Growth','Conservative','Ethical / sustainable option'].forEach(function(o){ %>
+            <% ['Balanced','Growth','High Growth','Conservative'].forEach(function(o){ %>
             <option <%= sel(od.super_option, o) %>><%= o %></option>
             <% }); %>
           </select>
@@ -154,13 +150,6 @@
               <% }); %>
             </select>
           </div>
-        </div>
-        <div class="field"><label>Ethical screening</label>
-          <select name="ethical_screening">
-            <% ['Halal framework','ESG / ethical framework','Both','No screening'].forEach(function(o){ %>
-            <option <%= sel(ethical, o) %>><%= o %></option>
-            <% }); %>
-          </select>
         </div>
       </div>
 

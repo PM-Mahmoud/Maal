@@ -15,11 +15,11 @@ const user = {
   two_factor_enabled: false,
 };
 const profile = {
-  user_id: 1, profession: 'Doctor', specialty: 'GP', years_in_practice: 3,
-  annual_income: 120000, hecs_balance: 40000, super_balance: 35000,
+  user_id: 1, profession: 'Teacher', years_in_practice: 3,
+  annual_income: 95000, hecs_balance: 40000, super_balance: 35000,
   investment_portfolio: 20000, property_value: 0, total_debt: 5000,
   cash_savings: 15000, monthly_expenses: 4000,
-  goals: [], prefers_halal: true, prefers_esg: false, has_smsf: false,
+  goals: [], prefers_halal: false, prefers_esg: false, has_smsf: false,
   has_private_health: true, practice_owner: false, insurance_cover: 'partial',
   retirement_age: 65, onboarding_data: {}, completed_onboarding: true,
 };

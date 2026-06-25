@@ -24,11 +24,11 @@ const user = {
   phone: null, two_factor_enabled: false,
 };
 const profile = {
-  user_id: 1, profession: 'Doctor', specialty: 'GP', years_in_practice: 3,
-  annual_income: 120000, hecs_balance: 42000, super_balance: 38000,
+  user_id: 1, profession: 'Teacher', years_in_practice: 3,
+  annual_income: 95000, hecs_balance: 42000, super_balance: 38000,
   investment_portfolio: 26000, property_value: 0, total_debt: 4000,
   cash_savings: 18500, monthly_expenses: 4200,
-  goals: [], prefers_halal: true, prefers_esg: false, has_smsf: false,
+  goals: [], prefers_halal: false, prefers_esg: false, has_smsf: false,
   has_private_health: true, practice_owner: false, insurance_cover: 'partial',
   retirement_age: 60, onboarding_data: {}, completed_onboarding: true,
 };
@@ -144,11 +144,11 @@ app.get('/radar', (_req, res, next) => {
 });
 app.get('/profile', (_req, res, next) => {
   const profileWithOd = { ...profile, onboarding_data: {
-    preferences: 'Plain language only. Maximise super first; prefer ethical investments.',
+    preferences: 'Plain language only. Pay down debt first, then maximise super.',
     dob: '1996-04-12', marital_status: 'Single', dependants: 0,
     tax_residency: 'Australian resident', state: 'NSW', salary_sacrifice: '$200 / fortnight',
-    super_fund: 'AustralianSuper', super_option: 'Ethical / sustainable option',
-    risk_tolerance: 'Growth', experience: 'Intermediate', ethical_screening: 'Halal framework',
+    super_fund: 'AustralianSuper', super_option: 'High Growth',
+    risk_tolerance: 'Growth', experience: 'Intermediate',
   } };
   renderInLayout('dashboard-profile', {
     ...base, profile: profileWithOd, pageTitle: 'Profile', success: null, error: null,

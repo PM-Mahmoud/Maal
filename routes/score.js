@@ -48,7 +48,7 @@ router.post('/calculate', async (req, res) => {
   }
 
   const formData = {
-    profession: profession || 'health professional',
+    profession: profession || 'everyday Australian',
     stage: stage || '',
     age: Number(age) ?? 30,
     annualIncome: Number(annualIncome) || 0,

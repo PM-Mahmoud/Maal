@@ -19,11 +19,6 @@
     <% if (financialScore) { %><span class="grade-pill <%= financialScore.grade ? financialScore.grade.toLowerCase().replace(' ','-') : '' %>"><%= financialScore.grade || '' %></span><% } %>
   </div>
   <div class="score-card" style="text-align:center;">
-    <div class="score-card-label">Ethical Score</div>
-    <div class="score-card-big"><%= ethicalScore ? ethicalScore.score_value : '—' %><span class="score-card-max">/100</span></div>
-    <span style="font-size:0.8rem;color:var(--fg-muted)">Portfolio compliance</span>
-  </div>
-  <div class="score-card" style="text-align:center;">
     <div class="score-card-label">Super Health Score</div>
     <div class="score-card-big"><%= superScore ? superScore.score_value : '—' %><span class="score-card-max">/100</span></div>
     <span style="font-size:0.8rem;color:var(--fg-muted)">Fund adequacy</span>
@@ -56,28 +51,6 @@
 </div>
 <% } %>
 
-<% if (ethicalScore && ethicalScore.score_value) { %>
-<div class="card">
-  <div class="card-title">Ethical Compliance</div>
-  <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:1rem;">
-    <div style="font-family:var(--font-display);font-size:3rem;font-weight:700;color:var(--accent);line-height:1;"><%= ethicalScore.score_value %><span style="font-size:1.5rem;color:var(--fg-muted);font-weight:300;">/100</span></div>
-    <div>
-      <div class="score-bar-wrap" style="width:160px;height:8px;"><div class="score-bar-fill" style="width:<%= ethicalScore.score_value %>%;"></div></div>
-      <p style="font-size:0.8rem;color:var(--fg-muted);margin:0.35rem 0 0;"><%= ethicalScore.score_value >= 80 ? 'Strong compliance' : ethicalScore.score_value >= 50 ? 'Partial compliance' : 'Needs attention' %></p>
-    </div>
-  </div>
-  <p style="font-size:0.85rem;color:var(--fg-muted);margin:0;line-height:1.6;">
-    <% if (ethicalScore.score_value >= 80) { %>
-      Your portfolio is predominantly ethically compliant. Most of your investments align with ethical screening standards.
-    <% } else if (ethicalScore.score_value >= 50) { %>
-      Your portfolio has a mix of compliant and non-compliant holdings. Review the non-compliant positions to improve your score.
-    <% } else { %>
-      Significant changes needed to bring your portfolio into compliance. Consider switching to ethically-screened funds or ethical ETFs.
-    <% } %>
-  </p>
-</div>
-<% } %>
-
 <% if (fhsHistory && fhsHistory.length > 1) { %>
 <div class="card">
   <div class="card-title">Score history (last <%= fhsHistory.length %> calculations)</div>
@@ -88,7 +61,6 @@
           <th style="text-align:left;padding:0.5rem 0.5rem 0.5rem;color:var(--fg-muted);font-weight:500;">Date</th>
           <th style="text-align:right;padding:0.5rem;color:var(--fg-muted);font-weight:500;">Financial Health</th>
           <th style="text-align:right;padding:0.5rem;color:var(--fg-muted);font-weight:500;">Grade</th>
-          <th style="text-align:right;padding:0.5rem;color:var(--fg-muted);font-weight:500;">Ethical</th>
         </tr>
       </thead>
       <tbody>
@@ -97,7 +69,6 @@
             <td style="padding:0.55rem 0.5rem;color:var(--fg-muted);"><%= new Date(s.calculated_at).toLocaleDateString('en-AU', {day:'numeric',month:'short',year:'numeric'}) %></td>
             <td style="text-align:right;padding:0.55rem;color:var(--fg);font-weight:600;"><%= s.score_value %>/100</td>
             <td style="text-align:right;padding:0.55rem;"><span class="grade-pill <%= (s.grade||'').toLowerCase().replace(' ','-') %>" style="font-size:0.65rem;"><%= s.grade || '' %></span></td>
-            <td style="text-align:right;padding:0.55rem;color:var(--fg-muted);"><%= s.halal_compliance_score || '—' %></td>
           </tr>
         <% }); %>
       </tbody>

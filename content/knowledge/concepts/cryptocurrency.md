@@ -56,7 +56,3 @@ These provide regulated, tax-straightforward exposure without self-custody requi
 ## Position Sizing
 
 Given the volatility and speculative nature, financial educators typically suggest that speculative assets like crypto should represent a small portion of a portfolio (0%–10% depending on risk tolerance) — only money you can afford to lose entirely.
-
-## Halal Perspective on Crypto
-
-Islamic scholars are divided on cryptocurrency. Arguments against: excessive gharar (uncertainty), speculative nature, no intrinsic value. Arguments for: not riba-based, can represent legitimate ownership. The debate continues, and Muslims are encouraged to consult qualified Islamic scholars for their own position.

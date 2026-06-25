@@ -44,6 +44,6 @@ Note: Extras/ancillary cover alone does not avoid the MLS — you need a complyi
 
 Australians who do not take out private hospital cover before their 31st birthday pay a Lifetime Health Cover (LHC) loading of 2% per year of age over 30 on their hospital premium. A 40-year-old taking out cover for the first time pays 20% more than the base premium. The loading is removed after 10 continuous years of hospital cover.
 
-## Relevance for Health Professionals
+## Why this matters
 
-Doctors, nurses, and allied health professionals often have high incomes that make the MLS very relevant. Understanding the tax implications and the value of private health insurance is important for financial planning.
+If your income is above the MLS thresholds, taking out private hospital cover can be cheaper than paying the surcharge. Understanding the tax implications and the value of private health insurance is an important part of financial planning for any Australian.

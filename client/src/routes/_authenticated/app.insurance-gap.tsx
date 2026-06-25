@@ -31,7 +31,7 @@ export const Route = createFileRoute("/_authenticated/app/insurance-gap")({
 /*  Constants                                                                  */
 /* -------------------------------------------------------------------------- */
 
-const MEDIAN_DOCTOR_INCOME = 200_000;
+const MEDIAN_INCOME = 95_000;
 
 /* -------------------------------------------------------------------------- */
 /*  Component                                                                  */
@@ -39,7 +39,7 @@ const MEDIAN_DOCTOR_INCOME = 200_000;
 
 function InsuranceGap() {
   const [age, setAge] = useState(38);
-  const [income, setIncome] = useState(180_000);
+  const [income, setIncome] = useState(95_000);
   const [dependants, setDependants] = useState(2);
   const [mortgage, setMortgage] = useState(450_000);
   const [existingCover, setExistingCover] = useState(300_000);
@@ -75,7 +75,7 @@ function InsuranceGap() {
             Is your family <span className="text-gradient-mint">actually covered?</span>
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Most clinicians have default super-based cover — usually far too low for
+            Most Australians have default super-based cover — usually far too low for
             their income and dependants. Calculate your real life/TPD gap in 30 seconds.
           </p>
         </Reveal>
@@ -152,10 +152,10 @@ function InsuranceGap() {
 
               <div className="rounded-lg border border-hairline bg-surface-2/60 p-3 space-y-1.5 text-xs">
                 <p className="flex items-center justify-between text-muted-foreground">
-                  <span>Median AU doctor income</span>
-                  <span className="font-medium text-foreground">{formatAUD(MEDIAN_DOCTOR_INCOME)}</span>
+                  <span>Median AU full-time income</span>
+                  <span className="font-medium text-foreground">{formatAUD(MEDIAN_INCOME)}</span>
                 </p>
-                <p className="text-[10px] text-muted-foreground">Source: ABS + AMA. For awareness only.</p>
+                <p className="text-[10px] text-muted-foreground">Source: ABS. For awareness only.</p>
               </div>
             </Card>
           </Reveal>

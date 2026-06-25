@@ -110,10 +110,10 @@ function ResearchPage() {
               </ul>
             </section>
           )}
-          {active.body?.ethical_notes && (
+          {active.body?.considerations && (
             <section className="mb-6">
-              <h2 className="text-[16px] font-bold mb-2">Ethical notes</h2>
-              <p className="text-[13.5px] leading-7">{active.body.ethical_notes}</p>
+              <h2 className="text-[16px] font-bold mb-2">Other considerations</h2>
+              <p className="text-[13.5px] leading-7">{active.body.considerations}</p>
             </section>
           )}
           <div className="pt-4 mt-6 border-t border-border flex items-center justify-between">

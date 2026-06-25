@@ -717,7 +717,8 @@ router.post('/scores/recalculate', async (req, res) => {
       action_plan: result.recommendations,
     });
 
-    // Save ethical score
+    // Save portfolio diversification signal under legacy 'ethical_score' type
+    // (non-destructive DB compat; not surfaced in UI)
     await saveScore(userId, {
       score_type: 'ethical_score',
       score_value: result.halalComplianceScore,
@@ -874,7 +875,6 @@ router.post('/profile',
       // Merge onto the existing profile — upsertProfile overwrites every
       // column, so we must pass the full row, not just the changed fields.
       const existing = (await getProfileByUserId(req.session.userId)) || {};
-      const ethical = b.ethical_screening || '';
       const merged = {
         ...existing,
         profession: (b.profession || '').trim() || null,
@@ -884,8 +884,10 @@ router.post('/profile',
         hecs_balance: parseMoney(b.hecs_balance),
         super_balance: parseMoney(b.super_balance),
         has_private_health: b.private_health === 'yes',
-        prefers_halal: ethical === 'Halal framework' || ethical === 'Both',
-        prefers_esg: ethical === 'ESG / ethical framework' || ethical === 'Both',
+        // Values-agnostic: columns retained for non-destructive DB compat,
+        // but never set from the UI any more.
+        prefers_halal: false,
+        prefers_esg: false,
         // Soft personalisation fields → JSONB (no schema churn)
         onboarding_data: {
           ...(existing.onboarding_data || {}),
@@ -900,7 +902,6 @@ router.post('/profile',
           super_option: b.super_option || '',
           risk_tolerance: b.risk_tolerance || '',
           experience: b.experience || '',
-          ethical_screening: ethical,
         },
       };
       await updateProfile(req.session.userId, merged);
@@ -982,8 +983,8 @@ router.get('/projections', async (req, res) => {
       const { complete } = require('../services/advisor');
       const gap = mc.asfaTarget - mc.p50;
       const msgs = [
-        { role: 'system', content: 'You are an educational financial wellness assistant for Maal, an Australian platform for health professionals. Keep responses factual, concise, and educational — never personal financial advice.' },
-        { role: 'user', content: `Write a 3-sentence retirement projection summary for an Australian health professional (educational purposes only):
+        { role: 'system', content: 'You are an educational financial wellness assistant for Maal, an Australian platform for everyday Australians. Keep responses factual, concise, and educational — never personal financial advice.' },
+        { role: 'user', content: `Write a 3-sentence retirement projection summary for an everyday Australian (educational purposes only):
 Age ${age}, salary $${salary.toLocaleString('en-AU')}, current super $${superBal.toLocaleString('en-AU')}, retiring at ${retirementAge}.
 Median projection: $${mc.p50.toLocaleString('en-AU')} | ASFA comfortable target: $${mc.asfaTarget.toLocaleString('en-AU')} | Success rate: ${mc.successRate}%
 ${gap > 0 ? 'They have a gap of $' + Math.abs(gap).toLocaleString('en-AU') + ' to the ASFA comfortable target.' : 'They are on track or ahead of the ASFA comfortable target.'}

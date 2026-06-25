@@ -29,7 +29,7 @@ The standard recommendation is **3–6 months of essential living expenses**. Th
 - Minimum debt repayments
 
 Factors suggesting a larger fund (6–12 months):
-- Self-employed or variable income (doctors doing locum work, contractors)
+- Self-employed or variable income (sole traders, contractors, casual or commission-based work)
 - Only one income in a household
 - High fixed expenses or dependants
 - Industry with volatile employment

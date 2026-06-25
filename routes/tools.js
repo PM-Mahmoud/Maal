@@ -30,7 +30,8 @@ router.get('/', async (req, res) => {
     const profile = await getProfileByUserId(req.session.userId);
 
     const tier = tierFromUser(user);
-    const prefersHalal = profile ? !!profile.prefers_halal : false;
+    // Values-agnostic: halal filtering retired. Always false (column kept for DB compat).
+    const prefersHalal = false;
     const hasSmsf = profile ? !!profile.has_smsf : false;
     const hasProperty = profile ? (profile.property_value > 0) : false;
 

@@ -10,7 +10,6 @@ export const Route = createFileRoute("/_authenticated/app/onboarding")({
 type State = {
   display_name: string;
   age_band: "under-30" | "30-39" | "40-49" | "50-59" | "60+";
-  ethical_preference: "none" | "esg" | "islamic";
   annual_income: string;
   super_balance: string;
   investments_value: string;
@@ -23,7 +22,6 @@ type State = {
 
 const STEPS = [
   "About you",
-  "Ethical preference",
   "Income",
   "Super",
   "Investments & cash",
@@ -38,7 +36,6 @@ function OnboardingWizard() {
   const [s, setS] = useState<State>({
     display_name: "",
     age_band: "30-39",
-    ethical_preference: "none",
     annual_income: "",
     super_balance: "",
     investments_value: "",
@@ -50,12 +47,11 @@ function OnboardingWizard() {
   });
 
   useEffect(() => {
-    supabase.from("profiles").select("display_name, age_band, ethical_preference").maybeSingle().then(({ data }) => {
+    supabase.from("profiles").select("display_name, age_band").maybeSingle().then(({ data }) => {
       if (data) setS((x) => ({
         ...x,
         display_name: data.display_name ?? "",
         age_band: (data.age_band as State["age_band"]) ?? "30-39",
-        ethical_preference: (data.ethical_preference as State["ethical_preference"]) ?? "none",
       }));
     });
   }, []);
@@ -72,7 +68,7 @@ function OnboardingWizard() {
       await supabase.from("profiles").update({
         display_name: s.display_name,
         age_band: s.age_band,
-        ethical_preference: s.ethical_preference,
+        ethical_preference: "none", // values-agnostic: column retained, neutral default
         onboarded: true,
       }).eq("id", uid);
       const writes: Promise<any>[] = [];
@@ -137,34 +133,18 @@ function OnboardingWizard() {
           </>
         )}
         {step === 1 && (
-          <Field label="Investment style">
-            <Segmented
-              value={s.ethical_preference}
-              onChange={(v) => u("ethical_preference", v)}
-              options={[
-                { v: "none", l: "Standard" },
-                { v: "esg", l: "Ethical (ESG)" },
-                { v: "islamic", l: "Ethical (Islamic)" },
-              ]}
-            />
-            <p className="text-[12px] text-muted-foreground mt-3">
-              We'll screen recommendations against your preference. You can change this any time.
-            </p>
-          </Field>
-        )}
-        {step === 2 && (
           <Field label="Annual income before tax (AUD)">
             <input className={inp} inputMode="numeric" value={s.annual_income}
               onChange={(e) => u("annual_income", e.target.value)} placeholder="120000" />
           </Field>
         )}
-        {step === 3 && (
+        {step === 2 && (
           <Field label="Total super balance (AUD)">
             <input className={inp} inputMode="numeric" value={s.super_balance}
               onChange={(e) => u("super_balance", e.target.value)} placeholder="85000" />
           </Field>
         )}
-        {step === 4 && (
+        {step === 3 && (
           <>
             <Field label="Investments — ETFs, shares, funds (AUD)">
               <input className={inp} inputMode="numeric" value={s.investments_value}
@@ -176,13 +156,13 @@ function OnboardingWizard() {
             </Field>
           </>
         )}
-        {step === 5 && (
+        {step === 4 && (
           <Field label="HECS / HELP balance (AUD)">
             <input className={inp} inputMode="numeric" value={s.hecs_balance}
               onChange={(e) => u("hecs_balance", e.target.value)} placeholder="0" />
           </Field>
         )}
-        {step === 6 && (
+        {step === 5 && (
           <>
             <Field label="Risk tolerance">
               <Segmented

@@ -19,8 +19,6 @@ function profileLine(profile) {
   if (p.investment_portfolio) bits.push(`investments ${aud(p.investment_portfolio)}`);
   if (p.hecs_balance) bits.push(`HECS ${aud(p.hecs_balance)}`);
   if (p.property_value) bits.push(`property ${aud(p.property_value)}`);
-  if (p.prefers_halal) bits.push('prefers halal-compliant');
-  if (p.prefers_esg) bits.push('prefers ESG/ethical');
   return bits.length ? bits.join(', ') : 'no financial profile on file yet';
 }
 

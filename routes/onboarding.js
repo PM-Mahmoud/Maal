@@ -151,10 +151,11 @@ router.post('/complete', requireAuth, async (req, res) => {
       total_debt: (parseFloat(allData.mortgage_balance) || 0)
                 + (parseFloat(allData.investment_property_debt) || 0)
                 + (parseFloat(allData.other_personal_debt) || 0),
-      prefers_halal: allData.is_muslim === true || allData.is_muslim === 'yes',
-      prefers_esg: allData.is_muslim === false || allData.is_muslim === 'no',
+      // Values-agnostic: columns retained for non-destructive DB compat, neutral default.
+      prefers_halal: false,
+      prefers_esg: false,
       has_smsf: allData.super_fund_type === 'smsf',
-      practice_owner: allData.employment_type === 'practice_owner',
+      practice_owner: allData.employment_type === 'business_owner',
       retirement_age: parseInt(allData.target_retirement_age, 10) || 65,
       insurance_cover: 'partial',
       onboarding_data: allData,
@@ -224,7 +225,8 @@ router.post('/complete', requireAuth, async (req, res) => {
       diagnosis: null,
     });
 
-    // Save Halal/Ethical Compliance Score
+    // Save portfolio diversification signal under legacy 'ethical_score'
+    // type for non-destructive DB compatibility (no longer surfaced in UI).
     await saveScore(userId, {
       score_type: 'ethical_score',
       score_value: result.halalComplianceScore,
@@ -265,8 +267,8 @@ router.post('/complete', requireAuth, async (req, res) => {
               </td>
               <td style="width:12px;"></td>
               <td style="padding:16px;background:rgba(255,255,255,0.04);border-radius:8px;text-align:center;">
-                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:#8A8D83;margin-bottom:8px;">Ethical Score</div>
-                <div style="font-size:2.5rem;font-weight:700;color:#C9A84C;">${result.halalComplianceScore}<span style="font-size:1rem;color:#8A8D83;">/100</span></div>
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:#8A8D83;margin-bottom:8px;">Super Health Score</div>
+                <div style="font-size:2.5rem;font-weight:700;color:#C9A84C;">${superScoreValue}<span style="font-size:1rem;color:#8A8D83;">/100</span></div>
               </td>
             </tr>
           </table>
@@ -298,7 +300,6 @@ router.post('/complete', requireAuth, async (req, res) => {
       ok: true,
       score: result.score,
       grade: result.grade,
-      halalScore: result.halalComplianceScore,
       superScore: superScoreValue
     });
   } catch (err) {
