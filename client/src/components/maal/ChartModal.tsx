@@ -27,23 +27,9 @@ function hashKey(s: string) {
   return h >>> 0;
 }
 
-/** Synthetic monthly history that ends at `current` and drifts back over time. */
-function buildSeries(seedKey: string, months: number, current: number, positive: boolean) {
-  const rng = mulberry32(hashKey(seedKey));
-  const n = months;
-  // long-term drift: positive series grew ~6% / yr, debts grew ~3%.
-  const annualGrowth = positive ? 0.06 : 0.03;
-  const monthlyDrift = Math.pow(1 + annualGrowth, 1 / 12);
-  const values: number[] = new Array(n);
-  // Walk backwards from "now".
-  let v = current || 1;
-  values[n - 1] = v;
-  for (let i = n - 2; i >= 0; i--) {
-    const noise = 1 + (rng() - 0.5) * 0.04; // ±2% monthly noise
-    v = v / monthlyDrift / noise;
-    values[i] = Math.round(v);
-  }
-  return values;
+function buildSeries(months: number, current: number): number[] {
+  // Flat line at current value — no fake growth projection.
+  return new Array(months).fill(current ?? 0);
 }
 function monthLabel(monthsAgo: number) {
   const d = new Date();
@@ -73,7 +59,7 @@ export function ChartModal({
   const months = RANGES.find((r) => r.key === range)!.months;
 
   const { series, labels } = useMemo(() => {
-    const s = buildSeries(`${seriesKey}:${range}`, months, current || 1, positive);
+    const s = buildSeries(months, current ?? 0);
     const l = s.map((_, i) => monthLabel(months - 1 - i));
     return { series: s, labels: l };
   }, [seriesKey, range, months, current, positive]);
