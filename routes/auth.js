@@ -2,6 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
+const { authLimiter, otpLimiter } = require('../lib/rate-limiters');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
@@ -71,7 +72,7 @@ router.get('/login', (req, res) => {
   res.render('auth-login', { layout: false, error: null, email: '' });
 });
 
-router.post('/login',
+router.post('/login', authLimiter,
   body('email').isEmail().normalizeEmail(),
   body('password').notEmpty(),
   async (req, res) => {
@@ -152,7 +153,7 @@ router.get('/signup', (req, res) => {
   res.render('auth-signup', { layout: false, error: null, email: '', name: '' });
 });
 
-router.post('/signup',
+router.post('/signup', authLimiter,
   body('name').trim().isLength({ min: 1, max: 100 }),
   body('email').isEmail().normalizeEmail(),
   body('password').isLength({ min: 8 }),
@@ -207,7 +208,7 @@ router.get('/verify-email', (req, res) => {
   res.render('auth-verify-otp', { layout: false, email, error: null });
 });
 
-router.post('/verify-email', async (req, res) => {
+router.post('/verify-email', otpLimiter, async (req, res) => {
   const { email, code } = req.body;
   if (!email || !code) {
     return res.render('auth-verify-otp', { layout: false, email: email || '', error: 'Please enter the 6-digit code.' });
@@ -236,7 +237,7 @@ router.post('/verify-email', async (req, res) => {
 
 // ─── API: /resend-otp ─────────────────────────────────────────────────────────
 
-router.post('/resend-otp', async (req, res) => {
+router.post('/resend-otp', otpLimiter, async (req, res) => {
   const email = req.body.email || req.session.pendingEmail;
   if (!email) return res.status(400).json({ error: 'No email' });
 
@@ -257,7 +258,7 @@ router.post('/resend-otp', async (req, res) => {
 
 // ─── API: /resend-otp-sms ─────────────────────────────────────────────────────
 
-router.post('/resend-otp-sms', async (req, res) => {
+router.post('/resend-otp-sms', otpLimiter, async (req, res) => {
   const email = req.body.email || req.session.pendingEmail;
   const phone = req.session.pendingPhone;
   if (!email) return res.status(400).json({ error: 'No email' });
@@ -284,7 +285,7 @@ router.get('/forgot-password', (req, res) => {
   res.render('auth-forgot-password', { layout: false, error: null, success: null });
 });
 
-router.post('/forgot-password',
+router.post('/forgot-password', authLimiter,
   body('email').isEmail().normalizeEmail(),
   async (req, res) => {
     const { email } = req.body;

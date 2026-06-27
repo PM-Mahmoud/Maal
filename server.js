@@ -14,6 +14,23 @@ process.on('uncaughtException', (err) => { console.error('Uncaught exception:', 
 const app = express();
 const port = process.env.PORT || 3000;
 
+// ─── Security headers (Helmet) ─────────────────────────────────────────────
+const helmet = require('helmet');
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://js.stripe.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://api.stripe.com"],
+      frameSrc: ["'self'", "https://js.stripe.com", "https://hooks.stripe.com"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // needed for Stripe iframes
+}));
+
 // Trust Render's reverse proxy so req.secure is correct (needed for secure cookies)
 app.set('trust proxy', 1);
 

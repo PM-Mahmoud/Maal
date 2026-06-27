@@ -5,6 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
+const { aiLimiter } = require('../lib/rate-limiters');
 
 const { findUserById } = require('../db/users');
 const { getProfileByUserId, updateProfile } = require('../db/profiles');
@@ -207,7 +208,7 @@ router.get('/', async (req, res) => {
 
 // ─── API: Ask Maal chat (DeepSeek-powered) ──────────────────────────────────
 
-router.post('/ask/message', async (req, res) => {
+router.post('/ask/message', aiLimiter, async (req, res) => {
   try {
     const { messages } = req.body; // [{role:'user'|'assistant', content:string}, ...]
     if (!Array.isArray(messages) || !messages.length) {

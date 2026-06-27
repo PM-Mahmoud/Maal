@@ -3,6 +3,7 @@
 
 const express = require('express');
 const router = express.Router();
+const { authLimiter } = require('../lib/rate-limiters');
 const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 
@@ -15,7 +16,7 @@ router.get('/reset-password', async (req, res) => {
   res.render('auth-reset-password', { layout: false, error: null, success: null, token: user ? token : '' });
 });
 
-router.post('/reset-password',
+router.post('/reset-password', authLimiter,
   body('password').isLength({ min: 8 }),
   async (req, res) => {
     const { token, password } = req.body;
