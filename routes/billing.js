@@ -58,6 +58,9 @@ router.post('/webhook',
 
     let event;
     try {
+      // Debug: log body type + first 100 chars to confirm raw buffer arrives
+      const bodyType = Buffer.isBuffer(req.body) ? `Buffer(${req.body.length})` : typeof req.body;
+      console.log(`[billing/webhook] body type=${bodyType} sig=${sig ? sig.slice(0,30) : 'MISSING'}`);
       event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
     } catch (err) {
       console.error('[billing] Webhook signature verification failed:', err.message);
