@@ -14,6 +14,7 @@
 const express = require('express');
 const router = express.Router();
 const { setUserPlan } = require('../db/users');
+const pool = require('../db/pool');
 
 const PLANS = {
   pro: { name: 'Maal Pro', amount: 2000, blurb: 'The full advisor experience' },   // $20.00 AUD
@@ -34,6 +35,86 @@ function getStripe() {
     return null;
   }
 }
+
+// ─── POST /billing/webhook — Stripe sends subscription events here ────────────
+// IMPORTANT: must use raw body for signature verification (before JSON parser).
+
+router.post('/webhook',
+  require('express').raw({ type: 'application/json' }),
+  async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    if (!webhookSecret) {
+      console.warn('[billing] STRIPE_WEBHOOK_SECRET not set — webhook verification skipped');
+      return res.json({ received: true });
+    }
+
+    const stripe = getStripe();
+    if (!stripe) {
+      console.warn('[billing] Stripe not configured — ignoring webhook');
+      return res.json({ received: true });
+    }
+
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } catch (err) {
+      console.error('[billing] Webhook signature verification failed:', err.message);
+      return res.status(400).json({ error: `Webhook Error: ${err.message}` });
+    }
+
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object;
+          if (session.payment_status === 'paid') {
+            const userId = session.metadata?.userId;
+            const planKey = session.metadata?.plan;
+            if (userId && planKey) {
+              await setUserPlan(Number(userId), planKey);
+              // Also persist customer ID if not already saved
+              if (session.customer) {
+                await pool.query('UPDATE users SET stripe_customer_id = $1 WHERE id = $2 AND (stripe_customer_id IS NULL OR stripe_customer_id != $1)', [session.customer, Number(userId)]);
+              }
+              console.log(`[billing] Plan '${planKey}' applied to user ${userId} via webhook`);
+            }
+          }
+          break;
+        }
+        case 'customer.subscription.deleted':
+        case 'invoice.payment_failed': {
+          // Downgrade to free on cancellation or failed payment
+          const customerId = event.data.object.customer;
+          if (customerId) {
+            const { rows } = await pool.query(
+              'SELECT id FROM users WHERE stripe_customer_id = $1',
+              [customerId]
+            );
+            if (rows.length) {
+              await setUserPlan(rows[0].id, 'free');
+              console.log(`[billing] Downgraded user ${rows[0].id} to free via webhook (${event.type})`);
+            }
+          }
+          break;
+        }
+        case 'invoice.payment_succeeded': {
+          // Renewal — plan stays current, just log
+          console.log(`[billing] Invoice paid for customer ${event.data.object.customer}`);
+          break;
+        }
+        default:
+          // Unhandled event type — ignore
+          break;
+      }
+    } catch (err) {
+      console.error('[billing] Webhook handler error:', err);
+      return res.status(500).json({ error: 'Webhook handler failed' });
+    }
+
+    res.json({ received: true });
+  }
+);
 
 // ─── POST /billing/checkout ──────────────────────────────────────────────────
 
@@ -72,6 +153,11 @@ router.post('/checkout', requireAuth, async (req, res) => {
       cancel_url: `${baseUrl}/dashboard/settings?billing=cancel`,
       metadata: { userId: String(req.session.userId), plan: planKey },
     });
+    // Save Stripe customer ID for webhook lookups
+    if (session.customer) {
+      pool.query('UPDATE users SET stripe_customer_id = $1 WHERE id = $2', [session.customer, req.session.userId])
+        .catch(err => console.error('[billing] Failed to save stripe_customer_id:', err.message));
+    }
     return res.redirect(303, session.url);
   } catch (err) {
     console.error('Stripe checkout error:', err.message);
