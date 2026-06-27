@@ -13,6 +13,7 @@ const {
   setOtp, findUserByOtp, clearOtp,
   incrementFailedAttempts, lockUser, resetFailedAttempts, recordLogin,
   markEmailVerified, setPhone,
+  incrementOtpAttempts, resetOtpAttempts, getOtpLockStatus,
 } = require('../db/users');
 
 const { sendEmail } = require('../services/email');
@@ -239,11 +240,23 @@ router.post('/verify-email', otpLimiter, async (req, res) => {
     return res.render('auth-verify-otp', { layout: false, email: email || '', error: 'Please enter the 6-digit code.' });
   }
 
+  // Brute-force lock: look up user by email first, check lock status
+  const userForLock = await findUserByEmail(email).catch(() => null);
+  if (userForLock) {
+    const lockStatus = await getOtpLockStatus(userForLock.id);
+    if (lockStatus?.otp_locked_until && new Date(lockStatus.otp_locked_until) > new Date()) {
+      const mins = Math.ceil((new Date(lockStatus.otp_locked_until) - Date.now()) / 60000);
+      return res.render('auth-verify-otp', { layout: false, email, error: `Too many failed attempts. Try again in ${mins} minute(s).` });
+    }
+  }
+
   const user = await findUserByOtp(email, code.trim());
   if (!user) {
+    if (userForLock) await incrementOtpAttempts(userForLock.id);
     return res.render('auth-verify-otp', { layout: false, email, error: 'Invalid or expired code. Check your email or request a new code.' });
   }
 
+  await resetOtpAttempts(user.id);
   await markEmailVerified(user.id);
   await clearOtp(user.id);
   await recordLogin(user.id, getIp(req));
@@ -272,6 +285,7 @@ router.post('/resend-otp', otpLimiter, async (req, res) => {
     if (user && !user.email_verified) {
       const otp = generateOtp();
       await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
+      await resetOtpAttempts(user.id);
       await sendOtpEmail(email, user.name, otp);
     }
   } catch (e) {
@@ -295,6 +309,7 @@ router.post('/resend-otp-sms', otpLimiter, async (req, res) => {
 
   const otp = generateOtp();
   await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
+  await resetOtpAttempts(user.id);
   try {
     await sendOtpSms(phone, otp);
     res.json({ ok: true });

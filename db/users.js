@@ -245,10 +245,42 @@ async function setNotificationPref(userId, key, value) {
   );
 }
 
+
+// ─── OTP Brute-Force Protection ───────────────────────────────────────────────
+
+async function incrementOtpAttempts(userId) {
+  const { rows } = await pool.query(
+    `UPDATE users SET otp_attempts = otp_attempts + 1,
+       otp_locked_until = CASE WHEN otp_attempts + 1 >= 5
+         THEN NOW() + INTERVAL '15 minutes' ELSE otp_locked_until END
+     WHERE id = $1 RETURNING otp_attempts, otp_locked_until`,
+    [userId]
+  );
+  return rows[0];
+}
+
+async function resetOtpAttempts(userId) {
+  await pool.query(
+    `UPDATE users SET otp_attempts = 0, otp_locked_until = NULL WHERE id = $1`,
+    [userId]
+  );
+}
+
+async function getOtpLockStatus(userId) {
+  const { rows } = await pool.query(
+    `SELECT otp_attempts, otp_locked_until FROM users WHERE id = $1`,
+    [userId]
+  );
+  return rows[0] || null;
+}
+
 module.exports = {
   ...module.exports,
   setUserPlan,
   setBasiqUserId,
   setTwoFactor,
   setNotificationPref,
+  incrementOtpAttempts,
+  resetOtpAttempts,
+  getOtpLockStatus,
 };
