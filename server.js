@@ -41,8 +41,16 @@ if (!process.env.DATABASE_URL) {
 
 // ─── Middleware ────────────────────────────────────────────────────────────
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // parse HTML form POST bodies
+// Skip JSON body parsing for /billing/webhook — Stripe needs the raw body
+// for signature verification. The route itself uses express.raw() instead.
+app.use((req, res, next) => {
+  if (req.path === '/billing/webhook') return next();
+  express.json()(req, res, next);
+});
+app.use((req, res, next) => {
+  if (req.path === '/billing/webhook') return next();
+  express.urlencoded({ extended: true })(req, res, next);
+});
 
 // Session — 30-day persistence, stored in Postgres
 // Fail fast in production if no secret is configured — a hardcoded fallback
