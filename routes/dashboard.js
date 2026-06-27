@@ -448,8 +448,11 @@ router.get('/vault/file/:id', async (req, res) => {
   try {
     const f = await vaultDb.getFile(req.params.id, req.session.userId);
     if (!f) return res.status(404).render('error', { layout: false, message: 'File not found.' });
-    res.setHeader('Content-Type', f.mime || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `inline; filename="${(f.filename || 'document').replace(/"/g, '')}"`);
+    // SECURITY: force download (attachment) to prevent inline HTML/script execution (XSS)
+    // Sanitise filename to alphanumeric, dots, hyphens, underscores only
+    const safeFilename = (f.filename || 'document').replace(/[^a-zA-Z0-9._-]/g, '_');
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
     res.send(f.content);
   } catch (err) {
     console.error('vault download error:', err.message);
@@ -687,7 +690,7 @@ router.post('/scores/recalculate', async (req, res) => {
 
     const scoreData = {
       // age proxy: graduated ~25, years_in_practice added (legacy field; prefer DOB from onboarding_data)
-      age: profile.years_in_practice ? 25 + (profile.years_in_practice || 0) : 30,
+      age: profile.years_in_practice ? 25 + (Number(profile.years_in_practice) || 0) : 30,
       annualIncome: profile.annual_income,
       hecsBalance: profile.hecs_balance,
       superBalance: profile.super_balance,
@@ -761,7 +764,7 @@ router.get('/recommendations', async (req, res) => {
 router.post('/recommendations/:id/status', async (req, res) => {
   try {
     const { status } = req.body; // 'accepted' | 'dismissed'
-    await updateRecommendationStatus(req.params.id, status);
+    await updateRecommendationStatus(req.params.id, status, req.session.userId);
     res.json({ ok: true });
   } catch (err) {
     console.error('Update rec status error:', err.message);
@@ -971,8 +974,11 @@ router.get('/projections', async (req, res) => {
     const maritalStatus = maritalFromProfile(profile);
     const extra        = 0;
 
-    const projection = superProjection({ currentBalance: superBal, salary, age, retirementAge, maritalStatus, extraAnnual: extra });
-    const mc = monteCarlo({ currentBalance: superBal, salary, age, retirementAge, maritalStatus, simulations: 1000, seed: 42 });
+    // Guard: retirementAge must be strictly greater than age to avoid division-by-zero crashes
+    let safeRetirementAge = retirementAge;
+    if (age >= safeRetirementAge) safeRetirementAge = age + 1;
+    const projection = superProjection({ currentBalance: superBal, salary, age, retirementAge: safeRetirementAge, maritalStatus, extraAnnual: extra });
+    const mc = monteCarlo({ currentBalance: superBal, salary, age, retirementAge: safeRetirementAge, maritalStatus, simulations: 1000, seed: 42 });
 
     let narration = null;
     try {
@@ -1013,8 +1019,11 @@ router.get('/projections/what-if', async (req, res) => {
     const maritalStatus = maritalFromProfile(profile);
     const extra        = Math.max(0, Math.min(100000, Number(req.query.extra) || 0));
 
-    const projection = superProjection({ currentBalance: superBal, salary, age, retirementAge, maritalStatus, extraAnnual: extra });
-    const mc = monteCarlo({ currentBalance: superBal, salary, age, retirementAge, maritalStatus, simulations: 1000, seed: 42, extraAnnual: extra });
+    // Guard: retirementAge must be strictly greater than age
+    let safeRetirementAge2 = retirementAge;
+    if (age >= safeRetirementAge2) safeRetirementAge2 = age + 1;
+    const projection = superProjection({ currentBalance: superBal, salary, age, retirementAge: safeRetirementAge2, maritalStatus, extraAnnual: extra });
+    const mc = monteCarlo({ currentBalance: superBal, salary, age, retirementAge: safeRetirementAge2, maritalStatus, simulations: 1000, seed: 42, extraAnnual: extra });
 
     res.json({ ok: true, projection, mc, extra });
   } catch (err) {

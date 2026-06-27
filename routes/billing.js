@@ -82,12 +82,20 @@ router.post('/checkout', requireAuth, async (req, res) => {
 // ─── GET /billing/success — verify the Stripe session, persist the plan ──────
 
 router.get('/success', requireAuth, async (req, res) => {
-  const planKey = (req.query.plan || '').toLowerCase();
   const stripe = getStripe();
   try {
     if (stripe && req.query.session_id) {
-      const session = await stripe.checkout.sessions.retrieve(req.query.session_id);
-      if (session && session.payment_status === 'paid' && PLANS[planKey]) {
+      const stripeSession = await stripe.checkout.sessions.retrieve(req.query.session_id);
+      // SECURITY: read plan from server-side metadata, never from query param
+      const planKey = (stripeSession.metadata && stripeSession.metadata.plan || '').toLowerCase();
+      // SECURITY: verify the session belongs to the currently logged-in user
+      if (
+        stripeSession &&
+        stripeSession.payment_status === 'paid' &&
+        PLANS[planKey] &&
+        stripeSession.metadata &&
+        String(stripeSession.metadata.userId) === String(req.session.userId)
+      ) {
         await setUserPlan(req.session.userId, planKey);
         return res.redirect(`/dashboard/settings?billing=success&plan=${planKey}`);
       }

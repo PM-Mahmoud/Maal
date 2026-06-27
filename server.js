@@ -7,6 +7,10 @@ const path = require('path');
 const { buildLandingContext } = require('./lib/landing-context');
 const { sessionStore } = require('./db/auth');
 
+// ─── Process-level error handlers ─────────────────────────────────────────
+process.on('unhandledRejection', (reason) => console.error('Unhandled rejection:', reason));
+process.on('uncaughtException', (err) => { console.error('Uncaught exception:', err); process.exit(1); });
+
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -30,9 +34,16 @@ if (!process.env.SESSION_SECRET && process.env.NODE_ENV === 'production') {
   console.error('FATAL: SESSION_SECRET is not set in production. Refusing to start.');
   process.exit(1);
 }
+// SECURITY: generate a random ephemeral secret if SESSION_SECRET is not set (dev only)
+// Sessions won't persist across restarts without a fixed SECRET — set SESSION_SECRET in env.
+const _sessionSecret = process.env.SESSION_SECRET || (() => {
+  const s = require('crypto').randomBytes(32).toString('hex');
+  console.warn('[WARN] SESSION_SECRET not set — using ephemeral secret. Sessions will not survive restarts. Set SESSION_SECRET env var.');
+  return s;
+})();
 const sessionMiddleware = require('express-session')({
   store: sessionStore,
-  secret: process.env.SESSION_SECRET || 'maal-dev-insecure-secret-change-me',
+  secret: _sessionSecret,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -60,10 +71,22 @@ app.use(expressLayouts);
 
 // ─── Health (no DB) ───────────────────────────────────────────────────────
 
-app.get('/health', (_req, res) => {
+app.get('/health', async (_req, res) => {
   // Integration flags are booleans only — never expose key values.
+  const pool = require('./db/pool');
+  let dbOk = false;
+  try {
+    await pool.query('SELECT 1');
+    dbOk = true;
+  } catch (e) {
+    console.error('Health check DB error:', e.message);
+  }
+  if (!dbOk) {
+    return res.status(503).json({ status: 'unhealthy', db: false });
+  }
   res.json({
     status: 'healthy',
+    db: true,
     integrations: {
       basiq: !!(process.env.BASIQ_API_KEY || '').trim(),
       advisor: !!((process.env.AZURE_OPENAI_API_KEY || process.env.GROQ_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.AI_API_KEY || '').trim()),
@@ -173,6 +196,25 @@ app.use('*', (req, res, next) => {
 
 // ─── Start ─────────────────────────────────────────────────────────────────
 
-app.listen(port, () => {
+// ─── Global error handler ─────────────────────────────────────────────────
+// Must be registered after all routes. Catches any error passed to next(err)
+// or thrown in a synchronous route handler.
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  if (res.headersSent) return next(err);
+  res.status(500).render('error', { layout: false, message: 'Something went wrong. Please try again.' });
+});
+
+const server = app.listen(port, () => {
   console.log(`Server running on port ${port}`);
+});
+
+// ─── Graceful shutdown on SIGTERM (Render redeploys) ──────────────────────
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  const pool = require('./db/pool');
+  server.close(() => {
+    pool.end(() => process.exit(0));
+  });
+  setTimeout(() => process.exit(1), 10000);
 });

@@ -105,24 +105,36 @@ async function runRadar(radarId, userId) {
   return { alerted, summary };
 }
 
+// In-flight guard — prevents concurrent cron invocations from double-firing alerts
+let _sweepRunning = false;
+
 // Cron sweep — evaluate every radar whose interval has elapsed.
 async function runDueRadars() {
-  const due = await radarDb.dueRadars();
-  let ran = 0, alerts = 0;
-  for (const radar of due) {
-    try {
-      const user = await findUserById(radar.user_id);
-      const profile = await getProfileByUserId(radar.user_id);
-      const { alerted, summary } = await evaluateRadar(radar, user, profile);
-      await radarDb.recordRun(radar.id, { result: summary, alerted });
-      await radarDb.logEvent(radar.id, alerted, summary);
-      if (alerted) { await notify(radar, user, summary); alerts++; }
-      ran++;
-    } catch (e) {
-      console.error(`Radar ${radar.id} evaluation failed:`, e.message);
-    }
+  if (_sweepRunning) {
+    console.warn('[radar] Sweep already in progress — skipping concurrent invocation');
+    return { ran: 0, alerts: 0, skipped: true };
   }
-  return { ran, alerts };
+  _sweepRunning = true;
+  try {
+    const due = await radarDb.dueRadars();
+    let ran = 0, alerts = 0;
+    for (const radar of due) {
+      try {
+        const user = await findUserById(radar.user_id);
+        const profile = await getProfileByUserId(radar.user_id);
+        const { alerted, summary } = await evaluateRadar(radar, user, profile);
+        await radarDb.recordRun(radar.id, { result: summary, alerted });
+        await radarDb.logEvent(radar.id, alerted, summary);
+        if (alerted) { await notify(radar, user, summary); alerts++; }
+        ran++;
+      } catch (e) {
+        console.error(`Radar ${radar.id} evaluation failed:`, e.message);
+      }
+    }
+    return { ran, alerts };
+  } finally {
+    _sweepRunning = false;
+  }
 }
 
 function escapeHtml(s) {

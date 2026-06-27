@@ -14,7 +14,8 @@ router.get('/me', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Not found' });
     res.json({ id: user.id, email: user.email, plan: user.plan || 'free' });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error('/api/me error:', e.message);
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 
@@ -32,7 +33,8 @@ router.post('/auth/login', async (req, res) => {
     await new Promise((ok, err) => req.session.save(e => e ? err(e) : ok()));
     res.json({ user: { id: user.id, email: user.email, plan: user.plan || 'free' } });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error('/api/auth/login error:', e.message);
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 
@@ -50,7 +52,8 @@ router.post('/auth/signup', async (req, res) => {
     await new Promise((ok, err) => req.session.save(e => e ? err(e) : ok()));
     res.json({ user: { id: user.id, email: user.email, plan: 'free' } });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error('/api/auth/signup error:', e.message);
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 
@@ -186,7 +189,9 @@ const ASSET_TABLES = new Set([
   'cash_accounts', 'investments', 'properties', 'debts',
   'super_accounts', 'incomes', 'other_assets',
   'linked_accounts', 'goals', 'transactions',
-  'profiles', 'score_snapshots',
+  // BUG-5 FIX: 'profiles' table does not exist; the correct table is 'user_profiles'
+  // 'user_profiles' is intentionally not in the generic API (profile updates go through /dashboard/profile)
+  'score_snapshots',
 ]);
 
 function parseFilters(raw) {
@@ -258,9 +263,34 @@ router.all('/v1/:table', async (req, res) => {
       const keys = Object.keys(body).filter(k => /^\w+$/.test(k));
       if (!keys.length) return res.json({ ok: true });
       const setClause = keys.map((k, i) => `${k} = $${i + 2}`).join(', ');
+      // BUG-3 FIX: rebuild filter placeholders offset after SET params to avoid collisions
+      // SET uses $2..$N+1 (N body keys, $1=uid). Filters start at $N+2.
+      const rawFilters = Array.isArray(raw) ? raw : raw ? [raw] : [];
+      const filterClauses = [];
+      const filterVals = [];
+      for (const f of rawFilters) {
+        const m = f.match(/^(\w+)=(eq|neq|gte|lte|is|in|not)\.(.+)$/);
+        if (!m) continue;
+        const [, col, op, val] = m;
+        if (!/^\w+$/.test(col)) continue;
+        const idx = keys.length + 2 + filterVals.length;
+        if (op === 'eq')  { filterClauses.push(`${col} = $${idx}`); filterVals.push(val); }
+        else if (op === 'neq') { filterClauses.push(`${col} != $${idx}`); filterVals.push(val); }
+        else if (op === 'gte') { filterClauses.push(`${col} >= $${idx}`); filterVals.push(val); }
+        else if (op === 'lte') { filterClauses.push(`${col} <= $${idx}`); filterVals.push(val); }
+        else if (op === 'is')  { filterClauses.push(val === 'null' ? `${col} IS NULL` : `${col} IS NOT NULL`); }
+        else if (op === 'in')  {
+          const items = val.replace(/^\(/, '').replace(/\)$/, '').split(',').map(s => s.trim()).filter(Boolean);
+          if (!items.length) continue;
+          const ph = items.map((_, i) => `$${idx + i}`).join(', ');
+          filterClauses.push(`${col} IN (${ph})`);
+          filterVals.push(...items);
+        }
+      }
+      const whereExtra = filterClauses.length ? ' AND ' + filterClauses.join(' AND ') : '';
       const { rows } = await pool.query(
-        `UPDATE ${table} SET ${setClause}, updated_at = NOW() WHERE ${ucol} = $1${where} RETURNING *`,
-        [uid, ...keys.map(k => body[k]), ...vals]
+        `UPDATE ${table} SET ${setClause}, updated_at = NOW() WHERE ${ucol} = $1${whereExtra} RETURNING *`,
+        [uid, ...keys.map(k => body[k]), ...filterVals]
       );
       return res.json(isSingle ? (rows[0] || null) : rows);
     }
@@ -274,7 +304,7 @@ router.all('/v1/:table', async (req, res) => {
   } catch (e) {
     console.error(`api /v1/${table} ${req.method} error:`, e.message);
     if (req.method === 'GET') return res.json([]);
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 

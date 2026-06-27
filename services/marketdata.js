@@ -17,6 +17,14 @@ function hasMarketData() {
 
 // Tiny in-memory cache so repeated dashboard loads don't burn the rate limit.
 const cache = new Map(); // key -> { exp, value }
+
+// Prune expired cache entries every minute to prevent unbounded growth
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of cache) {
+    if (v.exp < now) cache.delete(k);
+  }
+}, 60_000).unref();
 function cached(key, ttlMs, fn) {
   const hit = cache.get(key);
   if (hit && Date.now() < hit.exp) return hit.value;

@@ -25,7 +25,8 @@ const LOCK_DURATION    = 15 * 60 * 1000;    // 15 minutes
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function generateOtp() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  // Use crypto.randomInt for cryptographically secure OTP generation
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
 function getIp(req) {
@@ -133,8 +134,13 @@ router.post('/login',
     req.session.emailVerified = true;
     req.session.save((err) => {
       if (err) console.error('[login] Session save error:', err.message);
-      const redirect = req.query.redirect || '/dashboard';
-      res.redirect(redirect);
+      // SECURITY: validate redirect to prevent open redirect attacks
+      const redir = (
+        typeof req.query.redirect === 'string' &&
+        req.query.redirect.startsWith('/') &&
+        !req.query.redirect.startsWith('//')
+      ) ? req.query.redirect : '/dashboard';
+      res.redirect(redir);
     });
   }
 );
@@ -234,15 +240,18 @@ router.post('/resend-otp', async (req, res) => {
   const email = req.body.email || req.session.pendingEmail;
   if (!email) return res.status(400).json({ error: 'No email' });
 
-  const user = await findUserByEmail(email);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-
-  if (user.email_verified) return res.json({ ok: true }); // already verified
-
-  const otp = generateOtp();
-  await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
-  await sendOtpEmail(email, user.name, otp);
-  res.json({ ok: true });
+  // SECURITY: always return 200 regardless of whether user exists (prevents email enumeration)
+  try {
+    const user = await findUserByEmail(email);
+    if (user && !user.email_verified) {
+      const otp = generateOtp();
+      await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
+      await sendOtpEmail(email, user.name, otp);
+    }
+  } catch (e) {
+    console.error('[resend-otp] error:', e.message);
+  }
+  res.json({ ok: true, message: 'If that email is registered and unverified, a new code has been sent.' });
 });
 
 

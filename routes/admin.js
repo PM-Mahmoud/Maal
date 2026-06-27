@@ -5,6 +5,16 @@ const express = require('express');
 const router = express.Router();
 const { getAllUsers } = require('../db/users');
 
+// HTML-escape helper — prevents stored XSS in admin dashboard
+function esc(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 function requireAdmin(req, res, next) {
   const adminPass = process.env.ADMIN_PASSWORD;
   if (!adminPass) return res.status(503).send('Admin not configured. Set ADMIN_PASSWORD env var.');
@@ -61,14 +71,14 @@ router.get('/admin', requireAdmin, async (req, res) => {
       return new Date(d).toLocaleDateString('en-AU', { day:'numeric', month:'short', year:'numeric' });
     };
     return `<tr>
-      <td>${u.id}</td>
-      <td><strong>${u.name || '—'}</strong><br><span style="color:var(--fg-muted);font-size:0.8rem">${u.email}</span></td>
+      <td>${esc(u.id)}</td>
+      <td><strong>${esc(u.name) || '—'}</strong><br><span style="color:var(--fg-muted);font-size:0.8rem">${esc(u.email)}</span></td>
       <td>${u.provider === 'google' ? '<span class="badge google">Google</span>' : '<span class="badge creds">Email</span>'}</td>
       <td>${u.email_verified ? '<span class="badge ok">✓ Verified</span>' : '<span class="badge warn">Unverified</span>'}</td>
       <td>${u.completed_onboarding ? '<span class="badge ok">Complete</span>' : '<span class="badge warn">Pending</span>'}</td>
       <td style="font-size:0.8rem;color:var(--fg-muted)">${ago(u.created_at)}</td>
       <td style="font-size:0.8rem;color:var(--fg-muted)">${ago(u.last_login_at)}</td>
-      <td>${isLocked ? '<span class="badge danger">Locked</span>' : (u.failed_attempts > 0 ? `<span class="badge warn">${u.failed_attempts} fail${u.failed_attempts>1?'s':''}</span>` : '—')}</td>
+      <td>${isLocked ? '<span class="badge danger">Locked</span>' : (u.failed_attempts > 0 ? `<span class="badge warn">${esc(u.failed_attempts)} fail${u.failed_attempts>1?'s':''}</span>` : '—')}</td>
     </tr>`;
   }).join('');
 
@@ -124,8 +134,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 });
 
 router.get('/admin/logout', (req, res) => {
-  req.session.isAdmin = false;
-  res.redirect('/admin');
+  req.session.destroy(() => res.redirect('/admin'));
 });
 
 module.exports = router;

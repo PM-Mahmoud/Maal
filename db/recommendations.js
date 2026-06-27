@@ -38,14 +38,14 @@ async function getRecommendationsByUserId(userId, status) {
   return result.rows;
 }
 
-async function updateRecommendationStatus(recId, status) {
-  const implementedAt = status === 'accepted' ? 'NOW()' : 'NULL';
+async function updateRecommendationStatus(recId, status, userId) {
+  // SECURITY: require userId so users can only update their own recommendations
   const result = await pool.query(
     `UPDATE recommendations
      SET status = $2, implemented_at = ${status === 'accepted' ? 'NOW()' : 'NULL'}
-     WHERE id = $1
+     WHERE id = $1 AND user_id = $3
      RETURNING *`,
-    [recId, status]
+    [recId, status, userId]
   );
   return result.rows[0] || null;
 }

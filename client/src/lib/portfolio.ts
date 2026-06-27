@@ -20,12 +20,12 @@ export async function fetchPortfolio(): Promise<Portfolio> {
     supabase.from("properties").select("value, mortgage_balance"),
     supabase.from("cash_accounts").select("balance"),
     supabase.from("debts").select("balance"),
-    supabase.from("profiles").select("age_band").maybeSingle(),
+    supabase.from("user_profiles").select("years_in_practice").maybeSingle(),
   ]);
   const sum = <T extends Record<string, any>>(rows: T[] | null, key: keyof T) =>
     (rows ?? []).reduce((a, r) => a + Number(r[key] ?? 0), 0);
-  const ageBand = profile.data?.age_band ?? "30-39";
-  const age = ageBand === "under-30" ? 27 : ageBand === "30-39" ? 35 : ageBand === "40-49" ? 45 : ageBand === "50-59" ? 55 : 65;
+  // BUG-4 FIX: table is user_profiles, age computed from years_in_practice
+  const age = profile.data?.years_in_practice ? 25 + Number(profile.data.years_in_practice) : 35;
   return {
     income: sum(income.data, "annual_amount"),
     superBalance: sum(sup.data, "balance"),
