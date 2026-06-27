@@ -133,6 +133,31 @@ router.post('/login', authLimiter,
     req.session.name = user.name;
     req.session.provider = user.provider;
     req.session.emailVerified = true;
+
+    // After successful password login, complete any pending Google account link.
+    // This is the second half of the consent flow: the user proved ownership of
+    // the email/password account, so it is safe to link the Google identity now.
+    if (req.session.pendingGoogleLink) {
+      const { googleId, email: googleEmail } = req.session.pendingGoogleLink;
+      if (user.email.toLowerCase() === googleEmail.toLowerCase()) {
+        try {
+          const pool = require('../db/pool');
+          await pool.query(
+            `UPDATE users SET provider_id = $1, provider = 'google', email_verified = true, updated_at = NOW() WHERE id = $2`,
+            [googleId, user.id]
+          );
+          delete req.session.pendingGoogleLink;
+          console.log('[oauth] Linked Google account', googleId, 'to user', user.id, 'after password consent');
+        } catch (linkErr) {
+          console.error('[oauth] Google link failed after login:', linkErr.message);
+          delete req.session.pendingGoogleLink;
+        }
+      } else {
+        // Email mismatch — clear the stale pending link
+        delete req.session.pendingGoogleLink;
+      }
+    }
+
     req.session.save((err) => {
       if (err) console.error('[login] Session save error:', err.message);
       // SECURITY: validate redirect to prevent open redirect attacks

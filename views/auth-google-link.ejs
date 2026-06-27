@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Link Google Account — Maal</title>
+  <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body class="auth-page">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
+    <div style="max-width:440px;width:100%;background:var(--surface,#fff);border:1px solid var(--border,#E8E8EA);border-radius:12px;padding:40px 36px;text-align:center;">
+
+      <img src="/images/logo.svg" alt="Maal" style="height:32px;margin-bottom:32px;" onerror="this.style.display='none'">
+
+      <div style="width:48px;height:48px;border-radius:50%;background:var(--accent-soft,#DEF7F4);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#12B5A6)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+
+      <h1 style="font-size:1.375rem;font-weight:700;letter-spacing:-0.02em;margin:0 0 10px;color:var(--fg,#0E0E10);">Account already exists</h1>
+
+      <p style="color:var(--muted,#6B6F76);font-size:0.9375rem;line-height:1.6;margin:0 0 8px;">
+        A Maal account with
+      </p>
+      <p style="font-weight:600;color:var(--fg,#0E0E10);margin:0 0 20px;font-size:0.9375rem;word-break:break-all;">
+        <%= email %>
+      </p>
+      <p style="color:var(--muted,#6B6F76);font-size:0.9375rem;line-height:1.6;margin:0 0 28px;">
+        already exists. Sign in with your password to securely link your Google account.
+      </p>
+
+      <a href="/login" class="btn btn-accent" style="display:block;width:100%;box-sizing:border-box;padding:12px 20px;background:var(--fg,#0E0E10);color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:0.9375rem;margin-bottom:12px;">
+        Sign in with password
+      </a>
+
+      <a href="/" style="font-size:0.875rem;color:var(--muted,#6B6F76);text-decoration:none;">
+        Cancel
+      </a>
+
+    </div>
+  </div>
+</body>
+</html>

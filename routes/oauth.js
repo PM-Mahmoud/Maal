@@ -98,12 +98,17 @@ router.get('/auth/google/callback', async (req, res) => {
     if (!user) {
       user = await findUserByEmail(profile.email);
       if (user) {
-        // Existing email account — link Google to it
-        await require('../db/auth').pool.query(
-          `UPDATE users SET provider = 'google', provider_id = $2, email_verified = true, updated_at = NOW() WHERE id = $1`,
-          [user.id, profile.sub]
-        );
-        user.provider = 'google';
+        // SECURITY: Do NOT auto-link -- an attacker who controls a Google account
+        // with a matching email could silently take over an existing password account.
+        // Instead, store the Google profile in session and redirect to a consent page
+        // where the user must first sign in with their existing password.
+        req.session.pendingGoogleLink = {
+          googleId: profile.sub,
+          email: profile.email,
+          name: profile.displayName || profile.name,
+        };
+        await new Promise((resolve, reject) => req.session.save(e => e ? reject(e) : resolve()));
+        return res.redirect('/auth/google/link-required');
       } else {
         // Brand new user via Google
         user = await createUser({
@@ -135,6 +140,18 @@ router.get('/auth/google/callback', async (req, res) => {
     console.error('[oauth] Google callback error:', err.message);
     res.redirect('/login?error=google_failed');
   }
+});
+
+// --- GET /auth/google/link-required -------------------------------------------
+// Shown when a Google login matches an existing email/password account.
+// The user must sign in with their password to confirm the link.
+
+router.get('/auth/google/link-required', (req, res) => {
+  if (!req.session.pendingGoogleLink) return res.redirect('/login');
+  res.render('auth-google-link', {
+    email: req.session.pendingGoogleLink.email,
+    layout: 'layout',
+  });
 });
 
 module.exports = router;
