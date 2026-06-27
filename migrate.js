@@ -32,6 +32,9 @@ async function migrate() {
   console.log('Running migrations...');
 
   const client = await pool.connect();
+  // Acquire advisory lock — only one deploy slot runs migrations at a time.
+  // Lock ID 5432 is arbitrary; must be consistent across all instances.
+  await client.query('SELECT pg_advisory_lock(5432)');
   try {
     // 1. Create migration tracking table (always first)
     await client.query(`
@@ -50,6 +53,7 @@ async function migrate() {
 
     console.log('Migrations complete.');
   } finally {
+    try { await client.query('SELECT pg_advisory_unlock(5432)'); } catch (_) {}
     client.release();
     await pool.end();
   }
