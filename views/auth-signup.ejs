@@ -66,7 +66,7 @@
       <% if (locals.error) { %><div class="auth-alert"><%= error %></div><% } %>
 
       <form action="/signup" method="POST" class="auth-form">
-        <input class="auth-input" type="email" name="email" placeholder="you@example.com" autocomplete="email" required value="<%= locals.email || \'\' %>">
+        <input class="auth-input" type="email" name="email" placeholder="you@example.com" autocomplete="email" required value="<%= locals.email || '' %>">
         <input class="auth-input" type="password" name="password" placeholder="Password (min 6 characters)" autocomplete="new-password" minlength="6" required>
         <button type="submit" class="auth-submit">Create account</button>
       </form>
