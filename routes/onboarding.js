@@ -55,7 +55,7 @@ router.post('/session', requireAuth, async (req, res) => {
     if (!session) {
       session = await createSession(userId);
     } else if (!session.user_id) {
-      const { pool } = require('../db/auth');
+      const pool = require('../db/pool');
       await pool.query(
         'UPDATE onboarding_sessions SET user_id = $1 WHERE id = $2',
         [userId, session.id]

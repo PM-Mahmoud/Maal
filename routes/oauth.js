@@ -118,7 +118,7 @@ router.get('/auth/google/callback', async (req, res) => {
           providerId: profile.sub,
         });
         // Mark email verified immediately for OAuth users
-        await require('../db/auth').pool.query(
+        await require('../db/pool').query(
           `UPDATE users SET email_verified = true WHERE id = $1`, [user.id]
         );
       }
