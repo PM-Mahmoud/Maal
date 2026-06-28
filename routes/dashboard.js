@@ -394,10 +394,17 @@ router.post('/vault/upload', upload.single('file'), async (req, res) => {
     let extractedText = '';
     try { extractedText = await extractText(req.file.buffer, req.file.mimetype, req.file.originalname); }
     catch (e) { console.error('extract on upload failed:', e.message); }
+    const ALLOWED_MIME = new Set([
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword', 'text/plain', 'text/csv',
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    ]);
+    const safeMime = ALLOWED_MIME.has(req.file.mimetype) ? req.file.mimetype : 'application/octet-stream';
     const id = await vaultDb.addFile(req.session.userId, {
       kind,
       filename: String(req.file.originalname || 'document').slice(0, 255),
-      mime: req.file.mimetype,
+      mime: safeMime,
       size: req.file.size,
       content: req.file.buffer,
       extractedText,
@@ -764,7 +771,9 @@ router.get('/recommendations', async (req, res) => {
 
 router.post('/recommendations/:id/status', async (req, res) => {
   try {
-    const { status } = req.body; // 'accepted' | 'dismissed'
+    const { status } = req.body;
+    const VALID_STATUSES = ['accepted', 'dismissed', 'pending'];
+    if (!VALID_STATUSES.includes(status)) return res.status(400).json({ error: 'Invalid status.' });
     await updateRecommendationStatus(req.params.id, status, req.session.userId);
     res.json({ ok: true });
   } catch (err) {

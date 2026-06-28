@@ -790,9 +790,10 @@
       if (sources.length) {
         src.innerHTML = '<div class="row-sub" style="font-weight:600; margin-bottom:0.3rem;">Sources</div>' +
           sources.map(function (s, i) {
-            return '<div class="row-sub" style="padding:0.15rem 0;">[' + (i + 1) + '] <a href="' + s.url +
-              '" target="_blank" rel="noopener" style="color:var(--accent);">' + (s.title || s.url) + '</a>' +
-              (s.source ? ' · ' + s.source : '') + '</div>';
+            var safeUrl = (typeof s.url === 'string' && s.url.startsWith('https://')) ? esc(s.url) : '#';
+            return '<div class="row-sub" style="padding:0.15rem 0;">[' + (i + 1) + '] <a href="' + safeUrl +
+              '" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">' + esc(s.title || s.url) + '</a>' +
+              (s.source ? ' · ' + esc(s.source) : '') + '</div>';
           }).join('');
       } else { src.innerHTML = ''; }
       reportEl.style.display = '';

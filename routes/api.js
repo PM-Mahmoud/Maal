@@ -19,18 +19,37 @@ router.get('/me', async (req, res) => {
   }
 });
 
-router.post('/auth/login', async (req, res) => {
+const { authLimiter } = require('../lib/rate-limiters');
+const { findUserByEmail: _findUserByEmail, incrementFailedAttempts, resetFailedAttempts, recordLogin: _recordLogin } = require('../db/users');
+
+router.post('/auth/login', authLimiter, async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
   try {
-    const { findUserByEmail } = require('../db/users');
-    const user = await findUserByEmail(email.toLowerCase().trim());
+    const user = await _findUserByEmail(email.toLowerCase().trim());
     if (!user || !user.password_hash) return res.status(401).json({ error: 'Invalid credentials' });
+    // Check account lockout
+    if (user.locked_until && new Date(user.locked_until) > new Date()) {
+      return res.status(423).json({ error: 'Account temporarily locked. Try again later.' });
+    }
     const ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!ok) {
+      await incrementFailedAttempts(user.id);
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    // Enforce 2FA — don't complete login here if 2FA is enabled
+    if (user.two_factor_enabled) {
+      req.session.pendingEmail = user.email;
+      await new Promise((resolve, reject) => req.session.save(e => e ? reject(e) : resolve()));
+      return res.json({ ok: true, requires2fa: true });
+    }
+    await resetFailedAttempts(user.id);
+    await _recordLogin(user.id, req.ip);
+    // SECURITY: regenerate session ID to prevent fixation
+    await new Promise((resolve, reject) => req.session.regenerate(e => e ? reject(e) : resolve()));
     req.session.userId = user.id;
     req.session.userEmail = user.email;
-    await new Promise((ok, err) => req.session.save(e => e ? err(e) : ok()));
+    await new Promise((resolve, reject) => req.session.save(e => e ? reject(e) : resolve()));
     res.json({ user: { id: user.id, email: user.email, plan: user.plan || 'free' } });
   } catch (e) {
     console.error('/api/auth/login error:', e.message);

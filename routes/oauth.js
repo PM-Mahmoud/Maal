@@ -126,15 +126,18 @@ router.get('/auth/google/callback', async (req, res) => {
 
     await recordLogin(user.id, getIp(req));
 
-    req.session.oauthState = null;
-    req.session.userId = user.id;
-    req.session.email = user.email || profile.email;
-    req.session.name = user.name || profile.name;
-    req.session.provider = 'google';
-    req.session.emailVerified = true;
-    req.session.save((err) => {
-      if (err) console.error('[oauth] Session save error:', err.message);
-      res.redirect('/dashboard');
+    // SECURITY: regenerate session ID to prevent fixation
+    req.session.regenerate((regenErr) => {
+      if (regenErr) { console.error('[oauth] Session regenerate error:', regenErr); return res.redirect('/login?error=google_failed'); }
+      req.session.userId = user.id;
+      req.session.email = user.email || profile.email;
+      req.session.name = user.name || profile.name;
+      req.session.provider = 'google';
+      req.session.emailVerified = true;
+      req.session.save((err) => {
+        if (err) console.error('[oauth] Session save error:', err.message);
+        res.redirect('/dashboard');
+      });
     });
   } catch (err) {
     console.error('[oauth] Google callback error:', err.message);

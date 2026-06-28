@@ -129,45 +129,42 @@ router.post('/login', authLimiter,
     await resetFailedAttempts(user.id);
     await recordLogin(user.id, getIp(req));
 
-    req.session.userId = user.id;
-    req.session.email = user.email;
-    req.session.name = user.name;
-    req.session.provider = user.provider;
-    req.session.emailVerified = true;
+    // SECURITY: regenerate session ID before writing auth state (prevents session fixation)
+    const pendingLink = req.session.pendingGoogleLink || null;
+    req.session.regenerate((regenErr) => {
+      if (regenErr) { console.error('[login] Session regenerate error:', regenErr); return res.status(500).render('error', { layout: false, message: 'Session error.' }); }
+      req.session.userId = user.id;
+      req.session.email = user.email;
+      req.session.name = user.name;
+      req.session.provider = user.provider;
+      req.session.emailVerified = true;
 
-    // After successful password login, complete any pending Google account link.
-    // This is the second half of the consent flow: the user proved ownership of
-    // the email/password account, so it is safe to link the Google identity now.
-    if (req.session.pendingGoogleLink) {
-      const { googleId, email: googleEmail } = req.session.pendingGoogleLink;
-      if (user.email.toLowerCase() === googleEmail.toLowerCase()) {
-        try {
+      // Complete any pending Google account link after password confirmation.
+      if (pendingLink) {
+        const { googleId, email: googleEmail } = pendingLink;
+        if (user.email.toLowerCase() === googleEmail.toLowerCase()) {
           const pool = require('../db/pool');
-          await pool.query(
+          pool.query(
             `UPDATE users SET provider_id = $1, provider = 'google', email_verified = true, updated_at = NOW() WHERE id = $2`,
             [googleId, user.id]
-          );
-          delete req.session.pendingGoogleLink;
-          console.log('[oauth] Linked Google account', googleId, 'to user', user.id, 'after password consent');
-        } catch (linkErr) {
-          console.error('[oauth] Google link failed after login:', linkErr.message);
-          delete req.session.pendingGoogleLink;
+          ).then(() => {
+            console.log('[oauth] Linked Google account', googleId, 'to user', user.id, 'after password consent');
+          }).catch((linkErr) => {
+            console.error('[oauth] Google link failed after login:', linkErr.message);
+          });
         }
-      } else {
-        // Email mismatch — clear the stale pending link
-        delete req.session.pendingGoogleLink;
       }
-    }
 
-    req.session.save((err) => {
-      if (err) console.error('[login] Session save error:', err.message);
-      // SECURITY: validate redirect to prevent open redirect attacks
-      const redir = (
-        typeof req.query.redirect === 'string' &&
-        req.query.redirect.startsWith('/') &&
-        !req.query.redirect.startsWith('//')
-      ) ? req.query.redirect : '/dashboard';
-      res.redirect(redir);
+      req.session.save((err) => {
+        if (err) console.error('[login] Session save error:', err.message);
+        // SECURITY: validate redirect to prevent open redirect attacks
+        const redir = (
+          typeof req.query.redirect === 'string' &&
+          req.query.redirect.startsWith('/') &&
+          !req.query.redirect.startsWith('//')
+        ) ? req.query.redirect : '/dashboard';
+        res.redirect(redir);
+      });
     });
   }
 );
@@ -261,15 +258,18 @@ router.post('/verify-email', otpLimiter, async (req, res) => {
   await clearOtp(user.id);
   await recordLogin(user.id, getIp(req));
 
-  req.session.pendingEmail = null;
-  req.session.userId = user.id;
-  req.session.email = user.email;
-  req.session.name = user.name;
-  req.session.provider = 'credentials';
-  req.session.emailVerified = true;
-  req.session.save((err) => {
-    if (err) console.error('[verify-otp] Session save error:', err.message);
-    res.redirect('/onboarding');
+  // SECURITY: regenerate session ID to prevent fixation
+  req.session.regenerate((regenErr) => {
+    if (regenErr) { console.error('[verify-otp] Session regenerate error:', regenErr); return res.status(500).render('error', { layout: false, message: 'Session error.' }); }
+    req.session.userId = user.id;
+    req.session.email = user.email;
+    req.session.name = user.name;
+    req.session.provider = 'credentials';
+    req.session.emailVerified = true;
+    req.session.save((err) => {
+      if (err) console.error('[verify-otp] Session save error:', err.message);
+      res.redirect('/onboarding');
+    });
   });
 });
 

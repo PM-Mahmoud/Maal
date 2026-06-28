@@ -2,6 +2,16 @@
 // Set ADMIN_PASSWORD in Render env vars. Default is insecure — always override.
 
 const express = require('express');
+const crypto = require('crypto');
+const { authLimiter } = require('../lib/rate-limiters');
+
+function safeEqual(a, b) {
+  if (!a || !b) return false;
+  const ba = Buffer.from(String(a));
+  const bb = Buffer.from(String(b));
+  if (ba.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ba, bb);
+}
 const router = express.Router();
 const { getAllUsers } = require('../db/users');
 
@@ -26,7 +36,7 @@ function requireAdmin(req, res, next) {
   const auth = req.headers.authorization;
   if (auth && auth.startsWith('Basic ')) {
     const [, pass] = Buffer.from(auth.slice(6), 'base64').toString().split(':');
-    if (pass === adminPass) { req.session.isAdmin = true; return next(); }
+    if (safeEqual(pass, adminPass)) { req.session.isAdmin = true; return next(); }
   }
 
   // Show password form
@@ -45,7 +55,7 @@ ${req.query.error ? '<div class="err">Incorrect password.</div>' : ''}
 
 router.post('/admin/login', (req, res) => {
   const adminPass = process.env.ADMIN_PASSWORD;
-  if (req.body.password === adminPass) {
+  if (safeEqual(req.body.password, adminPass)) {
     req.session.isAdmin = true;
     return req.session.save(() => res.redirect('/admin'));
   }
