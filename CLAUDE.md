@@ -63,8 +63,24 @@ Maal is "the all-in-one for everyday Australians" — a CFO-level advisor (AI ne
 - New dashboard pages: /dashboard/{ask,research,radar,assets,vault,transactions,goals,settings} + legacy {scores,recommendations,accounts,profile,history,portfolio,tools}
 - Migration `1749600000000_snapshots_plan_basiq.js` adds snapshots table + users.plan + users.basiq_user_id
 
+## AI Advisor Upgrade Plan (2026-06-28)
+
+Ordered implementation steps — each builds on the last:
+
+1. **RAG wiring** ✅ — `retrieveAndFormat()` called inside `chat()`, knowledge_chunks already embedded (41 AU financial articles)
+2. **Enriched system prompt** ✅ — transactions (30d), goals, net-worth trend (90d), cash runway passed as `extra` to `buildSystemPrompt()`
+3. **Injection guardrails** ✅ — pattern check before advisor call; `<user_preferences>` XML wrapper; `<document>` wrapper on vault docs
+4. **Server-side conversation persistence** (next) — `advisor_sessions` + `advisor_messages` tables; `db/advisor.js`; history survives page refresh
+5. **Isaacus legal/tax integration** — Isaacus (https://isaacus.com) is an AU legal AI provider. Route legal/tax questions to Isaacus API, general financial education stays on main LLM. Needs: `ISAACUS_API_KEY` env var, `services/isaacus.js` wrapper, topic-classifier in `/ask/message` handler to detect legal/tax intent. Add to `/health` check. See project memory for details.
+6. **Tool calling** — `get_score_breakdown`, `get_cashflow_summary`, `get_net_worth_trend`, `calculate_tax_estimate`, `get_goals_summary` via OpenAI function-calling format
+7. **SSE streaming** — `POST /dashboard/ask/stream`, `X-Accel-Buffering: no`, client reads token-by-token
+8. **Knowledge base gaps** — add AU articles: Centrelink thresholds, FHSSS, salary sacrifice, concessional catch-up, debt recycling
+9. **Context summarisation** — auto-compress sessions >20 turns
+
+Env vars needed for full advisor: `AZURE_OPENAI_ENDPOINT/_API_KEY/_DEPLOYMENT/_API_VERSION`, `ISAACUS_API_KEY` (for legal/tax routing), `FINNHUB_API_KEY`, `BING_SEARCH_KEY`
+
 ## Env vars (Render)
-DATABASE_URL, SESSION_SECRET, BASE_URL, RESEND_API_KEY/EMAIL_FROM, ADMIN_PASSWORD, GOOGLE_CLIENT_ID/SECRET, TWILIO_*, plus integrations: BASIQ_API_KEY, STRIPE_SECRET_KEY; AI: **AZURE_OPENAI_ENDPOINT/_API_KEY/_DEPLOYMENT/_API_VERSION** (preferred) or GROQ_API_KEY or AI_API_KEY/AI_BASE_URL/AI_MODEL; real-time data: FINNHUB_API_KEY, BING_SEARCH_KEY (+ optional BING_SEARCH_ENDPOINT), MAAL_WATCHLIST; radar cron: RADAR_CRON_SECRET
+DATABASE_URL, SESSION_SECRET, BASE_URL, RESEND_API_KEY/EMAIL_FROM, ADMIN_PASSWORD, GOOGLE_CLIENT_ID/SECRET, TWILIO_*, plus integrations: BASIQ_API_KEY, STRIPE_SECRET_KEY; AI: **AZURE_OPENAI_ENDPOINT/_API_KEY/_DEPLOYMENT/_API_VERSION** (preferred) or GROQ_API_KEY or AI_API_KEY/AI_BASE_URL/AI_MODEL; real-time data: FINNHUB_API_KEY, BING_SEARCH_KEY (+ optional BING_SEARCH_ENDPOINT), MAAL_WATCHLIST; radar cron: RADAR_CRON_SECRET; legal AI: ISAACUS_API_KEY
 
 ## Key architecture (2026-06-12 additions)
 - **Tax Impact**: `lib/tax.js` — FY25-26 resident brackets + 2% Medicare + new marginal HECS (15c $67k–$125k, 17c above). Widget on overview; indicative only
