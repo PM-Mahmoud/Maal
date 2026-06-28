@@ -150,7 +150,8 @@ function buildDocsSection(docs) {
     parts.join('\n\n');
 }
 
-function buildSystemPrompt(user, profile, maal, docs) {
+function buildSystemPrompt(user, profile, maal, docs, extra = {}) {
+  const { transactions = [], snapshots = [], goals = [], cashRunway = null } = extra;
   const p = profile || {};
   const lines = [
     'You are Maal, a warm, sharp CFO-level financial advisor inside the Maal app — the all-in-one for everyday Australians.',
@@ -185,18 +186,62 @@ function buildSystemPrompt(user, profile, maal, docs) {
     lines.push('Their Maal Score (composite financial wellbeing, 0-100) is ' + maal.score + ' (' + maal.band + '). Pillars: ' +
       maal.pillars.map(function(pl) { return pl.label + ' ' + pl.score + '/100'; }).join(', ') + '.');
   }
+  // Goals section
+  if (goals.length > 0) {
+    lines.push('');
+    lines.push('Financial goals:');
+    goals.slice(0, 5).forEach(function(g) {
+      var pct = Number(g.target) > 0 ? Math.round((Number(g.current || 0) / Number(g.target)) * 100) : 0;
+      lines.push('- ' + g.name + ': ' + aud(g.current || 0) + ' of ' + aud(g.target || 0) + ' (' + pct + '% complete)');
+    });
+  }
+  // Cash runway
+  if (cashRunway !== null) {
+    lines.push('Cash runway: approximately ' + cashRunway + ' months at current monthly expenses.');
+  }
+  // Recent cashflow
+  if (transactions.length > 0) {
+    var inflow = transactions.filter(function(tx) { return Number(tx.amount) > 0; }).reduce(function(s, tx) { return s + Number(tx.amount); }, 0);
+    var outflow = transactions.filter(function(tx) { return Number(tx.amount) < 0; }).reduce(function(s, tx) { return s + Number(tx.amount); }, 0);
+    lines.push('');
+    lines.push('Recent cashflow (last 30 days): ' + aud(inflow) + ' in, ' + aud(Math.abs(outflow)) + ' out.');
+  }
+  // Net worth trend
+  if (snapshots.length >= 2) {
+    var first = snapshots[0];
+    var last = snapshots[snapshots.length - 1];
+    var delta = Number(last.net_worth || 0) - Number(first.net_worth || 0);
+    var sign = delta >= 0 ? '+' : '';
+    lines.push('Net worth trend (' + snapshots.length + ' days): ' + sign + aud(delta) + ' change.');
+  }
   return lines.join('\n') + buildDocsSection(docs);
 }
+
+const { retrieveAndFormat } = require('../lib/rag');
+const { hasEmbeddings } = require('./embeddings');
 
 const FALLBACK_REPLY =
   "I'm not fully switched on yet — no AI provider is configured in this environment. " +
   'Add AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, and AZURE_OPENAI_DEPLOYMENT on the server to enable me. ' +
   'In the meantime, try adding your assets and liabilities so your dashboard and Maal Score stay accurate.';
 
-async function chat(user, profile, maal, messages, docs) {
+async function chat(user, profile, maal, messages, docs, extra = {}) {
   if (!hasAdvisor()) return FALLBACK_REPLY;
+  // RAG: retrieve relevant knowledge chunks for the latest user message
+  var knowledgeSection = '';
+  if (hasEmbeddings()) {
+    var lastUserMsg = messages.slice().reverse().find(function(m) { return m.role === 'user'; });
+    if (lastUserMsg) {
+      try {
+        var ragResult = await retrieveAndFormat(lastUserMsg.content, { topK: 4, minScore: 0.35 });
+        knowledgeSection = ragResult.section || '';
+      } catch (ragErr) {
+        console.error('[advisor] RAG retrieval failed:', ragErr.message);
+      }
+    }
+  }
   return complete([
-    { role: 'system', content: buildSystemPrompt(user, profile, maal, docs) },
+    { role: 'system', content: buildSystemPrompt(user, profile, maal, docs, extra) + knowledgeSection },
     ...messages.slice(-10),
   ], { maxTokens: 600, temperature: 0.6 }); // chat always uses cheap tier
 }

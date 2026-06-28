@@ -210,7 +210,7 @@ router.get('/', async (req, res) => {
 
 router.post('/ask/message', aiLimiter, async (req, res) => {
   try {
-    const { messages } = req.body; // [{role:'user'|'assistant', content:string}, ...]
+    const { messages } = req.body;
     if (!Array.isArray(messages) || !messages.length) {
       return res.status(400).json({ error: 'No messages.' });
     }
@@ -218,12 +218,39 @@ router.post('/ask/message', aiLimiter, async (req, res) => {
       .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
       .map(m => ({ role: m.role, content: m.content.slice(0, 2000) }));
 
+    // Prompt injection guard
+    const INJECTION_PATTERNS = [
+      /ignore (all |previous |prior |the |your )?(instructions|rules|constraints|guidelines)/i,
+      /disregard.{0,40}(instructions|prompt|system)/i,
+      /you are now/i,
+      /new persona/i,
+      /reveal.{0,30}(system prompt|instructions|context)/i,
+      /output.{0,30}(system prompt|context|all instructions)/i,
+    ];
+    const latestUserMsg = [...clean].reverse().find(m => m.role === 'user');
+    if (latestUserMsg && INJECTION_PATTERNS.some(p => p.test(latestUserMsg.content))) {
+      console.warn('[advisor] Possible prompt injection by user', req.session.userId);
+      return res.json({ ok: true, reply: "I can only answer financial education questions about tax, super, investing, and wealth building in Australia. What would you like to learn about?", live: advisor.hasAdvisor() });
+    }
+
     const { user, profile } = await dashboardContext(req);
     const maal = computeMaalScore(profile);
     let docs = [];
     try { docs = await vaultDb.getReadableDocs(req.session.userId); }
     catch (e) { console.error('vault docs for advisor failed:', e.message); }
-    const reply = await advisor.chat(user, profile, maal, clean, docs);
+
+    // Fetch enriched context for the advisor
+    const [txns, snaps, goals] = await Promise.all([
+      getTxnsSince(req.session.userId, 30).catch(() => []),
+      getSnapshots(req.session.userId, 90).catch(() => []),
+      goalsDb.listGoals(req.session.userId).catch(() => []),
+    ]);
+    const cashSavings = Number(profile.cash_savings || 0);
+    const monthlyExpenses = Number(profile.monthly_expenses || 0);
+    const cashRunway = monthlyExpenses > 0 ? Math.round(cashSavings / monthlyExpenses) : null;
+    const extra = { transactions: txns, snapshots: snaps, goals, cashRunway };
+
+    const reply = await advisor.chat(user, profile, maal, clean, docs, extra);
     res.json({ ok: true, reply, live: advisor.hasAdvisor() });
   } catch (err) {
     console.error('ask/message error:', err.message);
