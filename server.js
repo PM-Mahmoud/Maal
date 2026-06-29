@@ -45,7 +45,7 @@ if (!process.env.DATABASE_URL) {
 // for signature verification. The route itself uses express.raw() instead.
 app.use((req, res, next) => {
   if (req.path === '/billing/webhook') return next();
-  express.json()(req, res, next);
+  express.json({ limit: '50kb' })(req, res, next);
 });
 app.use((req, res, next) => {
   if (req.path === '/billing/webhook') return next();

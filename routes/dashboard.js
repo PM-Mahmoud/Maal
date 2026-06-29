@@ -30,6 +30,7 @@ const multer = require('multer');
 const { superProjection, monteCarlo } = require('../lib/calc');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const advisor = require('../services/advisor');
+const advisorDb = require('../db/advisor');
 const basiqService = require('../services/basiq');
 
 // ─── Auth guard middleware ─────────────────────────────────────────────────
@@ -251,10 +252,67 @@ router.post('/ask/message', aiLimiter, async (req, res) => {
     const extra = { transactions: txns, snapshots: snaps, goals, cashRunway };
 
     const reply = await advisor.chat(user, profile, maal, clean, docs, extra);
+
+    // Persist the exchange if a sessionId was provided
+    const sessionId = req.body.sessionId ? Number(req.body.sessionId) : null;
+    if (sessionId) {
+      try {
+        await advisorDb.appendMessage(sessionId, 'user', latestUserMsg?.content || '');
+        await advisorDb.appendMessage(sessionId, 'assistant', reply);
+      } catch (persistErr) {
+        console.error('advisor persist error:', persistErr.message);
+        // Non-fatal — don't fail the response
+      }
+    }
+
     res.json({ ok: true, reply, live: advisor.hasAdvisor() });
   } catch (err) {
     console.error('ask/message error:', err.message);
     res.status(500).json({ error: 'The advisor hit a snag — try again in a moment.' });
+  }
+});
+
+// ─── Advisor session management ───────────────────────────────────────────────
+
+router.post('/ask/session', async (req, res) => {
+  try {
+    const firstMsg = req.body.firstMessage || 'New conversation';
+    const sessionId = await advisorDb.createSession(req.session.userId, firstMsg);
+    res.json({ ok: true, sessionId });
+  } catch (err) {
+    console.error('create advisor session error:', err.message);
+    res.status(500).json({ error: 'Failed to create session.' });
+  }
+});
+
+router.get('/ask/sessions', async (req, res) => {
+  try {
+    const sessions = await advisorDb.listSessions(req.session.userId);
+    res.json({ ok: true, sessions });
+  } catch (err) {
+    console.error('list advisor sessions error:', err.message);
+    res.status(500).json({ error: 'Failed to load sessions.' });
+  }
+});
+
+router.get('/ask/session/:id', async (req, res) => {
+  try {
+    const messages = await advisorDb.getMessages(Number(req.params.id), req.session.userId);
+    if (messages === null) return res.status(404).json({ error: 'Session not found.' });
+    res.json({ ok: true, messages });
+  } catch (err) {
+    console.error('get advisor session error:', err.message);
+    res.status(500).json({ error: 'Failed to load session.' });
+  }
+});
+
+router.delete('/ask/session/:id', async (req, res) => {
+  try {
+    await advisorDb.deleteSession(Number(req.params.id), req.session.userId);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('delete advisor session error:', err.message);
+    res.status(500).json({ error: 'Failed to delete session.' });
   }
 });
 
@@ -1064,7 +1122,8 @@ router.get('/projections/what-if', async (req, res) => {
 
     res.json({ ok: true, projection, mc, extra });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('/projections error:', err.message);
+    res.status(500).json({ error: 'Projection failed. Please try again.' });
   }
 });
 

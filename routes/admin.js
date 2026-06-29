@@ -53,7 +53,7 @@ ${req.query.error ? '<div class="err">Incorrect password.</div>' : ''}
 </div></body></html>`);
 }
 
-router.post('/admin/login', (req, res) => {
+router.post('/admin/login', authLimiter, (req, res) => {
   const adminPass = process.env.ADMIN_PASSWORD;
   if (safeEqual(req.body.password, adminPass)) {
     req.session.isAdmin = true;

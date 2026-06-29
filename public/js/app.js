@@ -697,8 +697,12 @@
     });
   }
 
-  /* ─── 7. Shared advisor chat (DeepSeek via /dashboard/ask/message) ── */
-  function makeChatSession(threadEl) {
+  /* ─── 7. Shared advisor chat (session-persistent via /dashboard/ask/*) ── */
+  var _advisorSessionId = null; // persisted session for the Ask Maal page
+
+  function makeChatSession(threadEl, opts) {
+    // opts.persistent: if true, this session creates/resumes a server-side session
+    var isPersistent = opts && opts.persistent;
     var history = [];
     function bubble(role, text) {
       var el = document.createElement('div');
@@ -709,6 +713,7 @@
       el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       return el;
     }
+
     return function send(text) {
       bubble('user', text);
       history.push({ role: 'user', content: text });
@@ -716,22 +721,39 @@
       typing.style.opacity = '0.6';
       typing.setAttribute('role', 'status');
       typing.setAttribute('aria-live', 'polite');
-      fetch('/dashboard/ask/message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history })
-      }).then(function (r) { return r.json(); }).then(function (j) {
-        typing.style.opacity = '';
-        if (j.ok) {
-          typing.textContent = j.reply;
-          history.push({ role: 'assistant', content: j.reply });
-        } else {
-          typing.textContent = j.error || 'Something went wrong — try again.';
-        }
-        typing.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }).catch(function () {
-        typing.style.opacity = '';
-        typing.textContent = 'Connection hiccup — try again in a moment.';
+
+      // Create server-side session on first user message (persistent sessions only)
+      var sessionPromise = Promise.resolve();
+      if (isPersistent && !_advisorSessionId) {
+        sessionPromise = fetch('/dashboard/ask/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ firstMessage: text }),
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d.sessionId) _advisorSessionId = d.sessionId;
+        }).catch(function () { /* non-fatal */ });
+      }
+
+      sessionPromise.then(function () {
+        var body = { messages: history };
+        if (isPersistent && _advisorSessionId) body.sessionId = _advisorSessionId;
+        fetch('/dashboard/ask/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        }).then(function (r) { return r.json(); }).then(function (j) {
+          typing.style.opacity = '';
+          if (j.ok) {
+            typing.textContent = j.reply;
+            history.push({ role: 'assistant', content: j.reply });
+          } else {
+            typing.textContent = j.error || 'Something went wrong — try again.';
+          }
+          typing.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }).catch(function () {
+          typing.style.opacity = '';
+          typing.textContent = 'Connection hiccup — try again in a moment.';
+        });
       });
     };
   }
@@ -739,7 +761,30 @@
   /* Ask Maal page */
   var askSend = $('#ask-send');
   if (askSend) {
-    var askChat = makeChatSession($('#ask-thread'));
+    var askThreadEl = $('#ask-thread');
+    var askChat = makeChatSession(askThreadEl, { persistent: true });
+
+    // Load most-recent session history on page open
+    (function loadAdvisorSession() {
+      fetch('/dashboard/ask/sessions').then(function (r) { return r.json(); }).then(function (data) {
+        if (!data.sessions || !data.sessions.length) return;
+        var latest = data.sessions[0];
+        _advisorSessionId = latest.id;
+        return fetch('/dashboard/ask/session/' + latest.id).then(function (r) { return r.json(); });
+      }).then(function (msgData) {
+        if (!msgData || !msgData.messages || !msgData.messages.length) return;
+        askThreadEl.style.display = 'flex';
+        msgData.messages.forEach(function (m) {
+          var el = document.createElement('div');
+          el.className = 'chat-msg ' + (m.role === 'user' ? 'me' : 'bot');
+          el.textContent = m.content;
+          askThreadEl.appendChild(el);
+        });
+        var last = askThreadEl.lastElementChild;
+        if (last) last.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+      }).catch(function () { /* non-fatal — fresh session starts on first send */ });
+    })();
+
     askSend.addEventListener('click', function () {
       var input = $('#ask-input');
       var text = input.value.trim();
@@ -758,7 +803,7 @@
     });
   }
 
-  /* Floating chat widget (markup lives in app-layout) */
+  /* Floating chat widget (markup lives in app-layout) — ephemeral, no persistence */
   var widgetSend = $('#chat-send');
   if (widgetSend && $('#chat-body')) {
     var widgetChat = makeChatSession($('#chat-body'));
@@ -790,10 +835,10 @@
       if (sources.length) {
         src.innerHTML = '<div class="row-sub" style="font-weight:600; margin-bottom:0.3rem;">Sources</div>' +
           sources.map(function (s, i) {
-            var safeUrl = (typeof s.url === 'string' && s.url.startsWith('https://')) ? esc(s.url) : '#';
+            var safeUrl = (typeof s.url === 'string' && s.url.startsWith('https://')) ? escapeHtml(s.url) : '#';
             return '<div class="row-sub" style="padding:0.15rem 0;">[' + (i + 1) + '] <a href="' + safeUrl +
-              '" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">' + esc(s.title || s.url) + '</a>' +
-              (s.source ? ' · ' + esc(s.source) : '') + '</div>';
+              '" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">' + escapeHtml(s.title || s.url) + '</a>' +
+              (s.source ? ' · ' + escapeHtml(s.source) : '') + '</div>';
           }).join('');
       } else { src.innerHTML = ''; }
       reportEl.style.display = '';

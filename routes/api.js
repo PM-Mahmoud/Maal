@@ -66,6 +66,7 @@ router.post('/auth/signup', async (req, res) => {
     if (existing) return res.status(409).json({ error: 'Email already in use' });
     const hash = await bcrypt.hash(password, 12);
     const user = await createUser({ email: email.toLowerCase().trim(), passwordHash: hash, provider: 'email' });
+    await new Promise((resolve, reject) => req.session.regenerate(e => e ? reject(e) : resolve()));
     req.session.userId = user.id;
     req.session.userEmail = user.email;
     await new Promise((ok, err) => req.session.save(e => e ? err(e) : ok()));
@@ -170,7 +171,7 @@ router.post('/v1/basiq/sync', async (req, res) => {
     res.json({ ok: true, accounts: accounts.length });
   } catch (err) {
     console.error('basiq sync error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Sync failed. Please try again.' });
   }
 });
 
