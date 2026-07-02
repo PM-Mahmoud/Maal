@@ -4,6 +4,9 @@
 # Installed by `npm install` (see scripts/install-hooks.js) into .git/hooks/pre-commit.
 # Edit THIS file (.claude/hooks/pre-commit), not .git/hooks/pre-commit directly —
 # the latter is regenerated on every install and is not tracked by git.
+#
+# Patterns live in .claude/hooks/secret-patterns.txt, shared with
+# scripts/ci-secret-scan.sh so local and CI checks can't drift apart.
 
 set -euo pipefail
 
@@ -12,39 +15,32 @@ if [ -z "$staged" ]; then
   exit 0
 fi
 
-# Patterns for known secret shapes used by Maal's integrations.
-# Keep this list in sync with the "Env vars" section of CLAUDE.md.
-PATTERNS=(
-  'sk_live_[A-Za-z0-9]+'                 # Stripe live secret key
-  'sk_test_[A-Za-z0-9]{20,}'             # Stripe test secret key (still shouldn't be committed)
-  're_[A-Za-z0-9_]{20,}'                 # Resend API key
-  'AZURE_OPENAI_API_KEY\s*=\s*[A-Za-z0-9]{20,}'
-  'BASIQ_API_KEY\s*=\s*[A-Za-z0-9]{20,}'
-  'postgres(ql)?://[^:]+:[^@]+@'         # DATABASE_URL with embedded credentials
-  '-----BEGIN [A-Z ]*PRIVATE KEY-----'
-)
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PATTERNS_FILE="$HOOK_DIR/secret-patterns.txt"
 
 found=0
 for f in $staged; do
-  # Skip binary files and this hook's own source.
-  if [ "$f" = ".claude/hooks/pre-commit" ]; then continue; fi
+  # Skip binary files and the hook's own source/pattern file.
+  if [ "$f" = ".claude/hooks/pre-commit" ] || [ "$f" = ".claude/hooks/secret-patterns.txt" ]; then continue; fi
   if ! git diff --cached -- "$f" | grep -Iq .; then continue; fi
 
-  for pat in "${PATTERNS[@]}"; do
+  while IFS= read -r pat; do
+    [ -z "$pat" ] && continue
+    case "$pat" in \#*) continue ;; esac
     hit=$(git diff --cached -U0 -- "$f" | grep -E '^\+' | grep -Ev '^\+\+\+' | grep -E -e "$pat" || true)
     if [ -n "$hit" ]; then
       echo "pre-commit: possible secret in $f (pattern: $pat)"
       echo "$hit" | sed 's/^/    /'
       found=1
     fi
-  done
+  done < "$PATTERNS_FILE"
 done
 
 if [ "$found" -eq 1 ]; then
   echo ""
   echo "Blocked: staged changes look like they contain a real credential."
   echo "If this is a false positive (e.g. an env var NAME with a placeholder value),"
-  echo "adjust the value or add a narrower exception to .claude/hooks/pre-commit."
+  echo "adjust the value or add a narrower exception to .claude/hooks/secret-patterns.txt."
   exit 1
 fi
 
