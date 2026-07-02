@@ -7,8 +7,9 @@
     "dev": "node server.js",
     "build": "npm run migrate && npm run build:client",
     "migrate": "node migrate.js",
-    "test": "node test/calc.test.js",
-    "build:client": "cd client && npm install && npm run build"
+    "test": "node test/calc.test.js && node test/basiq-sync.test.js",
+    "build:client": "cd client && npm install && npm run build",
+    "prepare": "node scripts/install-hooks.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

@@ -2,12 +2,13 @@
 // Basiq transactions persisted at sync time (see routes/basiq.js).
 
 const { pool } = require('./auth');
+const { mapBasiqTransaction } = require('../lib/basiq-mapping');
 
 async function upsertBasiqTransactions(userId, txns) {
   let saved = 0;
-  for (const t of txns) {
-    if (!t || !t.id) continue;
-    const postDate = (t.postDate || t.transactionDate || '').slice(0, 10) || null;
+  for (const raw of txns) {
+    const t = mapBasiqTransaction(raw);
+    if (!t) continue;
     await pool.query(
       `INSERT INTO transactions (user_id, basiq_id, description, amount, status, post_date)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -16,11 +17,7 @@ async function upsertBasiqTransactions(userId, txns) {
              amount = EXCLUDED.amount,
              status = EXCLUDED.status,
              post_date = EXCLUDED.post_date`,
-      [userId, t.id,
-       (t.description || (t.subClass && t.subClass.title) || '').slice(0, 500),
-       Number(t.amount) || 0,
-       t.status || null,
-       postDate]
+      [userId, t.basiq_id, t.description, t.amount, t.status, t.post_date]
     );
     saved++;
   }

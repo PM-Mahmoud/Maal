@@ -9,6 +9,7 @@ const express = require('express');
 const router = express.Router();
 
 const basiq = require('../services/basiq');
+const { mapBasiqAccount } = require('../lib/basiq-mapping');
 const { findUserById, setBasiqUserId } = require('../db/users');
 const { getAccountsByUserId, addAccount, deleteAccount } = require('../db/linked_accounts');
 const { upsertBasiqTransactions } = require('../db/transactions');
@@ -55,12 +56,7 @@ async function syncAccountsToDb(req) {
     }
   }
   for (const acc of accounts) {
-    await addAccount(req.session.userId, {
-      institution_name: (acc.institution && acc.institution.replace('AU', '')) || acc.name || 'Bank account',
-      institution_type: acc.class && acc.class.type ? acc.class.type : 'bank',
-      account_reference: 'basiq:' + acc.id,
-      balance: Math.round(Number(acc.balance) || 0),
-    });
+    await addAccount(req.session.userId, mapBasiqAccount(acc));
   }
 
   // Persist transactions too — the dashboard widget and transactions page

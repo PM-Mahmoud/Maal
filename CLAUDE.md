@@ -63,6 +63,40 @@ Maal is "the all-in-one for everyday Australians" — a CFO-level advisor (AI ne
 - New dashboard pages: /dashboard/{ask,research,radar,assets,vault,transactions,goals,settings} + legacy {scores,recommendations,accounts,profile,history,portfolio,tools}
 - Migration `1749600000000_snapshots_plan_basiq.js` adds snapshots table + users.plan + users.basiq_user_id
 
+## Agentic engineering hard rules (2026-07-02)
+
+Maal touches consumer financial data through Basiq, a CDR (Consumer Data Right) intermediary.
+These rules exist because "looks right" is not sufficient assurance for code that touches
+that data path. They apply to every agent session, not just this one.
+
+**Never violate:**
+- Never log, print, or commit a real `BASIQ_API_KEY`, Basiq access/refresh token, Azure OpenAI
+  key, Stripe secret key, or any user PII (email, balance, transaction description) to console
+  output that could land in a committed log file.
+- Never call the Basiq API, Stripe, or Azure OpenAI against production credentials from a
+  dev/test branch. `services/basiq.js` reads `BASIQ_API_KEY` from env only — never hardcode.
+- Treat all data returned by Basiq (`services/basiq.js` `getAccounts`/`getTransactions`) as PII
+  until it's been through the existing mapping/sanitisation layer.
+- Never modify a migration that touches `users`, `linked_accounts`, `transactions`, or
+  `session` without flagging it for human review — do not auto-apply to production.
+- Financial calculations and Basiq data-mapping logic (balance rounding, transaction field
+  coercion, score/tax/projection math) must be covered by a deterministic test in `test/`
+  before merge — never "looks right" verification alone.
+- Ownership checks replace RLS here: Maal has no Supabase/RLS layer — every query against a
+  per-user table (`linked_accounts`, `transactions`, `goals`, `vault_files`,
+  `advisor_sessions`, etc.) must filter by `user_id`/`req.session.userId` in the SQL itself
+  (see `db/advisor.js` `getMessages` for the pattern). A missing `WHERE user_id = $N` is an
+  IDOR bug, not a style issue.
+
+**Workflow:**
+- Read `/specs/<feature>.md` before implementing a feature that has one.
+- Run `npm test` before opening a PR that touches `lib/`, `db/transactions.js`,
+  `db/linked_accounts.js`, or `services/basiq.js`.
+- On a failing test: read the error, retry the fix up to 3 times in the same session, then
+  stop and report to the human rather than guessing further.
+- Basiq/Stripe dev work always targets sandbox credentials — this is enforced by the
+  pre-commit hook in `.claude/hooks/pre-commit`, not just convention.
+
 ## AI Advisor Upgrade Plan (2026-06-28)
 
 Ordered implementation steps — each builds on the last:
