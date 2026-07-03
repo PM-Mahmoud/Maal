@@ -19,6 +19,7 @@
   --accent-soft: #DEF7F4;
   --accent-softer: #F1FCFA;
   --accent-bar: #5FE3D1;
+  --mint: var(--accent);
   --ink: #0E0E10;
   --on-ink: #FFFFFF;
   --gold: #C2701E;
@@ -727,7 +728,7 @@ body::before {
   border-bottom: 1px solid var(--border);
 }
 .lv-header-inner {
-  max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; height: 64px;
+  max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; height: 72px;
   display: flex; align-items: center; justify-content: space-between;
 }
 .lv-header-left { display: flex; align-items: center; gap: 2.5rem; }
@@ -741,7 +742,7 @@ body::before {
 .lv-header-login { font-size: 13px; font-weight: 500; color: var(--fg-muted); text-decoration: none; transition: color .2s; }
 .lv-header-login:hover { color: var(--fg); }
 .lv-header-cta {
-  background: var(--fg); color: #fff; font-size: 13px; font-weight: 600;
+  background: var(--ink); color: var(--on-ink); font-size: 13px; font-weight: 600;
   padding: .5rem 1rem; border-radius: 8px; text-decoration: none;
   transition: opacity .15s, transform .1s;
 }
@@ -749,7 +750,7 @@ body::before {
 .lv-header-cta:active { transform: scale(.98); }
 .lv-hamburger { display: none; background: none; border: none; cursor: pointer; padding: .25rem; color: var(--fg); }
 .lv-mobile-menu {
-  display: none; position: fixed; inset: 0; top: 67px;
+  display: none; position: fixed; inset: 0; top: 75px;
   background: rgba(251,251,251,.97); backdrop-filter: blur(16px);
   z-index: 39; padding: 1.5rem; flex-direction: column; gap: 0;
 }
@@ -763,14 +764,19 @@ body::before {
 }
 
 /* ─── Hero v2 ─────────────────────────────────────────── */
-.lv-hero { padding: 4rem 1.5rem 2.5rem; }
-@media (min-width: 768px) { .lv-hero { padding: 6rem 1.5rem 3.5rem; } }
-.lv-hero-inner { max-width: 768px; margin: 0 auto; }
+.lv-hero { padding: 4rem 1.5rem 3rem; }
+@media (min-width: 768px) { .lv-hero { padding: 5.5rem 1.5rem 5rem; } }
+.lv-hero-2col { max-width: 1200px; margin: 0 auto; display: grid; gap: 3rem; }
+@media (min-width: 980px) {
+  .lv-hero-2col { grid-template-columns: 1.1fr .9fr; align-items: center; gap: 4rem; }
+}
+.lv-hero-inner { max-width: 640px; }
+.lv-hero-card-col { width: 100%; }
 .lv-hero-kicker { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .18em; color: var(--fg-muted); margin-bottom: 1.5rem; }
 .lv-hero-h1 { font-size: clamp(2.8rem, 8vw, 5rem); line-height: .98; letter-spacing: -.03em; font-weight: 700; margin-bottom: 1.75rem; text-wrap: balance; }
 .lv-hero-sub { font-size: clamp(15px, 2vw, 19px); color: var(--fg-muted); line-height: 1.65; max-width: 58ch; margin-bottom: 2.25rem; }
 .lv-hero-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; margin-bottom: 1.25rem; }
-.lv-hero-primary { background: var(--fg); color: #fff; font-size: 14px; font-weight: 600; padding: .75rem 1.25rem; border-radius: 8px; text-decoration: none; transition: opacity .15s, transform .1s; }
+.lv-hero-primary { background: var(--ink); color: var(--on-ink); font-size: 14px; font-weight: 600; padding: .75rem 1.25rem; border-radius: 8px; text-decoration: none; transition: opacity .15s, transform .1s; }
 .lv-hero-primary:hover { opacity: .88; }
 .lv-hero-primary:active { transform: scale(.98); }
 .lv-hero-secondary { font-size: 14px; font-weight: 600; color: var(--fg); text-decoration: none; padding: .25rem .5rem; opacity: .7; transition: opacity .15s; }
@@ -790,7 +796,8 @@ body::before {
 .lv-score-out-of { font-size: 20px; color: var(--fg-muted); }
 .lv-score-bar-wrap { height: 6px; border-radius: 9999px; background: var(--surface-2); overflow: hidden; margin-bottom: 1.5rem; }
 .lv-score-bar-fill { height: 100%; border-radius: 9999px; background: var(--fg); width: 0; transition: width 1.4s cubic-bezier(.2,.7,.2,1); }
-.lv-score-caption { text-align: center; padding-top: 1.25rem; border-top: 1px solid var(--border); font-size: 12px; color: var(--fg-muted); }
+.lv-score-insight { margin-top: 1.5rem; display: flex; align-items: center; gap: .5rem; padding: .625rem .75rem; border-radius: 10px; background: var(--surface-2); font-size: 12px; font-weight: 500; color: var(--fg); }
+.lv-score-caption { text-align: center; padding-top: 1.25rem; margin-top: 1.25rem; border-top: 1px solid var(--border); font-size: 12px; color: var(--fg-muted); }
 
 /* ─── Principles strip ────────────────────────────────── */
 .lv-principles { padding: 3.5rem 1.5rem 5rem; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: rgba(244,244,245,.4); }
@@ -846,7 +853,9 @@ body::before {
 .lv-why-inner { max-width: 1280px; margin: 0 auto; }
 .lv-why-kicker { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .18em; color: var(--fg-muted); margin-bottom: 1rem; }
 .lv-why-h2 { font-size: clamp(1.35rem,2.8vw,2.25rem); font-weight: 700; letter-spacing: -.03em; line-height: 1.3; max-width: 48rem; margin-bottom: 3rem; }
+.lv-why-h2 { margin-bottom: 1.25rem; }
 .lv-why-h2 em { font-style: normal; color: var(--mint); }
+.lv-why-lede { font-size: clamp(14px,1.6vw,17px); color: var(--fg-muted); line-height: 1.7; max-width: 46rem; margin-bottom: 3rem; }
 .lv-why-list { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .lv-why-item { display: grid; grid-template-columns: 200px 1fr; gap: 2rem; padding: 1.5rem 0; border-bottom: 1px solid var(--border); }
 .lv-why-item:last-child { border-bottom: none; }
@@ -876,14 +885,14 @@ body::before {
 .lv-price-cta:hover { opacity: .82; }
 .lv-price-cta.outline { border: 1px solid var(--border); color: var(--fg); background: transparent; }
 .lv-price-cta.outline:hover { background: var(--surface-2); opacity: 1; }
-.lv-price-cta.solid { background: var(--fg); color: #fff; }
+.lv-price-cta.solid { background: var(--ink); color: var(--on-ink); }
 
 /* ─── CTA section ─────────────────────────────────────── */
 .lv-cta { padding: 5rem 1.5rem; border-top: 1px solid var(--border); text-align: center; }
 .lv-cta-h2 { font-size: clamp(1.75rem,3vw,2.5rem); font-weight: 700; letter-spacing: -.03em; line-height: 1.15; margin-bottom: 1.25rem; }
 .lv-cta-sub { font-size: 15px; color: var(--fg-muted); max-width: 40ch; margin: 0 auto 2rem; }
 .lv-cta-actions { display: flex; justify-content: center; gap: .75rem; flex-wrap: wrap; }
-.lv-cta-primary { background: var(--fg); color: #fff; font-size: 14px; font-weight: 600; padding: .75rem 1.25rem; border-radius: 8px; text-decoration: none; transition: opacity .15s; }
+.lv-cta-primary { background: var(--ink); color: var(--on-ink); font-size: 14px; font-weight: 600; padding: .75rem 1.25rem; border-radius: 8px; text-decoration: none; transition: opacity .15s; }
 .lv-cta-primary:hover { opacity: .88; }
 .lv-cta-outline { border: 1px solid var(--border); color: var(--fg); font-size: 14px; font-weight: 600; padding: .75rem 1.25rem; border-radius: 8px; text-decoration: none; transition: background .15s; }
 .lv-cta-outline:hover { background: var(--surface-2); }
@@ -918,3 +927,22 @@ html.dark .lv-header, html[data-theme="dark"] .lv-header { background: rgba(10,1
 html.dark .lv-mobile-menu, html[data-theme="dark"] .lv-mobile-menu { background: rgba(10,10,11,.97); }
 html.dark .hover-lift:hover, html[data-theme="dark"] .hover-lift:hover { box-shadow: 0 24px 48px -24px rgba(0,0,0,.6), 0 0 0 1px rgba(45,212,196,.18); }
 html.dark .lv-footer-col a, html[data-theme="dark"] .lv-footer-col a { color: rgba(250,250,250,.8); }
+
+/* ─── Homepage refresh v1 — tap targets + final CTA block ─ */
+.lv-hero-primary, .lv-hero-secondary, .lv-cta-primary, .lv-cta-outline, .lv-header-cta, .lv-price-cta {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
+}
+
+/* Final CTA — contained inverted dark block */
+.lv-cta { border-top: none; padding: 5rem 1.5rem; }
+.lv-cta-block {
+  max-width: 1200px; margin: 0 auto; background: var(--ink); color: var(--on-ink);
+  border-radius: 24px; padding: 4rem 2rem; text-align: center;
+}
+.lv-cta-block .lv-cta-h2 { color: var(--on-ink); }
+.lv-cta-block .lv-cta-sub { color: rgba(255,255,255,.72); }
+.lv-cta-block .lv-cta-primary { background: var(--on-ink); color: var(--ink); }
+.lv-cta-block .lv-cta-primary:hover { opacity: .88; }
+.lv-cta-block .lv-cta-outline { border: 1px solid rgba(255,255,255,.28); color: var(--on-ink); background: transparent; }
+.lv-cta-block .lv-cta-outline:hover { background: rgba(255,255,255,.08); }
+html.dark .lv-cta-block, html[data-theme="dark"] .lv-cta-block { border: 1px solid var(--border); }
