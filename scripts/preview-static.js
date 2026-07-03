@@ -167,6 +167,7 @@ app.get('/assets', (_req, res, next) => {
     properties: [{ id: 1, label: 'Home', property_type: 'residential', value: '750000', mortgage_balance: '500000', source: 'manual' }],
     debts: [{ id: 1, label: 'Credit card', kind: 'credit_card', balance: '3000', interest_rate: '19.9', source: 'manual' }, { id: 2, label: 'Car loan', kind: 'loan', balance: '2000', interest_rate: '7.5', source: 'manual' }],
     superAccounts: [{ id: 1, label: 'Super fund', fund_name: 'AustralianSuper', balance: '35000', source: 'manual' }],
+    otherAssets: [{ id: 1, label: 'Car', kind: 'vehicle', value: '18000' }, { id: 2, label: 'Gold bars', kind: 'precious_metals', value: '5000' }],
   }).then(html => res.send(html)).catch(next);
 });
 app.get('/transactions', (_req, res, next) => {

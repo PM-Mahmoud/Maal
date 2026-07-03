@@ -506,21 +506,22 @@ router.get('/assets', async (req, res) => {
     const liveAccounts = allAccounts.filter(a => String(a.account_reference || '').startsWith('basiq:'));
     const connected = aggregateConnected(allAccounts);
 
-    // Real per-row data for the 5 granular tables — each can have multiple
+    // Real per-row data for the 6 granular tables — each can have multiple
     // rows per user (two properties, three debts at different rates).
-    const [cashAccounts, investments, properties, debts, superAccounts] = await Promise.all([
+    const [cashAccounts, investments, properties, debts, superAccounts, otherAssets] = await Promise.all([
       assetsDb.listCashAccounts(req.session.userId),
       assetsDb.listInvestments(req.session.userId),
       assetsDb.listProperties(req.session.userId),
       assetsDb.listDebts(req.session.userId),
       assetsDb.listSuperAccounts(req.session.userId),
+      assetsDb.listOtherAssets(req.session.userId),
     ]);
 
     res.render('dashboard-assets', {
       ...ctx, pageTitle: 'Assets & Liabilities',
       basiqEnabled: basiqService.hasBasiq(),
       liveAccounts, connected,
-      cashAccounts, investments, properties, debts, superAccounts,
+      cashAccounts, investments, properties, debts, superAccounts, otherAssets,
     });
   } catch (err) {
     console.error('/assets error:', err.message);
@@ -784,6 +785,7 @@ const ASSET_TYPES = {
   properties: { list: assetsDb.listProperties, get: assetsDb.getProperty, create: assetsDb.createProperty, update: assetsDb.updateProperty, del: assetsDb.deleteProperty },
   debts: { list: assetsDb.listDebts, get: assetsDb.getDebt, create: assetsDb.createDebt, update: assetsDb.updateDebt, del: assetsDb.deleteDebt },
   super: { list: assetsDb.listSuperAccounts, get: assetsDb.getSuperAccount, create: assetsDb.createSuperAccount, update: assetsDb.updateSuperAccount, del: assetsDb.deleteSuperAccount },
+  other: { list: assetsDb.listOtherAssets, get: assetsDb.getOtherAsset, create: assetsDb.createOtherAsset, update: assetsDb.updateOtherAsset, del: assetsDb.deleteOtherAsset },
 };
 
 async function refreshScoreAfterAssetChange(userId) {

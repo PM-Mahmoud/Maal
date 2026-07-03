@@ -650,6 +650,14 @@
         { key: 'balance', label: 'Balance (AUD)', type: 'number', required: true },
       ],
     },
+    other: {
+      label: 'other asset',
+      fields: [
+        { key: 'label', label: 'Name', type: 'text', placeholder: 'e.g. Car, gold, art' },
+        { key: 'kind', label: 'Type', type: 'select', options: { vehicle: 'Vehicle', precious_metals: 'Precious metals', private_investment: 'Private investment', collectible: 'Collectible', other: 'Other' } },
+        { key: 'value', label: 'Estimated value (AUD)', type: 'number', required: true },
+      ],
+    },
   };
 
   function rowModal(type, existingRow) {

@@ -7,10 +7,12 @@
   var propertyRows  = (typeof properties !== 'undefined' && properties) ? properties : [];
   var debtRows      = (typeof debts !== 'undefined' && debts) ? debts : [];
   var superRows     = (typeof superAccounts !== 'undefined' && superAccounts) ? superAccounts : [];
+  var otherRows     = (typeof otherAssets !== 'undefined' && otherAssets) ? otherAssets : [];
 
   var PROPERTY_TYPE_LABELS = { residential: 'Residential', commercial: 'Commercial' };
   var DEBT_KIND_LABELS = { credit_card: 'Credit card', mortgage: 'Mortgage', loan: 'Loan', other: 'Other debt' };
   var INVEST_KIND_LABELS = { shares: 'Shares', etf: 'ETF', crypto: 'Crypto', other: 'Other' };
+  var OTHER_KIND_LABELS = { vehicle: 'Vehicle', precious_metals: 'Precious metals', private_investment: 'Private investment', collectible: 'Collectible', other: 'Other' };
 %>
 
 <div class="page-head">
@@ -95,6 +97,28 @@
         <button class="btn btn-accent btn-sm" data-row-add data-row-type="investments">+ Add Investment</button>
         <button class="btn btn-ghost btn-sm" data-row-add data-row-type="properties">+ Add Property</button>
       </div>
+    </div>
+
+    <!-- ── Other assets: vehicles, precious metals, private investments, collectibles ── -->
+    <div class="panel" style="margin-bottom:1rem;">
+      <div class="panel-title">Other Assets</div>
+      <% otherRows.forEach(function(r) { %>
+        <div class="row-item">
+          <div><div class="row-main"><%= r.label || 'Other asset' %></div><div class="row-sub"><%= OTHER_KIND_LABELS[r.kind] || 'Other' %></div></div>
+          <div class="row-val"><%= aud(r.value) %></div>
+          <div class="row-actions">
+            <button class="btn-icon" data-row-edit data-row-type="other" data-row-id="<%= r.id %>" data-row-json='<%- JSON.stringify(r) %>' aria-label="Edit asset">✎</button>
+            <button class="btn-icon btn-icon-danger" data-row-delete data-row-type="other" data-row-id="<%= r.id %>" data-row-label="<%= r.label || 'Other asset' %>" aria-label="Remove asset">✕</button>
+          </div>
+        </div>
+      <% }); %>
+      <% if (!otherRows.length) { %>
+        <div class="empty">
+          <h3>No other assets yet</h3>
+          <p>Track vehicles, precious metals, private investments or collectibles.</p>
+        </div>
+      <% } %>
+      <button class="btn btn-accent btn-sm" data-row-add data-row-type="other">+ Add Other Asset</button>
     </div>
 
     <!-- ── Cash ── -->
