@@ -103,6 +103,17 @@ async function autoRecalcScores(userId, profile) {
       score_breakdown: {},
       diagnosis: null,
     });
+    // Maal Score snapshot — the single composite wellbeing score shown on the
+    // dashboard hero ring and the /scores page. Same throttle/cadence as above.
+    const maal = computeMaalScore(profile);
+    await saveScore(userId, {
+      score_type: 'maal_score',
+      score_value: maal.score,
+      grade: maal.band,
+      score_breakdown: maal.pillars,
+      diagnosis: null,
+      action_plan: [],
+    });
     // Update recommendations in background
     if (result.recommendations.length) {
       saveRecommendationsBatch(userId, result.recommendations).catch(() => {});
@@ -880,18 +891,19 @@ router.get('/settings', async (req, res) => {
 
 router.get('/scores', async (req, res) => {
   try {
-    const { user, profile, session } = await dashboardContext(req);
-    const scores = await getScoresByUserId(req.session.userId, 50);
-    const fhs = scores.find(s => s.score_type === 'financial_health');
-    const shs = scores.find(s => s.score_type === 'super_health');
+    const { user, profile: rawProfile, session } = await dashboardContext(req);
+    const assetSummary = await assetsDb.getAssetSummary(req.session.userId);
+    const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
+    const maalScore = computeMaalScore(profile);
 
-    // Historical scores for chart (last 20 entries)
-    const fhsHistory = scores.filter(s => s.score_type === 'financial_health').slice(0, 20).reverse();
+    // Historical Maal Score snapshots for the history table (last 20 entries)
+    const scores = await getScoresByUserId(req.session.userId, 50);
+    const maalHistory = scores.filter(s => s.score_type === 'maal_score').slice(0, 20).reverse();
 
     res.render('dashboard-scores', {
       user, profile, session,
-      financialScore: fhs, superScore: shs,
-      fhsHistory,
+      maalScore,
+      maalHistory,
       pageTitle: 'Scores'
     });
   } catch (err) {
@@ -950,6 +962,17 @@ router.post('/scores/recalculate', async (req, res) => {
            : result.halalComplianceScore >= 40 ? 'Fair' : 'Needs Work',
       score_breakdown: {},
       diagnosis: null,
+    });
+
+    // Save Maal Score — the score actually shown on /dashboard and /dashboard/scores
+    const maal = computeMaalScore(profile);
+    await saveScore(userId, {
+      score_type: 'maal_score',
+      score_value: maal.score,
+      grade: maal.band,
+      score_breakdown: maal.pillars,
+      diagnosis: null,
+      action_plan: [],
     });
 
     // Save recommendations

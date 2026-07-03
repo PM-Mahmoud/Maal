@@ -1,74 +1,78 @@
 <div class="page-header">
-  <h1>Your Scores</h1>
-  <p>Detailed breakdown of your financial health metrics.</p>
+  <h1>Your Maal Score</h1>
+  <p>The same score shown on your dashboard — savings, debt, super, wealth trajectory and protection, in one number.</p>
 </div>
 
 <% if (!profile || !profile.completed_onboarding) { %>
 <div class="empty-state">
   <div class="icon">◈</div>
-  <h3>Complete onboarding to see your scores</h3>
-  <p>Answer a few questions about your finances to get your personalised scores.</p>
+  <h3>Complete onboarding to see your score</h3>
+  <p>Answer a few questions about your finances to get your personalised score.</p>
   <a href="/onboarding" class="btn-primary">Start onboarding</a>
 </div>
 <% } else { %>
 
-<div class="score-cards" style="margin-bottom:1.5rem;">
-  <div class="score-card" style="text-align:center;">
-    <div class="score-card-label">Financial Health Score</div>
-    <div class="score-card-big"><%= financialScore ? financialScore.score_value : '—' %><span class="score-card-max">/100</span></div>
-    <% if (financialScore) { %><span class="grade-pill <%= financialScore.grade ? financialScore.grade.toLowerCase().replace(' ','-') : '' %>"><%= financialScore.grade || '' %></span><% } %>
-  </div>
-  <div class="score-card" style="text-align:center;">
-    <div class="score-card-label">Super Health Score</div>
-    <div class="score-card-big"><%= superScore ? superScore.score_value : '—' %><span class="score-card-max">/100</span></div>
-    <span style="font-size:0.8rem;color:var(--fg-muted)">Fund adequacy</span>
-  </div>
+<%
+  var mz = (typeof maalScore !== 'undefined' && maalScore) ? maalScore : { score: 0, band: '—', pillars: [], hasData: false };
+  var bandChip = mz.score >= 65 ? 'chip-accent' : mz.score >= 50 ? 'chip-gold' : mz.score >= 35 ? 'chip-warn' : 'chip-danger';
+%>
+
+<div class="card" style="margin-bottom:1.5rem;text-align:center;">
+  <div class="score-card-label">Maal Score</div>
+  <div class="score-card-big"><%= mz.hasData ? mz.score : '—' %><span class="score-card-max">/100</span></div>
+  <% if (mz.hasData) { %><span class="chip <%= bandChip %>"><%= mz.band %></span><% } %>
+  <p style="font-size:0.85rem;color:var(--fg-muted);margin-top:0.75rem;max-width:480px;margin-left:auto;margin-right:auto;">
+    <%= mz.hasData
+        ? 'Your financial wellbeing in one number — savings, debt, super, wealth and protection, weighted the way researchers measure financial health.'
+        : 'Add income and assets to calculate your score.' %>
+  </p>
 </div>
 
-<div style="margin-bottom:1.5rem;">
+<div style="margin-bottom:1.5rem;display:flex;align-items:center;flex-wrap:wrap;gap:0.75rem;">
   <form action="/dashboard/scores/recalculate" method="POST" style="display:inline;">
-    <button type="submit" class="btn-primary">Recalculate Scores</button>
+    <button type="submit" class="btn-primary">Recalculate now</button>
   </form>
+  <span style="font-size:0.78rem;color:var(--fg-muted);">
+    Updates automatically as you add assets or connect accounts (at most once an hour) — or recalculate instantly above.
+  </span>
 </div>
 
-<% if (financialScore && financialScore.score_breakdown) { %>
+<% if (mz.hasData && mz.pillars && mz.pillars.length) { %>
 <div class="card">
-  <div class="card-title">Financial Health Score breakdown</div>
-  <% const breakdown = financialScore.score_breakdown; const maxes = {debtRatio:20,savingsRate:15,emergencyFund:15,superAdequacy:20,insuranceCoverage:10,investmentDiversity:10,retirementReadiness:10}; const descriptions = {debtRatio:'Ratio of HECS + consumer debt to annual income',savingsRate:'Monthly savings as % of gross income',emergencyFund:'Liquid savings vs monthly expenses',superAdequacy:'Current super vs ASFA comfortable benchmark',insuranceCoverage:'Life + income protection + professional indemnity',investmentDiversity:'Non-super portfolio concentration',retirementReadiness:'Projected super at target retirement age'}; %>
-  <% Object.entries(breakdown).forEach(function([key, val]) { %>
-    <% const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, function(s) { return s.toUpperCase(); }); const max = maxes[key] || 10; const pct = Math.round(val/max*100); %>
+  <div class="card-title">Score breakdown — five pillars</div>
+  <% mz.pillars.forEach(function(pl) { %>
     <div class="breakdown-row">
       <div>
-        <span class="breakdown-label"><%= label %></span>
-        <div style="font-size:0.725rem;color:var(--fg-muted);opacity:0.7;margin-top:0.15rem;"><%= descriptions[key] || '' %></div>
+        <span class="breakdown-label"><%= pl.label %> <span style="color:var(--fg-muted);font-weight:400;">(<%= Math.round(pl.weight * 100) %>%)</span></span>
+        <div style="font-size:0.725rem;color:var(--fg-muted);opacity:0.7;margin-top:0.15rem;"><%= pl.note || '' %></div>
       </div>
       <div style="display:flex;align-items:center;gap:0.75rem;margin-left:1rem;">
-        <div style="width:100px;height:4px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;"><div style="height:100%;width:<%= pct %>%;background:linear-gradient(90deg,var(--green-light),var(--accent));border-radius:999px;"></div></div>
-        <span class="breakdown-val"><%= val %>/<%= max %></span>
+        <div class="bar-track" style="width:100px;"><div class="bar-fill" style="width:<%= pl.score %>%; <%= pl.score < 40 ? 'background:var(--warn);' : '' %>"></div></div>
+        <span class="breakdown-val"><%= pl.score %>/100</span>
       </div>
     </div>
   <% }); %>
 </div>
 <% } %>
 
-<% if (fhsHistory && fhsHistory.length > 1) { %>
+<% if (maalHistory && maalHistory.length > 1) { %>
 <div class="card">
-  <div class="card-title">Score history (last <%= fhsHistory.length %> calculations)</div>
+  <div class="card-title">Score history (last <%= maalHistory.length %> calculations)</div>
   <div style="overflow-x:auto;">
     <table style="width:100%;border-collapse:collapse;font-size:0.825rem;">
       <thead>
         <tr style="border-bottom:1px solid var(--border);">
           <th style="text-align:left;padding:0.5rem 0.5rem 0.5rem;color:var(--fg-muted);font-weight:500;">Date</th>
-          <th style="text-align:right;padding:0.5rem;color:var(--fg-muted);font-weight:500;">Financial Health</th>
-          <th style="text-align:right;padding:0.5rem;color:var(--fg-muted);font-weight:500;">Grade</th>
+          <th style="text-align:right;padding:0.5rem;color:var(--fg-muted);font-weight:500;">Maal Score</th>
+          <th style="text-align:right;padding:0.5rem;color:var(--fg-muted);font-weight:500;">Band</th>
         </tr>
       </thead>
       <tbody>
-        <% fhsHistory.forEach(function(s) { %>
+        <% maalHistory.forEach(function(s) { %>
           <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
             <td style="padding:0.55rem 0.5rem;color:var(--fg-muted);"><%= new Date(s.calculated_at).toLocaleDateString('en-AU', {day:'numeric',month:'short',year:'numeric'}) %></td>
             <td style="text-align:right;padding:0.55rem;color:var(--fg);font-weight:600;"><%= s.score_value %>/100</td>
-            <td style="text-align:right;padding:0.55rem;"><span class="grade-pill <%= (s.grade||'').toLowerCase().replace(' ','-') %>" style="font-size:0.65rem;"><%= s.grade || '' %></span></td>
+            <td style="text-align:right;padding:0.55rem;"><span class="grade-pill" style="font-size:0.65rem;"><%= s.grade || '' %></span></td>
           </tr>
         <% }); %>
       </tbody>
@@ -76,5 +80,12 @@
   </div>
 </div>
 <% } %>
+
+<div class="card" style="margin-top:1.5rem;">
+  <div class="card-title">What this score is — and isn't</div>
+  <p style="font-size:0.825rem;color:var(--fg-muted);line-height:1.7;">
+    The Maal Score is general information for educational purposes only, based on the profile and account data you've provided — it is not personal financial advice and doesn't take into account objectives, financial situation or needs beyond what you've told Maal. It isn't a credit score and has no effect on your credit file.
+  </p>
+</div>
 
 <% } %>

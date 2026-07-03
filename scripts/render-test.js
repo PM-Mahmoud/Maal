@@ -55,7 +55,10 @@ const cases = {
   'dashboard-transactions': { ...base, basiqEnabled: true, basiqStatus: 'error', basiqReason: 'Basiq 403 on /users', liveTransactions: [], liveAccounts: [], statementFiles: [{ id: 2, filename: 'cba-may.csv', mime: 'text/csv', size_bytes: 5120, created_at: new Date() }] },
   'dashboard-goals': { ...base, goals: [{ id: 1, name: 'Emergency fund', type: 'Save', target: 20000, current: 12000, created_at: new Date() }, { id: 2, name: 'Pay off HECS', type: 'Pay Off', target: 42000, current: 8000, created_at: new Date() }] },
   'dashboard-settings': { ...base, billingStatus: 'success', billingPlanName: 'Maal Pro ($20/mo)' },
-  'dashboard-scores': { ...base, financialScore: score, superScore: score, ethicalScore: score, fhsHistory: [score], shsHistory: [], ehsHistory: [] },
+  'dashboard-scores': { ...base, maalScore, maalHistory: [
+    { score_value: maalScore.score, grade: maalScore.band, calculated_at: new Date() },
+    { score_value: maalScore.score - 4, grade: maalScore.band, calculated_at: new Date(Date.now() - 86400000) },
+  ] },
   'dashboard-recommendations': { ...base, recommendations: [], filter: 'all' },
   'dashboard-accounts': { ...base, accounts: [], basiqEnabled: true },
   'dashboard-profile': { ...base, accounts: [], success: null, error: null },
