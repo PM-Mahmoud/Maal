@@ -19,6 +19,7 @@ const { upsertProfile } = require('../db/profiles');
 const { saveScore } = require('../db/scores');
 const { saveRecommendationsBatch } = require('../db/recommendations');
 const { computeScore } = require('../lib/score-engine');
+const assetsDb = require('../db/assets');
 
 // ─── Auth guard ──────────────────────────────────────────────────────────────
 
@@ -164,6 +165,33 @@ router.post('/complete', requireAuth, async (req, res) => {
 
     // 4. Save profile
     await upsertProfile(userId, profileData);
+
+    // Also seed the granular asset tables (db/assets.js) so a new user who
+    // never touches the asset modal still gets populated dashboard tiles.
+    // hecs_balance intentionally excluded — stays a flat column (see the
+    // assets-liabilities plan). Only non-zero values create a row.
+    //
+    // Idempotency: this finalize step has no explicit re-run guard, so a
+    // user who resubmits onboarding must not accumulate duplicate rows —
+    // only create when no manual row of that type exists yet.
+    try {
+      const [existingSuper, existingDebts] = await Promise.all([
+        assetsDb.listSuperAccounts(userId),
+        assetsDb.listDebts(userId),
+      ]);
+      const hasManualSuper = existingSuper.some((r) => r.source !== 'basiq');
+      const hasManualDebt = existingDebts.some((r) => r.source !== 'basiq');
+
+      if (profileData.super_balance > 0 && !hasManualSuper) {
+        await assetsDb.createSuperAccount(userId, { label: 'Superannuation', balance: profileData.super_balance, source: 'manual' });
+      }
+      if (profileData.total_debt > 0 && !hasManualDebt) {
+        await assetsDb.createDebt(userId, { label: 'Other debt', kind: 'other', balance: profileData.total_debt, source: 'manual' });
+      }
+    } catch (e) {
+      console.error('onboarding asset seed error:', e.message);
+      // Non-fatal — the flat profile columns above already saved successfully.
+    }
 
     // 5. Build score engine inputs from onboarding data
     const income = profileData.annual_income;

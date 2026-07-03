@@ -223,6 +223,63 @@ router.post('/signup', authLimiter,
   }
 );
 
+// ─── API: /login/email-code — request a passwordless sign-in code ────────────
+
+router.post('/login/email-code', authLimiter,
+  body('email').isEmail().normalizeEmail(),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.render('auth-login', { layout: false, error: 'Please enter a valid email address.', email: req.body.email || '' });
+    }
+
+    const { email } = req.body;
+    const user = await findUserByEmail(email);
+    if (!user) {
+      return res.render('auth-login', { layout: false, error: 'No account found with that email. Try signing up.', email });
+    }
+
+    const otp = generateOtp();
+    await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
+    await sendOtpEmail(user.email, user.name, otp);
+
+    req.session.pendingEmail = user.email;
+    req.session.otpPurpose = 'login';
+    req.session.save(() => res.redirect('/verify-email'));
+  }
+);
+
+// ─── API: /signup/email-code — passwordless account creation ─────────────────
+
+router.post('/signup/email-code', authLimiter,
+  body('name').trim().isLength({ min: 1, max: 100 }),
+  body('email').isEmail().normalizeEmail(),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.render('auth-signup', { layout: false, error: 'Please enter your name and a valid email address.', email: req.body.email || '', name: req.body.name || '' });
+    }
+
+    const { name, email } = req.body;
+    const existing = await findUserByEmail(email);
+    if (existing) {
+      return res.render('auth-signup', { layout: false, error: 'An account with this email already exists. Sign in instead.', email, name });
+    }
+
+    const user = await createUser({ email, name, passwordHash: null, provider: 'credentials' });
+
+    const otp = generateOtp();
+    await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
+    await sendOtpEmail(email, name, otp);
+
+    req.session.pendingEmail = email;
+    req.session.save((err) => {
+      if (err) console.error('[signup/email-code] Session save error:', err.message);
+      res.redirect('/verify-email');
+    });
+  }
+);
+
 // ─── Page: /verify-email (OTP entry) ─────────────────────────────────────────
 
 router.get('/verify-email', (req, res) => {
@@ -258,6 +315,10 @@ router.post('/verify-email', otpLimiter, async (req, res) => {
   await clearOtp(user.id);
   await recordLogin(user.id, getIp(req));
 
+  // A code requested from the sign-in page (not signup/2FA) is an existing user
+  // logging in passwordlessly — send them straight to the dashboard, not onboarding.
+  const isPasswordlessLogin = req.session.otpPurpose === 'login';
+
   // SECURITY: regenerate session ID to prevent fixation
   req.session.regenerate((regenErr) => {
     if (regenErr) { console.error('[verify-otp] Session regenerate error:', regenErr); return res.status(500).render('error', { layout: false, message: 'Session error.' }); }
@@ -268,7 +329,7 @@ router.post('/verify-email', otpLimiter, async (req, res) => {
     req.session.emailVerified = true;
     req.session.save((err) => {
       if (err) console.error('[verify-otp] Session save error:', err.message);
-      res.redirect('/onboarding');
+      res.redirect(isPasswordlessLogin ? '/dashboard' : '/onboarding');
     });
   });
 });

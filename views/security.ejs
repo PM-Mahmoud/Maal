@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <title>Security — Maal</title>
+  <meta name="description" content="Privacy first. Security and confidentiality built into every layer. Bank-level encryption, read-only account access, your data stays yours.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/theme.css">
+  <style>
+    body { background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
+    main { flex: 1; }
+    .sc-section { padding: 5rem 1.5rem 2rem; text-align: center; }
+    .sc-kicker { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .18em; color: var(--fg-muted); margin-bottom: 1rem; }
+    .sc-h1 { font-size: clamp(2.2rem,6vw,3.5rem); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; }
+    .sc-sub { margin: 1.25rem auto 0; font-size: 1.05rem; color: var(--fg-muted); max-width: 560px; line-height: 1.7; }
+    .sc-badge-row { display: flex; justify-content: center; margin-top: 2rem; }
+    .sc-badge { display: inline-flex; align-items: center; gap: .5rem; font-size: 12px; font-weight: 600; color: var(--fg); border: 1px solid var(--border); border-radius: 9999px; padding: .5rem 1rem; background: var(--surface); }
+    .sc-grid { max-width: 1000px; margin: 3rem auto 4rem; padding: 0 1.5rem; display: grid; grid-template-columns: repeat(2,1fr); gap: 1rem; }
+    @media (max-width: 700px) { .sc-grid { grid-template-columns: 1fr; } }
+    .sc-card { padding: 1.75rem; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); }
+    .sc-card-icon { width: 32px; height: 32px; border-radius: 9px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; }
+    .sc-card h3 { font-size: 15px; font-weight: 700; letter-spacing: -.01em; margin-bottom: .5rem; }
+    .sc-card p { font-size: 13.5px; color: var(--fg-muted); line-height: 1.65; }
+    .disclaimer-block { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem 4rem; font-size: 11px; color: var(--fg-muted); line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <%- include('partials/navbar') %>
+
+  <main>
+    <section class="sc-section">
+      <p class="sc-kicker">Security</p>
+      <h1 class="sc-h1">We take security<br>very seriously.</h1>
+      <p class="sc-sub">Privacy first. We've built security and confidentiality into every layer of Maal — because it's your financial life, and it stays yours.</p>
+    </section>
+
+    <div class="sc-grid">
+      <div class="sc-card">
+        <div class="sc-card-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3>Bank-level encryption</h3>
+        <p>Your data is encrypted in transit and at rest, using the same standard of encryption used by the banks it connects to.</p>
+      </div>
+      <div class="sc-card">
+        <div class="sc-card-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6z"/></svg>
+        </div>
+        <h3>Your data, your control</h3>
+        <p>You choose exactly what to connect — banks, brokerages, real estate, crypto, more — and you can disconnect or delete any of it at any time.</p>
+      </div>
+      <div class="sc-card">
+        <div class="sc-card-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg>
+        </div>
+        <h3>Read-only account access</h3>
+        <p>Your bank credentials stay with your bank. Maal never sees or stores them — connections are read-only and can't move money.</p>
+      </div>
+      <div class="sc-card">
+        <div class="sc-card-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg>
+        </div>
+        <h3>Always anonymised</h3>
+        <p>Your identity is kept separate from your financial data, so even our own team can't connect the two.</p>
+      </div>
+      <div class="sc-card">
+        <div class="sc-card-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 12 2 2 4-4"/><path d="M12 2 4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6z"/></svg>
+        </div>
+        <h3>CDR-accredited connections</h3>
+        <p>Maal connects to your accounts through Basiq, an Australian Consumer Data Right (CDR) accredited data recipient — the same regulatory framework that governs open banking in Australia.</p>
+      </div>
+      <div class="sc-card">
+        <div class="sc-card-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6M9 16h6M9 8h6"/><rect x="4" y="3" width="16" height="18" rx="2"/></svg>
+        </div>
+        <h3>Vault encryption</h3>
+        <p>Statements and documents you upload to Vault are encrypted at rest and in transit, the same as every other layer of Maal.</p>
+      </div>
+    </div>
+
+    <div class="disclaimer-block">
+      DISCLAIMER: Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+  <%- analyticsSnippet %>
+</body>
+</html>

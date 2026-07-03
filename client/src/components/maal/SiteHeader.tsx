@@ -20,6 +20,7 @@ export function SiteHeader() {
           </Link>
           <nav className="hidden md:flex items-center gap-7 text-[13px] text-muted-foreground">
             <Link to="/score" className="hover:text-foreground transition-colors">Score Calculator</Link>
+            <a href="/#how" className="hover:text-foreground transition-colors">How it Works</a>
             <Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
             <Link to="/waitlist" className="hover:text-foreground transition-colors">Waitlist</Link>
           </nav>

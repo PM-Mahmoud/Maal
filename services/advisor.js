@@ -153,7 +153,7 @@ function buildDocsSection(docs) {
 }
 
 function buildSystemPrompt(user, profile, maal, docs, extra = {}) {
-  const { transactions = [], snapshots = [], goals = [], cashRunway = null } = extra;
+  const { transactions = [], snapshots = [], goals = [], cashRunway = null, isaacusGrounding = null } = extra;
   const p = profile || {};
   const lines = [
     'You are Maal, a warm, sharp CFO-level financial advisor inside the Maal app — the all-in-one for everyday Australians.',
@@ -218,6 +218,16 @@ function buildSystemPrompt(user, profile, maal, docs, extra = {}) {
     var delta = Number(last.net_worth || 0) - Number(first.net_worth || 0);
     var sign = delta >= 0 ? '+' : '';
     lines.push('Net worth trend (' + snapshots.length + ' days): ' + sign + aud(delta) + ' change.');
+  }
+  // Isaacus legal/tax extraction — a specialist tool pulled this text directly
+  // out of the user's own uploaded document in response to their question.
+  if (isaacusGrounding && isaacusGrounding.text) {
+    var safeSource = String(isaacusGrounding.filename || 'their uploaded document').replace(/[<>"]/g, '');
+    lines.push('');
+    lines.push('<legal_extraction source="' + safeSource + '" confidence="' + Math.round((isaacusGrounding.score || 0) * 100) + '%">');
+    lines.push(String(isaacusGrounding.text).slice(0, 2000));
+    lines.push('</legal_extraction>');
+    lines.push('The text above was extracted directly from the user\'s own document by a specialist legal extraction tool (Isaacus), specifically to answer their question. If it genuinely answers what they asked, quote or paraphrase it accurately and name the source document. If it does not actually answer their question, say so rather than forcing it in — do not treat it as a general legal opinion beyond what it literally says.');
   }
   return lines.join('\n') + buildDocsSection(docs);
 }

@@ -6,7 +6,8 @@
 // here mocks global.fetch or calls pure functions directly.
 
 const assert = require('assert');
-const { mapBasiqAccount, mapBasiqTransaction } = require('../lib/basiq-mapping');
+const { mapBasiqAccount, mapBasiqTransaction, shapeBasiqAssetRow } = require('../lib/basiq-mapping');
+const { classifyAccountType } = require('../lib/connected');
 
 let passed = 0;
 let failed = 0;
@@ -151,6 +152,50 @@ test('status defaults to null when absent', () => {
 test('status passes through when present', () => {
   const r = mapBasiqTransaction({ id: 't1', status: 'posted' });
   assert.strictEqual(r.status, 'posted');
+});
+
+// ─── shapeBasiqAssetRow ───
+console.log('\nshapeBasiqAssetRow');
+
+test('savings account classifies as cash and shapes for cash_accounts', () => {
+  const mapped = mapBasiqAccount({ id: 'acc-1', institution: 'HoolibankAU', class: { type: 'savings' }, balance: 5000 });
+  const { bucket, table, row } = shapeBasiqAssetRow(mapped, classifyAccountType);
+  assert.strictEqual(bucket, 'cash');
+  assert.strictEqual(table, 'cash_accounts');
+  assert.strictEqual(row.balance, 5000);
+  assert.strictEqual(row.source, 'basiq');
+  assert.strictEqual(row.account_reference, 'basiq:acc-1');
+});
+
+test('credit card account classifies as debt, balance is stored positive (magnitude)', () => {
+  const mapped = mapBasiqAccount({ id: 'acc-2', institution: 'HoolibankAU', class: { type: 'credit-card' }, balance: -1200 });
+  const { bucket, table, row } = shapeBasiqAssetRow(mapped, classifyAccountType);
+  assert.strictEqual(bucket, 'debt');
+  assert.strictEqual(table, 'debts');
+  assert.strictEqual(row.balance, 1200, 'debts.balance is a positive magnitude, not signed');
+});
+
+test('super account classifies as super and shapes for super_accounts', () => {
+  const mapped = mapBasiqAccount({ id: 'acc-3', institution: 'AustralianSuperAU', class: { type: 'superannuation' }, balance: 150000 });
+  const { bucket, table, row } = shapeBasiqAssetRow(mapped, classifyAccountType);
+  assert.strictEqual(bucket, 'super');
+  assert.strictEqual(table, 'super_accounts');
+  assert.strictEqual(row.fund_name, 'AustralianSuper');
+  assert.strictEqual(row.balance, 150000);
+});
+
+test('investment/broker account classifies as invest and shapes for investments', () => {
+  const mapped = mapBasiqAccount({ id: 'acc-4', institution: 'SelfWealthAU', class: { type: 'broker' }, balance: 42000 });
+  const { bucket, table, row } = shapeBasiqAssetRow(mapped, classifyAccountType);
+  assert.strictEqual(bucket, 'invest');
+  assert.strictEqual(table, 'investments');
+  assert.strictEqual(row.value, 42000);
+});
+
+test('a negative-balance unclassified account still routes to debt (classifyAccountType balance fallback)', () => {
+  const mapped = mapBasiqAccount({ id: 'acc-5', institution: 'HoolibankAU', balance: -50 });
+  const { bucket } = shapeBasiqAssetRow(mapped, classifyAccountType);
+  assert.strictEqual(bucket, 'debt');
 });
 
 (async () => {

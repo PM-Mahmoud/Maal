@@ -71,10 +71,11 @@ that data path. They apply to every agent session, not just this one.
 
 **Never violate:**
 - Never log, print, or commit a real `BASIQ_API_KEY`, Basiq access/refresh token, Azure OpenAI
-  key, Stripe secret key, or any user PII (email, balance, transaction description) to console
-  output that could land in a committed log file.
-- Never call the Basiq API, Stripe, or Azure OpenAI against production credentials from a
-  dev/test branch. `services/basiq.js` reads `BASIQ_API_KEY` from env only — never hardcode.
+  key, Stripe secret key, `ISAACUS_API_KEY`, or any user PII (email, balance, transaction
+  description) to console output that could land in a committed log file.
+- Never call the Basiq API, Stripe, Azure OpenAI, or Isaacus against production credentials
+  from a dev/test branch. `services/basiq.js`/`services/isaacus.js` read their API keys from
+  env only — never hardcode.
 - Treat all data returned by Basiq (`services/basiq.js` `getAccounts`/`getTransactions`) as PII
   until it's been through the existing mapping/sanitisation layer.
 - Never modify a migration that touches `users`, `linked_accounts`, `transactions`, or
@@ -104,8 +105,20 @@ Ordered implementation steps — each builds on the last:
 1. **RAG wiring** ✅ — `retrieveAndFormat()` called inside `chat()`, knowledge_chunks already embedded (41 AU financial articles)
 2. **Enriched system prompt** ✅ — transactions (30d), goals, net-worth trend (90d), cash runway passed as `extra` to `buildSystemPrompt()`
 3. **Injection guardrails** ✅ — pattern check before advisor call; `<user_preferences>` XML wrapper; `<document>` wrapper on vault docs
-4. **Server-side conversation persistence** (next) — `advisor_sessions` + `advisor_messages` tables; `db/advisor.js`; history survives page refresh
-5. **Isaacus legal/tax integration** — Isaacus (https://isaacus.com) is an AU legal AI provider. Route legal/tax questions to Isaacus API, general financial education stays on main LLM. Needs: `ISAACUS_API_KEY` env var, `services/isaacus.js` wrapper, topic-classifier in `/ask/message` handler to detect legal/tax intent. Add to `/health` check. See project memory for details.
+4. **Server-side conversation persistence** ✅ — `advisor_sessions` + `advisor_messages` tables; `db/advisor.js`; history survives page refresh
+5. **Isaacus legal/tax integration** — `services/isaacus.js`. Isaacus (https://isaacus.com) is
+   **not** a chat/completion API — every call is extractive/classificatory over text you supply,
+   there's no "ask it anything about AU law" endpoint. Current scope (✅ done): when a user asks
+   a legal/tax question and has documents in Vault, `/ask/message` uses Isaacus's universal
+   classifier to detect legal/tax intent, then extractive Q&A (`kanon-answer-extractor`) to pull
+   the literal answer out of their own document text, injected into the main LLM's system prompt
+   as `<legal_extraction>` grounding so it can phrase the reply and cite the source. General
+   legal/tax questions with no matching Vault document still fall through to the main LLM as
+   before — Isaacus can't answer from nothing, it needs a document to extract from. **Not yet
+   built:** a curated AU legal/tax reference corpus (ATO guidance, super rules, etc.) in
+   `knowledge_chunks` (category `legal`) for questions with no Vault document — needs real
+   sourced content, not fabricated, before it can be built. `ISAACUS_API_KEY` env var, `/health`
+   check wired.
 6. **Tool calling** — `get_score_breakdown`, `get_cashflow_summary`, `get_net_worth_trend`, `calculate_tax_estimate`, `get_goals_summary` via OpenAI function-calling format
 7. **SSE streaming** — `POST /dashboard/ask/stream`, `X-Accel-Buffering: no`, client reads token-by-token
 8. **Knowledge base gaps** — add AU articles: Centrelink thresholds, FHSSS, salary sacrifice, concessional catch-up, debt recycling

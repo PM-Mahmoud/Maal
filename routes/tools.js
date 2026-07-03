@@ -9,6 +9,7 @@ const router = express.Router();
 const { findUserById } = require('../db/users');
 const { getProfileByUserId } = require('../db/profiles');
 const { getToolsForUser, tierFromUser } = require('../db/recommended-tools');
+const { getAssetSummary, mergeAssetSummaryIntoProfile } = require('../db/assets');
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 
@@ -27,7 +28,9 @@ router.use(function(req, res, next) { res.locals.layout = 'app-layout'; next(); 
 router.get('/', async (req, res) => {
   try {
     const user = await findUserById(req.session.userId);
-    const profile = await getProfileByUserId(req.session.userId);
+    const rawProfile = await getProfileByUserId(req.session.userId);
+    const assetSummary = await getAssetSummary(req.session.userId);
+    const profile = mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
 
     const tier = tierFromUser(user);
     // Values-agnostic: halal filtering retired. Always false (column kept for DB compat).

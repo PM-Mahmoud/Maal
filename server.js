@@ -117,6 +117,7 @@ app.get('/health', async (_req, res) => {
       advisor: !!((process.env.AZURE_OPENAI_API_KEY || process.env.GROQ_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.AI_API_KEY || '').trim()),
       azure: !!((process.env.AZURE_OPENAI_API_KEY || '').trim() && (process.env.AZURE_OPENAI_ENDPOINT || '').trim() && (process.env.AZURE_OPENAI_DEPLOYMENT || '').trim()),
       stripe: !!(process.env.STRIPE_SECRET_KEY || '').trim(),
+      isaacus: !!(process.env.ISAACUS_API_KEY || '').trim(),
     },
   });
 });
@@ -199,6 +200,61 @@ app.get('/waitlist', (req, res) => {
     analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || ''),
     user: req.session && req.session.userId ? { id: req.session.userId } : null,
   });
+});
+
+app.get('/about', (req, res) => {
+  const { buildAnalyticsSnippet } = require('./lib/landing-context');
+  res.render('about', { layout: false,
+    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || ''),
+    user: req.session && req.session.userId ? { id: req.session.userId } : null,
+  });
+});
+
+app.get('/security', (req, res) => {
+  const { buildAnalyticsSnippet } = require('./lib/landing-context');
+  res.render('security', { layout: false,
+    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || ''),
+    user: req.session && req.session.userId ? { id: req.session.userId } : null,
+  });
+});
+
+app.get('/financial-wellbeing-score', (req, res) => {
+  const { buildAnalyticsSnippet } = require('./lib/landing-context');
+  res.render('financial-wellbeing-score', { layout: false,
+    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || ''),
+    user: req.session && req.session.userId ? { id: req.session.userId } : null,
+  });
+});
+
+app.get('/contact', (req, res) => {
+  const { buildAnalyticsSnippet } = require('./lib/landing-context');
+  res.render('contact', { layout: false,
+    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || ''),
+    user: req.session && req.session.userId ? { id: req.session.userId } : null,
+    success: false, name: '', email: '', message: '',
+  });
+});
+
+app.post('/contact', async (req, res) => {
+  const { buildAnalyticsSnippet } = require('./lib/landing-context');
+  const { addFeedback } = require('./db/feedback');
+  const { name, email, message } = req.body;
+  const renderArgs = { layout: false,
+    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || ''),
+    user: req.session && req.session.userId ? { id: req.session.userId } : null,
+    success: false, name: name || '', email: email || '', message: message || '',
+  };
+  if (!name || !email || !message) {
+    return res.render('contact', renderArgs);
+  }
+  try {
+    const userId = req.session && req.session.userId ? req.session.userId : null;
+    await addFeedback(userId, `Name: ${name}\nEmail: ${email}\n\n${message}`, 'contact');
+    res.render('contact', { ...renderArgs, success: true, name: '', email: '', message: '' });
+  } catch (err) {
+    console.error('[contact] Failed to save message:', err.message);
+    res.render('contact', renderArgs);
+  }
 });
 
 // ─── JSON API for React SPA ──────────────────────────────────────────────

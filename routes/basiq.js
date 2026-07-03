@@ -9,10 +9,22 @@ const express = require('express');
 const router = express.Router();
 
 const basiq = require('../services/basiq');
-const { mapBasiqAccount } = require('../lib/basiq-mapping');
+const { mapBasiqAccount, shapeBasiqAssetRow } = require('../lib/basiq-mapping');
 const { findUserById, setBasiqUserId } = require('../db/users');
 const { getAccountsByUserId, addAccount, deleteAccount } = require('../db/linked_accounts');
 const { upsertBasiqTransactions } = require('../db/transactions');
+const { classifyAccountType } = require('../lib/connected');
+const assetsDb = require('../db/assets');
+
+// Which db/assets.js create function to call for each shapeBasiqAssetRow()
+// bucket. Kept here (not in lib/basiq-mapping.js) since it references live
+// DB functions — lib/basiq-mapping.js stays pure/no-I/O per its own contract.
+const BASIQ_ASSET_CREATORS = {
+  cash: assetsDb.createCashAccount,
+  invest: assetsDb.createInvestment,
+  super: assetsDb.createSuperAccount,
+  debt: assetsDb.createDebt,
+};
 
 function requireAuth(req, res, next) {
   if (!req.session.userId) return res.redirect('/login');
@@ -44,26 +56,43 @@ router.get('/connect', async (req, res) => {
 });
 
 async function syncAccountsToDb(req) {
-  const user = await findUserById(req.session.userId);
+  const userId = req.session.userId;
+  const user = await findUserById(userId);
   if (!user.basiq_user_id) return 0;
   const accounts = await basiq.getAccounts(user.basiq_user_id);
 
-  // Replace previously-synced Basiq accounts with the fresh list
-  const existing = await getAccountsByUserId(req.session.userId);
+  // Replace previously-synced Basiq accounts with the fresh list.
+  // linked_accounts stays the source of truth for "which accounts are
+  // connected" (the UI badge/list) — see routes/dashboard.js.
+  const existing = await getAccountsByUserId(userId);
   for (const acc of existing) {
     if (acc.account_reference && String(acc.account_reference).startsWith('basiq:')) {
-      await deleteAccount(acc.id, req.session.userId);
+      await deleteAccount(acc.id, userId);
     }
   }
   for (const acc of accounts) {
-    await addAccount(req.session.userId, mapBasiqAccount(acc));
+    await addAccount(userId, mapBasiqAccount(acc));
+  }
+
+  // Also write balances into the granular asset tables (db/assets.js) —
+  // these are the source of truth for $ totals (Maal Score, dashboard
+  // tiles, the advisor). Delete-then-recreate per table, same pattern as
+  // linked_accounts above, since Basiq is the sole owner of source='basiq'
+  // rows and re-syncing shouldn't accumulate duplicates.
+  for (const t of ['cash_accounts', 'investments', 'debts', 'super_accounts']) {
+    await assetsDb.deleteAssetsBySource(t, userId, 'basiq');
+  }
+  for (const acc of accounts) {
+    const mapped = mapBasiqAccount(acc);
+    const { bucket, row } = shapeBasiqAssetRow(mapped, classifyAccountType);
+    await BASIQ_ASSET_CREATORS[bucket](userId, row);
   }
 
   // Persist transactions too — the dashboard widget and transactions page
   // read these from the DB instead of hitting Basiq on every page load.
   try {
     const txns = await basiq.getTransactions(user.basiq_user_id, 100);
-    await upsertBasiqTransactions(req.session.userId, txns);
+    await upsertBasiqTransactions(userId, txns);
   } catch (e) {
     console.error('Basiq transaction sync failed:', e.message);
   }

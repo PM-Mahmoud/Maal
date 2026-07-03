@@ -790,6 +790,14 @@ input.input-error:focus, select.input-error:focus, textarea.input-error:focus {
   background: radial-gradient(135% 135% at 50% -10%, #3d4046 0%, #21242a 68%, #15171b 100%);
   border-color: transparent;
 }
+.stat-card[data-trend="investassets"] {
+  background: radial-gradient(135% 135% at 20% -8%, #7a92a3 0%, #435868 55%, #2b3843 100%);
+  border-color: transparent;
+}
+.stat-card[data-trend="cashflow"] {
+  background: radial-gradient(140% 130% at 82% 100%, #c99a92 0%, #8f5c52 52%, #5c3a33 100%);
+  border-color: transparent;
+}
 /* Top-light gloss overlay identical to landing page ::after */
 .stat-card[data-trend]::after {
   content: '';

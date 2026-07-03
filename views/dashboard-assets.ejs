@@ -1,12 +1,16 @@
 <%
   function aud(n) { n = Number(n) || 0; return '$' + n.toLocaleString('en-AU', { maximumFractionDigits: 0 }); }
   // Number() — Postgres returns BIGINT as strings; avoid string concatenation
-  var superBal  = Number(profile && profile.super_balance) || 0;
-  var investBal = Number(profile && profile.investment_portfolio) || 0;
-  var propertyV = Number(profile && profile.property_value) || 0;
-  var hecs      = Number(profile && profile.hecs_balance) || 0;
-  var otherDebt = Number(profile && profile.total_debt) || 0;
-  var liveAcc   = (typeof liveAccounts !== 'undefined' && liveAccounts) ? liveAccounts : [];
+  var liveAcc      = (typeof liveAccounts !== 'undefined' && liveAccounts) ? liveAccounts : [];
+  var cashRows      = (typeof cashAccounts !== 'undefined' && cashAccounts) ? cashAccounts : [];
+  var investRows    = (typeof investments !== 'undefined' && investments) ? investments : [];
+  var propertyRows  = (typeof properties !== 'undefined' && properties) ? properties : [];
+  var debtRows      = (typeof debts !== 'undefined' && debts) ? debts : [];
+  var superRows     = (typeof superAccounts !== 'undefined' && superAccounts) ? superAccounts : [];
+
+  var PROPERTY_TYPE_LABELS = { residential: 'Residential', commercial: 'Commercial' };
+  var DEBT_KIND_LABELS = { credit_card: 'Credit card', mortgage: 'Mortgage', loan: 'Loan', other: 'Other debt' };
+  var INVEST_KIND_LABELS = { shares: 'Shares', etf: 'ETF', crypto: 'Crypto', other: 'Other' };
 %>
 
 <div class="page-head">
@@ -14,7 +18,6 @@
     <h1>My Portfolio</h1>
     <div class="sub">Everything you own and owe, in one place.</div>
   </div>
-  <div class="tabs"><button class="tab active">Cards</button><button class="tab">List</button></div>
 </div>
 
 <div class="widget-grid">
@@ -32,108 +35,118 @@
       </div>
       <% }); %>
       <p style="font-size:0.72rem; color:var(--fg-faint); margin:0.7rem 0 0; line-height:1.6;">
-        Live balances are added on top of your manual entries below. If you also entered one of these accounts
-        manually, set its manual figure to $0 so it isn't counted twice.
+        Live balances sync automatically — you don't need to add these manually below.
       </p>
     </div>
     <% } %>
 
+    <!-- ── Superannuation ── -->
     <div class="panel" style="margin-bottom:1rem;">
       <div class="panel-title">Superannuation <span class="chip chip-muted">Manual</span></div>
-      <% if (superBal > 0) { %>
+      <% superRows.filter(function(r) { return r.source !== 'basiq'; }).forEach(function(r) { %>
         <div class="row-item">
-          <div><div class="row-main">Super fund balance</div><div class="row-sub">Manual · update anytime</div></div>
-          <div class="row-val"><%= aud(superBal) %></div>
+          <div><div class="row-main"><%= r.label || 'Super fund' %></div><div class="row-sub"><%= r.fund_name || 'Superannuation' %></div></div>
+          <div class="row-val"><%= aud(r.balance) %></div>
           <div class="row-actions">
-            <button class="btn-icon" data-edit-asset="super_balance" data-edit-value="<%= superBal %>" aria-label="Edit superannuation">✎</button>
-            <button class="btn-icon btn-icon-danger" data-remove-asset="super_balance" aria-label="Remove superannuation">✕</button>
+            <button class="btn-icon" data-row-edit data-row-type="super" data-row-id="<%= r.id %>" data-row-json='<%- JSON.stringify(r) %>' aria-label="Edit super fund">✎</button>
+            <button class="btn-icon btn-icon-danger" data-row-delete data-row-type="super" data-row-id="<%= r.id %>" data-row-label="<%= r.label || 'Super fund' %>" aria-label="Remove super fund">✕</button>
           </div>
         </div>
-      <% } else { %>
+      <% }); %>
+      <% if (!superRows.filter(function(r) { return r.source !== 'basiq'; }).length) { %>
         <div class="empty">
           <h3>No super fund added</h3>
           <p>Add your super — AustralianSuper, HESTA, Hostplus, Aware, UniSuper or any fund — to track Australia's biggest retirement asset.</p>
-          <button class="btn btn-accent btn-sm" data-add-asset="super_balance">+ Add Super Fund</button>
         </div>
       <% } %>
+      <button class="btn btn-accent btn-sm" data-row-add data-row-type="super">+ Add Super Fund</button>
     </div>
 
+    <!-- ── Assets: investments + property ── -->
     <div class="panel" style="margin-bottom:1rem;">
       <div class="panel-title">Assets</div>
-      <% if (investBal > 0 || propertyV > 0) { %>
-        <% if (investBal > 0) { %>
+      <% investRows.filter(function(r) { return r.source !== 'basiq'; }).forEach(function(r) { %>
         <div class="row-item">
-          <div><div class="row-main">Investment portfolio</div><div class="row-sub">Shares, ETFs &amp; funds</div></div>
-          <div class="row-val"><%= aud(investBal) %></div>
+          <div><div class="row-main"><%= r.name || 'Investment' %></div><div class="row-sub"><%= INVEST_KIND_LABELS[r.kind] || r.kind || 'Other' %></div></div>
+          <div class="row-val"><%= aud(r.value) %></div>
           <div class="row-actions">
-            <button class="btn-icon" data-edit-asset="investment_portfolio" data-edit-value="<%= investBal %>" aria-label="Edit investments">✎</button>
-            <button class="btn-icon btn-icon-danger" data-remove-asset="investment_portfolio" aria-label="Remove investments">✕</button>
+            <button class="btn-icon" data-row-edit data-row-type="investments" data-row-id="<%= r.id %>" data-row-json='<%- JSON.stringify(r) %>' aria-label="Edit investment">✎</button>
+            <button class="btn-icon btn-icon-danger" data-row-delete data-row-type="investments" data-row-id="<%= r.id %>" data-row-label="<%= r.name || 'Investment' %>" aria-label="Remove investment">✕</button>
           </div>
         </div>
-        <% } %>
-        <% if (propertyV > 0) { %>
+      <% }); %>
+      <% propertyRows.forEach(function(r) { %>
         <div class="row-item">
-          <div><div class="row-main">Property</div><div class="row-sub">Estimated value</div></div>
-          <div class="row-val"><%= aud(propertyV) %></div>
+          <div><div class="row-main"><%= r.label || 'Property' %></div><div class="row-sub"><%= PROPERTY_TYPE_LABELS[r.property_type] || 'Residential' %><%= Number(r.mortgage_balance) > 0 ? ' · ' + aud(r.mortgage_balance) + ' mortgage' : '' %></div></div>
+          <div class="row-val"><%= aud(r.value) %></div>
           <div class="row-actions">
-            <button class="btn-icon" data-edit-asset="property_value" data-edit-value="<%= propertyV %>" aria-label="Edit property">✎</button>
-            <button class="btn-icon btn-icon-danger" data-remove-asset="property_value" aria-label="Remove property">✕</button>
+            <button class="btn-icon" data-row-edit data-row-type="properties" data-row-id="<%= r.id %>" data-row-json='<%- JSON.stringify(r) %>' aria-label="Edit property">✎</button>
+            <button class="btn-icon btn-icon-danger" data-row-delete data-row-type="properties" data-row-id="<%= r.id %>" data-row-label="<%= r.label || 'Property' %>" aria-label="Remove property">✕</button>
           </div>
         </div>
-        <% } %>
-      <% } else { %>
+      <% }); %>
+      <% if (!investRows.filter(function(r) { return r.source !== 'basiq'; }).length && !propertyRows.length) { %>
         <div class="empty">
           <h3>No assets yet</h3>
           <p>Add cash, shares, ETFs, property, crypto or anything else you own.</p>
-          <button class="btn btn-accent btn-sm" data-add-asset="investment_portfolio">+ Add Asset</button>
         </div>
       <% } %>
+      <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+        <button class="btn btn-accent btn-sm" data-row-add data-row-type="investments">+ Add Investment</button>
+        <button class="btn btn-ghost btn-sm" data-row-add data-row-type="properties">+ Add Property</button>
+      </div>
     </div>
 
-    <div class="panel">
-      <div class="panel-title">Liabilities</div>
-      <% if (hecs > 0 || otherDebt > 0) { %>
-        <% if (hecs > 0) { %>
+    <!-- ── Cash ── -->
+    <div class="panel" style="margin-bottom:1rem;">
+      <div class="panel-title">Cash &amp; Savings</div>
+      <% cashRows.filter(function(r) { return r.source !== 'basiq'; }).forEach(function(r) { %>
         <div class="row-item">
-          <div><div class="row-main">HECS-HELP</div><div class="row-sub">Indexed each 1 June</div></div>
-          <div class="row-val"><%= aud(hecs) %></div>
+          <div><div class="row-main"><%= r.label || 'Bank account' %></div><div class="row-sub"><%= r.institution || 'Manual entry' %></div></div>
+          <div class="row-val"><%= aud(r.balance) %></div>
           <div class="row-actions">
-            <button class="btn-icon" data-edit-asset="hecs_balance" data-edit-value="<%= hecs %>" aria-label="Edit HECS balance">✎</button>
-            <button class="btn-icon btn-icon-danger" data-remove-asset="hecs_balance" aria-label="Remove HECS">✕</button>
+            <button class="btn-icon" data-row-edit data-row-type="cash" data-row-id="<%= r.id %>" data-row-json='<%- JSON.stringify(r) %>' aria-label="Edit account">✎</button>
+            <button class="btn-icon btn-icon-danger" data-row-delete data-row-type="cash" data-row-id="<%= r.id %>" data-row-label="<%= r.label || 'Bank account' %>" aria-label="Remove account">✕</button>
           </div>
         </div>
-        <% } %>
-        <% if (otherDebt > 0) { %>
-        <div class="row-item">
-          <div><div class="row-main">Other debt</div><div class="row-sub">Loans &amp; cards</div></div>
-          <div class="row-val"><%= aud(otherDebt) %></div>
-          <div class="row-actions">
-            <button class="btn-icon" data-edit-asset="total_debt" data-edit-value="<%= otherDebt %>" aria-label="Edit debt">✎</button>
-            <button class="btn-icon btn-icon-danger" data-remove-asset="total_debt" aria-label="Remove debt">✕</button>
-          </div>
-        </div>
-        <% } %>
-      <% } else { %>
+      <% }); %>
+      <% if (!cashRows.filter(function(r) { return r.source !== 'basiq'; }).length) { %>
         <div class="empty">
-          <h3>No liabilities</h3>
-          <p>Track HECS-HELP, mortgage, car loans and credit cards.</p>
-          <button class="btn btn-danger-soft btn-sm" data-add-asset="hecs_balance">+ Add Liability</button>
+          <h3>No cash accounts added</h3>
+          <p>Add a bank account, savings account or term deposit.</p>
         </div>
       <% } %>
+      <button class="btn btn-accent btn-sm" data-row-add data-row-type="cash">+ Add Cash Account</button>
+    </div>
+
+    <!-- ── Liabilities ── -->
+    <div class="panel">
+      <div class="panel-title">Liabilities</div>
+      <% debtRows.filter(function(r) { return r.source !== 'basiq'; }).forEach(function(r) { %>
+        <div class="row-item">
+          <div><div class="row-main"><%= r.label || 'Debt' %></div><div class="row-sub"><%= DEBT_KIND_LABELS[r.kind] || 'Other debt' %><%= Number(r.interest_rate) > 0 ? ' · ' + r.interest_rate + '% p.a.' : '' %></div></div>
+          <div class="row-val"><%= aud(r.balance) %></div>
+          <div class="row-actions">
+            <button class="btn-icon" data-row-edit data-row-type="debts" data-row-id="<%= r.id %>" data-row-json='<%- JSON.stringify(r) %>' aria-label="Edit debt">✎</button>
+            <button class="btn-icon btn-icon-danger" data-row-delete data-row-type="debts" data-row-id="<%= r.id %>" data-row-label="<%= r.label || 'Debt' %>" aria-label="Remove debt">✕</button>
+          </div>
+        </div>
+      <% }); %>
+      <p style="font-size:0.72rem; color:var(--fg-faint); margin:0.5rem 0;">
+        HECS-HELP is tracked separately on your <a href="/dashboard/profile" style="color:var(--accent);">Profile</a> page (it's income-contingent, not a commercial debt).
+      </p>
+      <% if (!debtRows.filter(function(r) { return r.source !== 'basiq'; }).length) { %>
+        <div class="empty">
+          <h3>No other liabilities</h3>
+          <p>Track mortgages, car loans and credit cards.</p>
+        </div>
+      <% } %>
+      <button class="btn btn-danger-soft btn-sm" data-row-add data-row-type="debts">+ Add Liability</button>
     </div>
 
   </div>
 
   <div class="col-4">
-    <div class="panel" style="margin-bottom:1rem;">
-      <div class="panel-title">Add an Asset <span class="tabs"><button class="tab active">Assets</button><button class="tab">Liabilities</button></span></div>
-      <div class="row-item" data-add-asset="investment_portfolio"><div><div class="row-main">Banks &amp; Brokerages</div><div class="row-sub">Bank and brokerage accounts</div></div><span class="row-val">🏦</span></div>
-      <div class="row-item" data-add-asset="super_balance"><div><div class="row-main">Superannuation</div><div class="row-sub">Your super fund balance &amp; option</div></div><span class="row-val">🌿</span></div>
-      <div class="row-item" data-add-asset="property_value"><div><div class="row-main">Real Estate</div><div class="row-sub">Residential and investment property</div></div><span class="row-val">🏠</span></div>
-      <div class="row-item" data-add-asset="investment_portfolio"><div><div class="row-main">Public Holdings</div><div class="row-sub">ASX &amp; global shares, ETFs</div></div><span class="row-val">📈</span></div>
-      <div class="row-item" data-add-asset="investment_portfolio"><div><div class="row-main">Crypto Holdings</div><div class="row-sub">Wallets and exchanges</div></div><span class="row-val">🪙</span></div>
-    </div>
-
     <div class="panel">
       <div class="panel-title">Connect Accounts <span class="chip chip-accent">via Basiq</span></div>
       <div class="field"><input type="search" data-inst-search placeholder="Search institutions…"></div>

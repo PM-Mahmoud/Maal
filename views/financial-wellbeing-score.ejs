@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <title>The Financial Wellbeing Score for Australians — Maal</title>
+  <meta name="description" content="The Maal Score is a free 0–100 financial wellbeing score for Australians — savings, debt, super, wealth trajectory and protection, explained in plain English. Not financial advice.">
+  <meta property="og:title" content="The Financial Wellbeing Score for Australians — Maal">
+  <meta property="og:description" content="One number across savings, debt, super, wealth trajectory and protection — with a plain-English plan to improve it. Free, two minutes, no bank login.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/theme.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is a financial wellbeing score?",
+        "acceptedAnswer": { "@type": "Answer", "text": "A financial wellbeing score is a single number, usually 0–100, that summarises your overall financial health — not just your ability to borrow (which is what a credit score measures), but your savings buffer, debt load, retirement readiness and protection against setbacks. The Maal Score is Australia's version, built around super, HECS-HELP and other local factors a US or UK-built app would miss." }
+      },
+      {
+        "@type": "Question",
+        "name": "How is the Maal Score calculated?",
+        "acceptedAnswer": { "@type": "Answer", "text": "The Maal Score is a weighted composite of five pillars: Savings buffer (25%), Debt health (25%), Super adequacy (20%), Wealth trajectory (15%) and Protection (15%). Each pillar scores 0–100, and the Maal Score is the weighted sum — so it's always explainable: you can see exactly which pillar is helping your score and which is holding it back." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is the Maal Score the same as a credit score?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No. A credit score (like Equifax or Experian) predicts how likely you are to repay debt, and is used by lenders to decide whether to approve you. The Maal Score is broader — it looks at your whole financial picture, including super and long-term wealth trajectory, and is designed to help you understand and improve your own finances, not to be used by a third party to assess you." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is the Maal Score financial advice?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No. The Maal Score and the explanations Maal provides are general information for educational purposes only, and do not take into account your personal objectives, financial situation or needs. Maal is not a substitute for advice from a licensed financial adviser." }
+      }
+    ]
+  }
+  </script>
+  <style>
+    body { background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
+    main { flex: 1; }
+    .fw-hero { padding: 5rem 1.5rem 2.5rem; text-align: center; }
+    .fw-kicker { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .18em; color: var(--fg-muted); margin-bottom: 1rem; }
+    .fw-h1 { font-size: clamp(2.2rem,6vw,3.5rem); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; max-width: 18ch; margin: 0 auto; }
+    .fw-sub { margin: 1.25rem auto 0; font-size: 1.05rem; color: var(--fg-muted); max-width: 620px; line-height: 1.7; }
+    .fw-actions { margin-top: 2rem; display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
+    .fw-cta-primary { background: var(--fg); color: var(--bg); padding: .875rem 1.5rem; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; }
+    .fw-cta-secondary { border: 1px solid var(--border); color: var(--fg); padding: .875rem 1.5rem; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; }
+    .fw-trust { margin-top: 1.25rem; font-size: 12px; color: var(--fg-muted); }
+
+    .fw-section { max-width: 780px; margin: 0 auto; padding: 3.5rem 1.5rem; }
+    .fw-section-title { font-size: clamp(1.5rem,3vw,2rem); font-weight: 700; letter-spacing: -.02em; margin-bottom: 1.25rem; }
+    .fw-section p { font-size: 15px; line-height: 1.8; color: var(--fg); margin-bottom: 1.25rem; }
+    .fw-section p.muted { color: var(--fg-muted); }
+
+    .fw-pillars { border-top: 1px solid var(--border); background: rgba(0,0,0,.02); }
+    html[data-theme="dark"] .fw-pillars { background: rgba(255,255,255,.015); }
+    .fw-pillar-list { max-width: 780px; margin: 0 auto; padding: 0 1.5rem; display: flex; flex-direction: column; }
+    .fw-pillar { display: grid; grid-template-columns: 60px 1fr; gap: 1.25rem; padding: 1.75rem 0; border-bottom: 1px solid var(--border); align-items: baseline; }
+    .fw-pillar:last-child { border-bottom: none; }
+    .fw-pillar-weight { font-size: 22px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+    .fw-pillar-title { font-size: 15px; font-weight: 700; margin-bottom: .35rem; }
+    .fw-pillar-desc { font-size: 13.5px; color: var(--fg-muted); line-height: 1.65; }
+
+    .fw-bands { display: grid; grid-template-columns: repeat(5,1fr); gap: .5rem; margin-top: 1rem; }
+    @media (max-width: 700px) { .fw-bands { grid-template-columns: repeat(2,1fr); } }
+    .fw-band { padding: 1rem .75rem; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); text-align: center; }
+    .fw-band-range { font-size: 11px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+    .fw-band-label { font-size: 13px; font-weight: 700; margin-top: .25rem; }
+
+    .fw-not { max-width: 780px; margin: 0 auto; padding: 3.5rem 1.5rem; }
+    .fw-not-list { display: flex; flex-direction: column; gap: 1rem; padding: 0; list-style: none; margin: 1.5rem 0 0; }
+    .fw-not-item { display: flex; gap: .75rem; align-items: flex-start; font-size: 14px; color: var(--fg-muted); line-height: 1.6; }
+    .fw-not-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--fg-muted); flex-shrink: 0; margin-top: .55rem; }
+
+    .fw-faq { border-top: 1px solid var(--border); }
+    .fw-faq-inner { max-width: 780px; margin: 0 auto; padding: 3.5rem 1.5rem; }
+    .fw-faq-item { padding: 1.5rem 0; border-bottom: 1px solid var(--border); }
+    .fw-faq-item:last-child { border-bottom: none; }
+    .fw-faq-q { font-size: 15px; font-weight: 700; margin-bottom: .5rem; }
+    .fw-faq-a { font-size: 14px; color: var(--fg-muted); line-height: 1.7; }
+
+    .fw-final-cta { text-align: center; padding: 4rem 1.5rem; border-top: 1px solid var(--border); }
+    .fw-final-cta h2 { font-size: clamp(1.6rem,4vw,2.2rem); font-weight: 700; letter-spacing: -.02em; }
+    .fw-final-cta p { margin: 1rem auto 0; color: var(--fg-muted); max-width: 480px; }
+
+    .disclaimer-block { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem 4rem; font-size: 11px; color: var(--fg-muted); line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <%- include('partials/navbar') %>
+
+  <main>
+    <section class="fw-hero">
+      <p class="fw-kicker">Financial Wellbeing Score</p>
+      <h1 class="fw-h1">The financial wellbeing score for Australians.</h1>
+      <p class="fw-sub">One number that reads your savings, debt, super, wealth trajectory and protection — then explains, in plain English, what's helping and what's holding you back.</p>
+      <div class="fw-actions">
+        <a href="/score" class="fw-cta-primary">Get your free Maal Score</a>
+        <a href="/#how" class="fw-cta-secondary">See how it works</a>
+      </div>
+      <p class="fw-trust">Free. Two minutes. No bank login required. Education only — never financial advice.</p>
+    </section>
+
+    <section class="fw-section">
+      <h2 class="fw-section-title">What is a financial wellbeing score?</h2>
+      <p>A credit score answers one question: how likely are you to repay debt. It's useful to lenders, but it tells you almost nothing about whether you're actually on track — whether your savings could cover a bad month, whether your super is heading toward a comfortable retirement, or whether your net worth is keeping pace with your age and income.</p>
+      <p>A financial wellbeing score is built to answer that broader question instead. The Maal Score takes everything you tell Maal (or everything your connected accounts show) and turns it into a single 0–100 number — plus a plain-English breakdown of exactly which parts of your financial life are pulling that number up, and which are pulling it down.</p>
+      <p class="muted">It's built specifically for Australia: superannuation, HECS-HELP's income-contingent structure, and ASFA retirement benchmarks are part of the model, not bolted on afterwards.</p>
+    </section>
+
+    <section class="fw-pillars">
+      <div style="max-width:780px;margin:0 auto;padding:1rem 1.5rem 0;">
+        <h2 class="fw-section-title">The five pillars</h2>
+        <p style="font-size:14px;color:var(--fg-muted);margin-bottom:0;">Each pillar scores 0–100. The Maal Score is the weighted sum, so it's always explainable — you can trace the number back to exactly what's driving it.</p>
+      </div>
+      <div class="fw-pillar-list">
+        <div class="fw-pillar">
+          <div class="fw-pillar-weight">25%</div>
+          <div>
+            <p class="fw-pillar-title">Savings buffer</p>
+            <p class="fw-pillar-desc">How many months of expenses your liquid savings and investments would cover. Six or more months scores full marks.</p>
+          </div>
+        </div>
+        <div class="fw-pillar">
+          <div class="fw-pillar-weight">25%</div>
+          <div>
+            <p class="fw-pillar-title">Debt health</p>
+            <p class="fw-pillar-desc">Your debt relative to income. HECS-HELP is weighted lightly in this calculation, since it's income-contingent and CPI-indexed rather than commercial debt.</p>
+          </div>
+        </div>
+        <div class="fw-pillar">
+          <div class="fw-pillar-weight">20%</div>
+          <div>
+            <p class="fw-pillar-title">Super adequacy</p>
+            <p class="fw-pillar-desc">Your projected super balance at retirement, measured against the ASFA comfortable standard for your age.</p>
+          </div>
+        </div>
+        <div class="fw-pillar">
+          <div class="fw-pillar-weight">15%</div>
+          <div>
+            <p class="fw-pillar-title">Wealth trajectory</p>
+            <p class="fw-pillar-desc">Your net worth as a multiple of income, benchmarked against people your age.</p>
+          </div>
+        </div>
+        <div class="fw-pillar">
+          <div class="fw-pillar-weight">15%</div>
+          <div>
+            <p class="fw-pillar-title">Protection</p>
+            <p class="fw-pillar-desc">Insurance cover, private health cover, and whether you have a retirement plan in place.</p>
+          </div>
+        </div>
+      </div>
+      <div style="max-width:780px;margin:0 auto;padding:0 1.5rem 3rem;">
+        <p style="font-size:13px;font-weight:700;margin-top:2rem;margin-bottom:0;">Score bands</p>
+        <div class="fw-bands">
+          <div class="fw-band"><div class="fw-band-range">80–100</div><div class="fw-band-label">Excellent</div></div>
+          <div class="fw-band"><div class="fw-band-range">65–79</div><div class="fw-band-label">Strong</div></div>
+          <div class="fw-band"><div class="fw-band-range">50–64</div><div class="fw-band-label">Steady</div></div>
+          <div class="fw-band"><div class="fw-band-range">35–49</div><div class="fw-band-label">Stretched</div></div>
+          <div class="fw-band"><div class="fw-band-range">Under 35</div><div class="fw-band-label">At Risk</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="fw-not">
+      <h2 class="fw-section-title">What the Maal Score is not</h2>
+      <ul class="fw-not-list">
+        <li class="fw-not-item"><span class="fw-not-dot"></span>Not a credit score — it doesn't affect your credit file and isn't used by lenders.</li>
+        <li class="fw-not-item"><span class="fw-not-dot"></span>Not personal financial advice — it's general information for educational purposes only, and doesn't take into account your personal objectives, financial situation or needs.</li>
+        <li class="fw-not-item"><span class="fw-not-dot"></span>Not a guarantee — it's an estimate based on the information you provide or the accounts you connect.</li>
+        <li class="fw-not-item"><span class="fw-not-dot"></span>Not a replacement for a licensed financial adviser — always consider seeking professional advice before making investment decisions.</li>
+      </ul>
+    </section>
+
+    <section class="fw-faq">
+      <div class="fw-faq-inner">
+        <h2 class="fw-section-title">Frequently asked questions</h2>
+        <div class="fw-faq-item">
+          <p class="fw-faq-q">What is a financial wellbeing score?</p>
+          <p class="fw-faq-a">A single 0–100 number that summarises your overall financial health — savings, debt, retirement readiness and protection against setbacks — rather than just your ability to borrow, which is what a credit score measures.</p>
+        </div>
+        <div class="fw-faq-item">
+          <p class="fw-faq-q">How is the Maal Score calculated?</p>
+          <p class="fw-faq-a">A weighted composite of five pillars: Savings buffer (25%), Debt health (25%), Super adequacy (20%), Wealth trajectory (15%) and Protection (15%). Each pillar scores 0–100, so the final number is always explainable.</p>
+        </div>
+        <div class="fw-faq-item">
+          <p class="fw-faq-q">Is the Maal Score the same as a credit score?</p>
+          <p class="fw-faq-a">No. A credit score predicts repayment risk for lenders. The Maal Score is broader, covers your whole financial picture including super, and is designed to help you understand your own finances — not to be used by a third party to assess you.</p>
+        </div>
+        <div class="fw-faq-item">
+          <p class="fw-faq-q">Is the Maal Score financial advice?</p>
+          <p class="fw-faq-a">No. It's general information for educational purposes only and doesn't take into account your personal objectives, financial situation or needs. Maal is not a substitute for advice from a licensed financial adviser.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="fw-final-cta">
+      <h2>Find out where you stand.</h2>
+      <p>Get your first Maal Score in about two minutes. No bank login required to start.</p>
+      <div class="fw-actions" style="margin-top:1.5rem;">
+        <a href="/score" class="fw-cta-primary">Get your free Maal Score</a>
+        <a href="/waitlist" class="fw-cta-secondary">Join the waitlist</a>
+      </div>
+    </section>
+
+    <div class="disclaimer-block">
+      DISCLAIMER: Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.
+      <br>Maal Pty Ltd is not an Australian Financial Services Licensee. Information provided is general in nature and does not take into account your individual objectives, financial situation, or needs. Always consider seeking advice from a qualified financial adviser before making investment decisions. Past performance is not a reliable indicator of future performance.
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+  <%- analyticsSnippet %>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <title>About — Maal</title>
+  <meta name="description" content="Maal is the one place all your financial well-being tools and data reside — a financial wellbeing score, plain-English explanations, and a plan that thinks in decades, not quarters.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/theme.css">
+  <style>
+    body { background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
+    main { flex: 1; }
+    .ab-section { padding: 5rem 1.5rem 2rem; text-align: center; }
+    .ab-kicker { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .18em; color: var(--fg-muted); margin-bottom: 1rem; }
+    .ab-h1 { font-size: clamp(2.2rem,6vw,3.5rem); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; }
+    .ab-sub { margin: 1.25rem auto 0; font-size: 1.05rem; color: var(--fg-muted); max-width: 620px; line-height: 1.7; }
+    .ab-body { max-width: 680px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+    .ab-body p { font-size: 15px; line-height: 1.85; color: var(--fg); margin-bottom: 1.5rem; }
+    .ab-body p.muted { color: var(--fg-muted); }
+    .ab-body strong { font-weight: 600; }
+    .ab-roles { padding: 4rem 1.5rem; border-top: 1px solid var(--border); background: rgba(0,0,0,.02); }
+    html[data-theme="dark"] .ab-roles { background: rgba(255,255,255,.015); }
+    .ab-roles-inner { max-width: 900px; margin: 0 auto; text-align: center; }
+    .ab-roles h2 { font-size: clamp(1.5rem,3vw,1.9rem); font-weight: 700; letter-spacing: -.03em; margin-bottom: 2.5rem; }
+    .ab-role-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: .75rem; }
+    .ab-role { padding: 1.25rem 1rem; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); font-size: 13px; font-weight: 600; }
+    .disclaimer-block { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; font-size: 11px; color: var(--fg-muted); line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <%- include('partials/navbar') %>
+
+  <main>
+    <section class="ab-section">
+      <p class="ab-kicker">About Maal</p>
+      <h1 class="ab-h1">One place for your<br>entire financial life.</h1>
+      <p class="ab-sub">Maal is the one place where all of your financial well-being tools — and your financial data — reside.</p>
+    </section>
+
+    <div class="ab-body">
+      <p>Care, memory, and patience — and the absence of an agenda. That's what Maal brings to your financial picture, applied consistently, every single day.</p>
+
+      <p><strong>Maal remembers everything.</strong> The bond you bought five years ago. Your son's university timeline. The conversation about your in-laws' trust last year. The thing that made you nervous in 2020. It adjusts accordingly, every time — Maal never asks you twice, and it never forgets.</p>
+
+      <p><strong>There's no agenda.</strong> Maal isn't trying to sell you anything. There's no fund it earns more on, no quarterly reshuffle to justify. The only thing Maal is built to do is help you understand your money, more clearly, over a longer horizon than most people remember to plan for.</p>
+
+      <p><strong>Maal thinks in decades.</strong> It's easy to get distracted by what's hot. Maal starts with the long view — it thinks like old money: slowly, patiently, with the next generation already in mind. It isn't interested in what's hot. It's interested in what compounds.</p>
+
+      <p class="muted">Career-agnostic and values-agnostic — built for every Australian who wants to understand their finances, grow their wealth, and plan with confidence.</p>
+    </div>
+
+    <section class="ab-roles">
+      <div class="ab-roles-inner">
+        <h2>Every part of your financial life, in one place</h2>
+        <div class="ab-role-grid">
+          <div class="ab-role">Net worth &amp; assets</div>
+          <div class="ab-role">Super &amp; retirement</div>
+          <div class="ab-role">Debt &amp; HECS</div>
+          <div class="ab-role">Tax &amp; cashflow</div>
+          <div class="ab-role">Investments &amp; portfolio</div>
+          <div class="ab-role">Goals &amp; planning</div>
+          <div class="ab-role">Documents &amp; records</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="disclaimer-block">
+      DISCLAIMER: Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+  <%- analyticsSnippet %>
+</body>
+</html>

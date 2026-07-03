@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/png" href="/favicon.png">
   <title>Join the waitlist — Maal</title>
-  <meta name="description" content="Be first to use Maal — a CFO-level financial clarity platform for every Australian.">
+  <meta name="description" content="Be first to get your Maal Score — the financial wellbeing score for every Australian.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -29,6 +29,16 @@
     .wl-submit:hover { opacity: .88; }
     .wl-submit:disabled { opacity: .5; cursor: default; }
     .wl-alert { margin-top: .75rem; font-size: 12px; color: #dc2626; }
+    .wl-trust { margin-top: .875rem; font-size: 12px; color: var(--fg-muted); }
+    .wl-proof { margin-top: 3rem; padding-top: 2.5rem; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
+    @media (min-width: 500px) { .wl-proof { grid-template-columns: repeat(4, 1fr); } }
+    .wl-proof-big { font-size: 1.1rem; font-weight: 700; letter-spacing: -.02em; }
+    .wl-proof-small { margin-top: .2rem; font-size: 11px; color: var(--fg-muted); line-height: 1.4; }
+    .wl-shape { margin-top: 3rem; padding-top: 2.5rem; border-top: 1px solid var(--border); }
+    .wl-shape-title { font-size: 13px; font-weight: 600; }
+    .wl-shape-list { margin-top: 1rem; display: flex; flex-direction: column; gap: .75rem; padding: 0; list-style: none; }
+    .wl-shape-item { display: flex; align-items: flex-start; gap: .625rem; font-size: 13px; color: var(--fg-muted); line-height: 1.5; }
+    .wl-shape-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mint); flex-shrink: 0; margin-top: .45rem; }
   </style>
 </head>
 <body>
@@ -36,9 +46,9 @@
 
   <main>
     <div class="wl-inner">
-      <p class="wl-kicker">Waitlist</p>
-      <h1 class="wl-h1">Be first to use Maal.</h1>
-      <p class="wl-sub">We're opening access in waves. Drop your email and we'll send your invite when your wave goes live.</p>
+      <p class="wl-kicker">Early access</p>
+      <h1 class="wl-h1">Be first to get your Maal Score.</h1>
+      <p class="wl-sub">We're opening access in waves. Join the list and we'll email your invite — plus your first Maal Score — the moment your wave goes live.</p>
 
       <div id="wl-success" class="wl-success" style="display:none">
         <p class="wl-success-title">You're on the list.</p>
@@ -50,6 +60,36 @@
         <button id="wl-btn" class="wl-submit" type="submit">Join waitlist</button>
       </form>
       <p id="wl-error" class="wl-alert" style="display:none"></p>
+      <p class="wl-trust">No spam. No card required. Maal provides education and general information only.</p>
+
+      <div class="wl-proof">
+        <div>
+          <p class="wl-proof-big">3 scores</p>
+          <p class="wl-proof-small">Credit, debt &amp; financial wellbeing</p>
+        </div>
+        <div>
+          <p class="wl-proof-big">100+ institutions</p>
+          <p class="wl-proof-small">Connected via Basiq open banking</p>
+        </div>
+        <div>
+          <p class="wl-proof-big">Built for AU</p>
+          <p class="wl-proof-small">Super, HECS &amp; ATO native</p>
+        </div>
+        <div>
+          <p class="wl-proof-big">Read-only</p>
+          <p class="wl-proof-small">Maal can never move your money</p>
+        </div>
+      </div>
+
+      <div class="wl-shape">
+        <p class="wl-shape-title">What early users will help shape</p>
+        <ul class="wl-shape-list">
+          <li class="wl-shape-item"><span class="wl-shape-dot"></span>How the Maal Score is explained, pillar by pillar</li>
+          <li class="wl-shape-item"><span class="wl-shape-dot"></span>Which score drivers matter most to everyday Australians</li>
+          <li class="wl-shape-item"><span class="wl-shape-dot"></span>The questions Ask Maal should handle best around super, HECS and debt</li>
+          <li class="wl-shape-item"><span class="wl-shape-dot"></span>What Radar should flag as a meaningful change worth an alert</li>
+        </ul>
+      </div>
     </div>
   </main>
 

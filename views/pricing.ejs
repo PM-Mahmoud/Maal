@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/png" href="/favicon.png">
   <title>Pricing — Maal</title>
-  <meta name="description" content="Free, Pro $20/mo, and Max $200/mo. Honest pricing for a CFO-level financial advisor built for Australians.">
+  <meta name="description" content="Free, Pro $20/mo, and Max $200/mo. Honest pricing for a financial wellbeing score and plain-English action plan, built for Australians.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -17,6 +17,10 @@
     .pr-kicker { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .18em; color: var(--fg-muted); margin-bottom: 1rem; }
     .pr-h1 { font-size: clamp(2.2rem,6vw,3.5rem); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; }
     .pr-sub { margin: 1.25rem auto 0; font-size: 1rem; color: var(--fg-muted); max-width: 480px; line-height: 1.65; }
+    .billing-toggle { display: flex; justify-content: center; gap: .25rem; margin: 0 auto 2.5rem; padding: .25rem; width: fit-content; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9999px; }
+    .bt-opt { border: none; background: none; padding: .5rem 1rem; border-radius: 9999px; font-size: 12.5px; font-weight: 600; color: var(--fg-muted); cursor: pointer; font-family: var(--font-body); transition: all .15s; display: flex; align-items: center; gap: .4rem; }
+    .bt-opt.active { background: var(--surface); color: var(--fg); box-shadow: var(--shadow); }
+    .bt-save { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); }
     .tiers { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem 4rem; display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; }
     @media (max-width: 800px) { .tiers { grid-template-columns: 1fr; } }
     .tier { padding: 2rem; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); display: flex; flex-direction: column; }
@@ -62,18 +66,24 @@
       <p class="pr-sub">Maal replaces the spreadsheet and the awkward annual review. Cancel anytime. All amounts in AUD.</p>
     </section>
 
+    <div class="billing-toggle">
+      <button type="button" class="bt-opt active" data-period="monthly" onclick="setPeriod('monthly')">Monthly</button>
+      <button type="button" class="bt-opt" data-period="annual" onclick="setPeriod('annual')">Annual <span class="bt-save">2 months free</span></button>
+    </div>
+
     <div class="tiers">
       <div class="tier">
         <div class="tier-top"><span class="tier-name">Free</span></div>
         <div class="tier-price">
           <span class="tier-price-num">$0</span>
-          <span class="tier-price-per">forever</span>
+          <span class="tier-price-per">forever, no card required</span>
         </div>
-        <p class="tier-desc">Get your score and try the dashboard.</p>
+        <p class="tier-desc">Start building your full financial picture with Maal.</p>
         <ul class="tier-list">
-          <li><span class="tier-check">&#10003;</span> Maal Score</li>
-          <li><span class="tier-check">&#10003;</span> Manual entry</li>
-          <li><span class="tier-check">&#10003;</span> Basic dashboard</li>
+          <li><span class="tier-check">&#10003;</span> Limited Ask Maal chat, research and radar usage each month</li>
+          <li><span class="tier-check">&#10003;</span> Track accounts, real estate, crypto, vehicles, debt and more</li>
+          <li><span class="tier-check">&#10003;</span> Net worth, transactions, allocations and performance</li>
+          <li><span class="tier-check">&#10003;</span> Bank connections pause after 30 days of inactivity — reconnect any time</li>
         </ul>
         <a href="/signup" class="tier-cta outline">Start free</a>
       </div>
@@ -84,16 +94,19 @@
           <span class="tier-badge">Recommended</span>
         </div>
         <div class="tier-price">
-          <span class="tier-price-num">$20</span>
-          <span class="tier-price-per">AUD / month</span>
+          <span class="tier-price-num price-monthly">$20</span>
+          <span class="tier-price-num price-annual" style="display:none">$200</span>
+          <span class="tier-price-per price-monthly">AUD / month</span>
+          <span class="tier-price-per price-annual" style="display:none">AUD / year</span>
         </div>
-        <p class="tier-desc">The full advisor — for every Australian household.</p>
+        <p class="tier-desc">For active users who use Maal regularly.</p>
         <ul class="tier-list">
           <li><span class="tier-check">&#10003;</span> Everything in Free</li>
-          <li><span class="tier-check">&#10003;</span> Open banking sync</li>
-          <li><span class="tier-check">&#10003;</span> Tax &amp; super tools</li>
-          <li><span class="tier-check">&#10003;</span> Ask Maal chat</li>
-          <li><span class="tier-check">&#10003;</span> Retirement projections</li>
+          <li><span class="tier-check">&#10003;</span> 10x the monthly usage across chat, research and radars</li>
+          <li><span class="tier-check">&#10003;</span> The latest frontier AI models</li>
+          <li><span class="tier-check">&#10003;</span> The most robust, accurate financial data</li>
+          <li><span class="tier-check">&#10003;</span> Maal builds and emails you any spreadsheet, PDF or report you ask for</li>
+          <li><span class="tier-check">&#10003;</span> Priority support</li>
         </ul>
         <a href="/signup" class="tier-cta solid">Get Pro</a>
       </div>
@@ -104,15 +117,15 @@
           <span class="tier-price-num">$200</span>
           <span class="tier-price-per">AUD / month</span>
         </div>
-        <p class="tier-desc">For complex finances and small business owners.</p>
+        <p class="tier-desc">For power users running serious workflows.</p>
         <ul class="tier-list">
           <li><span class="tier-check">&#10003;</span> Everything in Pro</li>
-          <li><span class="tier-check">&#10003;</span> Radar alerts (email + SMS)</li>
-          <li><span class="tier-check">&#10003;</span> Vault PDF extraction</li>
-          <li><span class="tier-check">&#10003;</span> Multi-entity</li>
-          <li><span class="tier-check">&#10003;</span> Priority reviews</li>
+          <li><span class="tier-check">&#10003;</span> 10x Pro's usage across chat, research and radars</li>
+          <li><span class="tier-check">&#10003;</span> Personal setup with founder Mahmoud</li>
+          <li><span class="tier-check">&#10003;</span> Early access to new features</li>
+          <li><span class="tier-check">&#10003;</span> Top-level priority support</li>
         </ul>
-        <a href="/waitlist" class="tier-cta outline">Talk to us</a>
+        <a href="/signup" class="tier-cta outline">Get Max</a>
       </div>
     </div>
 
@@ -130,16 +143,14 @@
           </thead>
           <tbody>
             <tr><td>Maal Score (0–100)</td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
-            <tr><td>Manual asset &amp; debt entry</td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
-            <tr><td>Tax &amp; super optimiser tools</td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
-            <tr><td>Open banking sync</td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
-            <tr><td>Retirement projections (Monte Carlo)</td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
-            <tr><td>Ask Maal advisor chat</td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
-            <tr><td>Goals &amp; portfolio plan</td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
-            <tr><td>Radar alerts (email + SMS)</td><td><span class="c-dash">—</span></td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td></tr>
-            <tr><td>Vault PDF extraction</td><td><span class="c-dash">—</span></td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td></tr>
-            <tr><td>Multi-entity (trusts, companies)</td><td><span class="c-dash">—</span></td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td></tr>
-            <tr><td>Priority human-led reviews</td><td><span class="c-dash">—</span></td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td></tr>
+            <tr><td>Connect accounts, real estate, crypto, vehicles &amp; debt</td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
+            <tr><td>Net worth, transactions, allocations &amp; performance</td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
+            <tr><td>Ask Maal chat, research &amp; radars</td><td>Limited</td><td>10x Free</td><td>10x Pro</td></tr>
+            <tr><td>Frontier AI models &amp; most accurate financial data</td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
+            <tr><td>Maal builds &amp; emails spreadsheets, PDFs &amp; reports on request</td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
+            <tr><td>Priority support</td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td><td>Top-level</td></tr>
+            <tr><td>Personal setup with founder Mahmoud</td><td><span class="c-dash">—</span></td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td></tr>
+            <tr><td>Early access to new features</td><td><span class="c-dash">—</span></td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td></tr>
           </tbody>
         </table>
       </div>
@@ -152,5 +163,12 @@
 
   <%- include('partials/footer') %>
   <%- analyticsSnippet %>
+  <script>
+    function setPeriod(period) {
+      document.querySelectorAll('.bt-opt').forEach(function(b) { b.classList.toggle('active', b.dataset.period === period); });
+      document.querySelectorAll('.price-monthly').forEach(function(el) { el.style.display = period === 'monthly' ? '' : 'none'; });
+      document.querySelectorAll('.price-annual').forEach(function(el) { el.style.display = period === 'annual' ? '' : 'none'; });
+    }
+  </script>
 </body>
 </html>

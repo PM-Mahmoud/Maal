@@ -7,9 +7,9 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Maal — Financial clarity for every Australian" },
-      { name: "description", content: "Maal reads your assets, debts, super, and income to deliver a 0–100 Financial Health Score and a personalised action plan. CFO-level clarity, no advisor required." },
+      { name: "description", content: "Maal reads your assets, debts, super, and income to deliver a 0–100 Financial Wellbeing Score and a plain-English action plan to improve it." },
       { property: "og:title", content: "Maal — Financial clarity for every Australian" },
-      { property: "og:description", content: "Maal reads your assets, debts, super, and income to deliver a 0–100 Financial Health Score and a personalised action plan." },
+      { property: "og:description", content: "Maal reads your assets, debts, super, and income to deliver a 0–100 Financial Wellbeing Score and a plain-English action plan to improve it." },
     ],
   }),
   component: Index,
@@ -42,12 +42,12 @@ function Hero() {
           Built for Australia
         </p>
         <h1 className="text-[52px] md:text-[80px] leading-[0.98] tracking-display font-bold text-balance">
-          Your money,<br />in balance.
+          Your financial life,<br />scored.
         </h1>
         <p className="mt-7 text-[17px] md:text-[19px] text-muted-foreground leading-relaxed max-w-[58ch] text-pretty">
-          Maal is the all-in-one for everyday Australians — a CFO-level advisor that reads your statements,
-          bank accounts and transactions, then explains your financial situation in plain language.
-          Super, HECS, portfolio, spending: one clear picture.
+          Maal is the all-in-one for everyday Australians — it reads your statements,
+          bank accounts and transactions, then turns them into one clear financial wellbeing score
+          and a plain-English plan to improve it. Super, HECS, portfolio, spending: one clear picture.
         </p>
         <div className="mt-9 flex flex-wrap gap-3 items-center">
           <Link to="/score" className="bg-foreground text-background px-5 py-3 rounded-[8px] text-[14px] font-semibold hover:bg-foreground/90 active:scale-[0.98] transition-all">
@@ -58,7 +58,7 @@ function Hero() {
           </Link>
         </div>
         <p className="mt-5 text-[12px] text-muted-foreground">
-          Free to start. No card required. Read-only bank connections via Basiq.
+          Free to start. No card required. Read-only bank connections via Basiq. Education only — never financial advice.
         </p>
       </div>
     </section>
@@ -105,7 +105,7 @@ function ScoreCard() {
             ))}
           </div>
           <p className="mt-6 pt-5 border-t border-border text-center text-[12px] text-muted-foreground">
-            Your values. Your framework. Your score.
+            One score across the parts of money Australians actually deal with.
           </p>
         </div>
       </div>
@@ -289,11 +289,11 @@ function WhyMaal() {
 function HowItWorks() {
   const steps = [
     { n: "01", title: "Tell Maal what you have", body: "Add your income, super balance, HECS, mortgage, savings, and any investments. Takes a few minutes — no bank login needed to start." },
-    { n: "02", title: "Get your Maal Score", body: "A weighted 0–100 read of your financial health across five pillars: net worth, debt, super, diversification, and emergency buffer." },
+    { n: "02", title: "Get your Maal Score", body: "A weighted 0–100 read of your financial health across five pillars: savings buffer, debt health, super adequacy, wealth trajectory, and protection." },
     { n: "03", title: "Follow your action plan", body: "A prioritised list of moves to lift your score, ranked by impact — pay down debt, top up super, build your buffer. The plan adapts as your situation changes." },
   ];
   return (
-    <section className="py-24 border-t border-border bg-[var(--secondary)]/30">
+    <section id="how" className="py-24 border-t border-border bg-[var(--secondary)]/30">
       <div className="max-w-7xl mx-auto px-6">
         <div className="mb-14">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-3">How it works</p>
@@ -319,7 +319,7 @@ function PricingStrip() {
   const tiers = [
     { name: "Free", price: "$0", per: "forever", desc: "Maal Score, basic dashboard, manual entry.", cta: "Start free", to: "/auth", featured: false },
     { name: "Pro", price: "$20", per: "AUD / month", desc: "Open banking sync, retirement projections, tax & super tools, Ask Maal.", cta: "Get Pro", to: "/pricing", featured: true },
-    { name: "Max", price: "$200", per: "AUD / month", desc: "Multi-entity, Radar alerts, Vault PDF extraction, priority advisor.", cta: "Talk to us", to: "/pricing", featured: false },
+    { name: "Max", price: "$200", per: "AUD / month", desc: "Multi-entity, Radar alerts, Vault PDF extraction, priority support.", cta: "Talk to us", to: "/pricing", featured: false },
   ];
   return (
     <section className="py-24">

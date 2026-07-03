@@ -137,12 +137,17 @@
     fill.setAttribute('d', d + ' L200,36 L0,36 Z');
   }
 
-  // metric → snapshot field, label, and whether "up" is bad (debts)
+  // metric → snapshot field, label, and whether "up" is bad (debts).
+  // 'cashflow' is deliberately absent — it's a flow, not a balance, and has
+  // no direct snapshot field. It's handled separately below (see
+  // cashflowCumulativeSeries) since Open/Close/Change on a raw balance
+  // series doesn't make sense for money in/out.
   var METRICS = {
-    networth: { field: 'nw',   label: 'Net Worth',   invert: false },
-    invest:   { field: 'inv',  label: 'Investments', invert: false },
-    cash:     { field: 'cash', label: 'Total Cash',  invert: false },
-    debts:    { field: 'debt', label: 'Total Debts', invert: true }
+    networth:     { field: 'nw',         label: 'Net Worth',         invert: false },
+    invest:       { field: 'inv',        label: 'Investments',       invert: false },
+    cash:         { field: 'cash',       label: 'Total Cash',        invert: false },
+    debts:        { field: 'debt',       label: 'Total Debts',       invert: true  },
+    investassets: { field: 'investable', label: 'Investable Assets', invert: false }
   };
 
   function rangeDays(label) {
@@ -172,6 +177,40 @@
     return { moneyIn: inSum, moneyOut: outSum, net: inSum - outSum, count: txns.length };
   }
 
+  // Cashflow is a flow, not a balance — there's no per-day "cashflow value"
+  // in MAAL_SNAPSHOTS the way there is for net worth or investments. Instead,
+  // build a cumulative running-net series over the range: starts at 0, each
+  // day adds that day's signed transaction total. This gives the cashflow
+  // tile/trend-modal a sensible line chart and an Open(0)/Close/Change
+  // framing that reuses the same rendering machinery as the balance metrics.
+  function cashflowCumulativeSeries(label) {
+    var txns = window.MAAL_TXNS || [];
+    if (label !== 'All') {
+      var cutoff = Date.now() - rangeDays(label) * 86400000;
+      txns = txns.filter(function (t) { return new Date(t.d).getTime() >= cutoff; });
+    }
+    var byDay = {};
+    txns.forEach(function (t) {
+      var day = String(t.d).slice(0, 10);
+      byDay[day] = (byDay[day] || 0) + (Number(t.amt) || 0);
+    });
+    var days = Object.keys(byDay).sort();
+    if (!days.length) return [];
+    var running = 0;
+    var points = days.map(function (d) {
+      running += byDay[d];
+      return { d: d, value: Math.round(running * 100) / 100 };
+    });
+    // Leading zero-baseline point (one day before the first transaction) so
+    // Open is always 0 and Close always equals the true period net — keeps
+    // this in sync with flowSummary()'s totals rather than silently
+    // dropping the first day's contribution from the "Change" figure.
+    var firstDay = new Date(days[0] + 'T00:00:00Z');
+    firstDay.setUTCDate(firstDay.getUTCDate() - 1);
+    points.unshift({ d: firstDay.toISOString().slice(0, 10), value: 0 });
+    return points;
+  }
+
   function deltaText(metric, visible, label) {
     var cfg = METRICS[metric];
     if (visible.length < 2) return null; // keep the server descriptive text
@@ -188,10 +227,11 @@
 
   function renderCharts(label) {
     var visible = snapsInRange(label);
-    drawSpark('spark-networth', visible.map(function (s) { return s.nw; }));
-    drawSpark('spark-invest',   visible.map(function (s) { return s.inv; }));
-    drawSpark('spark-cash',     visible.map(function (s) { return s.cash; }));
-    drawSpark('spark-debts',    visible.map(function (s) { return s.debt; }));
+    drawSpark('spark-networth',     visible.map(function (s) { return s.nw; }));
+    drawSpark('spark-invest',       visible.map(function (s) { return s.inv; }));
+    drawSpark('spark-cash',         visible.map(function (s) { return s.cash; }));
+    drawSpark('spark-debts',        visible.map(function (s) { return s.debt; }));
+    drawSpark('spark-investassets', visible.map(function (s) { return s.investable; }));
     Object.keys(METRICS).forEach(function (metric) {
       var el = $('[data-delta="' + metric + '"]');
       if (!el) return;
@@ -201,6 +241,21 @@
       el.classList.toggle('up', d.good && d.changed);
       el.classList.toggle('down', !d.good && d.changed);
     });
+
+    // Cashflow tile — flow, not a balance, handled separately (see
+    // cashflowCumulativeSeries). Sparkline draws fine either way since
+    // drawSpark just wants a numeric series.
+    var flow = flowSummary(label);
+    var cfSeries = cashflowCumulativeSeries(label);
+    drawSpark('spark-cashflow', cfSeries.map(function (p) { return p.value; }));
+    var cfValueEl = document.getElementById('ov-tile-cashflow');
+    if (cfValueEl) cfValueEl.textContent = (flow.net >= 0 ? '+' : '−') + audFmt(Math.abs(flow.net));
+    var cfDeltaEl = $('[data-delta="cashflow"]');
+    if (cfDeltaEl) {
+      cfDeltaEl.textContent = flow.count ? (audFmt(flow.moneyIn) + ' in, ' + audFmt(flow.moneyOut) + ' out') : 'No transactions in this range';
+      cfDeltaEl.classList.toggle('up', flow.net > 0);
+      cfDeltaEl.classList.toggle('down', flow.net < 0);
+    }
   }
 
   /* ─── 2b. Expanded trend modal (click a stat tile) ─────── */
@@ -228,7 +283,9 @@
   }
 
   function openTrendModal(metric, startRange) {
-    var cfg = METRICS[metric];
+    // cashflow isn't in METRICS (it's a flow, not a balance — see
+    // cashflowCumulativeSeries) but still opens the same modal shell.
+    var cfg = metric === 'cashflow' ? { label: 'Cashflow', invert: false, isCashflow: true } : METRICS[metric];
     if (!cfg) return;
     var nowValEl = $('.stat-card[data-trend="' + metric + '"] .stat-value');
     var nowVal = nowValEl ? nowValEl.textContent : '';
@@ -251,9 +308,16 @@
     document.body.appendChild(overlay);
 
     function render(r) {
-      var visible = snapsInRange(r);
-      var series = visible.map(function (s) { return s[cfg.field]; });
-      var dates = visible.map(function (s) { return s.d; });
+      var series, dates;
+      if (cfg.isCashflow) {
+        var cfPoints = cashflowCumulativeSeries(r);
+        series = cfPoints.map(function (p) { return p.value; });
+        dates = cfPoints.map(function (p) { return p.d; });
+      } else {
+        var visible = snapsInRange(r);
+        series = visible.map(function (s) { return s[cfg.field]; });
+        dates = visible.map(function (s) { return s.d; });
+      }
       var open = series.length ? series[0] : 0, close = series.length ? series[series.length - 1] : 0;
       var diff = close - open;
       var good = cfg.invert ? diff <= 0 : diff >= 0;
@@ -532,6 +596,147 @@
           if (!document.getElementById('score-ring-meter')) setTimeout(function () { location.reload(); }, 800);
         } else { toast(j.error || 'Could not remove'); }
       }).catch(function () { toast('Could not remove — please try again'); });
+    });
+  });
+
+  /* ─── 3b. Per-row asset/liability CRUD (dashboard-assets.ejs) ───
+     Real multi-row CRUD on the granular tables (db/assets.js), distinct
+     from the single-value ASSET_FIELDS system above — that one stays for
+     hecs_balance/monthly_expenses (never relationalized, see the
+     assets-liabilities plan), this one owns cash/investments/properties/
+     debts/super. A user can have multiple rows per type here (two
+     properties, three debts at different rates), which ASSET_FIELDS
+     structurally can't represent. */
+  var ROW_TYPE_CONFIG = {
+    cash: {
+      label: 'cash account',
+      fields: [
+        { key: 'label', label: 'Account name', type: 'text', placeholder: 'e.g. Everyday account' },
+        { key: 'institution', label: 'Institution', type: 'text', placeholder: 'e.g. CommBank' },
+        { key: 'balance', label: 'Balance (AUD)', type: 'number', required: true },
+      ],
+    },
+    investments: {
+      label: 'investment',
+      fields: [
+        { key: 'name', label: 'Name', type: 'text', placeholder: 'e.g. VAS ETF' },
+        { key: 'kind', label: 'Type', type: 'select', options: { shares: 'Shares', etf: 'ETF', crypto: 'Crypto', other: 'Other' } },
+        { key: 'value', label: 'Current value (AUD)', type: 'number', required: true },
+      ],
+    },
+    properties: {
+      label: 'property',
+      fields: [
+        { key: 'label', label: 'Property name', type: 'text', placeholder: 'e.g. Home' },
+        { key: 'property_type', label: 'Type', type: 'select', options: { residential: 'Residential', commercial: 'Commercial' } },
+        { key: 'value', label: 'Estimated value (AUD)', type: 'number', required: true },
+        { key: 'mortgage_balance', label: 'Mortgage balance (AUD)', type: 'number' },
+      ],
+    },
+    debts: {
+      label: 'liability',
+      fields: [
+        { key: 'label', label: 'Name', type: 'text', placeholder: 'e.g. Car loan' },
+        { key: 'kind', label: 'Type', type: 'select', options: { credit_card: 'Credit card', mortgage: 'Mortgage', loan: 'Loan', other: 'Other' } },
+        { key: 'balance', label: 'Balance owed (AUD)', type: 'number', required: true },
+        { key: 'interest_rate', label: 'Interest rate (% p.a., optional)', type: 'number' },
+      ],
+    },
+    super: {
+      label: 'super fund',
+      fields: [
+        { key: 'label', label: 'Name', type: 'text', placeholder: 'e.g. My super' },
+        { key: 'fund_name', label: 'Fund name', type: 'text', placeholder: 'e.g. AustralianSuper' },
+        { key: 'balance', label: 'Balance (AUD)', type: 'number', required: true },
+      ],
+    },
+  };
+
+  function rowModal(type, existingRow) {
+    var cfg = ROW_TYPE_CONFIG[type];
+    if (!cfg) return;
+    var isEdit = !!existingRow;
+    var fieldsHtml = cfg.fields.map(function (f) {
+      var val = isEdit ? (existingRow[f.key] != null ? existingRow[f.key] : '') : '';
+      var id = 'mz-row-' + f.key;
+      if (f.type === 'select') {
+        var opts = Object.keys(f.options).map(function (k) {
+          return '<option value="' + k + '"' + (String(val) === k ? ' selected' : '') + '>' + f.options[k] + '</option>';
+        }).join('');
+        return '<div class="field"><label>' + f.label + '</label><select id="' + id + '">' + opts + '</select></div>';
+      }
+      return '<div class="field"><label>' + f.label + '</label><input type="' + f.type + '" id="' + id + '"' +
+        (f.type === 'number' ? ' min="0" step="0.01"' : '') +
+        (f.placeholder ? ' placeholder="' + f.placeholder + '"' : '') +
+        (val !== '' ? ' value="' + escapeHtml(String(val)) + '"' : '') + '></div>';
+    }).join('');
+
+    openModal(
+      (isEdit ? 'Edit ' : 'Add ') + cfg.label,
+      fieldsHtml,
+      function (overlay) {
+        var payload = {};
+        var firstBad = null;
+        for (var i = 0; i < cfg.fields.length; i++) {
+          var f = cfg.fields[i];
+          var el = $('#mz-row-' + f.key, overlay);
+          clearFieldError(el);
+          var raw = el.value;
+          if (f.type === 'number') {
+            if (raw === '' && f.required) { setFieldError(el, 'This field is required.'); firstBad = firstBad || el; continue; }
+            var num = raw === '' ? 0 : parseFloat(raw);
+            if (isNaN(num) || num < 0) { setFieldError(el, 'Enter a valid amount (0 or more).'); firstBad = firstBad || el; continue; }
+            payload[f.key] = num;
+          } else {
+            if (f.required && !raw.trim()) { setFieldError(el, 'This field is required.'); firstBad = firstBad || el; continue; }
+            payload[f.key] = raw.trim();
+          }
+        }
+        if (firstBad) { firstBad.focus(); return false; }
+
+        var url = isEdit ? '/dashboard/assets/' + type + '/' + existingRow.id : '/dashboard/assets/' + type;
+        fetch(url, {
+          method: isEdit ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }).then(function (r) { return r.json(); }).then(function (j) {
+          if (j.ok) {
+            toast((isEdit ? 'Updated' : 'Added') + ' ' + cfg.label);
+            setTimeout(function () { location.reload(); }, 500);
+          } else {
+            toast(j.error || 'Could not save');
+          }
+        }).catch(function () { toast('Could not save — are you online?'); });
+      },
+      'Save'
+    );
+  }
+
+  $all('[data-row-add]').forEach(function (btn) {
+    btn.addEventListener('click', function () { rowModal(btn.getAttribute('data-row-type')); });
+  });
+
+  $all('[data-row-edit]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var type = btn.getAttribute('data-row-type');
+      var row;
+      try { row = JSON.parse(btn.getAttribute('data-row-json')); } catch (e) { return; }
+      rowModal(type, row);
+    });
+  });
+
+  $all('[data-row-delete]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var type = btn.getAttribute('data-row-type');
+      var id = btn.getAttribute('data-row-id');
+      var label = btn.getAttribute('data-row-label') || 'this';
+      if (!confirm('Remove ' + label + '? This can\'t be undone.')) return;
+      fetch('/dashboard/assets/' + type + '/' + id, { method: 'DELETE' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (j.ok) { toast(label + ' removed'); setTimeout(function () { location.reload(); }, 400); }
+          else toast(j.error || 'Could not remove');
+        }).catch(function () { toast('Could not remove — please try again'); });
     });
   });
 

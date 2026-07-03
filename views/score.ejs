@@ -69,6 +69,11 @@
     .sc-result-nav { margin-top: 2rem; display: flex; align-items: center; justify-content: space-between; }
     .sc-restart { font-size: 13px; font-weight: 600; color: var(--fg-muted); background: none; border: none; cursor: pointer; font-family: var(--font-body); }
     .sc-restart:hover { color: var(--fg); }
+    /* Intro */
+    .sc-intro-body { margin-top: 1rem; font-size: 15px; color: var(--fg-muted); line-height: 1.65; }
+    .sc-intro-trust { margin-top: 1.25rem; font-size: 12px; color: var(--fg-muted); }
+    .sc-intro-start { margin-top: 2rem; height: 48px; padding: 0 1.5rem; border-radius: 8px; background: var(--fg); color: #fff; font-size: 14px; font-weight: 600; border: none; cursor: pointer; font-family: var(--font-body); transition: opacity .15s; }
+    .sc-intro-start:hover { opacity: .88; }
   </style>
 </head>
 <body>
@@ -91,6 +96,7 @@
 
     var root = document.getElementById('sc-app');
     var step = 0;
+    var introShown = false;
     var inputs = { age: 35, income: 95000, assets: 250000, debts: 80000, superBalance: 90000 };
     var STEPS = [
       { title: 'You', question: 'How old are you and what do you earn?',
@@ -185,6 +191,21 @@
       return s;
     }
 
+    function renderIntro() {
+      var html = '<p class="sc-kicker">Free Maal Score</p>';
+      html += '<h1 class="sc-h1">Get your free Maal Score.</h1>';
+      html += '<p class="sc-intro-body">Answer a few questions about your income, savings, debts, super, HECS and investments. Maal will estimate your financial wellbeing score and show the main drivers behind it.</p>';
+      html += '<p class="sc-intro-trust">Takes about two minutes. No bank login required. Educational only — not financial advice.</p>';
+      html += '<button class="sc-intro-start" id="sc-intro-start">Get started</button>';
+      root.innerHTML = html;
+
+      document.getElementById('sc-intro-start').addEventListener('click', function() {
+        introShown = true;
+        step = 0;
+        renderWizard();
+      });
+    }
+
     function renderWizard() {
       var cur = STEPS[step];
       var pct = ((step + 1) / 4) * 100;
@@ -211,7 +232,7 @@
       });
       html += '</div>';
       html += '<div class="sc-nav">';
-      html += '<button class="sc-back" id="sc-back-btn"' + (step === 0 ? ' disabled' : '') + '>← Back</button>';
+      html += '<button class="sc-back" id="sc-back-btn">← Back</button>';
       html += '<button class="sc-next" id="sc-next-btn">' + (step === 3 ? 'See my score' : 'Continue') + '</button>';
       html += '</div>';
       html += '<div class="sc-disclaimer">Maal does not provide financial advice. This calculator is for educational purposes only.</div>';
@@ -223,6 +244,7 @@
       });
       document.getElementById('sc-back-btn').addEventListener('click', function() {
         if (step > 0) { step--; renderWizard(); }
+        else { renderIntro(); }
       });
       document.getElementById('sc-next-btn').addEventListener('click', function() {
         if (step < 3) { step++; renderWizard(); }
@@ -345,7 +367,7 @@
       });
     }
 
-    renderWizard();
+    renderIntro();
   })();
   </script>
 </body>

@@ -16,7 +16,8 @@ const { computeScore } = require('../lib/score-engine');
 const { computeMaalScore } = require('../lib/maal-score');
 const { recordSnapshot, getSnapshots } = require('../db/snapshots');
 const { estimateTax } = require('../lib/tax');
-const { buildEffectiveProfile } = require('../lib/connected');
+const { aggregateConnected } = require('../lib/connected');
+const assetsDb = require('../db/assets');
 const { getRecentTransactions, getTxnsSince } = require('../db/transactions');
 const researchDb = require('../db/research');
 const { runResearch } = require('../services/research');
@@ -32,6 +33,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 const advisor = require('../services/advisor');
 const advisorDb = require('../db/advisor');
 const basiqService = require('../services/basiq');
+const isaacus = require('../services/isaacus');
 
 // ─── Auth guard middleware ─────────────────────────────────────────────────
 
@@ -115,10 +117,8 @@ async function autoRecalcScores(userId, profile) {
 router.get('/api/maal-score', async (req, res) => {
   try {
     const profile = await getProfileByUserId(req.session.userId);
-    const { profile: effectiveProfile } = buildEffectiveProfile(
-      profile,
-      await getAccountsByUserId(req.session.userId).catch(() => [])
-    );
+    const assetSummary = await assetsDb.getAssetSummary(req.session.userId);
+    const effectiveProfile = assetsDb.mergeAssetSummaryIntoProfile(profile, assetSummary);
     const score = computeMaalScore(effectiveProfile);
     res.json({ ok: true, ...score });
   } catch (e) {
@@ -132,10 +132,16 @@ router.get('/', async (req, res) => {
     const scores = await getScoresByUserId(req.session.userId, 3);
     const fhs = scores.find(s => s.score_type === 'financial_health');
 
-    // Fold live Basiq balances into the manual entries — score, stats,
-    // snapshots and templates all see the combined picture.
+    // Basiq-connected balances are now real rows in the granular asset
+    // tables (source='basiq', written by routes/basiq.js syncAccountsToDb) —
+    // getAssetSummary() picks them up automatically, no separate $ folding
+    // needed. linked_accounts stays the source of truth for the "X live"
+    // badge count only (aggregateConnected), a display concern separate
+    // from the dollar totals.
     const linkedAccounts = await getAccountsByUserId(req.session.userId).catch(() => []);
-    const { profile, connected } = buildEffectiveProfile(rawProfile, linkedAccounts);
+    const connected = aggregateConnected(linkedAccounts);
+    const assetSummary = await assetsDb.getAssetSummary(req.session.userId);
+    const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
 
     // Recent synced transactions for the dashboard widget
     let recentTransactions = [];
@@ -234,7 +240,15 @@ router.post('/ask/message', aiLimiter, async (req, res) => {
       return res.json({ ok: true, reply: "I can only answer financial education questions about tax, super, investing, and wealth building in Australia. What would you like to learn about?", live: advisor.hasAdvisor() });
     }
 
-    const { user, profile } = await dashboardContext(req);
+    const { user, profile: rawAdvisorProfile } = await dashboardContext(req);
+    // Same "effective profile" (granular tables, falling back to flat
+    // columns pre-backfill) as the dashboard and /api/maal-score — without
+    // this, the advisor and dashboard could disagree on the user's numbers
+    // whenever they have Basiq-connected accounts (this was a real,
+    // pre-existing inconsistency, not hypothetical — dashboardContext()
+    // previously returned the raw profile with no folding at all here).
+    const advisorAssetSummary = await assetsDb.getAssetSummary(req.session.userId);
+    const profile = assetsDb.mergeAssetSummaryIntoProfile(rawAdvisorProfile, advisorAssetSummary);
     const maal = computeMaalScore(profile);
     let docs = [];
     try { docs = await vaultDb.getReadableDocs(req.session.userId); }
@@ -249,7 +263,40 @@ router.post('/ask/message', aiLimiter, async (req, res) => {
     const cashSavings = Number(profile.cash_savings || 0);
     const monthlyExpenses = Number(profile.monthly_expenses || 0);
     const cashRunway = monthlyExpenses > 0 ? Math.round(cashSavings / monthlyExpenses) : null;
-    const extra = { transactions: txns, snapshots: snaps, goals, cashRunway };
+
+    // Legal/tax grounding via Isaacus (extractive — pulls the answer directly
+    // out of the user's own Vault documents; only runs when there's actually
+    // a document to extract from). Non-fatal: if it fails or finds nothing,
+    // the advisor just answers from general knowledge as before.
+    let isaacusGrounding = null;
+    if (isaacus.hasIsaacus() && docs.length && latestUserMsg) {
+      try {
+        const legalScore = await isaacus.classifyLegalIntent(latestUserMsg.content);
+        // Calibrated against two real classifier calls, not guessed: a clearly
+        // legal tenancy question scored ~0.42, a clearly non-legal finance
+        // question scored ~0.33. 0.35 sits between them. Erring permissive is
+        // the safer failure mode here — a false positive just costs one extra
+        // extraction call, which then self-filters via inextractability_score
+        // in extractAnswer(); a false negative silently loses grounding.
+        if (legalScore >= 0.35) {
+          const answer = await isaacus.extractAnswer(
+            latestUserMsg.content,
+            docs.map((d) => d.extracted_text)
+          );
+          if (answer) {
+            isaacusGrounding = {
+              text: answer.text,
+              score: answer.score,
+              filename: docs[answer.sourceIndex] ? docs[answer.sourceIndex].filename : null,
+            };
+          }
+        }
+      } catch (e) {
+        console.error('[isaacus] grounding lookup failed:', e.message);
+      }
+    }
+
+    const extra = { transactions: txns, snapshots: snaps, goals, cashRunway, isaacusGrounding };
 
     const reply = await advisor.chat(user, profile, maal, clean, docs, extra);
 
@@ -350,7 +397,9 @@ router.post('/research/run', async (req, res) => {
     const question = String(req.body.question || '').trim().slice(0, 600);
     if (!question) return res.status(400).json({ error: 'Ask a research question first.' });
 
-    const { user, profile } = await dashboardContext(req);
+    const { user, profile: rawResearchProfile } = await dashboardContext(req);
+    const researchAssetSummary = await assetsDb.getAssetSummary(req.session.userId);
+    const profile = assetsDb.mergeAssetSummaryIntoProfile(rawResearchProfile, researchAssetSummary);
     const maal = computeMaalScore(profile);
     const id = await researchDb.createReport(req.session.userId, question);
     try {
@@ -444,11 +493,23 @@ router.get('/assets', async (req, res) => {
     // Live Basiq accounts shown separately from manual entries (no double-count)
     const allAccounts = await getAccountsByUserId(req.session.userId).catch(() => []);
     const liveAccounts = allAccounts.filter(a => String(a.account_reference || '').startsWith('basiq:'));
-    const { connected } = buildEffectiveProfile(ctx.profile, allAccounts);
+    const connected = aggregateConnected(allAccounts);
+
+    // Real per-row data for the 5 granular tables — each can have multiple
+    // rows per user (two properties, three debts at different rates).
+    const [cashAccounts, investments, properties, debts, superAccounts] = await Promise.all([
+      assetsDb.listCashAccounts(req.session.userId),
+      assetsDb.listInvestments(req.session.userId),
+      assetsDb.listProperties(req.session.userId),
+      assetsDb.listDebts(req.session.userId),
+      assetsDb.listSuperAccounts(req.session.userId),
+    ]);
+
     res.render('dashboard-assets', {
       ...ctx, pageTitle: 'Assets & Liabilities',
       basiqEnabled: basiqService.hasBasiq(),
       liveAccounts, connected,
+      cashAccounts, investments, properties, debts, superAccounts,
     });
   } catch (err) {
     console.error('/assets error:', err.message);
@@ -698,6 +759,74 @@ router.post('/assets/remove', async (req, res) => {
   }
 });
 
+// ─── API: per-row CRUD on the granular asset/liability tables ────────────────
+// Replaces the single-value ASSET_FIELDS model above for the 5 relationalized
+// concepts (cash, investments, properties, debts, super) — a user can now
+// have multiple rows per type (two properties, three debts at different
+// rates), which flat columns can't represent. hecs_balance and
+// monthly_expenses are NOT part of this — they stay on the flat-column API
+// above (see the assets-liabilities plan for why HECS is excluded).
+
+const ASSET_TYPES = {
+  cash: { list: assetsDb.listCashAccounts, get: assetsDb.getCashAccount, create: assetsDb.createCashAccount, update: assetsDb.updateCashAccount, del: assetsDb.deleteCashAccount },
+  investments: { list: assetsDb.listInvestments, get: assetsDb.getInvestment, create: assetsDb.createInvestment, update: assetsDb.updateInvestment, del: assetsDb.deleteInvestment },
+  properties: { list: assetsDb.listProperties, get: assetsDb.getProperty, create: assetsDb.createProperty, update: assetsDb.updateProperty, del: assetsDb.deleteProperty },
+  debts: { list: assetsDb.listDebts, get: assetsDb.getDebt, create: assetsDb.createDebt, update: assetsDb.updateDebt, del: assetsDb.deleteDebt },
+  super: { list: assetsDb.listSuperAccounts, get: assetsDb.getSuperAccount, create: assetsDb.createSuperAccount, update: assetsDb.updateSuperAccount, del: assetsDb.deleteSuperAccount },
+};
+
+async function refreshScoreAfterAssetChange(userId) {
+  try {
+    const rawProfile = await getProfileByUserId(userId);
+    const assetSummary = await assetsDb.getAssetSummary(userId);
+    const effectiveProfile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
+    await autoRecalcScores(userId, effectiveProfile);
+  } catch (e) {
+    console.error('refreshScoreAfterAssetChange error:', e.message);
+  }
+}
+
+router.post('/assets/:type', async (req, res) => {
+  const typeCfg = ASSET_TYPES[req.params.type];
+  if (!typeCfg) return res.status(400).json({ error: 'Unknown asset type.' });
+  try {
+    const row = await typeCfg.create(req.session.userId, req.body || {});
+    await refreshScoreAfterAssetChange(req.session.userId);
+    res.json({ ok: true, row });
+  } catch (err) {
+    console.error('asset create error:', err.message);
+    res.status(500).json({ error: 'Failed to save.' });
+  }
+});
+
+router.put('/assets/:type/:id', async (req, res) => {
+  const typeCfg = ASSET_TYPES[req.params.type];
+  if (!typeCfg) return res.status(400).json({ error: 'Unknown asset type.' });
+  try {
+    const row = await typeCfg.update(req.params.id, req.session.userId, req.body || {});
+    if (!row) return res.status(404).json({ error: 'Not found.' });
+    await refreshScoreAfterAssetChange(req.session.userId);
+    res.json({ ok: true, row });
+  } catch (err) {
+    console.error('asset update error:', err.message);
+    res.status(500).json({ error: 'Failed to save.' });
+  }
+});
+
+router.delete('/assets/:type/:id', async (req, res) => {
+  const typeCfg = ASSET_TYPES[req.params.type];
+  if (!typeCfg) return res.status(400).json({ error: 'Unknown asset type.' });
+  try {
+    const deleted = await typeCfg.del(req.params.id, req.session.userId);
+    if (!deleted) return res.status(404).json({ error: 'Not found.' });
+    await refreshScoreAfterAssetChange(req.session.userId);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('asset delete error:', err.message);
+    res.status(500).json({ error: 'Failed to delete.' });
+  }
+});
+
 // ─── API: persist a notification preference toggle ───────────────────────────
 
 const NOTIFICATION_KEYS = ['portfolio_summary', 'market_alerts', 'research_reports', 'spending_alerts', 'score_changes', 'product_updates'];
@@ -776,10 +905,12 @@ router.get('/scores', async (req, res) => {
 router.post('/scores/recalculate', async (req, res) => {
   try {
     const userId = req.session.userId;
-    const profile = await getProfileByUserId(userId);
-    if (!profile || !profile.completed_onboarding) {
+    const rawProfile = await getProfileByUserId(userId);
+    if (!rawProfile || !rawProfile.completed_onboarding) {
       return res.redirect('/onboarding');
     }
+    const recalcAssetSummary = await assetsDb.getAssetSummary(userId);
+    const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, recalcAssetSummary);
 
     const scoreData = {
       // age proxy: graduated ~25, years_in_practice added (legacy field; prefer DOB from onboarding_data)
@@ -999,6 +1130,23 @@ router.post('/profile',
         },
       };
       await updateProfile(req.session.userId, merged);
+
+      // Keep the granular super_accounts table in sync too — but only when
+      // it's safe to guess which row the user means. Profile Settings can
+      // be saved repeatedly, so a blind create() here would pile up
+      // duplicate rows on every save. If the user already manages multiple
+      // manual super funds via /dashboard/assets, leave those alone rather
+      // than guess which one this field refers to.
+      try {
+        const manualSuper = (await assetsDb.listSuperAccounts(req.session.userId)).filter((r) => r.source !== 'basiq');
+        if (manualSuper.length === 1) {
+          await assetsDb.updateSuperAccount(manualSuper[0].id, req.session.userId, { balance: merged.super_balance });
+        } else if (manualSuper.length === 0 && merged.super_balance > 0) {
+          await assetsDb.createSuperAccount(req.session.userId, { label: 'Superannuation', balance: merged.super_balance, source: 'manual' });
+        }
+      } catch (e) {
+        console.error('profile super sync error:', e.message);
+      }
 
       const { user, profile, session } = await dashboardContext(req);
       res.render('dashboard-profile', {

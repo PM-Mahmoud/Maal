@@ -162,6 +162,11 @@ app.get('/assets', (_req, res, next) => {
       { institution_name: 'Hooli Saver', institution_type: 'savings', balance: 12200 },
     ],
     connected: { count: 2, cash: 16450, super: 0, invest: 0, debt: 0 },
+    cashAccounts: [{ id: 1, label: 'Everyday account', institution: 'CommBank', balance: '15000', source: 'manual' }],
+    investments: [{ id: 1, name: 'ASX shares', kind: 'shares', value: '20000', source: 'manual' }],
+    properties: [{ id: 1, label: 'Home', property_type: 'residential', value: '750000', mortgage_balance: '500000', source: 'manual' }],
+    debts: [{ id: 1, label: 'Credit card', kind: 'credit_card', balance: '3000', interest_rate: '19.9', source: 'manual' }, { id: 2, label: 'Car loan', kind: 'loan', balance: '2000', interest_rate: '7.5', source: 'manual' }],
+    superAccounts: [{ id: 1, label: 'Super fund', fund_name: 'AustralianSuper', balance: '35000', source: 'manual' }],
   }).then(html => res.send(html)).catch(next);
 });
 app.get('/transactions', (_req, res, next) => {
@@ -228,7 +233,31 @@ app.get('/waitlist', (_req, res, next) => {
 });
 app.get('/signup', (_req, res, next) => {
   ejs.renderFile(path.join(VIEWS, 'auth-signup.ejs'), {
-    error: null, email: '',
+    error: null, email: '', name: '',
+  }).then(html => res.send(html)).catch(next);
+});
+app.get('/about', (_req, res, next) => {
+  ejs.renderFile(path.join(VIEWS, 'about.ejs'), {
+    analyticsSnippet: '',
+    user: null,
+  }).then(html => res.send(html)).catch(next);
+});
+app.get('/security', (_req, res, next) => {
+  ejs.renderFile(path.join(VIEWS, 'security.ejs'), {
+    analyticsSnippet: '',
+    user: null,
+  }).then(html => res.send(html)).catch(next);
+});
+app.get('/financial-wellbeing-score', (_req, res, next) => {
+  ejs.renderFile(path.join(VIEWS, 'financial-wellbeing-score.ejs'), {
+    analyticsSnippet: '',
+    user: null,
+  }).then(html => res.send(html)).catch(next);
+});
+app.get('/contact', (_req, res, next) => {
+  ejs.renderFile(path.join(VIEWS, 'contact.ejs'), {
+    analyticsSnippet: '',
+    user: null, success: false, name: '', email: '', message: '',
   }).then(html => res.send(html)).catch(next);
 });
 app.use((err, _req, res, _next) => {
