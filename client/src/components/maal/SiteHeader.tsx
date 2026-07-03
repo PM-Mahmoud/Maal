@@ -19,10 +19,11 @@ export function SiteHeader() {
             <span className="text-[17px] font-bold tracking-display">Maal</span>
           </Link>
           <nav className="hidden md:flex items-center gap-7 text-[13px] text-muted-foreground">
-            <Link to="/score" className="hover:text-foreground transition-colors">Score Calculator</Link>
+            {/* plain anchors: these pages are server-rendered EJS, not client routes */}
+            <a href="/score" className="hover:text-foreground transition-colors">Score Calculator</a>
             <a href="/#how" className="hover:text-foreground transition-colors">How it Works</a>
-            <Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
-            <Link to="/waitlist" className="hover:text-foreground transition-colors">Waitlist</Link>
+            <a href="/pricing" className="hover:text-foreground transition-colors">Pricing</a>
+            <a href="/waitlist" className="hover:text-foreground transition-colors">Waitlist</a>
           </nav>
         </div>
         <div className="flex items-center gap-3">
@@ -46,12 +47,12 @@ export function SiteHeader() {
               <Link to="/auth" className="text-[13px] font-medium text-muted-foreground hover:text-foreground">
                 Log in
               </Link>
-              <Link
-                to="/score"
+              <a
+                href="/score"
                 className="bg-foreground text-background px-4 py-2 rounded-[8px] text-[13px] font-semibold hover:bg-foreground/90 active:scale-[0.98] transition-all"
               >
                 Calculate your score
-              </Link>
+              </a>
             </>
           )}
         </div>

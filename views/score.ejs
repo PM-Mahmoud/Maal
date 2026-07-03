@@ -45,6 +45,17 @@
     .sc-band-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mint); }
     .sc-band-text { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .16em; color: var(--mint); }
     .sc-result-desc { margin-top: .75rem; font-size: 15px; color: var(--fg-muted); line-height: 1.65; }
+    .sc-signal-block { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+    .sc-signal-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; margin-bottom: .625rem; }
+    .sc-signal-title--up { color: var(--accent-strong); }
+    .sc-signal-title--down { color: var(--gold); }
+    .sc-signal-row { display: flex; align-items: baseline; gap: .5rem; font-size: 13px; color: var(--fg); line-height: 1.6; margin-bottom: .375rem; }
+    .sc-signal-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: .5rem; }
+    .sc-signal-dot--up { background: var(--mint); }
+    .sc-signal-dot--down { background: var(--gold); }
+    .sc-next-title { font-size: 13px; font-weight: 700; }
+    .sc-next-list { margin: .875rem 0 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: .625rem; }
+    .sc-next-list li { font-size: 13.5px; color: var(--fg); line-height: 1.6; }
     .sc-pillars { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: .875rem; }
     .sc-pillar-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; margin-bottom: .375rem; }
     .sc-pillar-name { }
@@ -275,9 +286,39 @@
 
     var emailSent = false;
 
-    function renderResult() {
+      // Plain-English commentary for the four pillars this calculator actually
+      // derives from user input (Protection is a fixed estimate — see below —
+      // so it's excluded from the helping/dragging/next-steps narrative to
+      // avoid praising or blaming the user for something not based on their answers).
+      var HELPING_COPY = {
+        savings: 'ahead of where your age and income would suggest',
+        debt: 'well managed relative to what you own',
+        super: 'tracking well against the ASFA benchmark for your age',
+        trajectory: 'growing faster than your income alone would suggest',
+      };
+      var DRAGGING_COPY = {
+        savings: 'behind where your age and income would suggest',
+        debt: 'a large share of what you own',
+        super: 'behind the ASFA benchmark for your age',
+        trajectory: 'not yet keeping pace with your income',
+      };
+      var NEXT_STEP_COPY = {
+        savings: 'How building a cash buffer changes your net worth over time.',
+        debt: 'Whether paying down debt faster, or investing the difference, gets you further.',
+        super: 'Whether extra super contributions could close the gap to the ASFA benchmark for your age.',
+        trajectory: 'How consistent investing compounds over the next 10, 20, 30 years.',
+      };
+
+      function renderResult() {
       var res = computeScore(inputs);
       var band = scoreBand(res.total);
+      var realPillars = res.pillars.filter(function(p) { return p.key !== 'protection'; });
+      var ascending = realPillars.slice().sort(function(a, b) { return a.score - b.score; });
+      var descending = realPillars.slice().sort(function(a, b) { return b.score - a.score; });
+      var helping = descending.filter(function(p) { return p.score >= 60; }).slice(0, 2);
+      if (!helping.length) helping = [descending[0]];
+      var dragging = ascending.filter(function(p) { return p.score < 70; }).slice(0, 2);
+      var nextSteps = ascending.slice(0, 3);
 
       var html = '<p class="sc-kicker">Your result</p>';
       html += '<h1 class="sc-h1">Your Maal Score is in.</h1>';
@@ -287,9 +328,25 @@
       html += '<div class="sc-ring-wrap">' + renderRing(res.total) + '<div class="sc-ring-label"><span class="sc-ring-num">' + res.total + '</span><span class="sc-ring-denom">/ 100</span></div></div>';
       html += '<div>';
       html += '<div class="sc-band-pill"><span class="sc-band-dot"></span><span class="sc-band-text">' + band + '</span></div>';
-      html += '<p class="sc-result-desc">Based on what you told us, your net worth is <strong>' + fmtAUD(res.netWorth) + '</strong>. Here\'s how each pillar contributed.</p>';
+      html += '<p class="sc-result-desc">Based on what you told us, your net worth is <strong>' + fmtAUD(res.netWorth) + '</strong>. Here\'s what\'s helping, what\'s holding you back, and three things worth understanding next.</p>';
       html += '</div>';
       html += '</div>';
+
+      html += '<div class="sc-signal-block">';
+      html += '<p class="sc-signal-title sc-signal-title--up">What\'s helping</p>';
+      helping.forEach(function(p) {
+        html += '<p class="sc-signal-row"><span class="sc-signal-dot sc-signal-dot--up"></span>' + p.label + ' is ' + (HELPING_COPY[p.key] || 'a relative strength') + '.</p>';
+      });
+      html += '</div>';
+
+      if (dragging.length) {
+        html += '<div class="sc-signal-block">';
+        html += '<p class="sc-signal-title sc-signal-title--down">What\'s holding you back</p>';
+        dragging.forEach(function(p) {
+          html += '<p class="sc-signal-row"><span class="sc-signal-dot sc-signal-dot--down"></span>' + p.label + ' is ' + (DRAGGING_COPY[p.key] || 'behind where it could be') + '.</p>';
+        });
+        html += '</div>';
+      }
 
       html += '<div class="sc-pillars">';
       res.pillars.forEach(function(p) {
@@ -300,9 +357,20 @@
         html += '<span class="sc-pillar-score">' + p.score + '</span>';
         html += '</div>';
         html += '<div class="sc-pillar-bar-bg"><div class="sc-pillar-bar-fill" data-score="' + p.score + '" style="width:0%;background:' + color + '"></div></div>';
+        if (p.key === 'protection') html += '<p class="sc-hint" style="margin-top:.35rem;">Estimated — this quick calculator doesn\'t ask about insurance or retirement planning yet.</p>';
         html += '</div>';
       });
       html += '</div>';
+      html += '</div>';
+
+      html += '<div class="sc-result-box" style="margin-top:1.25rem;">';
+      html += '<p class="sc-next-title">Your next 3 things to understand</p>';
+      html += '<ol class="sc-next-list">';
+      nextSteps.forEach(function(p) {
+        html += '<li>' + (NEXT_STEP_COPY[p.key] || 'How ' + p.label.toLowerCase() + ' affects your score.') + '</li>';
+      });
+      html += '</ol>';
+      html += '<p class="sc-hint" style="margin-top:.75rem;">These are educational prompts, not personal financial advice.</p>';
       html += '</div>';
 
       if (!emailSent) {
