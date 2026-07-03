@@ -50,9 +50,9 @@ function Hero() {
           and a plain-English plan to improve it. Super, HECS, portfolio, spending: one clear picture.
         </p>
         <div className="mt-9 flex flex-wrap gap-3 items-center">
-          <Link to="/score" className="bg-foreground text-background px-5 py-3 rounded-[8px] text-[14px] font-semibold hover:bg-foreground/90 active:scale-[0.98] transition-all">
+          <a href="/score" className="bg-foreground text-background px-5 py-3 rounded-[8px] text-[14px] font-semibold hover:bg-foreground/90 active:scale-[0.98] transition-all">
             Get your score free
-          </Link>
+          </a>
           <Link to="/auth" className="text-[14px] font-semibold text-foreground hover:text-foreground/70 px-2">
             Log in →
           </Link>
@@ -342,9 +342,9 @@ function PricingStrip() {
                 <span className="text-[12px] text-muted-foreground">{t.per}</span>
               </div>
               <p className="text-[13px] text-muted-foreground mt-3 leading-relaxed min-h-[44px]">{t.desc}</p>
-              <Link to={t.to} className={"mt-7 inline-flex items-center justify-center px-4 py-2.5 rounded-[8px] text-[13px] font-semibold transition-all " + (t.featured ? "bg-foreground text-background hover:bg-foreground/90" : "border border-border hover:bg-[var(--secondary)]")}>
+              <a href={t.to} className={"mt-7 inline-flex items-center justify-center px-4 py-2.5 rounded-[8px] text-[13px] font-semibold transition-all " + (t.featured ? "bg-foreground text-background hover:bg-foreground/90" : "border border-border hover:bg-[var(--secondary)]")}>
                 {t.cta}
-              </Link>
+              </a>
             </div>
           ))}
         </div>
@@ -364,12 +364,12 @@ function Cta() {
           Two minutes to your first Maal Score. No bank login. No credit card.
         </p>
         <div className="mt-8 flex justify-center gap-3">
-          <Link to="/score" className="bg-foreground text-background px-5 py-3 rounded-[8px] text-[14px] font-semibold hover:bg-foreground/90">
+          <a href="/score" className="bg-foreground text-background px-5 py-3 rounded-[8px] text-[14px] font-semibold hover:bg-foreground/90">
             Calculate your score
-          </Link>
-          <Link to="/waitlist" className="px-5 py-3 rounded-[8px] text-[14px] font-semibold border border-border hover:bg-[var(--secondary)]">
+          </a>
+          <a href="/waitlist" className="px-5 py-3 rounded-[8px] text-[14px] font-semibold border border-border hover:bg-[var(--secondary)]">
             Join the waitlist
-          </Link>
+          </a>
         </div>
       </div>
     </section>

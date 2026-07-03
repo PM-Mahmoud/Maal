@@ -9,9 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WaitlistRouteImport } from './routes/waitlist'
-import { Route as ScoreRouteImport } from './routes/score'
-import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -40,21 +37,6 @@ import { Route as AuthenticatedAppAssetsRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAppAdvisorIndexRouteImport } from './routes/_authenticated/app.advisor.index'
 import { Route as AuthenticatedAppAdvisorThreadIdRouteImport } from './routes/_authenticated/app.advisor.$threadId'
 
-const WaitlistRoute = WaitlistRouteImport.update({
-  id: '/waitlist',
-  path: '/waitlist',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ScoreRoute = ScoreRouteImport.update({
-  id: '/score',
-  path: '/score',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PricingRoute = PricingRouteImport.update({
-  id: '/pricing',
-  path: '/pricing',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -208,9 +190,6 @@ const AuthenticatedAppAdvisorThreadIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/pricing': typeof PricingRoute
-  '/score': typeof ScoreRoute
-  '/waitlist': typeof WaitlistRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/app/assets': typeof AuthenticatedAppAssetsRoute
   '/app/cost-of-living': typeof AuthenticatedAppCostOfLivingRoute
@@ -239,9 +218,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/pricing': typeof PricingRoute
-  '/score': typeof ScoreRoute
-  '/waitlist': typeof WaitlistRoute
   '/app/assets': typeof AuthenticatedAppAssetsRoute
   '/app/cost-of-living': typeof AuthenticatedAppCostOfLivingRoute
   '/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
@@ -271,9 +247,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/pricing': typeof PricingRoute
-  '/score': typeof ScoreRoute
-  '/waitlist': typeof WaitlistRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/_authenticated/app/assets': typeof AuthenticatedAppAssetsRoute
   '/_authenticated/app/cost-of-living': typeof AuthenticatedAppCostOfLivingRoute
@@ -304,9 +277,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
-    | '/pricing'
-    | '/score'
-    | '/waitlist'
     | '/app'
     | '/app/assets'
     | '/app/cost-of-living'
@@ -335,9 +305,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
-    | '/pricing'
-    | '/score'
-    | '/waitlist'
     | '/app/assets'
     | '/app/cost-of-living'
     | '/app/debt-payoff'
@@ -366,9 +333,6 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
-    | '/pricing'
-    | '/score'
-    | '/waitlist'
     | '/_authenticated/app'
     | '/_authenticated/app/assets'
     | '/_authenticated/app/cost-of-living'
@@ -399,34 +363,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  PricingRoute: typeof PricingRoute
-  ScoreRoute: typeof ScoreRoute
-  WaitlistRoute: typeof WaitlistRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/waitlist': {
-      id: '/waitlist'
-      path: '/waitlist'
-      fullPath: '/waitlist'
-      preLoaderRoute: typeof WaitlistRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/score': {
-      id: '/score'
-      path: '/score'
-      fullPath: '/score'
-      preLoaderRoute: typeof ScoreRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pricing': {
-      id: '/pricing'
-      path: '/pricing'
-      fullPath: '/pricing'
-      preLoaderRoute: typeof PricingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -691,9 +631,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  PricingRoute: PricingRoute,
-  ScoreRoute: ScoreRoute,
-  WaitlistRoute: WaitlistRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

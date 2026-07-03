@@ -17,12 +17,12 @@ export function SiteFooter() {
           </div>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-4">Product</p>
+            {/* plain anchors: these pages are server-rendered EJS, not client routes */}
             <ul className="space-y-2.5 text-[13px]">
-              <li><Link to="/score" className="text-foreground/80 hover:text-foreground">Score Calculator</Link></li>
-              {/* plain anchor: this page is server-rendered EJS, not a client route */}
+              <li><a href="/score" className="text-foreground/80 hover:text-foreground">Score Calculator</a></li>
               <li><a href="/financial-wellbeing-score" className="text-foreground/80 hover:text-foreground">Financial Wellbeing Score</a></li>
-              <li><Link to="/pricing" className="text-foreground/80 hover:text-foreground">Pricing</Link></li>
-              <li><Link to="/waitlist" className="text-foreground/80 hover:text-foreground">Waitlist</Link></li>
+              <li><a href="/pricing" className="text-foreground/80 hover:text-foreground">Pricing</a></li>
+              <li><a href="/waitlist" className="text-foreground/80 hover:text-foreground">Waitlist</a></li>
             </ul>
           </div>
           <FooterCol title="Company" links={[
