@@ -260,21 +260,6 @@ app.post('/contact', async (req, res) => {
 // ─── JSON API for React SPA ──────────────────────────────────────────────
 app.use('/api', require('./routes/api'));
 
-// ─── Retire the legacy React dashboard ─────────────────────────────────────
-// The old React "_authenticated" dashboard (client/src/routes/_authenticated/*)
-// is served under /app/* by the SPA catch-all below. It is fully superseded by
-// the EJS /dashboard and was only gated by CLIENT-side Supabase auth — the
-// server returned 200 to anyone, so the old design was publicly reachable.
-// Redirect the whole /app/* surface to the real dashboard so it's no longer
-// accessible. (React assets live under /assets, not /app, so this is safe.)
-app.get(/^\/app(\/.*)?$/, (req, res) => res.redirect(301, '/dashboard'));
-
-// Retire the legacy React /auth login page too — the real auth is the EJS
-// /login and /signup. Exact-match only: /auth/google + /auth/google/callback
-// are the genuine Google OAuth endpoints (routes/oauth.js) and must NOT be
-// caught here, so this deliberately does not match /auth/*.
-app.get('/auth', (req, res) => res.redirect(301, '/login'));
-
 // ─── React SPA catch-all ──────────────────────────────────────────────────
 // Serve React app for all routes not already handled by Express
 const reactBuild = path.join(__dirname, 'public', 'app', 'index.html');

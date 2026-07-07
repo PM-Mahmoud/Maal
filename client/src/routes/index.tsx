@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteHeader } from "@/components/maal/SiteHeader";
 import { SiteFooter } from "@/components/maal/SiteFooter";
 import { Reveal } from "@/components/maal/Reveal";
@@ -53,9 +53,9 @@ function Hero() {
           <a href="/score" className="bg-foreground text-background px-5 py-3 rounded-[8px] text-[14px] font-semibold hover:bg-foreground/90 active:scale-[0.98] transition-all">
             Get your score free
           </a>
-          <a href="/login" className="text-[14px] font-semibold text-foreground hover:text-foreground/70 px-2">
+          <Link to="/auth" className="text-[14px] font-semibold text-foreground hover:text-foreground/70 px-2">
             Log in →
-          </a>
+          </Link>
         </div>
         <p className="mt-5 text-[12px] text-muted-foreground">
           Free to start. No card required. Read-only bank connections via Basiq. Education only — never financial advice.
@@ -317,7 +317,7 @@ function HowItWorks() {
 
 function PricingStrip() {
   const tiers = [
-    { name: "Free", price: "$0", per: "forever", desc: "Maal Score, basic dashboard, manual entry.", cta: "Start free", to: "/signup", featured: false },
+    { name: "Free", price: "$0", per: "forever", desc: "Maal Score, basic dashboard, manual entry.", cta: "Start free", to: "/auth", featured: false },
     { name: "Pro", price: "$20", per: "AUD / month", desc: "Open banking sync, retirement projections, tax & super tools, Ask Maal.", cta: "Get Pro", to: "/pricing", featured: true },
     { name: "Max", price: "$200", per: "AUD / month", desc: "Multi-entity, Radar alerts, Vault PDF extraction, priority support.", cta: "Talk to us", to: "/pricing", featured: false },
   ];
