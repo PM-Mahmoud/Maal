@@ -199,6 +199,43 @@ router.get('/v1/notifications', async (req, res) => {
 });
 router.post('/v1/notifications/read', (_req, res) => res.json({ ok: true }));
 
+// ─── Maal Score (authoritative — same engine as the EJS dashboard) ─────────
+// GET /api/v1/score → { ok, score, band, pillars, hasData, history }
+// Computes the real Maal Score for the logged-in user via lib/maal-score.js
+// over the MERGED effective profile (flat user_profiles columns folded with the
+// granular asset tables) — identical to GET /dashboard and /dashboard/api/maal-score,
+// so the React and EJS dashboards can never disagree. History (oldest-first) comes
+// from financial_scores (score_type='maal_score'). Registered before /v1/:table so
+// it isn't swallowed as a generic stub.
+router.get('/v1/score', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const { getProfileByUserId } = require('../db/profiles');
+    const assetsDb = require('../db/assets');
+    const { computeMaalScore } = require('../lib/maal-score');
+    const { getScoresByUserId, shapeScoreHistory } = require('../db/scores');
+
+    const profile = (await getProfileByUserId(req.session.userId)) || {};
+    const assetSummary = await assetsDb.getAssetSummary(req.session.userId);
+    const effectiveProfile = assetsDb.mergeAssetSummaryIntoProfile(profile, assetSummary);
+    const score = computeMaalScore(effectiveProfile);
+
+    let history = [];
+    try {
+      const rows = await getScoresByUserId(req.session.userId, 60);
+      history = shapeScoreHistory(rows, 'maal_score');
+    } catch (e) {
+      // History is best-effort — never fail the live score on a history read.
+      console.error('/api/v1/score history error:', e.message);
+    }
+
+    res.json({ ok: true, ...score, history });
+  } catch (e) {
+    console.error('/api/v1/score error:', e.message);
+    res.status(500).json({ ok: false, error: 'Could not compute score' });
+  }
+});
+
 // ─── Generic CRUD for user-scoped asset tables ────────────────────────────
 //
 // Tables the React SPA reads/writes. Every row is scoped to user_id.

@@ -41,4 +41,14 @@ async function getLatestScoreByUserId(userId, scoreType) {
   return result.rows[0] || null;
 }
 
-module.exports = { saveScore, getScoresByUserId, getLatestScoreByUserId };
+// Pure: reduce financial_scores rows to the Maal Score history series, oldest
+// first, for charting. Kept pure (no DB) so it's deterministically testable.
+function shapeScoreHistory(rows, scoreType = 'maal_score') {
+  return (rows || [])
+    .filter((r) => r && r.score_type === scoreType && r.score_value != null)
+    .map((r) => ({ value: Number(r.score_value), at: r.calculated_at }))
+    .filter((p) => Number.isFinite(p.value))
+    .reverse();
+}
+
+module.exports = { saveScore, getScoresByUserId, getLatestScoreByUserId, shapeScoreHistory };
