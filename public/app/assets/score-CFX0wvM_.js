@@ -1,1 +1,0 @@
-function t(e){if(!Number.isFinite(e))return"$0";const r=Math.abs(e);return r>=1e6?`${e<0?"-":""}$${(r/1e6).toFixed(2)}M`:r>=1e3?`${e<0?"-":""}$${(r/1e3).toFixed(0)}k`:new Intl.NumberFormat("en-AU",{style:"currency",currency:"AUD",maximumFractionDigits:0}).format(e)}export{t as f};

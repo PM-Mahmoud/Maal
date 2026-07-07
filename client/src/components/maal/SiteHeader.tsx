@@ -35,12 +35,15 @@ export function SiteHeader() {
               >
                 Sign out
               </button>
-              <Link
-                to="/app"
+              {/* plain anchor: the real dashboard is the server-rendered EJS
+                  /dashboard, not a client route (the old React /app dashboard
+                  is retired and now redirects to /dashboard) */}
+              <a
+                href="/dashboard"
                 className="bg-foreground text-background px-4 py-2 rounded-[8px] text-[13px] font-semibold hover:bg-foreground/90 active:scale-[0.98] transition-all"
               >
                 Dashboard
-              </Link>
+              </a>
             </>
           ) : (
             <>
