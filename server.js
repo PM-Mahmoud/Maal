@@ -269,6 +269,12 @@ app.use('/api', require('./routes/api'));
 // accessible. (React assets live under /assets, not /app, so this is safe.)
 app.get(/^\/app(\/.*)?$/, (req, res) => res.redirect(301, '/dashboard'));
 
+// Retire the legacy React /auth login page too — the real auth is the EJS
+// /login and /signup. Exact-match only: /auth/google + /auth/google/callback
+// are the genuine Google OAuth endpoints (routes/oauth.js) and must NOT be
+// caught here, so this deliberately does not match /auth/*.
+app.get('/auth', (req, res) => res.redirect(301, '/login'));
+
 // ─── React SPA catch-all ──────────────────────────────────────────────────
 // Serve React app for all routes not already handled by Express
 const reactBuild = path.join(__dirname, 'public', 'app', 'index.html');
