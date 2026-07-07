@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { GripVertical, Eye, EyeOff, Maximize2, Minimize2, Plus, Settings2, ArrowUpRight, ArrowUp, Info, ChevronDown, Layers, CreditCard } from "lucide-react";
 import { fetchPortfolio, type Portfolio } from "@/lib/portfolio";
+import { fetchMaalScore, type MaalScore } from "@/lib/maalScore";
 import { formatAUD } from "@/lib/score";
 import { supabase } from "@/integrations/api";
 
@@ -15,6 +16,7 @@ type Size = "sm" | "md" | "lg" | "wide";
 type TileDef = { id: string; title: string; defaultSize: Size; kind: string };
 
 const TILES: TileDef[] = [
+  { id: "maal_score",   title: "Maal Score",           defaultSize: "md", kind: "maal_score" },
   { id: "net_worth",    title: "Net Worth",            defaultSize: "sm", kind: "kpi_net_worth" },
   { id: "investments",  title: "Investments Value",    defaultSize: "sm", kind: "kpi_investments" },
   { id: "cash",         title: "Total Cash",           defaultSize: "sm", kind: "kpi_cash" },
@@ -74,6 +76,7 @@ export function Dashboard() {
   const [layout, setLayout] = useState<Layout>(defaultLayout);
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+  const [score, setScore] = useState<MaalScore | null>(null);
   const [periodOpen, setPeriodOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const dragId = useRef<string | null>(null);
@@ -89,6 +92,8 @@ export function Dashboard() {
       setPortfolio(await fetchPortfolio());
     })();
   }, []);
+
+  useEffect(() => { fetchMaalScore().then(setScore); }, []);
 
   function toggleHidden(id: string) {
     setLayout((l) => l.hidden.includes(id)
@@ -213,7 +218,7 @@ export function Dashboard() {
                   </button>
                 </div>
               </div>
-              <TileBody kind={t.kind} period={period} portfolio={portfolio} />
+              <TileBody kind={t.kind} period={period} portfolio={portfolio} score={score} />
             </div>
           );
         })}
@@ -256,9 +261,10 @@ export function Dashboard() {
 
 // ===== Tile bodies ===================================================
 
-function TileBody({ kind, period, portfolio }: { kind: string; period: Period; portfolio: Portfolio | null }) {
+function TileBody({ kind, period, portfolio, score }: { kind: string; period: Period; portfolio: Portfolio | null; score: MaalScore | null }) {
   if (kind.startsWith("kpi_")) return <KpiTile kind={kind} portfolio={portfolio} />;
   switch (kind) {
+    case "maal_score": return <MaalScoreTile score={score} />;
     case "radar": return <RadarTile />;
     case "ask": return <AskTile />;
     case "assets": return <AssetsTile portfolio={portfolio} />;
@@ -276,6 +282,49 @@ function TileBody({ kind, period, portfolio }: { kind: string; period: Period; p
   }
   // period reserved for future use
   void period;
+}
+
+function MaalScoreTile({ score }: { score: MaalScore | null }) {
+  if (!score) {
+    return <div className="text-[12px] text-muted-foreground py-2">Loading your Maal Score…</div>;
+  }
+  if (!score.hasData) {
+    return (
+      <Placeholder
+        title="No score yet"
+        hint="Add your income, super, and assets to see your Maal Score."
+        cta="Add details"
+        to="/app/assets"
+      />
+    );
+  }
+  return (
+    <div>
+      <div className="flex items-baseline gap-2">
+        <span className="text-[40px] font-bold tracking-display tabular-nums leading-none">{score.score}</span>
+        <span className="text-[13px] text-muted-foreground">/ 100</span>
+        <span className="ml-auto inline-flex items-center text-[11px] font-semibold text-mint bg-mint/10 border border-mint/25 rounded-full px-2 py-0.5">
+          {score.band}
+        </span>
+      </div>
+      <div className="mt-3 h-[6px] rounded-full bg-secondary overflow-hidden">
+        <div className="h-full bg-foreground rounded-full" style={{ width: `${Math.max(0, Math.min(100, score.score))}%` }} />
+      </div>
+      <div className="mt-4 space-y-2.5">
+        {score.pillars.map((p) => (
+          <div key={p.key} title={p.note}>
+            <div className="flex items-center justify-between text-[12px]">
+              <span className="text-foreground">{p.label}</span>
+              <span className="tabular-nums text-muted-foreground">{p.score}</span>
+            </div>
+            <div className="mt-1 h-[4px] rounded-full bg-secondary overflow-hidden">
+              <div className="h-full bg-foreground/70 rounded-full" style={{ width: `${Math.max(0, Math.min(100, p.score))}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 const KPI_META: Record<string, { title: string; positive: boolean }> = {
