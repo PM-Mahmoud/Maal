@@ -236,6 +236,43 @@ router.get('/v1/score', async (req, res) => {
   }
 });
 
+// ─── Profile (real — over db/profiles.js / user_profiles) ──────────────────
+// React models a profile with display_name / age_band / risk (no dedicated
+// columns — stored in onboarding_data JSONB) plus real financial columns.
+// GET returns the normalized flat object; PATCH is a partial update that never
+// clobbers unspecified fields. Both scoped to the session user. Registered
+// before /v1/:table so 'profile' isn't treated as a generic (stub) table, and
+// so the deliberately-excluded raw user_profiles table stays off the generic API.
+router.get('/v1/profile', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const { getProfileByUserId, normalizeProfile } = require('../db/profiles');
+    const { findUserById } = require('../db/users');
+    const [row, user] = await Promise.all([
+      getProfileByUserId(req.session.userId),
+      findUserById(req.session.userId),
+    ]);
+    res.json(normalizeProfile(row, user));
+  } catch (e) {
+    console.error('/api/v1/profile GET error:', e.message);
+    res.status(500).json({ error: 'Could not load profile' });
+  }
+});
+
+router.patch('/v1/profile', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const { patchProfile, normalizeProfile } = require('../db/profiles');
+    const { findUserById } = require('../db/users');
+    const row = await patchProfile(req.session.userId, req.body || {});
+    const user = await findUserById(req.session.userId);
+    res.json(normalizeProfile(row, user));
+  } catch (e) {
+    console.error('/api/v1/profile PATCH error:', e.message);
+    res.status(500).json({ error: 'Could not save profile' });
+  }
+});
+
 // ─── Generic CRUD for user-scoped asset tables ────────────────────────────
 //
 // Tables the React SPA reads/writes. Every row is scoped to user_id.

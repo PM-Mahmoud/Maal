@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/api";
+import { fetchProfile } from "@/lib/profile";
 import { buildPlan, type PlanInput } from "@/lib/portfolio-plan";
 
 export const Route = createFileRoute("/_authenticated/app/portfolio-plan")({ component: PortfolioPlanPage });
@@ -10,13 +10,9 @@ function PortfolioPlanPage() {
 
   useEffect(() => {
     (async () => {
-      const [{ data: prof }, { data: prefs }] = await Promise.all([
-        supabase.from("profiles").select("age_band").maybeSingle(),
-        supabase.from("preferences").select("risk").maybeSingle(),
-      ]);
-      const ageBand = prof?.age_band ?? "30-39";
-      const age = ageBand === "under-30" ? 27 : ageBand === "30-39" ? 35 : ageBand === "40-49" ? 45 : ageBand === "50-59" ? 55 : 65;
-      const risk = (prefs?.risk ?? "balanced") as PlanInput["risk"];
+      const prof = await fetchProfile();
+      const age = prof?.age ?? 35;
+      const risk = ((prof?.risk as PlanInput["risk"]) ?? "balanced");
       setInput({ age, risk });
     })();
   }, []);

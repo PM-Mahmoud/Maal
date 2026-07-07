@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/api";
+import { fetchProfile, saveProfile } from "@/lib/profile";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app/onboarding")({
@@ -47,7 +48,7 @@ function OnboardingWizard() {
   });
 
   useEffect(() => {
-    supabase.from("profiles").select("display_name, age_band").maybeSingle().then(({ data }) => {
+    fetchProfile().then((data) => {
       if (data) setS((x) => ({
         ...x,
         display_name: data.display_name ?? "",
@@ -65,12 +66,17 @@ function OnboardingWizard() {
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth.user?.id;
       if (!uid) throw new Error("Not signed in");
-      await supabase.from("profiles").update({
+      // Profile fields (name, age band, risk, retirement age, monthly expenses)
+      // → user_profiles via the real endpoint. Asset amounts go to their own
+      // tables below, so the merged Maal Score picks them up without double-counting.
+      await saveProfile({
         display_name: s.display_name,
         age_band: s.age_band,
-        ethical_preference: "none", // values-agnostic: column retained, neutral default
+        risk: s.risk,
+        retirement_age: Number(s.retirement_age) || 67,
+        monthly_expenses: n(s.monthly_expenses),
         onboarded: true,
-      }).eq("id", uid);
+      });
       const writes: Promise<any>[] = [];
       const push = (q: any) => writes.push(Promise.resolve(q));
       if (n(s.annual_income) > 0)
@@ -83,12 +89,6 @@ function OnboardingWizard() {
         push(supabase.from("cash_accounts").insert({ user_id: uid, label: "Savings", balance: n(s.cash_balance), kind: "savings" }));
       if (n(s.hecs_balance) > 0)
         push(supabase.from("debts").insert({ user_id: uid, label: "HECS", balance: n(s.hecs_balance), kind: "hecs" }));
-      push(supabase.from("preferences").upsert({
-        user_id: uid,
-        risk: s.risk,
-        retirement_age: Number(s.retirement_age) || 67,
-        monthly_expenses: n(s.monthly_expenses),
-      }));
       await Promise.all(writes);
       toast.success("Onboarding complete");
       navigate({ to: "/app" });

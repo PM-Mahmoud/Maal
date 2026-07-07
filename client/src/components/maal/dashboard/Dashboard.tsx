@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { GripVertical, Eye, EyeOff, Maximize2, Minimize2, Plus, Settings2, ArrowUpRight, ArrowUp, Info, ChevronDown, Layers, CreditCard } from "lucide-react";
 import { fetchPortfolio, type Portfolio } from "@/lib/portfolio";
 import { fetchMaalScore, type MaalScore } from "@/lib/maalScore";
+import { fetchProfile } from "@/lib/profile";
 import { formatAUD } from "@/lib/score";
 import { supabase } from "@/integrations/api";
 
@@ -87,8 +88,8 @@ export function Dashboard() {
   useEffect(() => {
     (async () => {
       const { data: u } = await supabase.auth.getUser();
-      const { data: prof } = await supabase.from("profiles").select("display_name").maybeSingle();
-      setName(prof?.display_name ?? u.user?.email?.split("@")[0] ?? "");
+      const prof = await fetchProfile();
+      setName(prof?.display_name || u.user?.email?.split("@")[0] || "");
       setPortfolio(await fetchPortfolio());
     })();
   }, []);
