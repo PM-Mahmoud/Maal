@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "@/integrations/api";
-import { listVault, registerVaultDoc, deleteVaultDoc, extractVaultDoc } from "@/lib/vault.functions";
+import { listVault, uploadVaultFile, deleteVaultDoc, extractVaultDoc } from "@/lib/vault.functions";
 
 export const Route = createFileRoute("/_authenticated/app/vault")({ component: VaultPage });
 
@@ -20,7 +19,6 @@ const DEFAULT_COLLECTION = "My Documents";
 
 function VaultPage() {
   const list = listVault;
-  const register = registerVaultDoc;
   const rm = deleteVaultDoc;
   const extract = extractVaultDoc;
 
@@ -56,20 +54,15 @@ function VaultPage() {
     if (!arr.length) return;
     setErr(null); setBusy("upload");
     try {
-      const { data: u } = await supabase.auth.getUser();
-      const uid = u.user?.id; if (!uid) throw new Error("Not signed in");
       for (const file of arr) {
-        if (file.size > 5 * 1024 * 1024 * 1024) throw new Error(`${file.name} exceeds 5GB`);
-        const path = `${uid}/${Date.now()}-${file.name.replace(/[^\w.-]+/g, "_")}`;
-        const up = await supabase.storage.from("vault").upload(path, file, { upsert: false });
-        if (up.error) throw up.error;
-        await register({ data: { filename: file.name, storage_path: path, size_bytes: file.size, collection: target } } as any);
+        if (file.size > 10 * 1024 * 1024) throw new Error(`${file.name} exceeds the 10MB limit`);
+        await uploadVaultFile(file);
       }
       setExpanded((e) => ({ ...e, [target]: true }));
       await refresh();
     } catch (e: any) { setErr(e?.message ?? "Upload failed"); }
     finally { setBusy(null); if (fileRef.current) fileRef.current.value = ""; }
-  }, [register, target]);
+  }, [target]);
 
   async function runExtract(id: string) {
     setBusy(id); setErr(null);
@@ -192,7 +185,7 @@ function VaultPage() {
 
             <div className="flex items-start gap-2 mt-3 text-[11px] text-muted-foreground">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-0.5 shrink-0"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
-              <p>Images, PDF, Word, CSV files. Max 5gb per file.</p>
+              <p>Images, PDF, Word, CSV files. Max 10MB per file.</p>
             </div>
           </div>
 
@@ -200,8 +193,8 @@ function VaultPage() {
             <div className="flex items-start gap-2 text-[11px] text-muted-foreground">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-0.5 shrink-0"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
               <p>
-                All documents are encrypted at rest and in transit.{" "}
-                <a href="#" className="text-[var(--mint)] underline">More on security</a>
+                Documents are private to your account and sent over an encrypted (HTTPS) connection.{" "}
+                <a href="/security" className="text-[var(--mint)] underline">More on security</a>
               </p>
             </div>
           </div>
