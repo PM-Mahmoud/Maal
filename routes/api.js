@@ -4,6 +4,11 @@ const router = express.Router();
 const { findUserById, createUser } = require('../db/users');
 const bcrypt = require('bcryptjs');
 const pool = require('../db/pool');
+const multer = require('multer');
+
+// Vault uploads — in-memory buffer, 10MB cap (matches the EJS vault). Files are
+// stored as Postgres bytea via db/vault.js, not on disk or in object storage.
+const vaultUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // ─── Auth ─────────────────────────────────────────────────────────────────
 
@@ -310,6 +315,121 @@ router.get('/v1/snapshots', async (req, res) => {
   } catch (e) {
     console.error('/api/v1/snapshots error:', e.message);
     res.status(500).json({ error: 'Could not load snapshots' });
+  }
+});
+
+// ─── Vault (real document storage — Postgres bytea via db/vault.js) ────────
+// The React vault page used a Supabase Storage bucket that doesn't exist (the
+// adapter has no .storage), so uploads threw and list/delete hit stubs. These
+// endpoints store the actual bytes server-side, scoped to req.session.userId.
+// Registered before /v1/:table.
+const VAULT_ALLOWED_MIME = new Set([
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/msword', 'text/plain', 'text/csv',
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+]);
+
+// GET /api/v1/vault → metadata list mapped to the React Doc shape.
+router.get('/v1/vault', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const vaultDb = require('../db/vault');
+    const files = await vaultDb.listFiles(req.session.userId, 'vault');
+    res.json(files.map((f) => ({
+      id: String(f.id),
+      filename: f.filename,
+      storage_path: '',
+      size_bytes: Number(f.size_bytes) || 0,
+      created_at: f.created_at,
+      collection: 'My Documents', // folders not persisted yet (backlog)
+      extracted: f.has_text ? { document_type: 'Readable' } : null,
+    })));
+  } catch (e) {
+    console.error('/api/v1/vault GET error:', e.message);
+    res.status(500).json({ error: 'Could not list documents' });
+  }
+});
+
+// POST /api/v1/vault (multipart, field "file") → store bytes + extracted text.
+// Auth is checked BEFORE multer so an unauthenticated request can't make the
+// server buffer a 10MB upload.
+router.post('/v1/vault',
+  (req, res, next) => (req.session.userId ? next() : res.status(401).json({ error: 'Not authenticated' })),
+  vaultUpload.single('file'),
+  async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file received.' });
+    const vaultDb = require('../db/vault');
+    const { extractText } = require('../services/extract');
+    let extractedText = '';
+    try { extractedText = await extractText(req.file.buffer, req.file.mimetype, req.file.originalname); }
+    catch (e) { console.error('vault extract on upload failed:', e.message); }
+    const safeMime = VAULT_ALLOWED_MIME.has(req.file.mimetype) ? req.file.mimetype : 'application/octet-stream';
+    const id = await vaultDb.addFile(req.session.userId, {
+      kind: 'vault',
+      filename: String(req.file.originalname || 'document').slice(0, 255),
+      mime: safeMime,
+      size: req.file.size,
+      content: req.file.buffer,
+      extractedText,
+    });
+    res.json({ ok: true, id: String(id), filename: req.file.originalname, size_bytes: req.file.size, hasText: !!extractedText });
+  } catch (err) {
+    console.error('/api/v1/vault POST error:', err.message);
+    res.status(500).json({ error: 'Upload failed.' });
+  }
+});
+
+// GET /api/v1/vault/:id → download (forced attachment to avoid inline XSS).
+router.get('/v1/vault/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const vaultDb = require('../db/vault');
+    const f = await vaultDb.getFile(req.params.id, req.session.userId);
+    if (!f) return res.status(404).json({ error: 'File not found' });
+    const safeFilename = (f.filename || 'document').replace(/[^a-zA-Z0-9._-]/g, '_');
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+    res.send(f.content);
+  } catch (err) {
+    console.error('/api/v1/vault/:id GET error:', err.message);
+    res.status(500).json({ error: 'Could not load the file.' });
+  }
+});
+
+// DELETE /api/v1/vault/:id → ownership-scoped delete.
+router.delete('/v1/vault/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const vaultDb = require('../db/vault');
+    await vaultDb.deleteFile(req.params.id, req.session.userId);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('/api/v1/vault/:id DELETE error:', err.message);
+    res.status(500).json({ error: 'Could not delete the file.' });
+  }
+});
+
+// POST /api/v1/vault/:id/extract → propose profile figures from the doc text.
+router.post('/v1/vault/:id/extract', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const vaultDb = require('../db/vault');
+    const advisor = require('../services/advisor');
+    const doc = await vaultDb.getTextById(req.params.id, req.session.userId);
+    if (!doc) return res.status(404).json({ error: 'Document not found.' });
+    if (!doc.extracted_text) {
+      return res.json({ ok: true, fields: [], reason: 'no-text' });
+    }
+    if (!advisor.hasAdvisor()) {
+      return res.json({ ok: true, fields: [], reason: 'ai-unavailable' });
+    }
+    const { fields, reason } = await advisor.extractFigures(doc.extracted_text);
+    res.json({ ok: true, fields: fields || [], reason, filename: doc.filename });
+  } catch (err) {
+    console.error('/api/v1/vault/:id/extract error:', err.message);
+    res.status(500).json({ error: 'Could not read that document.' });
   }
 });
 
