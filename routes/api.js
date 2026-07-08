@@ -591,6 +591,22 @@ router.post('/v1/alerts/evaluate', async (req, res) => {
   }
 });
 
+// ─── Report (real — server-side PDF via services/report.js) ────────────────
+// POST /api/v1/report → { filename, base64 } of a one-page financial snapshot
+// PDF (Maal Score, net worth, retirement, action plan). Scoped to the session
+// user; before /v1/:table.
+router.post('/v1/report', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const { generateFinancialReport } = require('../services/report');
+    const out = await generateFinancialReport(req.session.userId);
+    res.json(out);
+  } catch (e) {
+    console.error('/api/v1/report error:', e.message);
+    res.status(500).json({ error: 'Could not generate report.' });
+  }
+});
+
 // ─── Generic CRUD for user-scoped asset tables ────────────────────────────
 //
 // Tables the React SPA reads/writes. Every row is scoped to user_id.
