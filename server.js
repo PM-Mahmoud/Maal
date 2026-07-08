@@ -260,6 +260,19 @@ app.post('/contact', async (req, res) => {
 // ─── JSON API for React SPA ──────────────────────────────────────────────
 app.use('/api', require('./routes/api'));
 
+// ─── Server-side gate for the React app shell ─────────────────────────────
+// The authenticated React dashboard lives at /app/*. Its route guard is
+// client-side only, so without this the SPA shell was served 200 to anyone
+// (data is still protected server-side by /api/v1 user_id scoping, but the shell
+// shouldn't render for logged-out users). Redirect unauthenticated /app/* to the
+// login — same target as the client guard (_authenticated/route.tsx → /auth),
+// which sends the user on to /app after sign-in. Authenticated requests fall
+// through to the SPA catch-all below.
+app.get(/^\/app(\/.*)?$/, (req, res, next) => {
+  if (!req.session.userId) return res.redirect('/auth');
+  next();
+});
+
 // ─── React SPA catch-all ──────────────────────────────────────────────────
 // Serve React app for all routes not already handled by Express
 const reactBuild = path.join(__dirname, 'public', 'app', 'index.html');
