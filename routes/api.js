@@ -433,6 +433,68 @@ router.post('/v1/vault/:id/extract', async (req, res) => {
   }
 });
 
+// ─── Research (real — services/research.js + db/research.js) ───────────────
+// Grounded, synchronous research reports (Finnhub + Bing → Azure synthesis).
+// The DB stores a Markdown report; db/research.js maps it to the structured body
+// the React view renders. All scoped to req.session.userId; before /v1/:table.
+router.get('/v1/research', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const researchDb = require('../db/research');
+    const rows = await researchDb.listReportsWithBody(req.session.userId, 20);
+    res.json(rows.map(researchDb.rowToResearchReport));
+  } catch (e) {
+    console.error('/api/v1/research GET error:', e.message);
+    res.status(500).json({ error: 'Could not load research' });
+  }
+});
+
+router.post('/v1/research/generate', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const question = String((req.body && (req.body.topic || (req.body.data && req.body.data.topic))) || '').trim().slice(0, 600);
+  if (!question) return res.status(400).json({ error: 'Ask a research question first.' });
+  try {
+    const researchDb = require('../db/research');
+    const { getProfileByUserId } = require('../db/profiles');
+    const assetsDb = require('../db/assets');
+    const { computeMaalScore } = require('../lib/maal-score');
+    const { runResearch } = require('../services/research');
+
+    const user = await findUserById(req.session.userId);
+    const rawProfile = (await getProfileByUserId(req.session.userId)) || {};
+    const assetSummary = await assetsDb.getAssetSummary(req.session.userId);
+    const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
+    const maal = computeMaalScore(profile);
+
+    const id = await researchDb.createReport(req.session.userId, question);
+    try {
+      const { report, sources } = await runResearch(user, profile, maal, question);
+      await researchDb.completeReport(id, report, sources);
+    } catch (e) {
+      console.error('research generate run failed:', e.message);
+      await researchDb.failReport(id, 'The research engine hit a snag — please try again.');
+      return res.status(500).json({ error: 'The research engine hit a snag — please try again.' });
+    }
+    const row = await researchDb.getReport(id, req.session.userId);
+    res.json(researchDb.rowToResearchReport(row));
+  } catch (err) {
+    console.error('/api/v1/research/generate error:', err.message);
+    res.status(500).json({ error: 'Could not start research.' });
+  }
+});
+
+router.delete('/v1/research/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const researchDb = require('../db/research');
+    await researchDb.deleteReport(req.params.id, req.session.userId);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('/api/v1/research/:id DELETE error:', err.message);
+    res.status(500).json({ error: 'Could not delete report.' });
+  }
+});
+
 // ─── Generic CRUD for user-scoped asset tables ────────────────────────────
 //
 // Tables the React SPA reads/writes. Every row is scoped to user_id.
