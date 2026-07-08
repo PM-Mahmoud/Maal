@@ -495,6 +495,102 @@ router.delete('/v1/research/:id', async (req, res) => {
   }
 });
 
+// ─── Radar (real — db/radar.js + services/radar.js) ───────────────────────
+// React calls these "alerts"; the backend model is "radars". All scoped to
+// req.session.userId; registered before /v1/:table. Accept either the Lovable
+// { data: {...} } envelope or a flat body.
+function unwrap(body) { return (body && body.data && typeof body.data === 'object') ? body.data : (body || {}); }
+
+router.get('/v1/alerts', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const radarDb = require('../db/radar');
+    const [radars, events] = await Promise.all([
+      radarDb.listRadars(req.session.userId),
+      radarDb.listEvents(req.session.userId, 30),
+    ]);
+    res.json({ alerts: radars.map(radarDb.radarToAlert), events: events.map(radarDb.eventToAlertEvent) });
+  } catch (e) {
+    console.error('/api/v1/alerts GET error:', e.message);
+    res.status(500).json({ error: 'Could not load radars' });
+  }
+});
+
+router.post('/v1/alerts', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const radarDb = require('../db/radar');
+    const { extractSymbols } = require('../services/radar');
+    const d = unwrap(req.body);
+    const prompt = String(d.prompt || '').trim().slice(0, 600);
+    if (!prompt) return res.status(400).json({ error: 'Describe what Maal should watch.' });
+    const freq = ['daily', 'weekly', 'monthly'].includes(d.frequency) ? d.frequency : 'daily';
+    const id = await radarDb.createRadar(req.session.userId, {
+      prompt,
+      symbols: extractSymbols(prompt),
+      frequency: freq,
+      notifyEmail: d.notify_email !== false,
+      notifySms: !!d.notify_sms,
+    });
+    const row = await radarDb.getRadar(id, req.session.userId);
+    res.json(radarDb.radarToAlert(row));
+  } catch (e) {
+    console.error('/api/v1/alerts POST error:', e.message);
+    res.status(500).json({ error: 'Could not create radar.' });
+  }
+});
+
+router.delete('/v1/alerts/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const radarDb = require('../db/radar');
+    await radarDb.deleteRadar(req.params.id, req.session.userId);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/v1/alerts DELETE error:', e.message);
+    res.status(500).json({ error: 'Could not delete radar.' });
+  }
+});
+
+router.post('/v1/alerts/toggle', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const radarDb = require('../db/radar');
+    const d = unwrap(req.body);
+    if (!d.id) return res.status(400).json({ error: 'id required' });
+    await radarDb.setRadarActive(d.id, req.session.userId, d.active !== false);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/v1/alerts/toggle error:', e.message);
+    res.status(500).json({ error: 'Could not update radar.' });
+  }
+});
+
+// Run radars now (manual). One if alertId given, else all the user's radars.
+router.post('/v1/alerts/evaluate', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const radarDb = require('../db/radar');
+    const { runRadar } = require('../services/radar');
+    const d = unwrap(req.body);
+    let fired = 0;
+    if (d.alertId) {
+      const r = await runRadar(d.alertId, req.session.userId);
+      if (r && r.alerted) fired++;
+    } else {
+      const radars = await radarDb.listRadars(req.session.userId);
+      for (const radar of radars) {
+        try { const r = await runRadar(radar.id, req.session.userId); if (r && r.alerted) fired++; }
+        catch (e) { console.error(`radar ${radar.id} run failed:`, e.message); }
+      }
+    }
+    res.json({ fired });
+  } catch (e) {
+    console.error('/api/v1/alerts/evaluate error:', e.message);
+    res.status(500).json({ error: 'Could not evaluate radars.' });
+  }
+});
+
 // ─── Generic CRUD for user-scoped asset tables ────────────────────────────
 //
 // Tables the React SPA reads/writes. Every row is scoped to user_id.
