@@ -7,7 +7,7 @@
     "dev": "node server.js",
     "build": "npm run migrate && npm run build:client",
     "migrate": "node migrate.js",
-    "test": "node test/calc.test.js && node test/basiq-sync.test.js && node test/isaacus.test.js && node test/assets-summary.test.js && node test/maal-score.test.js && node test/backfill-assets.test.js && node test/score-history.test.js && node test/profile-mapping.test.js && node test/snapshot-values.test.js && node test/research-body.test.js && node test/radar-mapping.test.js",
+    "test": "node test/calc.test.js && node test/basiq-sync.test.js && node test/isaacus.test.js && node test/assets-summary.test.js && node test/maal-score.test.js && node test/backfill-assets.test.js && node test/score-history.test.js && node test/profile-mapping.test.js && node test/snapshot-values.test.js && node test/research-body.test.js && node test/radar-mapping.test.js && node test/report.test.js",
     "eval": "node evals/run-evals.js",
     "build:client": "cd client && npm install && npm run build",
     "prepare": "node scripts/install-hooks.js"
@@ -25,6 +25,7 @@
     "mammoth": "^1.8.0",
     "multer": "^1.4.5-lts.1",
     "openai": "^4.77.0",
+    "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.1",
     "pg": "^8.11.3",
     "stripe": "^22.2.0"
