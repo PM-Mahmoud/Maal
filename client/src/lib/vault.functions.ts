@@ -22,14 +22,16 @@ export async function uploadVaultFile(file: File): Promise<unknown> {
   return r.json();
 }
 
-export async function deleteVaultDoc(data?: unknown): Promise<void> {
-  const { id } = (data ?? {}) as { id?: string };
+export async function deleteVaultDoc(payload?: { data?: { id?: string } }): Promise<void> {
+  // Callers pass the Lovable-style { data: { id } } envelope — unwrap it.
+  const id = payload?.data?.id;
   if (!id) return;
   await fetch(`/api/v1/vault/${id}`, { method: 'DELETE', credentials: 'include' });
 }
 
-export async function extractVaultDoc(data?: unknown): Promise<unknown> {
-  const { id } = (data ?? {}) as { id?: string };
+export async function extractVaultDoc(payload?: { data?: { id?: string } }): Promise<unknown> {
+  // Callers pass the Lovable-style { data: { id } } envelope — unwrap it.
+  const id = payload?.data?.id;
   if (!id) return null;
   const r = await fetch(`/api/v1/vault/${id}/extract`, { method: 'POST', credentials: 'include' });
   return r.ok ? r.json() : null;
