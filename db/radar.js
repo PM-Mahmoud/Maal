@@ -35,6 +35,27 @@ async function recordRun(id, { result, alerted }) {
   );
 }
 
+// Pause/resume a radar (ownership-scoped).
+async function setRadarActive(id, userId, active) {
+  await pool.query(
+    `UPDATE radars SET active = $3 WHERE id = $1 AND user_id = $2`,
+    [id, userId, !!active]
+  );
+}
+
+// The user's radar event log (most recent first), joined so ownership is
+// enforced via the parent radar's user_id.
+async function listEvents(userId, limit = 30) {
+  const r = await pool.query(
+    `SELECT e.id, e.radar_id, e.alerted, e.summary, e.created_at
+       FROM radar_events e JOIN radars r ON r.id = e.radar_id
+      WHERE r.user_id = $1
+      ORDER BY e.created_at DESC LIMIT $2`,
+    [userId, limit]
+  );
+  return r.rows;
+}
+
 async function logEvent(radarId, alerted, summary) {
   await pool.query(
     `INSERT INTO radar_events (radar_id, alerted, summary) VALUES ($1, $2, $3)`,
@@ -57,4 +78,34 @@ async function dueRadars() {
   return r.rows;
 }
 
-module.exports = { createRadar, listRadars, getRadar, deleteRadar, recordRun, logEvent, dueRadars };
+// Pure: map a radars row to the React "alert" shape, and a radar_events row to
+// the React event shape. Kept pure so the field contract is unit-tested.
+function radarToAlert(row) {
+  return {
+    id: String(row.id),
+    prompt: row.prompt,
+    frequency: row.frequency,
+    notify_email: row.notify_email !== false,
+    notify_sms: !!row.notify_sms,
+    active: row.active !== false,
+    time_aest: null,                 // no schedule-time column server-side
+    symbols: row.symbols || [],
+    last_run_at: row.last_run_at || null,
+  };
+}
+
+function eventToAlertEvent(row) {
+  return {
+    id: String(row.id),
+    alert_id: String(row.radar_id),
+    message: row.summary,
+    alerted: !!row.alerted,
+    created_at: row.created_at,
+    email_status: null,
+  };
+}
+
+module.exports = {
+  createRadar, listRadars, getRadar, deleteRadar, recordRun, logEvent, dueRadars,
+  setRadarActive, listEvents, radarToAlert, eventToAlertEvent,
+};
