@@ -26,4 +26,18 @@ async function getSnapshots(userId, days) {
   return result.rows;
 }
 
-module.exports = { recordSnapshot, getSnapshots };
+// Pure: derive today's snapshot values from a (merged effective) profile.
+// Shared by the EJS dashboard and GET /api/v1/snapshots so both record and read
+// identical numbers. Postgres BIGINT columns come back as strings — Number() them.
+function snapshotValuesFromProfile(profile) {
+  const p = profile || {};
+  const superBalance  = Number(p.super_balance) || 0;
+  const investBalance = Number(p.investment_portfolio) || 0;
+  const propertyValue = Number(p.property_value) || 0;
+  const cashBalance   = Number(p.cash_savings) || 0;
+  const debtsTotal    = (Number(p.hecs_balance) || 0) + (Number(p.total_debt) || 0);
+  const assetsTotal   = superBalance + investBalance + propertyValue + cashBalance;
+  return { netWorth: assetsTotal - debtsTotal, assetsTotal, superBalance, investBalance, debtsTotal, cashBalance };
+}
+
+module.exports = { recordSnapshot, getSnapshots, snapshotValuesFromProfile };

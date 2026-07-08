@@ -46,6 +46,8 @@ export function ChartModal({
   current,
   positive,
   valueFormatted,
+  series: realSeries,
+  labels: realLabels,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -54,15 +56,25 @@ export function ChartModal({
   current: number;
   positive: boolean;
   valueFormatted: string;
+  series?: number[];
+  labels?: string[];
 }) {
   const [range, setRange] = useState<Range>("1Y");
   const months = RANGES.find((r) => r.key === range)!.months;
 
   const { series, labels } = useMemo(() => {
+    // Real daily history when provided — sliced to roughly the selected range.
+    if (realSeries && realSeries.length >= 2) {
+      const approxDays = months * 31;
+      const s = realSeries.slice(-approxDays);
+      const l = (realLabels ?? []).slice(-approxDays);
+      return { series: s, labels: l.length === s.length ? l : s.map((_, i) => String(i + 1)) };
+    }
+    // Fallback: flat line at current value until history accrues.
     const s = buildSeries(months, current ?? 0);
     const l = s.map((_, i) => monthLabel(months - 1 - i));
     return { series: s, labels: l };
-  }, [seriesKey, range, months, current, positive]);
+  }, [seriesKey, range, months, current, positive, realSeries, realLabels]);
 
   const first = series[0] || 0;
   const last = series[series.length - 1] || 0;

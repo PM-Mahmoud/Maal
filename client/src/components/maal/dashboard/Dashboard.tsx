@@ -4,6 +4,7 @@ import { GripVertical, Eye, EyeOff, Maximize2, Minimize2, Plus, Settings2, Arrow
 import { fetchPortfolio, type Portfolio } from "@/lib/portfolio";
 import { fetchMaalScore, type MaalScore } from "@/lib/maalScore";
 import { fetchProfile } from "@/lib/profile";
+import { fetchSnapshots, snapshotValue, snapshotLabel, type Snapshot } from "@/lib/snapshots";
 import { formatAUD } from "@/lib/score";
 import { supabase } from "@/integrations/api";
 
@@ -78,6 +79,7 @@ export function Dashboard() {
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [score, setScore] = useState<MaalScore | null>(null);
+  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [periodOpen, setPeriodOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const dragId = useRef<string | null>(null);
@@ -95,6 +97,7 @@ export function Dashboard() {
   }, []);
 
   useEffect(() => { fetchMaalScore().then(setScore); }, []);
+  useEffect(() => { fetchSnapshots(366).then(setSnapshots); }, []);
 
   function toggleHidden(id: string) {
     setLayout((l) => l.hidden.includes(id)
@@ -219,7 +222,7 @@ export function Dashboard() {
                   </button>
                 </div>
               </div>
-              <TileBody kind={t.kind} period={period} portfolio={portfolio} score={score} />
+              <TileBody kind={t.kind} period={period} portfolio={portfolio} score={score} snapshots={snapshots} />
             </div>
           );
         })}
@@ -262,8 +265,8 @@ export function Dashboard() {
 
 // ===== Tile bodies ===================================================
 
-function TileBody({ kind, period, portfolio, score }: { kind: string; period: Period; portfolio: Portfolio | null; score: MaalScore | null }) {
-  if (kind.startsWith("kpi_")) return <KpiTile kind={kind} portfolio={portfolio} />;
+function TileBody({ kind, period, portfolio, score, snapshots }: { kind: string; period: Period; portfolio: Portfolio | null; score: MaalScore | null; snapshots: Snapshot[] }) {
+  if (kind.startsWith("kpi_")) return <KpiTile kind={kind} portfolio={portfolio} snapshots={snapshots} />;
   switch (kind) {
     case "maal_score": return <MaalScoreTile score={score} />;
     case "radar": return <RadarTile />;
@@ -453,7 +456,7 @@ function KpiSparkline({
   );
 }
 
-function KpiTile({ kind, portfolio }: { kind: string; portfolio: Portfolio | null }) {
+function KpiTile({ kind, portfolio, snapshots }: { kind: string; portfolio: Portfolio | null; snapshots: Snapshot[] }) {
   const [open, setOpen] = useState(false);
   const value = useMemo(() => {
     if (!portfolio) return null;
@@ -467,12 +470,20 @@ function KpiTile({ kind, portfolio }: { kind: string; portfolio: Portfolio | nul
   }, [kind, portfolio]);
   const meta = KPI_META[kind] ?? { title: "Value", positive: true };
   const series = useMemo(() => {
+    // Real daily history from snapshots for this kind, when we have ≥2 points.
+    const real = (snapshots ?? [])
+      .map((s) => ({ v: snapshotValue(s, kind), label: snapshotLabel(s.date) }))
+      .filter((p) => Number.isFinite(p.v));
+    if (real.length >= 2) {
+      return { data: real.map((p) => p.v), labels: real.map((p) => p.label), real: true };
+    }
+    // Fallback: flat line at today's value until history accrues.
     if (value === null) return null;
     const months = 12;
     const data = buildKpiSeries(months, value ?? 0);
     const labels = data.map((_, i) => monthLabel(months - 1 - i));
-    return { data, labels };
-  }, [kind, value, meta.positive]);
+    return { data, labels, real: false };
+  }, [kind, value, snapshots]);
 
   const first = series?.data[0] ?? 0;
   const last = series?.data[series.data.length - 1] ?? 0;
@@ -506,7 +517,13 @@ function KpiTile({ kind, portfolio }: { kind: string; portfolio: Portfolio | nul
       </div>
       <p className="text-[26px] font-bold tabular-nums">{value === null ? "—" : formatAUD(value)}</p>
       <p className={`text-[11px] mt-1 tabular-nums ${goodDirection ? "text-[var(--mint)]" : "text-muted-foreground"}`}>
-        {value === null || value === 0 ? "—" : <span className="text-muted-foreground">Tracking from today</span>}
+        {series?.real ? (
+          <span className={goodDirection ? "text-[var(--mint)]" : "text-muted-foreground"}>
+            {delta >= 0 ? "▲" : "▼"} {formatAUD(Math.abs(delta))} ({pct >= 0 ? "+" : ""}{pct.toFixed(1)}%)
+          </span>
+        ) : value === null || value === 0 ? "—" : (
+          <span className="text-muted-foreground">Tracking from today</span>
+        )}
       </p>
       {value !== null && (
         <ChartModal
@@ -517,6 +534,8 @@ function KpiTile({ kind, portfolio }: { kind: string; portfolio: Portfolio | nul
           current={value}
           positive={meta.positive}
           valueFormatted={formatAUD(value)}
+          series={series?.real ? series.data : undefined}
+          labels={series?.real ? series.labels : undefined}
         />
       )}
     </div>

@@ -273,6 +273,46 @@ router.patch('/v1/profile', async (req, res) => {
   }
 });
 
+// ─── Net-worth snapshots (real history for the dashboard tiles/charts) ─────
+// GET /api/v1/snapshots?days=N → oldest-first daily series. Upserts today's
+// snapshot first (from the merged effective profile) so React-only users accrue
+// history just like the EJS dashboard does. Registered before /v1/:table.
+router.get('/v1/snapshots', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const { getProfileByUserId } = require('../db/profiles');
+    const assetsDb = require('../db/assets');
+    const { recordSnapshot, getSnapshots, snapshotValuesFromProfile } = require('../db/snapshots');
+
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 366, 1), 3660);
+
+    const profile = (await getProfileByUserId(req.session.userId)) || {};
+    const assetSummary = await assetsDb.getAssetSummary(req.session.userId);
+    const effectiveProfile = assetsDb.mergeAssetSummaryIntoProfile(profile, assetSummary);
+
+    try {
+      await recordSnapshot(req.session.userId, snapshotValuesFromProfile(effectiveProfile));
+    } catch (e) {
+      // Recording is best-effort (e.g. pre-migration) — still return any history.
+      console.error('/api/v1/snapshots record error:', e.message);
+    }
+
+    const rows = await getSnapshots(req.session.userId, days);
+    res.json(rows.map((r) => ({
+      date: r.snap_date,
+      netWorth: Number(r.net_worth) || 0,
+      assets: Number(r.assets_total) || 0,
+      super: Number(r.super_balance) || 0,
+      investments: Number(r.invest_balance) || 0,
+      debts: Number(r.debts_total) || 0,
+      cash: Number(r.cash_balance) || 0,
+    })));
+  } catch (e) {
+    console.error('/api/v1/snapshots error:', e.message);
+    res.status(500).json({ error: 'Could not load snapshots' });
+  }
+});
+
 // ─── Generic CRUD for user-scoped asset tables ────────────────────────────
 //
 // Tables the React SPA reads/writes. Every row is scoped to user_id.
