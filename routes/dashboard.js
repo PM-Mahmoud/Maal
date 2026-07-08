@@ -14,7 +14,7 @@ const { getRecommendationsByUserId, updateRecommendationStatus, saveRecommendati
 const { getAccountsByUserId, addAccount, deleteAccount, syncAccount } = require('../db/linked_accounts');
 const { computeScore } = require('../lib/score-engine');
 const { computeMaalScore } = require('../lib/maal-score');
-const { recordSnapshot, getSnapshots } = require('../db/snapshots');
+const { recordSnapshot, getSnapshots, snapshotValuesFromProfile } = require('../db/snapshots');
 const { estimateTax } = require('../lib/tax');
 const { aggregateConnected } = require('../lib/connected');
 const assetsDb = require('../db/assets');
@@ -183,24 +183,12 @@ router.get('/', async (req, res) => {
       } catch (e) { console.error('movers error:', e.message); }
     }
 
-    // Record today's net-worth snapshot, then load history for the real chart
-    const p = profile || {};
-    const superBal  = Number(p.super_balance) || 0;
-    const investBal = Number(p.investment_portfolio) || 0;
-    const propertyV = Number(p.property_value) || 0;
-    const cashBal   = Number(p.cash_savings) || 0;
-    const debts     = (Number(p.hecs_balance) || 0) + (Number(p.total_debt) || 0);
-    const assets    = superBal + investBal + propertyV + cashBal;
+    // Record today's net-worth snapshot, then load history for the real chart.
+    // Values via the shared pure helper so the EJS dashboard and the React
+    // GET /api/v1/snapshots record/read identical numbers.
     let snapshots = [];
     try {
-      await recordSnapshot(req.session.userId, {
-        netWorth: assets - debts,
-        assetsTotal: assets,
-        superBalance: superBal,
-        investBalance: investBal,
-        debtsTotal: debts,
-        cashBalance: cashBal,
-      });
+      await recordSnapshot(req.session.userId, snapshotValuesFromProfile(profile));
       snapshots = await getSnapshots(req.session.userId, 366);
     } catch (snapErr) {
       console.error('Snapshot error (run migrations?):', snapErr.message);
