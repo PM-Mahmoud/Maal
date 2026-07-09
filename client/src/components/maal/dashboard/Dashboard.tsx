@@ -5,10 +5,11 @@ import { fetchPortfolio, type Portfolio } from "@/lib/portfolio";
 import { fetchMaalScore, type MaalScore } from "@/lib/maalScore";
 import { fetchProfile } from "@/lib/profile";
 import { fetchSnapshots, snapshotValue, snapshotLabel, type Snapshot } from "@/lib/snapshots";
+import { listTransactions } from "@/lib/transactions.functions";
 import { formatAUD } from "@/lib/score";
 import { supabase } from "@/integrations/api";
 
-import { getMarketIndices, getMarketNews } from "@/lib/markets.functions";
+import { getMarketIndices, getMarketNews, getUpcomingEarnings } from "@/lib/markets.functions";
 import { ChartModal } from "@/components/maal/ChartModal";
 
 const PERIODS = ["1M", "3M", "YTD", "1Y", "All"] as const;
@@ -282,14 +283,64 @@ function TileBody({ kind, period, portfolio, score, snapshots }: { kind: string;
     case "movers": return <Placeholder title="No investments yet" hint="Add investments to see your top movers." cta="Add investment" to="/app/assets" />;
     case "market": return <MarketTile />;
     case "news": return <NewsTile />;
-    case "transactions": return <Placeholder title="No transactions" hint="See your transactions after you connect an account." cta="View transactions" to="/app/transactions" />;
-    case "earnings": return <Placeholder title="No investments yet" hint="Add investments to see upcoming earnings for your holdings." cta="Add investment" to="/app/assets" />;
+    case "transactions": return <TransactionsTile />;
+    case "earnings": return <EarningsTile />;
     case "runway": return <RunwayTile portfolio={portfolio} />;
     case "outgoing": return <Placeholder title="No spending data" hint="Connect transactions to see outgoing flow." cta="View transactions" to="/app/transactions" />;
     default: return null;
   }
   // period reserved for future use
   void period;
+}
+
+function EarningsTile() {
+  const [items, setItems] = useState<any[]>([]);
+  useEffect(() => { getUpcomingEarnings().then((r: any) => setItems(Array.isArray(r) ? r : [])).catch(() => {}); }, []);
+  if (items.length === 0) {
+    return <Placeholder title="No upcoming earnings" hint="Add investments with a ticker symbol to see upcoming earnings for your holdings." cta="Add investment" to="/app/assets" />;
+  }
+  return (
+    <ul className="space-y-2">
+      {items.slice(0, 6).map((e, i) => (
+        <li key={`${e.symbol}-${e.date}-${i}`} className="flex items-center justify-between gap-3 text-[12px]">
+          <span className="font-semibold">{e.symbol}</span>
+          <span className="text-muted-foreground tabular-nums">
+            {new Date(e.date).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+            {e.epsEstimate != null && <span className="ml-2">est. EPS {Number(e.epsEstimate).toFixed(2)}</span>}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function TransactionsTile() {
+  const [items, setItems] = useState<any[]>([]);
+  useEffect(() => { listTransactions().then((r: any) => setItems(Array.isArray(r) ? r : [])).catch(() => {}); }, []);
+  if (items.length === 0) {
+    return <Placeholder title="No transactions" hint="See your transactions after you connect an account." cta="Connect account" to="/app/transactions" />;
+  }
+  const recent = [...items]
+    .sort((a, b) => new Date(b.post_date || 0).getTime() - new Date(a.post_date || 0).getTime())
+    .slice(0, 6);
+  return (
+    <ul className="space-y-2">
+      {recent.map((t) => {
+        const amt = Number(t.amount) || 0;
+        return (
+          <li key={t.id} className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[12px] truncate text-foreground">{t.description || "Transaction"}</p>
+              {t.post_date && <p className="text-[10px] text-muted-foreground">{new Date(t.post_date).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}</p>}
+            </div>
+            <span className={`text-[12px] tabular-nums shrink-0 ${amt < 0 ? "text-foreground" : "text-mint"}`}>
+              {amt < 0 ? "-" : "+"}{formatAUD(Math.abs(amt))}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
 }
 
 function MaalScoreTile({ score }: { score: MaalScore | null }) {
