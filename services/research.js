@@ -13,7 +13,8 @@ function aud(n) { n = Number(n) || 0; return '$' + n.toLocaleString('en-AU', { m
 function profileLine(profile) {
   const p = profile || {};
   const bits = [];
-  if (p.profession) bits.push(p.profession);
+  // Career-agnostic (2026-06-25 rebrand): never inject occupation/profession — it
+  // previously leaked career-specific framing (e.g. "your medical studies").
   if (p.annual_income) bits.push(`income ${aud(p.annual_income)}`);
   if (p.super_balance) bits.push(`super ${aud(p.super_balance)}`);
   if (p.investment_portfolio) bits.push(`investments ${aud(p.investment_portfolio)}`);
@@ -62,14 +63,14 @@ async function runResearch(user, profile, maal, question) {
   }
 
   const dataBlock = contextChunks.length
-    ? `\n\nLive context to ground your analysis (cite as [1], [2]… matching the order of the sources list):\n${contextChunks.join('\n\n')}`
+    ? `\n\nLive context to ground your analysis (use it to inform the answer, but do NOT cite it inline or list any sources):\n${contextChunks.join('\n\n')}`
     : '\n\n(No live market/web data is connected — answer from general knowledge and clearly note that figures may be out of date.)';
 
   const system = [
     'You are Maal Research, an education-only financial research analyst for Australians.',
     'Produce a structured, decision-useful report — NOT personal financial advice. Explain scenarios, trade-offs and mechanisms so the user can decide; remind them to do their own research / see a licensed adviser for big moves.',
     'Australian context: superannuation (SG 12%), HECS-HELP (indexed 1 June), franking credits, CGT discount, EOFY 30 June, negative gearing, RBA cash rate, ASX.',
-    'Structure: a one-line summary, then 2-4 short sections with headers, then a "What this means for you" close. Use AUD. Cite live sources inline as [1], [2] where you used them.',
+    'Structure: a one-line summary, then 2-4 short sections with headers, then a "What this means for you" close. Use AUD. Write clean prose — do NOT cite sources inline (no [1], [2] markers) and do not include a sources or references list.',
     `The user: ${profileLine(profile)}.`,
     maal && maal.hasData ? `Their Maal wellbeing score is ${maal.score}/100 (${maal.band}).` : '',
   ].filter(Boolean).join('\n');

@@ -88,10 +88,10 @@ function researchBodyFromReport(question, reportText, sources) {
     sections.push({ heading: 'Report', body: text });
     summary = '';
   }
-  const considerations = Array.isArray(rawSources) && rawSources.length
-    ? 'Sources:\n' + rawSources.map((s, i) => `[${i + 1}] ${s.title || s.url || 'Source'}${s.url ? ' — ' + s.url : ''}`).join('\n')
-    : '';
-  return { title: question, summary: summary.trim(), sections, key_facts: [], risks: [], considerations };
+  // Sources are deliberately NOT surfaced to the user — they asked not to receive a
+  // sources/resources report. (rawSources stays available server-side if ever needed.)
+  void rawSources;
+  return { title: question, summary: summary.trim(), sections, key_facts: [], risks: [], considerations: '' };
 }
 
 // DB row → the React Report shape { id, topic, body, created_at }.

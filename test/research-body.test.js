@@ -34,14 +34,11 @@ test('no headings → single "Report" section, empty summary', () => {
   assert.strictEqual(b.sections[0].body, 'Just one paragraph of analysis.');
 });
 
-test('sources render into considerations (array or JSON string)', () => {
+test('sources are NOT surfaced to the user (considerations stays empty)', () => {
   const src = [{ title: 'ATO', url: 'https://ato.gov.au' }, { title: 'RBA', url: 'https://rba.gov.au' }];
-  const b = researchBodyFromReport('Q', '## H\nbody', src);
-  assert.ok(b.considerations.includes('[1] ATO — https://ato.gov.au'));
-  assert.ok(b.considerations.includes('[2] RBA — https://rba.gov.au'));
-  // JSON-string sources (TEXT column) are parsed too
-  const b2 = researchBodyFromReport('Q', 'x', JSON.stringify(src));
-  assert.ok(b2.considerations.includes('[1] ATO'));
+  // User asked not to receive a sources/resources report — considerations must be empty.
+  assert.strictEqual(researchBodyFromReport('Q', '## H\nbody', src).considerations, '');
+  assert.strictEqual(researchBodyFromReport('Q', 'x', JSON.stringify(src)).considerations, '');
 });
 
 test('empty / null report is safe', () => {
