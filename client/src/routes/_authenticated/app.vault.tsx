@@ -2,6 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { listVault, uploadVaultFile, deleteVaultDoc, extractVaultDoc } from "@/lib/vault.functions";
+import { saveProfile } from "@/lib/profile";
+
+type ExtractField = { field: string; label: string; amount: number };
+const audFmt = (n: number) => new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 }).format(n);
 
 export const Route = createFileRoute("/_authenticated/app/vault")({ component: VaultPage });
 
@@ -29,6 +33,9 @@ function VaultPage() {
   const [err, setErr] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ [DEFAULT_COLLECTION]: true });
+  const [extractResult, setExtractResult] = useState<{ id: string; fields: ExtractField[] } | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [applied, setApplied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const collections = useMemo(() => {
@@ -65,10 +72,29 @@ function VaultPage() {
   }, [target]);
 
   async function runExtract(id: string) {
-    setBusy(id); setErr(null);
-    try { await extract({ data: { id } }); refresh(); }
-    catch (e: any) { setErr(e?.message ?? "Extraction failed"); }
+    setBusy(id); setErr(null); setExtractResult(null); setApplied(false);
+    try {
+      const res: any = await extract({ data: { id } });
+      const fields: ExtractField[] = Array.isArray(res?.fields) ? res.fields : [];
+      if (fields.length) setExtractResult({ id, fields });
+      else setErr("Maal couldn't read any figures from this document. Try a digital PDF, Word, or CSV.");
+      refresh();
+    } catch (e: any) { setErr(e?.message ?? "Extraction failed"); }
     finally { setBusy(null); }
+  }
+
+  async function applyExtract() {
+    if (!extractResult) return;
+    setApplying(true); setErr(null);
+    try {
+      const patch: Record<string, number> = {};
+      for (const f of extractResult.fields) patch[f.field] = f.amount;
+      const saved = await saveProfile(patch);
+      if (!saved) throw new Error("Could not apply figures to your profile.");
+      setApplied(true);
+      setExtractResult(null);
+    } catch (e: any) { setErr(e?.message ?? "Could not apply figures."); }
+    finally { setApplying(false); }
   }
 
   function newCollection() {
@@ -84,6 +110,37 @@ function VaultPage() {
   return (
     <div className="max-w-[1400px] mx-auto px-6 md:px-10 py-8">
       <h1 className="text-[24px] tracking-display font-bold mb-6">My Vault</h1>
+
+      {applied && (
+        <div className="mb-6 px-4 py-3 rounded-[10px] border border-[var(--mint)]/30 bg-[var(--mint)]/10 text-[13px]">
+          Figures applied to your profile — your dashboard and Maal Score now reflect them.
+        </div>
+      )}
+
+      {/* Extract → apply figures to profile (feeds the dashboard) */}
+      {extractResult && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setExtractResult(null)}>
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-[16px] border border-border bg-[var(--surface)] p-6">
+            <h2 className="text-[16px] font-bold mb-1">Figures Maal read from this document</h2>
+            <p className="text-[12px] text-muted-foreground mb-4">Apply them to your profile to update your dashboard and Maal Score. Nothing is saved until you confirm.</p>
+            <ul className="divide-y divide-border mb-5">
+              {extractResult.fields.map((f) => (
+                <li key={f.field} className="flex items-center justify-between py-2.5 text-[13px]">
+                  <span className="text-muted-foreground">{f.label}</span>
+                  <span className="font-semibold tabular-nums">{audFmt(f.amount)}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex items-center justify-end gap-2">
+              <button onClick={() => setExtractResult(null)} className="px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-foreground">Not now</button>
+              <button onClick={applyExtract} disabled={applying}
+                className="px-4 py-2 rounded-[8px] text-[12px] font-semibold bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50">
+                {applying ? "Applying…" : "Apply to my profile"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
         {/* Left: collections */}
