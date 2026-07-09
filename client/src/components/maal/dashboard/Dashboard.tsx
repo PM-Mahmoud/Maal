@@ -81,6 +81,7 @@ export function Dashboard() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [score, setScore] = useState<MaalScore | null>(null);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
+  const [createdAt, setCreatedAt] = useState<string | null>(null);
   const [periodOpen, setPeriodOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const dragId = useRef<string | null>(null);
@@ -93,6 +94,7 @@ export function Dashboard() {
       const { data: u } = await supabase.auth.getUser();
       const prof = await fetchProfile();
       setName(prof?.display_name || u.user?.email?.split("@")[0] || "");
+      setCreatedAt(prof?.created_at ?? null);
       setPortfolio(await fetchPortfolio());
     })();
   }, []);
@@ -227,7 +229,7 @@ export function Dashboard() {
                   </button>
                 </div>
               </div>
-              <TileBody kind={t.kind} period={period} portfolio={portfolio} score={score} snapshots={snapshots} />
+              <TileBody kind={t.kind} period={period} portfolio={portfolio} score={score} snapshots={snapshots} createdAt={createdAt} />
             </div>
           );
         })}
@@ -270,8 +272,22 @@ export function Dashboard() {
 
 // ===== Tile bodies ===================================================
 
-function TileBody({ kind, period, portfolio, score, snapshots }: { kind: string; period: Period; portfolio: Portfolio | null; score: MaalScore | null; snapshots: Snapshot[] }) {
-  if (kind.startsWith("kpi_")) return <KpiTile kind={kind} portfolio={portfolio} snapshots={snapshots} />;
+// Start-of-range timestamp for the dashboard period selector. "All" floors at the
+// account-creation date (item 3) so history begins when the user joined.
+function rangeStartTs(period: Period, createdAt: string | null): number {
+  const now = Date.now();
+  const day = 864e5;
+  switch (period) {
+    case "1M": return now - 30 * day;
+    case "3M": return now - 90 * day;
+    case "YTD": return new Date(new Date().getFullYear(), 0, 1).getTime();
+    case "1Y": return now - 365 * day;
+    case "All": default: return createdAt ? new Date(createdAt).getTime() : 0;
+  }
+}
+
+function TileBody({ kind, period, portfolio, score, snapshots, createdAt }: { kind: string; period: Period; portfolio: Portfolio | null; score: MaalScore | null; snapshots: Snapshot[]; createdAt: string | null }) {
+  if (kind.startsWith("kpi_")) return <KpiTile kind={kind} portfolio={portfolio} snapshots={snapshots} period={period} createdAt={createdAt} />;
   switch (kind) {
     case "maal_score": return <MaalScoreTile score={score} />;
     case "radar": return <RadarTile />;
@@ -511,7 +527,7 @@ function KpiSparkline({
   );
 }
 
-function KpiTile({ kind, portfolio, snapshots }: { kind: string; portfolio: Portfolio | null; snapshots: Snapshot[] }) {
+function KpiTile({ kind, portfolio, snapshots, period, createdAt }: { kind: string; portfolio: Portfolio | null; snapshots: Snapshot[]; period: Period; createdAt: string | null }) {
   const [open, setOpen] = useState(false);
   const value = useMemo(() => {
     if (!portfolio) return null;
@@ -525,10 +541,15 @@ function KpiTile({ kind, portfolio, snapshots }: { kind: string; portfolio: Port
   }, [kind, portfolio]);
   const meta = KPI_META[kind] ?? { title: "Value", positive: true };
   const series = useMemo(() => {
-    // Real daily history from snapshots for this kind, when we have ≥2 points.
-    const real = (snapshots ?? [])
-      .map((s) => ({ v: snapshotValue(s, kind), label: snapshotLabel(s.date) }))
+    // Real daily history for this kind, filtered to the selected range (item 7).
+    const start = rangeStartTs(period, createdAt);
+    const all = (snapshots ?? [])
+      .map((s) => ({ v: snapshotValue(s, kind), label: snapshotLabel(s.date), t: new Date(s.date).getTime() }))
       .filter((p) => Number.isFinite(p.v));
+    const inRange = all.filter((p) => p.t >= start);
+    // Use the in-range window when it has enough points; else fall back to all real
+    // history so a sparse range doesn't render a broken single-point line.
+    const real = inRange.length >= 2 ? inRange : all;
     if (real.length >= 2) {
       return { data: real.map((p) => p.v), labels: real.map((p) => p.label), real: true };
     }
@@ -538,7 +559,7 @@ function KpiTile({ kind, portfolio, snapshots }: { kind: string; portfolio: Port
     const data = buildKpiSeries(months, value ?? 0);
     const labels = data.map((_, i) => monthLabel(months - 1 - i));
     return { data, labels, real: false };
-  }, [kind, value, snapshots]);
+  }, [kind, value, snapshots, period, createdAt]);
 
   const first = series?.data[0] ?? 0;
   const last = series?.data[series.data.length - 1] ?? 0;
