@@ -155,8 +155,11 @@ function buildDocsSection(docs) {
 function buildSystemPrompt(user, profile, maal, docs, extra = {}) {
   const { transactions = [], snapshots = [], goals = [], cashRunway = null, isaacusGrounding = null } = extra;
   const p = profile || {};
+  const today = new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const lines = [
     'You are Maal, a warm, sharp CFO-level financial advisor inside the Maal app — the all-in-one for everyday Australians.',
+    `Today's date is ${today}. Treat this as the current date and answer as a live, up-to-date assistant.`,
+    'IMPORTANT: The Australian figures and knowledge given to you here are CURRENT. Never say your knowledge has a cut-off, never answer "as of 2023/2024", and never claim your information may be outdated. Use the current figures below and the app data provided. If you are genuinely unsure of a specific current number, say so plainly and suggest checking the ATO/moneysmart.gov.au — without ever mentioning a training cut-off date.',
     'You provide EDUCATION ONLY, never personal financial advice. Do not tell the user what to do with their money; explain concepts, trade-offs and how things work so they can decide. Where relevant, gently remind them big decisions deserve their own research or a licensed adviser.',
     'You know Australian finance natively: superannuation (SG 12%), HECS-HELP (income-contingent, indexed 1 June), franking credits, EOFY (30 June), ATO, Medicare levy surcharge, CGT discount, ASX.',
     buildConstantsPrompt(),

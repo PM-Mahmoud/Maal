@@ -95,21 +95,65 @@ router.post('/v1/advisor/message', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
     const advisor = require('../services/advisor');
+    const { message, history = [] } = req.body;
+    if (!message) return res.status(400).json({ error: 'message required' });
     if (!advisor.hasAdvisor()) {
       return res.json({
         reply: "I'm not able to respond right now — the AI advisor isn't configured. Ask your admin to set an API key (AZURE_OPENAI_API_KEY or GROQ_API_KEY) in the server environment.",
         live: false,
       });
     }
+
+    // Feed the advisor the SAME dashboard context the EJS /dashboard/ask/message
+    // uses: merged effective profile, Maal Score, Vault docs, 30d transactions,
+    // 90d net-worth snapshots, goals, cash runway. Without this the React Ask Maal
+    // had no access to the user's financial data (advisor.complete = raw model).
     const { findUserById } = require('../db/users');
+    const { getProfileByUserId } = require('../db/profiles');
+    const assetsDb = require('../db/assets');
+    const { computeMaalScore } = require('../lib/maal-score');
+    const vaultDb = require('../db/vault');
+    const { getTxnsSince } = require('../db/transactions');
+    const { getSnapshots } = require('../db/snapshots');
+    const goalsDb = require('../db/goals');
+    const isaacus = require('../services/isaacus');
+
     const user = await findUserById(req.session.userId);
-    const { message, history = [] } = req.body;
-    if (!message) return res.status(400).json({ error: 'message required' });
+    const rawProfile = (await getProfileByUserId(req.session.userId)) || {};
+    const assetSummary = await assetsDb.getAssetSummary(req.session.userId);
+    const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
+    const maal = computeMaalScore(profile);
+
+    let docs = [];
+    try { docs = await vaultDb.getReadableDocs(req.session.userId); }
+    catch (e) { console.error('vault docs for advisor failed:', e.message); }
+
+    const [txns, snaps, goals] = await Promise.all([
+      getTxnsSince(req.session.userId, 30).catch(() => []),
+      getSnapshots(req.session.userId, 90).catch(() => []),
+      goalsDb.listGoals(req.session.userId).catch(() => []),
+    ]);
+    const cashSavings = Number(profile.cash_savings || 0);
+    const monthlyExpenses = Number(profile.monthly_expenses || 0);
+    const cashRunway = monthlyExpenses > 0 ? Math.round(cashSavings / monthlyExpenses) : null;
+
+    // Legal/tax grounding from the user's own Vault docs (only when they have any).
+    let isaacusGrounding = null;
+    if (isaacus.hasIsaacus() && docs.length) {
+      try {
+        if ((await isaacus.classifyLegalIntent(message)) >= 0.35) {
+          const answer = await isaacus.extractAnswer(message, docs.map((d) => d.extracted_text));
+          if (answer) isaacusGrounding = { text: answer.text, score: answer.score, filename: docs[answer.sourceIndex] ? docs[answer.sourceIndex].filename : null };
+        }
+      } catch (e) { console.error('[isaacus] grounding lookup failed:', e.message); }
+    }
+
     const clean = [
-      ...history.slice(-10).map(m => ({ role: m.role, content: m.content })),
+      ...history.slice(-10).map((m) => ({ role: m.role, content: m.content })),
       { role: 'user', content: message },
     ];
-    const reply = await advisor.complete(clean, { userId: req.session.userId });
+    const extra = { transactions: txns, snapshots: snaps, goals, cashRunway, isaacusGrounding };
+    const reply = await advisor.chat(user, profile, maal, clean, docs, extra);
     res.json({ ok: true, reply, live: true });
   } catch (err) {
     console.error('advisor message error:', err.message);
