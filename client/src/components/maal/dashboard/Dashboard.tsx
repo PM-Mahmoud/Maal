@@ -219,11 +219,11 @@ export function Dashboard() {
                   <p className="text-[13px] font-semibold truncate">{t.title}</p>
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                  <button onClick={() => cycleSize(t.id)} title={`Size: ${size}`}
+                  <button onClick={() => cycleSize(t.id)} title={`Resize ${t.title} tile`} aria-label={`Resize ${t.title} tile (currently ${size})`}
                     className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary">
                     {size === "wide" ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
                   </button>
-                  <button onClick={() => toggleHidden(t.id)} title="Hide tile"
+                  <button onClick={() => toggleHidden(t.id)} title={`Hide ${t.title} tile`} aria-label={`Hide ${t.title} tile`}
                     className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary">
                     <EyeOff className="size-3.5" />
                   </button>

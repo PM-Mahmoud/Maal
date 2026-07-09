@@ -840,12 +840,14 @@ function FormDialog({
         <div className="grid grid-cols-2 gap-4">
           {spec.fields.map((f) => (
             <div key={f.key} className={f.full ? "col-span-2" : "col-span-2 sm:col-span-1"}>
-              <Label className="text-[12px]">
+              <Label htmlFor={`field-${f.key}`} className="text-[12px]">
                 {f.label}
                 {f.required && <span className="text-[#C2701E]"> *</span>}
               </Label>
               {f.type === "textarea" ? (
                 <Textarea
+                  id={`field-${f.key}`}
+                  aria-required={f.required || undefined}
                   className="mt-1.5"
                   placeholder={f.placeholder}
                   value={values[f.key] ?? ""}
@@ -853,7 +855,7 @@ function FormDialog({
                 />
               ) : f.type === "select" ? (
                 <Select value={values[f.key] ?? ""} onValueChange={(val) => setValues((v) => ({ ...v, [f.key]: val }))}>
-                  <SelectTrigger className="mt-1.5"><SelectValue placeholder="Select…" /></SelectTrigger>
+                  <SelectTrigger id={`field-${f.key}`} aria-required={f.required || undefined} className="mt-1.5"><SelectValue placeholder="Select…" /></SelectTrigger>
                   <SelectContent>
                     {f.options?.map((o) => (
                       <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
@@ -862,6 +864,8 @@ function FormDialog({
                 </Select>
               ) : (
                 <Input
+                  id={`field-${f.key}`}
+                  aria-required={f.required || undefined}
                   className="mt-1.5"
                   type={f.type ?? "text"}
                   step={f.type === "number" ? "any" : undefined}

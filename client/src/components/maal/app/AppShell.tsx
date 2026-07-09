@@ -83,7 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-border bg-[var(--surface)] sticky top-0 h-screen">
         <div className="px-5 h-14 flex items-center gap-2 border-b border-border">
           <span className="size-2 rounded-full bg-mint" />
-          <Link to="/" className="text-[16px] font-bold tracking-display">Maal</Link>
+          <Link to="/app" className="text-[16px] font-bold tracking-display">Maal</Link>
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
@@ -156,7 +156,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <NotificationBell />
         </header>
         <header className="md:hidden sticky top-[3px] z-30 h-14 bg-background/90 backdrop-blur border-b border-border flex items-center justify-between px-4">
-          <Link to="/" className="text-[15px] font-bold tracking-display">Maal</Link>
+          <Link to="/app" className="text-[15px] font-bold tracking-display">Maal</Link>
           <div className="flex items-center gap-2">
             <NotificationBell />
             <select

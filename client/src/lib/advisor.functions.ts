@@ -11,15 +11,23 @@ function saveThreads(threads: Thread[]) {
   localStorage.setItem(THREADS_KEY, JSON.stringify(threads));
 }
 
+// A conversation is "empty" until it has at least one stored message.
+function hasMessages(id: string): boolean {
+  try { return (JSON.parse(localStorage.getItem(`maal_msgs_${id}`) || "[]") as unknown[]).length > 0; }
+  catch { return false; }
+}
+
 export async function listThreads(): Promise<Thread[]> {
   return loadThreads();
 }
 
 export async function createThread(): Promise<Thread> {
+  // Drop any prior empty conversations so the list doesn't fill with untitled
+  // "New conversation" duplicates from repeated clicks.
+  const kept = loadThreads().filter((t) => hasMessages(t.id));
   const t: Thread = { id: crypto.randomUUID(), title: "New conversation", updated_at: new Date().toISOString() };
-  const threads = loadThreads();
-  threads.unshift(t);
-  saveThreads(threads);
+  kept.unshift(t);
+  saveThreads(kept);
   return t;
 }
 
