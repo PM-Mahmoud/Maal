@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { GripVertical, Eye, EyeOff, Maximize2, Minimize2, Plus, Settings2, ArrowUpRight, ArrowUp, Info, ChevronDown, Layers, CreditCard } from "lucide-react";
+import { GripVertical, Eye, EyeOff, Maximize2, Minimize2, Plus, Settings2, ArrowUpRight, ArrowUp, Info, ChevronDown, Layers, CreditCard, FileText } from "lucide-react";
 import { fetchPortfolio, type Portfolio } from "@/lib/portfolio";
 import { fetchMaalScore, type MaalScore } from "@/lib/maalScore";
 import { fetchProfile } from "@/lib/profile";
@@ -154,6 +154,10 @@ export function Dashboard() {
               </>
             )}
           </div>
+          <Link to="/app/report"
+            className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-full text-[12px] font-medium bg-[var(--surface)] hover:border-mint/40">
+            <FileText className="size-3.5" /> Report
+          </Link>
           <button onClick={() => setCustomizeOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-full text-[12px] font-medium bg-[var(--surface)] hover:border-mint/40">
             <Settings2 className="size-3.5" /> Customize

@@ -166,7 +166,9 @@ function buildSystemPrompt(user, profile, maal, docs, extra = {}) {
   ];
   if (p.annual_income || p.super_balance || p.investment_portfolio || p.hecs_balance || p.total_debt) {
     lines.push('Their current financial snapshot (from their profile — use it to ground your answers):');
-    if (p.profession) lines.push('- Occupation: ' + p.profession + (p.years_in_practice ? ', ' + p.years_in_practice + ' years in the workforce' : ''));
+    // Career-agnostic (2026-06-25 rebrand): do NOT surface occupation/profession or
+    // years-in-practice — Maal is for all Australians and must not frame answers
+    // around a specific career (this previously leaked e.g. "your medical studies").
     if (p.annual_income) lines.push('- Annual gross income: ' + aud(p.annual_income));
     if (p.super_balance) lines.push('- Super balance: ' + aud(p.super_balance));
     if (p.investment_portfolio) lines.push('- Investments (non-super): ' + aud(p.investment_portfolio));
