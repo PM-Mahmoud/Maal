@@ -373,14 +373,15 @@ function DebtPayoff() {
   const mountedRef = useRef(false);
   const [mounted, setMounted] = useState(false);
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount. Set state directly — a previous
+  // requestAnimationFrame wrapper left the calculator stuck on "Loading…" in
+  // non-foreground tabs (rAF is throttled/never fires there). This route is
+  // client-only (ssr:false), so there's no hydration reason to defer.
   useEffect(() => {
     const stored = loadDebts();
-    requestAnimationFrame(() => {
-      setDebts(stored.length > 0 ? stored : SAMPLE_DEBTS);
-      setMounted(true);
-      mountedRef.current = true;
-    });
+    setDebts(stored.length > 0 ? stored : SAMPLE_DEBTS);
+    setMounted(true);
+    mountedRef.current = true;
   }, []);
 
   // Persist whenever debts change (after mount)
