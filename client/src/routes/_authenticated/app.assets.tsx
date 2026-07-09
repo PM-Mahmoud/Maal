@@ -790,6 +790,7 @@ function FormDialog({
 }) {
   const spec = useMemo(() => (cat ? specFor(cat) : null), [cat]);
   const [values, setValues] = useState<Record<string, any>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -799,18 +800,27 @@ function FormDialog({
       init[f.key] = f.type === "select" && f.options?.[0] ? f.options[0].value : "";
     });
     setValues(init);
+    setErrors({});
   }, [cat, spec]);
 
   if (!cat || !spec) return null;
 
   async function submit() {
     if (!spec || !cat) return;
+    // Inline validation: collect every missing required field, show errors next to
+    // each (plus a summary toast), and don't submit until they're all filled.
+    const nextErrors: Record<string, string> = {};
     for (const f of spec.fields) {
-      if (f.required && !values[f.key]) {
-        toast.error(`${f.label} is required`);
-        return;
+      if (f.required && (values[f.key] === undefined || values[f.key] === null || String(values[f.key]).trim() === "")) {
+        nextErrors[f.key] = `${f.label} is required`;
       }
     }
+    if (Object.keys(nextErrors).length) {
+      setErrors(nextErrors);
+      toast.error(Object.keys(nextErrors).length === 1 ? Object.values(nextErrors)[0] : "Please fill in the required fields");
+      return;
+    }
+    setErrors({});
     setSaving(true);
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) {
@@ -848,14 +858,16 @@ function FormDialog({
                 <Textarea
                   id={`field-${f.key}`}
                   aria-required={f.required || undefined}
-                  className="mt-1.5"
+                  aria-invalid={!!errors[f.key] || undefined}
+                  aria-describedby={errors[f.key] ? `err-${f.key}` : undefined}
+                  className={`mt-1.5 ${errors[f.key] ? "border-[#C2701E]" : ""}`}
                   placeholder={f.placeholder}
                   value={values[f.key] ?? ""}
-                  onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
+                  onChange={(e) => { setValues((v) => ({ ...v, [f.key]: e.target.value })); setErrors((er) => (er[f.key] ? { ...er, [f.key]: "" } : er)); }}
                 />
               ) : f.type === "select" ? (
-                <Select value={values[f.key] ?? ""} onValueChange={(val) => setValues((v) => ({ ...v, [f.key]: val }))}>
-                  <SelectTrigger id={`field-${f.key}`} aria-required={f.required || undefined} className="mt-1.5"><SelectValue placeholder="Select…" /></SelectTrigger>
+                <Select value={values[f.key] ?? ""} onValueChange={(val) => { setValues((v) => ({ ...v, [f.key]: val })); setErrors((er) => (er[f.key] ? { ...er, [f.key]: "" } : er)); }}>
+                  <SelectTrigger id={`field-${f.key}`} aria-required={f.required || undefined} aria-invalid={!!errors[f.key] || undefined} aria-describedby={errors[f.key] ? `err-${f.key}` : undefined} className={`mt-1.5 ${errors[f.key] ? "border-[#C2701E]" : ""}`}><SelectValue placeholder="Select…" /></SelectTrigger>
                   <SelectContent>
                     {f.options?.map((o) => (
                       <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
@@ -866,15 +878,18 @@ function FormDialog({
                 <Input
                   id={`field-${f.key}`}
                   aria-required={f.required || undefined}
-                  className="mt-1.5"
+                  aria-invalid={!!errors[f.key] || undefined}
+                  aria-describedby={errors[f.key] ? `err-${f.key}` : undefined}
+                  className={`mt-1.5 ${errors[f.key] ? "border-[#C2701E]" : ""}`}
                   type={f.type ?? "text"}
                   step={f.type === "number" ? "any" : undefined}
                   placeholder={f.placeholder}
                   value={values[f.key] ?? ""}
-                  onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
+                  onChange={(e) => { setValues((v) => ({ ...v, [f.key]: e.target.value })); setErrors((er) => (er[f.key] ? { ...er, [f.key]: "" } : er)); }}
                 />
               )}
-              {f.hint && <p className="text-[11px] text-muted-foreground mt-1">{f.hint}</p>}
+              {errors[f.key] && <p id={`err-${f.key}`} className="text-[11px] text-[#C2701E] mt-1">{errors[f.key]}</p>}
+              {f.hint && !errors[f.key] && <p className="text-[11px] text-muted-foreground mt-1">{f.hint}</p>}
             </div>
           ))}
         </div>
