@@ -184,10 +184,29 @@ class QueryBuilder<T = Record<string, unknown>> {
 
 // ── Supabase-compatible client export ─────────────────────────────────────
 
+// Realtime is not supported by this Express/Neon adapter. Provide graceful no-op
+// stubs so components written against Supabase realtime (e.g. NotificationBell's
+// supabase.channel(...).on(...).subscribe()) don't throw "channel is not a
+// function" on every app page — they simply get no live updates.
+function channelStub() {
+  const ch = {
+    on() { return ch; },
+    subscribe() { return ch; },
+    unsubscribe() { return Promise.resolve("ok"); },
+  };
+  return ch;
+}
+
 export const supabase = {
   auth: supabaseAuth,
   from<T = Record<string, unknown>>(table: string) {
     return new QueryBuilder<T>(table);
+  },
+  channel(_name?: string) {
+    return channelStub();
+  },
+  removeChannel(_channel?: unknown) {
+    /* no-op — realtime not supported */
   },
 };
 
