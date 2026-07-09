@@ -107,6 +107,7 @@ function ThreadPage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask anything about your money…"
+          aria-label="Ask Maal a question about your money"
           className="flex-1 bg-transparent px-3 py-2 text-[14px] outline-none"
         />
         <button type="submit" disabled={busy || !input.trim()}
