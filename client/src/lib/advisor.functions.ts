@@ -23,21 +23,30 @@ export async function createThread(): Promise<Thread> {
   return t;
 }
 
+// Callers pass the Lovable-style { data: { ... } } envelope — unwrap it. Reading
+// the top level left threadId/content undefined, so getThreadMessages returned []
+// and sendAdvisorMessage returned an empty reply (Ask Maal appeared "stuck").
+// Also tolerates a flat object (internal calls pass { threadId } directly).
+function unwrapArg<T>(payload: unknown): T {
+  const p = payload as { data?: T } | undefined;
+  return ((p && p.data !== undefined ? p.data : p) ?? {}) as T;
+}
+
 export async function deleteThread(data?: unknown): Promise<void> {
-  const { id } = (data ?? {}) as { id?: string };
+  const { id } = unwrapArg<{ id?: string }>(data);
   if (!id) return;
   saveThreads(loadThreads().filter(t => t.id !== id));
   localStorage.removeItem(`maal_msgs_${id}`);
 }
 
 export async function getThreadMessages(data?: unknown): Promise<Message[]> {
-  const { threadId } = (data ?? {}) as { threadId?: string };
+  const { threadId } = unwrapArg<{ threadId?: string }>(data);
   if (!threadId) return [];
   try { return JSON.parse(localStorage.getItem(`maal_msgs_${threadId}`) || "[]"); } catch { return []; }
 }
 
 export async function sendAdvisorMessage(data?: unknown): Promise<{ reply: string }> {
-  const { threadId, content } = (data ?? {}) as { threadId?: string; content?: string };
+  const { threadId, content } = unwrapArg<{ threadId?: string; content?: string }>(data);
   if (!threadId || !content) return { reply: "" };
 
   // Save user message locally
