@@ -174,15 +174,37 @@ app.use(require('./routes/oauth'));
 app.use(require('./routes/admin'));
 app.use(require('./routes/reset'));
 app.use(require('./routes/feedback'));
-app.use('/dashboard/roadmap', require('./routes/roadmap'));
-app.use('/dashboard', require('./routes/dashboard'));
+
+// ─── EJS dashboard RETIRED → redirect to the React app (/app/*) ────────────
+// The legacy EJS /dashboard/* is fully superseded by the canonical React app at
+// /app/*. React uses /api/v1/* exclusively (no /dashboard HTTP endpoint is still
+// called), so we redirect the whole /dashboard/* surface — mapping the main
+// pages to their React equivalents so old bookmarks keep working, everything
+// else to /app. Unauthenticated users then hit the /app auth gate → /auth.
+// (The EJS dashboard views/routes/*.ejs remain on disk as dead code for now;
+// deleting them is a separate cleanup.)
+const DASHBOARD_REDIRECTS = {
+  '/': '/app',
+  '/assets': '/app/assets',
+  '/vault': '/app/vault',
+  '/transactions': '/app/transactions',
+  '/goals': '/app/goals',
+  '/ask': '/app/advisor',
+  '/research': '/app/research',
+  '/radar': '/app/radar',
+  '/profile': '/app/onboarding',
+  '/portfolio': '/app/portfolio-plan',
+};
+app.use('/dashboard', (req, res) => {
+  const sub = (req.path.replace(/\/+$/, '') || '/');
+  res.redirect(301, DASHBOARD_REDIRECTS[sub] || '/app');
+});
+
 app.use('/billing', require('./routes/billing'));
 app.use('/basiq', require('./routes/basiq'));
 app.use('/onboarding', require('./routes/onboarding'));
 app.use('/api/onboarding', require('./routes/onboarding'));
 app.use('/score', require('./routes/score'));
-app.use('/dashboard/tools', require('./routes/tools'));
-app.use('/dashboard/portfolio', require('./routes/portfolio'));
 app.use('/api/waitlist', require('./routes/waitlist'));
 
 // Public pages
