@@ -700,7 +700,9 @@ function TaxTile({ portfolio }: { portfolio: Portfolio | null }) {
 function MarketTile() {
   const loadIndices = getMarketIndices;
   const [items, setItems] = useState<any[]>([]);
-  useEffect(() => { loadIndices().then((r: any) => setItems(r.items ?? [])).catch(() => {}); }, [loadIndices]);
+  // Server returns a bare array of { name, symbol, price, changePercent }. Keep
+  // only rows that actually resolved a price (Finnhub free tier can't quote some).
+  useEffect(() => { loadIndices().then((r: any) => setItems((Array.isArray(r) ? r : r?.items ?? []).filter((x: any) => x && x.price != null))).catch(() => {}); }, [loadIndices]);
   const focus = items.find((i) => i.name === "S&P 500") ?? items[0];
   return (
     <div>
@@ -708,7 +710,7 @@ function MarketTile() {
         <div className="mb-3">
           <div className="flex items-center gap-2 text-[12px]">
             <span className="font-semibold">{focus.name}</span>
-            <span className={focus.changePct >= 0 ? "text-mint" : "text-[hsl(0_70%_55%)]"}>{focus.changePct >= 0 ? "▲" : "▼"} {focus.changePct.toFixed(2)}%</span>
+            <span className={focus.changePercent >= 0 ? "text-mint" : "text-[hsl(0_70%_55%)]"}>{focus.changePercent >= 0 ? "▲" : "▼"} {focus.changePercent.toFixed(2)}%</span>
           </div>
           <p className="text-[13px] tabular-nums">{focus.price.toLocaleString()}</p>
         </div>
@@ -717,7 +719,7 @@ function MarketTile() {
         {items.slice(0, 5).map((i) => (
           <li key={i.symbol} className="flex justify-between text-[11px]">
             <span className="text-muted-foreground">{i.name}</span>
-            <span className={i.changePct >= 0 ? "text-mint" : "text-[hsl(0_70%_55%)]"}>{i.changePct >= 0 ? "+" : ""}{i.changePct.toFixed(2)}%</span>
+            <span className={i.changePercent >= 0 ? "text-mint" : "text-[hsl(0_70%_55%)]"}>{i.changePercent >= 0 ? "+" : ""}{i.changePercent.toFixed(2)}%</span>
           </li>
         ))}
       </ul>
@@ -728,14 +730,15 @@ function MarketTile() {
 function NewsTile() {
   const loadNews = getMarketNews;
   const [items, setItems] = useState<any[]>([]);
-  useEffect(() => { loadNews().then((r: any) => setItems(r.items ?? [])).catch(() => {}); }, [loadNews]);
+  // Server returns a bare array of { headline, summary, source, url, datetime }.
+  useEffect(() => { loadNews().then((r: any) => setItems(Array.isArray(r) ? r : r?.items ?? [])).catch(() => {}); }, [loadNews]);
   if (items.length === 0) return <SkeletonRows />;
   return (
     <ul className="space-y-2.5">
       {items.slice(0, 4).map((n, i) => (
         <li key={i}>
-          <a href={n.link} target="_blank" rel="noreferrer" className="block hover:text-mint">
-            <p className="text-[12px] leading-snug line-clamp-2">{n.title}</p>
+          <a href={n.url} target="_blank" rel="noreferrer" className="block hover:text-mint">
+            <p className="text-[12px] leading-snug line-clamp-2">{n.headline}</p>
             <p className="text-[10px] text-muted-foreground mt-1">{n.source}</p>
           </a>
         </li>
