@@ -185,6 +185,26 @@ function formatIndicesForPrompt(indices) {
   return 'Global markets right now:\n' + lines.join('\n');
 }
 
+// Upcoming earnings for a set of tickers (next ~90 days), soonest first.
+// → [{ symbol, date, epsEstimate, hour }]. Empty without a key or symbols.
+async function getUpcomingEarnings(symbols) {
+  if (!hasMarketData() || !Array.isArray(symbols) || !symbols.length) return [];
+  const from = new Date().toISOString().slice(0, 10);
+  const to = new Date(Date.now() + 90 * 864e5).toISOString().slice(0, 10);
+  const uniq = [...new Set(symbols.map((s) => String(s || '').trim().toUpperCase()).filter(Boolean))].slice(0, 25);
+  const out = [];
+  for (const sym of uniq) {
+    try {
+      const r = await cached(`earn:${sym}:${from}`, 6 * 60 * 60 * 1000, () => get(`/calendar/earnings?from=${from}&to=${to}&symbol=${encodeURIComponent(sym)}`));
+      const rows = (r && Array.isArray(r.earningsCalendar)) ? r.earningsCalendar : [];
+      for (const e of rows) {
+        if (e && e.date) out.push({ symbol: e.symbol || sym, date: e.date, epsEstimate: e.epsEstimate ?? null, hour: e.hour || null });
+      }
+    } catch (_) { /* skip this symbol */ }
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+
 module.exports = {
   hasMarketData,
   getQuote,
@@ -193,6 +213,7 @@ module.exports = {
   getMarketNews,
   resolveSymbol,
   getGlobalIndices,
+  getUpcomingEarnings,
   formatIndicesForPrompt,
   GLOBAL_INDICES,
 };

@@ -196,6 +196,22 @@ router.get('/v1/markets/news', async (req, res) => {
   } catch { res.json([]); }
 });
 
+// Upcoming earnings for the tickers the user holds in `investments`.
+router.get('/v1/markets/earnings', async (req, res) => {
+  if (!req.session.userId) return res.json([]);
+  try {
+    const { getUpcomingEarnings } = require('../services/marketdata');
+    const { rows } = await pool.query(
+      `SELECT DISTINCT ticker FROM investments WHERE user_id = $1 AND ticker IS NOT NULL AND ticker <> ''`,
+      [req.session.userId]
+    );
+    res.json(await getUpcomingEarnings(rows.map((r) => r.ticker)));
+  } catch (e) {
+    console.error('/api/v1/markets/earnings error:', e.message);
+    res.json([]);
+  }
+});
+
 // ─── Notifications ────────────────────────────────────────────────────────
 
 router.get('/v1/notifications', async (req, res) => {
