@@ -20,6 +20,7 @@ export type Profile = {
   retirement_age: number;
   completed_onboarding: boolean;
   onboarded: boolean;
+  created_at: string | null;
 };
 
 export async function fetchProfile(): Promise<Profile | null> {

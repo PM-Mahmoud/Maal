@@ -115,6 +115,7 @@ function normalizeProfile(row, user) {
     retirement_age: num(r.retirement_age) || 67,
     completed_onboarding: !!r.completed_onboarding,
     onboarded: !!r.completed_onboarding, // React alias
+    created_at: (user && user.created_at) || null, // account-creation date (dashboard "All" range floor)
   };
 }
 
