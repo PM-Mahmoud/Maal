@@ -138,7 +138,7 @@ async function main() {
   // ─── Failover ─────────────────────────────────────────────────────────────
   console.log('\nprovider failover');
 
-  await test('reasoner falls through to the next provider when the first fails', async () => {
+  await test('reasoner tries Azure FIRST, then falls through to Groq in order', async () => {
     // reasoner candidates here = [azure, groq]. Azure errors → should try Groq.
     const urls = [];
     gateway._setFetchForTests(async (url) => {
@@ -148,14 +148,18 @@ async function main() {
     });
     const out = await gateway.completeAs('reasoner', [{ role: 'user', content: 'hi' }], {});
     assert.strictEqual(out, 'from groq');
-    assert.ok(urls.some(u => u.includes('azure.com')), 'tried Azure first');
-    assert.ok(urls.some(u => u.includes('groq.com')), 'fell through to Groq');
+    assert.strictEqual(urls.length, 2, 'exactly two attempts');
+    assert.ok(urls[0].includes('azure.com'), 'Azure attempted first');
+    assert.ok(urls[1].includes('groq.com'), 'Groq attempted second');
     gateway._setFetchForTests(null);
   });
 
-  await test('completeAs throws the last error only when every provider fails', async () => {
-    gateway._setFetchForTests(async () => ({ ok: false, status: 500, text: async () => 'boom' }));
+  await test('every candidate is tried before completeAs throws the last error', async () => {
+    const urls = [];
+    gateway._setFetchForTests(async (url) => { urls.push(url); return { ok: false, status: 500, text: async () => 'boom' }; });
     await assert.rejects(() => gateway.completeAs('reasoner', [{ role: 'user', content: 'hi' }], {}), /500/);
+    assert.strictEqual(urls.length, 2, 'both candidates attempted (azure, groq)');
+    assert.ok(urls[0].includes('azure.com') && urls[1].includes('groq.com'), 'in order');
     gateway._setFetchForTests(null);
   });
 

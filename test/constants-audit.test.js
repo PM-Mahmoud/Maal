@@ -217,6 +217,9 @@ async function main() {
             assert.strictEqual('discrepancies' in t, false, 'a zero-source topic has no discrepancies field');
           }
           assert.deepStrictEqual(report.discrepancies, []);
+          // A sweep where nothing could be checked must be inconclusive, not clean.
+          assert.strictEqual(report.status, 'inconclusive');
+          assert.strictEqual(report.failures, 4);
         }
       )
     )
@@ -241,6 +244,9 @@ async function main() {
           assert.ok(hecsTopic.error && hecsTopic.error.includes('Exa 500'), 'expected the Exa error to be captured');
           assert.strictEqual(topicById(report, 'income-tax').sources, 1);
           assert.deepStrictEqual(report.discrepancies, []);
+          // One failed topic ⇒ the whole sweep is inconclusive, never clean.
+          assert.strictEqual(report.status, 'inconclusive');
+          assert.ok(report.failures >= 1);
         }
       )
     )
@@ -261,6 +267,8 @@ async function main() {
             assert.strictEqual(topicById(report, id).sources, 0); // no highlight configured for these
           }
           assert.deepStrictEqual(report.discrepancies, []);
+          assert.strictEqual(report.status, 'inconclusive');
+          assert.strictEqual(report.failures, 4); // 1 model error + 3 no-source
         }
       )
     )

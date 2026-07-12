@@ -84,7 +84,7 @@ function gatewayProxyEnabled() {
 }
 function gatewayOverride(role) {
   if (!gatewayProxyEnabled()) return null;
-  const baseURL = process.env.GATEWAY_BASE_URL.replace(/\/+$/, '');
+  const baseURL = process.env.GATEWAY_BASE_URL.trim().replace(/\/+$/, '');
   const apiKey = process.env.GATEWAY_API_KEY.trim();
   const model = (process.env['GATEWAY_MODEL_' + role.toUpperCase()] || process.env.GATEWAY_MODEL || '').trim();
   return { kind: 'openai', baseURL, apiKey, model, label: 'gateway/' + (model || '(no model configured)') };
@@ -198,20 +198,25 @@ function runProvider(cfg, messages, o) {
 
 // Complete `messages` using `role`. Tries each configured provider for the role
 // in order, falling through to the next on failure (network error, timeout,
-// 5xx). Returns assistant text; throws the last error only if every candidate
-// fails.
+// 5xx). opts.timeoutMs (default DEFAULT_TIMEOUT_MS) is the TOTAL budget across
+// ALL failover attempts — each attempt gets the time remaining until the shared
+// deadline, so total latency stays bounded regardless of candidate count.
+// Returns assistant text; throws the last error only if every candidate fails.
 async function completeAs(role, messages, opts) {
   const candidates = resolveRoleCandidates(role);
   if (!candidates.length) throw new Error('gateway: no provider configured for role "' + role + '"');
-  const o = {
+  const totalBudget = (opts && opts.timeoutMs) || DEFAULT_TIMEOUT_MS;
+  const deadline = Date.now() + totalBudget;
+  const base = {
     maxTokens: (opts && opts.maxTokens) || 600,
     temperature: opts && opts.temperature != null ? opts.temperature : 0.6,
-    timeoutMs: opts && opts.timeoutMs,
   };
   let lastErr;
   for (let i = 0; i < candidates.length; i++) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) { lastErr = lastErr || new Error('gateway: overall timeout budget exhausted for role "' + role + '"'); break; }
     try {
-      return await runProvider(candidates[i], messages, o);
+      return await runProvider(candidates[i], messages, Object.assign({}, base, { timeoutMs: remaining }));
     } catch (e) {
       lastErr = e;
       if (i < candidates.length - 1) {
