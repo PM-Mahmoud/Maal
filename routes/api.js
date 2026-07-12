@@ -89,6 +89,69 @@ router.post('/auth/logout', (req, res) => {
   });
 });
 
+// ─── Usage metering (specs/silvia-parity-tier1-2.md, decision 10) ──────────
+// Count-based per-feature limits by plan, reset on the 1st. Free tier = 0 AI
+// usage (launch cost guardrail) — gated endpoints return 402 with an upgrade
+// message, and the client renders it as a prompt, never an error.
+
+const planLimits = require('../lib/plan-limits');
+const usageDb = require('../db/usage');
+
+// Check + consume one use of a monthly AI feature. Sends the 402 itself and
+// returns null when over the limit; otherwise returns { user }. Counting is
+// attempt-based (consumed before the model runs). Fails OPEN on infrastructure
+// errors — availability wins, and the failure is logged.
+async function gateMonthlyAiUsage(req, res, feature) {
+  const user = await findUserById(req.session.userId);
+  const plan = (user && user.plan) || 'free';
+  try {
+    const counts = await usageDb.getCounts(req.session.userId);
+    const verdict = planLimits.evaluate(plan, feature, counts[feature]);
+    if (!verdict.allowed) {
+      res.status(402).json({
+        error: planLimits.upgradeMessage(plan, feature),
+        code: 'usage_limit',
+        upgrade: true,
+        upgradeUrl: '/app/billing',
+        feature: verdict.feature,
+        plan: verdict.plan,
+        limit: verdict.limit,
+        used: verdict.used,
+      });
+      return null;
+    }
+    await usageDb.increment(req.session.userId, feature);
+  } catch (e) {
+    console.error('[usage] metering failed open for ' + feature + ':', e.message);
+  }
+  return { user };
+}
+
+// GET /api/v1/usage — plan + per-feature usage for the current period.
+router.get('/v1/usage', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const user = await findUserById(req.session.userId);
+    const plan = planLimits.normalizePlan(user && user.plan);
+    const period = planLimits.periodKey();
+    const [counts, activeRadars] = await Promise.all([
+      usageDb.getCounts(req.session.userId),
+      usageDb.countActiveRadars(req.session.userId).catch(() => 0),
+    ]);
+    const features = {};
+    planLimits.MONTHLY_FEATURES.forEach((f) => {
+      features[f] = { used: counts[f] || 0, limit: planLimits.limitFor(plan, f) };
+    });
+    features.active_radars = { used: activeRadars, limit: planLimits.limitFor(plan, 'active_radars') };
+    const now = new Date();
+    const resetsOn = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().slice(0, 10);
+    res.json({ plan, period, resetsOn, features });
+  } catch (e) {
+    console.error('/api/v1/usage error:', e.message);
+    res.status(500).json({ error: 'Could not load usage' });
+  }
+});
+
 // ─── Advisor (AI chat) ────────────────────────────────────────────────────
 
 router.post('/v1/advisor/message', async (req, res) => {
@@ -104,11 +167,14 @@ router.post('/v1/advisor/message', async (req, res) => {
       });
     }
 
+    // Metering: consume one advisor message (402 + upgrade prompt when over).
+    const gate = await gateMonthlyAiUsage(req, res, 'advisor_messages');
+    if (!gate) return;
+
     // Feed the advisor the SAME dashboard context the EJS /dashboard/ask/message
     // uses: merged effective profile, Maal Score, Vault docs, 30d transactions,
     // 90d net-worth snapshots, goals, cash runway. Without this the React Ask Maal
     // had no access to the user's financial data (advisor.complete = raw model).
-    const { findUserById } = require('../db/users');
     const { getProfileByUserId } = require('../db/profiles');
     const assetsDb = require('../db/assets');
     const { computeMaalScore } = require('../lib/maal-score');
@@ -514,6 +580,10 @@ router.post('/v1/research/generate', async (req, res) => {
   const question = String((req.body && (req.body.topic || (req.body.data && req.body.data.topic))) || '').trim().slice(0, 600);
   if (!question) return res.status(400).json({ error: 'Ask a research question first.' });
   try {
+    // Metering: consume one research run (402 + upgrade prompt when over).
+    const gate = await gateMonthlyAiUsage(req, res, 'research_runs');
+    if (!gate) return;
+
     const researchDb = require('../db/research');
     const { getProfileByUserId } = require('../db/profiles');
     const assetsDb = require('../db/assets');
@@ -584,6 +654,20 @@ router.post('/v1/alerts', async (req, res) => {
     const d = unwrap(req.body);
     const prompt = String(d.prompt || '').trim().slice(0, 600);
     if (!prompt) return res.status(400).json({ error: 'Describe what Maal should watch.' });
+
+    // Metering: active radars is a CONCURRENT limit (not monthly) — check the
+    // live count against the plan before creating another active radar.
+    const user = await findUserById(req.session.userId);
+    const active = await usageDb.countActiveRadars(req.session.userId).catch(() => 0);
+    const verdict = planLimits.evaluate((user && user.plan) || 'free', 'active_radars', active);
+    if (!verdict.allowed) {
+      return res.status(402).json({
+        error: planLimits.upgradeMessage(verdict.plan, 'active_radars'),
+        code: 'usage_limit', upgrade: true, upgradeUrl: '/app/billing',
+        feature: verdict.feature, plan: verdict.plan, limit: verdict.limit, used: verdict.used,
+      });
+    }
+
     const freq = ['daily', 'weekly', 'monthly'].includes(d.frequency) ? d.frequency : 'daily';
     const id = await radarDb.createRadar(req.session.userId, {
       prompt,
@@ -618,7 +702,21 @@ router.post('/v1/alerts/toggle', async (req, res) => {
     const radarDb = require('../db/radar');
     const d = unwrap(req.body);
     if (!d.id) return res.status(400).json({ error: 'id required' });
-    await radarDb.setRadarActive(d.id, req.session.userId, d.active !== false);
+    const activating = d.active !== false;
+    if (activating) {
+      // Re-activating counts toward the concurrent active-radar limit too.
+      const user = await findUserById(req.session.userId);
+      const active = await usageDb.countActiveRadars(req.session.userId).catch(() => 0);
+      const verdict = planLimits.evaluate((user && user.plan) || 'free', 'active_radars', active);
+      if (!verdict.allowed) {
+        return res.status(402).json({
+          error: planLimits.upgradeMessage(verdict.plan, 'active_radars'),
+          code: 'usage_limit', upgrade: true, upgradeUrl: '/app/billing',
+          feature: verdict.feature, plan: verdict.plan, limit: verdict.limit, used: verdict.used,
+        });
+      }
+    }
+    await radarDb.setRadarActive(d.id, req.session.userId, activating);
     res.json({ ok: true });
   } catch (e) {
     console.error('/api/v1/alerts/toggle error:', e.message);

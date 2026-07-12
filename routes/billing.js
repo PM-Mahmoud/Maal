@@ -124,7 +124,7 @@ router.post('/webhook',
 router.post('/checkout', requireAuth, async (req, res) => {
   const planKey = (req.body.plan || '').toLowerCase();
   const plan = PLANS[planKey];
-  if (!plan) return res.redirect('/dashboard/settings');
+  if (!plan) return res.redirect('/app/billing');
 
   const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
   const stripe = getStripe();
@@ -132,7 +132,7 @@ router.post('/checkout', requireAuth, async (req, res) => {
   // Demo mode — no Stripe key configured. Simulate success and persist the plan.
   if (!stripe) {
     await setUserPlan(req.session.userId, planKey);
-    return res.redirect(`/dashboard/settings?billing=demo&plan=${planKey}`);
+    return res.redirect(`/app/billing?billing=demo&plan=${planKey}`);
   }
 
   try {
@@ -153,7 +153,7 @@ router.post('/checkout', requireAuth, async (req, res) => {
         },
       }],
       success_url: `${baseUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}&plan=${planKey}`,
-      cancel_url: `${baseUrl}/dashboard/settings?billing=cancel`,
+      cancel_url: `${baseUrl}/app/billing?billing=cancel`,
       metadata: { userId: String(req.session.userId), plan: planKey },
     });
     // Save Stripe customer ID for webhook lookups
@@ -164,7 +164,7 @@ router.post('/checkout', requireAuth, async (req, res) => {
     return res.redirect(303, session.url);
   } catch (err) {
     console.error('Stripe checkout error:', err.message);
-    return res.redirect('/dashboard/settings?billing=error');
+    return res.redirect('/app/billing?billing=error');
   }
 });
 
@@ -186,13 +186,13 @@ router.get('/success', requireAuth, async (req, res) => {
         String(stripeSession.metadata.userId) === String(req.session.userId)
       ) {
         await setUserPlan(req.session.userId, planKey);
-        return res.redirect(`/dashboard/settings?billing=success&plan=${planKey}`);
+        return res.redirect(`/app/billing?billing=success&plan=${planKey}`);
       }
     }
-    res.redirect('/dashboard/settings?billing=error');
+    res.redirect('/app/billing?billing=error');
   } catch (err) {
     console.error('Billing success verify error:', err.message);
-    res.redirect('/dashboard/settings?billing=error');
+    res.redirect('/app/billing?billing=error');
   }
 });
 
@@ -204,7 +204,7 @@ router.post('/downgrade', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Downgrade error:', err.message);
   }
-  res.redirect('/dashboard/settings?billing=downgraded');
+  res.redirect('/app/billing?billing=downgraded');
 });
 
 module.exports = router;

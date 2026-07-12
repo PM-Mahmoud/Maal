@@ -133,6 +133,9 @@ function RadarPage() {
       setToast("Radar created. We'll email you when something changes.");
       setTimeout(() => setToast(null), 3500);
       refresh();
+    } catch (e: any) {
+      setToast(e?.message ?? "Couldn't create radar.");
+      setTimeout(() => setToast(null), 5000);
     } finally { setBusy(false); }
   }
 
@@ -284,7 +287,11 @@ function RadarPage() {
                               className="text-muted-foreground hover:text-foreground">
                               {evalBusy === a.id ? <span className="w-3 h-3 border-2 border-current border-r-transparent rounded-full animate-spin inline-block" /> : <Play className="w-3 h-3" />}
                             </button>
-                            <button onClick={async () => { await toggle({ data: { id: a.id, active: !a.active } } as any); refresh(); }}
+                            <button onClick={async () => {
+                              try { await toggle({ data: { id: a.id, active: !a.active } } as any); }
+                              catch (e: any) { setToast(e?.message ?? "Couldn't update radar."); setTimeout(() => setToast(null), 5000); }
+                              refresh();
+                            }}
                               className="text-[10px] text-muted-foreground hover:text-foreground">
                               {a.active ? "Pause" : "Resume"}
                             </button>
