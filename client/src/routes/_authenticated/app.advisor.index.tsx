@@ -1,7 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 
 import { useEffect, useState } from "react";
+import { Brain } from "lucide-react";
 import { listThreads, createThread, deleteThread } from "@/lib/advisor.functions";
+import { MemoryPanel } from "@/components/maal/advisor/MemoryPanel";
 import { Disclaimer } from "@/components/maal/Disclaimer";
 
 export const Route = createFileRoute("/_authenticated/app/advisor/")({
@@ -17,6 +19,7 @@ function AdvisorIndex() {
   const del = deleteThread;
   const [threads, setThreads] = useState<Thread[] | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showMemory, setShowMemory] = useState(false);
 
   useEffect(() => { list().then((rows) => setThreads(rows as Thread[])); }, [list]);
 
@@ -36,18 +39,27 @@ function AdvisorIndex() {
 
   return (
     <div className="max-w-3xl mx-auto px-6 md:px-10 py-10">
+      {showMemory && <MemoryPanel onClose={() => setShowMemory(false)} />}
       <div className="flex items-end justify-between mb-8">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-2">Advisor</p>
           <h1 className="text-[28px] tracking-display font-bold leading-tight">Conversations</h1>
         </div>
-        <button
-          onClick={startNew}
-          disabled={busy}
-          className="bg-foreground text-background px-4 py-2 rounded-[8px] text-[12px] font-semibold disabled:opacity-40"
-        >
-          New conversation
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowMemory(true)}
+            className="inline-flex items-center gap-1.5 border border-border px-3 py-2 rounded-[8px] text-[12px] font-medium text-muted-foreground hover:text-foreground hover:border-foreground/40"
+          >
+            <Brain className="size-3.5" /> Memory
+          </button>
+          <button
+            onClick={startNew}
+            disabled={busy}
+            className="bg-foreground text-background px-4 py-2 rounded-[8px] text-[12px] font-semibold disabled:opacity-40"
+          >
+            New conversation
+          </button>
+        </div>
       </div>
 
       {threads === null && <p className="text-[13px] text-muted-foreground">Loading…</p>}
