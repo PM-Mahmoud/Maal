@@ -1,120 +1,22 @@
 // services/advisor.js
-// The Maal advisor brain — chat completions via any OpenAI-compatible API.
+// The Maal advisor brain — prompt building + chat orchestration.
 //
-// ACTIVE PROVIDER: Azure OpenAI (AZURE_OPENAI_ENDPOINT / _API_KEY / _DEPLOYMENT)
-// Supports both classic *.openai.azure.com and Foundry *.services.ai.azure.com.
+// All LLM calls route through services/gateway.js by ROLE:
+//   reasoner — synthesis/drafting (Azure-first). chat(), research, radar.
+//   cheap    — extraction/classification (Groq-first). extractFigures().
+//   verifier — Anthropic Claude critique pass on chat answers (verify-and-
+//              revise, blocking, one revision round; skipped without
+//              ANTHROPIC_API_KEY). See specs/silvia-parity-tier1-2.md.
 //
-// TWO-TIER MODEL (Phase 3):
-//   cheap tier  — default for all calls. Uses AZURE_OPENAI_DEPLOYMENT (or
-//                 LLM_MODEL_CHEAP if set). Fast, low-cost, good for chat/summaries.
-//   strong tier — opt-in per call via complete(msgs, { tier: 'strong' }). Uses
-//                 LLM_MODEL_STRONG (or falls back to cheap if not set). Route here
-//                 for Monte Carlo narration, portfolio interpretation (Phase 5).
-//
-// To wire up strong tier: add one env var on Render:
-//   LLM_MODEL_STRONG = <your gpt-4o or other deployment name>
-//
-// FALLBACK PROVIDERS (if no Azure configured) — set all three env vars:
-//   AI_API_KEY, AI_BASE_URL, AI_MODEL (cheap), LLM_MODEL_STRONG (optional)
-// Examples:
-//   Groq:        AI_BASE_URL=https://api.groq.com/openai/v1   AI_MODEL=llama-3.3-70b-versatile
-//   Together AI: AI_BASE_URL=https://api.together.xyz/v1       AI_MODEL=meta-llama/Llama-3.3-70B-Instruct-Turbo
-//   Mistral(EU): AI_BASE_URL=https://api.mistral.ai/v1         AI_MODEL=mistral-small-latest
+// Legacy opts.tier ('cheap'|'strong') is still accepted by complete() and
+// maps onto the reasoner role (strong selects Azure's LLM_MODEL_STRONG
+// deployment inside the gateway, exactly as before).
 
-const OpenAI = require('openai');
+const gateway = require('./gateway');
 const { buildConstantsPrompt } = require('../lib/au-constants');
 
-// ─── Azure OpenAI ─────────────────────────────────────────────────────────────
-// tier: 'cheap' (default) | 'strong'
-// Cheap deployment = LLM_MODEL_CHEAP || AZURE_OPENAI_DEPLOYMENT
-// Strong deployment = LLM_MODEL_STRONG || cheap deployment (graceful fallback)
-function azureConfig(tier) {
-  if (tier === undefined) tier = 'cheap';
-  const endpoint = (process.env.AZURE_OPENAI_ENDPOINT || '').replace(/\/+$/, '');
-  const apiKey = (process.env.AZURE_OPENAI_API_KEY || '').trim();
-  const baseDeployment = (process.env.AZURE_OPENAI_DEPLOYMENT || '').trim();
-  if (!endpoint || !apiKey || !baseDeployment) return null;
-
-  const cheapDeployment = (process.env.LLM_MODEL_CHEAP || baseDeployment).trim();
-  const strongDeployment = (process.env.LLM_MODEL_STRONG || cheapDeployment).trim();
-  const deployment = tier === 'strong' ? strongDeployment : cheapDeployment;
-
-  const apiVersion = process.env.AZURE_OPENAI_API_VERSION || '2024-10-21';
-  const useV1 = endpoint.includes('services.ai.azure.com') || endpoint.endsWith('/openai/v1');
-  const v1Base = endpoint.endsWith('/openai/v1') ? endpoint : (endpoint.replace(/\/openai$/, '') + '/openai/v1');
-  // Classic endpoint embeds deployment in URL; v1 uses model field in body
-  const url = useV1
-    ? (v1Base + '/chat/completions')
-    : (endpoint + '/openai/deployments/' + deployment + '/chat/completions?api-version=' + apiVersion);
-
-  return { url, apiKey, deployment, useV1, tier };
-}
-
-async function azureChatCompletion(messages, opts) {
-  if (!opts) opts = {};
-  const maxTokens = opts.maxTokens !== undefined ? opts.maxTokens : 600;
-  const temperature = opts.temperature !== undefined ? opts.temperature : 0.6;
-  const tier = opts.tier || 'cheap';
-  const cfg = azureConfig(tier);
-  const body = { messages: messages, max_tokens: maxTokens, temperature: temperature };
-  if (cfg.useV1) body.model = cfg.deployment; // v1 routes by model name
-  const res = await fetch(cfg.url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'api-key': cfg.apiKey },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(function() { return ''; });
-    throw new Error('Azure OpenAI ' + res.status + ' (' + cfg.tier + '/' + cfg.deployment + '): ' + detail.slice(0, 200));
-  }
-  const json = await res.json();
-  return json.choices && json.choices[0] && json.choices[0].message ? json.choices[0].message.content : '';
-}
-
-// ─── Non-Azure OpenAI-compatible providers ────────────────────────────────────
-function providerConfig(tier) {
-  if (tier === undefined) tier = 'cheap';
-
-  function resolveModel(cheapDefault) {
-    const cheap = (process.env.LLM_MODEL_CHEAP || process.env.AI_MODEL || cheapDefault).trim();
-    const strong = (process.env.LLM_MODEL_STRONG || cheap).trim();
-    return tier === 'strong' ? strong : cheap;
-  }
-
-  // 1. Fully custom provider
-  if (process.env.AI_API_KEY && process.env.AI_BASE_URL) {
-    return {
-      apiKey: process.env.AI_API_KEY,
-      baseURL: process.env.AI_BASE_URL,
-      model: resolveModel('llama-3.3-70b-versatile'),
-    };
-  }
-  // 2. Groq (US servers, open models, free tier)
-  if (process.env.GROQ_API_KEY) {
-    return {
-      apiKey: process.env.GROQ_API_KEY,
-      baseURL: 'https://api.groq.com/openai/v1',
-      model: resolveModel('llama-3.3-70b-versatile'),
-    };
-  }
-  // 3. DeepSeek (backwards compatibility)
-  if (process.env.DEEPSEEK_API_KEY) {
-    return {
-      apiKey: process.env.DEEPSEEK_API_KEY,
-      baseURL: 'https://api.deepseek.com',
-      model: resolveModel('deepseek-chat'),
-    };
-  }
-  return null;
-}
-
 function hasAdvisor() {
-  return !!azureConfig() || !!providerConfig();
-}
-
-function getClient(tier) {
-  const cfg = providerConfig(tier || 'cheap');
-  return { client: new OpenAI({ baseURL: cfg.baseURL, apiKey: cfg.apiKey }), model: cfg.model };
+  return gateway.hasAnyProvider();
 }
 
 function aud(n) {
@@ -260,10 +162,19 @@ async function chat(user, profile, maal, messages, docs, extra = {}) {
       }
     }
   }
-  return complete([
+  const promptMessages = [
     { role: 'system', content: buildSystemPrompt(user, profile, maal, docs, extra) + knowledgeSection },
     ...messages.slice(-10),
-  ], { maxTokens: 600, temperature: 0.6 }); // chat always uses cheap tier
+  ];
+  const opts = { maxTokens: 600, temperature: 0.6 };
+  const draft = await gateway.completeAs('reasoner', promptMessages, opts);
+  // Verify-and-revise pass (blocking, one revision round, ships regardless).
+  // Checks math, AU constants, and claims-vs-user-data — never style.
+  const verdict = await gateway.verifyAndRevise({ messages: promptMessages, draft, opts });
+  if (verdict.revised) {
+    console.log('[advisor] verifier revised answer (' + verdict.issues.length + ' issue(s))');
+  }
+  return verdict.text;
 }
 
 async function extractFigures(text) {
@@ -281,7 +192,7 @@ async function extractFigures(text) {
   try {
     raw = await complete(
       [{ role: 'system', content: system }, { role: 'user', content: doc }],
-      { maxTokens: 300, temperature: 0 }
+      { maxTokens: 300, temperature: 0, role: 'cheap' } // extraction → cheap role
     );
   } catch (e) {
     return { fields: [], reason: 'error' };
@@ -303,21 +214,14 @@ async function extractFigures(text) {
   return { fields: fields };
 }
 
-// Low-level completion shared by chat, research and radar. Azure first, then
-// any OpenAI-compatible provider. Returns the assistant's text.
-// opts.tier: 'cheap' (default) | 'strong'
+// Low-level completion shared by chat, research and radar — delegates to the
+// gateway. opts.role: 'reasoner' (default) | 'cheap' | 'verifier'. Legacy
+// opts.tier ('cheap'|'strong') maps onto the reasoner role for backwards
+// compatibility (both were synthesis calls).
 async function complete(messages, opts) {
   if (!opts) opts = {};
-  const tier = opts.tier || 'cheap';
-  if (azureConfig(tier)) return azureChatCompletion(messages, Object.assign({}, opts, { tier: tier }));
-  const clientInfo = getClient(tier);
-  const completion = await clientInfo.client.chat.completions.create({
-    model: clientInfo.model,
-    max_tokens: opts.maxTokens || 600,
-    temperature: opts.temperature != null ? opts.temperature : 0.6,
-    messages: messages,
-  });
-  return completion.choices[0].message.content;
+  const role = opts.role || 'reasoner';
+  return gateway.completeAs(role, messages, opts);
 }
 
 module.exports = { hasAdvisor: hasAdvisor, chat: chat, complete: complete, extractFigures: extractFigures };

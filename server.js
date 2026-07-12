@@ -118,18 +118,38 @@ app.get('/health', async (_req, res) => {
       azure: !!((process.env.AZURE_OPENAI_API_KEY || '').trim() && (process.env.AZURE_OPENAI_ENDPOINT || '').trim() && (process.env.AZURE_OPENAI_DEPLOYMENT || '').trim()),
       stripe: !!(process.env.STRIPE_SECRET_KEY || '').trim(),
       isaacus: !!(process.env.ISAACUS_API_KEY || '').trim(),
+      verifier: require('./services/gateway').hasRole('verifier'),
+      exa: !!(process.env.EXA_API_KEY || '').trim(),
+      financialdatasets: !!(process.env.FINANCIAL_DATASETS_API_KEY || '').trim(),
     },
   });
 });
 
+// Shared secret check for internal cron endpoints. Prefers the
+// `Authorization: Bearer <secret>` header (OWASP advises against secrets in URLs
+// — query strings leak into access logs). A `?token=` query param is still
+// accepted for backward-compat with existing schedulers but is discouraged.
+// Comparison is timing-safe.
+function checkCronSecret(req, envName) {
+  const secret = (process.env[envName] || '').trim();
+  if (!secret) return false;
+  const auth = req.get('authorization') || '';
+  const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  const provided = bearer || String(req.query.token || '');
+  if (!provided) return false;
+  const crypto = require('crypto');
+  const a = Buffer.from(provided);
+  const b = Buffer.from(secret);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 // ─── Radar cron sweep ──────────────────────────────────────────────────────
 // Hit by an external scheduler (e.g. cron-job.org) on whatever cadence you
-// like, e.g. hourly: GET /internal/radar/run?token=<RADAR_CRON_SECRET>.
+// like, e.g. hourly, with header: Authorization: Bearer <RADAR_CRON_SECRET>.
 // Evaluates every radar whose frequency interval has elapsed and emails/SMSes
 // alerts. Protected by a shared secret; returns 403 if unset or mismatched.
 app.get('/internal/radar/run', async (req, res) => {
-  const secret = (process.env.RADAR_CRON_SECRET || '').trim();
-  if (!secret || req.query.token !== secret) return res.status(403).json({ error: 'forbidden' });
+  if (!checkCronSecret(req, 'RADAR_CRON_SECRET')) return res.status(403).json({ error: 'forbidden' });
   try {
     const { runDueRadars } = require('./services/radar');
     const result = await runDueRadars();
@@ -140,13 +160,30 @@ app.get('/internal/radar/run', async (req, res) => {
   }
 });
 
+// ─── AU constants drift-check ──────────────────────────────────────────────
+// Hit monthly by an external scheduler (same secret as the radar sweep):
+// GET /internal/constants/drift with header Authorization: Bearer <RADAR_CRON_SECRET>.
+// Compares lib/au-constants.js against official ATO sources (via Exa + the
+// cheap model) and REPORTS discrepancies — propose-only, a human confirms
+// every constants change. Degrades gracefully when EXA_API_KEY is unset.
+app.get('/internal/constants/drift', async (req, res) => {
+  if (!checkCronSecret(req, 'RADAR_CRON_SECRET')) return res.status(403).json({ error: 'forbidden' });
+  try {
+    const { runDriftCheck } = require('./services/constants-audit');
+    const report = await runDriftCheck();
+    res.json({ ok: true, ...report });
+  } catch (e) {
+    console.error('constants drift-check error:', e.message);
+    res.status(500).json({ error: 'drift check failed' });
+  }
+});
+
 // ─── Knowledge ingest trigger (one-time HTTP trigger, no shell needed) ─────
 // POST /internal/ingest-knowledge?token=<INGEST_SECRET>
 // Fires the RAG ingest pipeline in the background; returns immediately.
 // Watch Render logs for progress. Protected by INGEST_SECRET env var.
 app.get('/internal/ingest-knowledge', (req, res) => {
-  const secret = (process.env.INGEST_SECRET || '').trim();
-  if (!secret || req.query.token !== secret) return res.status(403).json({ error: 'forbidden' });
+  if (!checkCronSecret(req, 'INGEST_SECRET')) return res.status(403).json({ error: 'forbidden' });
   // Respond immediately — ingest runs in background (takes several minutes)
   res.json({ ok: true, message: 'Ingest started — watch Render logs for progress' });
   // Fire-and-forget: run after response is flushed
