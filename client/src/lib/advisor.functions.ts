@@ -64,9 +64,9 @@ export async function getThreadMessages(data?: unknown): Promise<Message[]> {
   try { return JSON.parse(localStorage.getItem(`maal_msgs_${threadId}`) || "[]"); } catch { return []; }
 }
 
-type AdvisorReply = { reply: string; widgets?: WidgetSpec[]; followUps?: string[]; citations?: Citation[] };
+type AdvisorReply = { reply: string; widgets?: WidgetSpec[]; followUps?: string[]; citations?: Citation[]; aborted?: boolean };
 
-export async function sendAdvisorMessage(data?: unknown): Promise<AdvisorReply> {
+export async function sendAdvisorMessage(data?: unknown, opts?: { signal?: AbortSignal }): Promise<AdvisorReply> {
   const { threadId, content } = unwrapArg<{ threadId?: string; content?: string }>(data);
   if (!threadId || !content) return { reply: "" };
 
@@ -91,6 +91,7 @@ export async function sendAdvisorMessage(data?: unknown): Promise<AdvisorReply> 
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: content, history: msgs.slice(-10).map(m => ({ role: m.role, content: m.content })) }),
+      signal: opts?.signal,
     });
     const json = await r.json().catch(() => null);
     // 402 usage_limit carries an upgrade prompt in `error` — surface it as the
@@ -108,7 +109,8 @@ export async function sendAdvisorMessage(data?: unknown): Promise<AdvisorReply> 
     msgs.push({ id: crypto.randomUUID(), role: "assistant", content: reply, created_at: new Date().toISOString(), widgets, followUps, citations });
     localStorage.setItem(`maal_msgs_${threadId}`, JSON.stringify(msgs));
     return { reply, widgets, followUps, citations };
-  } catch {
+  } catch (e: any) {
+    if (e?.name === "AbortError") return { reply: "", aborted: true };
     return { reply: "Unable to reach advisor. Please try again." };
   }
 }

@@ -226,14 +226,82 @@ router.post('/v1/advisor/message', async (req, res) => {
       ...history.slice(-10).map((m) => ({ role: m.role, content: m.content })),
       { role: 'user', content: message },
     ];
-    const extra = { transactions: txns, snapshots: snaps, goals, cashRunway, isaacusGrounding };
+
+    // Cross-session memory + the user's custom instructions, injected into the prompt.
+    const memoryDb = require('../db/advisor-memory');
+    let memoryRow = { content: '', last_merged_at: null };
+    let customInstructions = '';
+    try {
+      [memoryRow, customInstructions] = await Promise.all([
+        memoryDb.getMemory(req.session.userId),
+        memoryDb.getCustomInstructions(req.session.userId),
+      ]);
+    } catch (e) { console.error('[advisor] memory/instructions load failed:', e.message); }
+
+    const extra = { transactions: txns, snapshots: snaps, goals, cashRunway, isaacusGrounding, memory: memoryRow.content, customInstructions };
     // Rich web chat: reply text + generative-UI widgets (filled with the user's
     // real data server-side) + follow-up chips + internal-only citations.
     const rich = await advisor.chatRich(user, profile, maal, clean, docs, extra);
     res.json({ ok: true, reply: rich.reply, widgets: rich.widgets, followUps: rich.followUps, citations: rich.citations, live: rich.live });
+
+    // Deferred memory merge (after the response is flushed, debounced) — updates
+    // the user's memory from this turn without adding latency to the reply.
+    const memoryService = require('../services/advisor-memory');
+    if (rich.live && memoryService.shouldMerge(memoryRow.last_merged_at)) {
+      setImmediate(async () => {
+        try {
+          const transcript = memoryService.transcriptFromMessages([...clean, { role: 'assistant', content: rich.reply }]);
+          const updated = await memoryService.mergeMemory(memoryRow.content, transcript);
+          if (updated) await memoryDb.saveMemory(req.session.userId, updated);
+        } catch (e) { console.error('[advisor] deferred memory merge failed:', e.message); }
+      });
+    }
   } catch (err) {
     console.error('advisor message error:', err.message);
     res.status(500).json({ reply: 'The advisor hit a snag — try again in a moment.', live: false });
+  }
+});
+
+// ─── Advisor memory + custom instructions (inspect / edit / clear) ─────────
+router.get('/v1/advisor/memory', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const memoryDb = require('../db/advisor-memory');
+    const [mem, instructions] = await Promise.all([
+      memoryDb.getMemory(req.session.userId),
+      memoryDb.getCustomInstructions(req.session.userId),
+    ]);
+    res.json({ memory: mem.content || '', updatedAt: mem.updated_at || null, customInstructions: instructions });
+  } catch (e) {
+    console.error('/api/v1/advisor/memory GET error:', e.message);
+    res.status(500).json({ error: 'Could not load memory' });
+  }
+});
+
+// PUT { memory?, customInstructions? } — edit either. DELETE clears memory only.
+router.put('/v1/advisor/memory', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const memoryDb = require('../db/advisor-memory');
+    const d = (req.body && req.body.data && typeof req.body.data === 'object') ? req.body.data : (req.body || {});
+    if (typeof d.memory === 'string') await memoryDb.saveMemory(req.session.userId, d.memory);
+    if (typeof d.customInstructions === 'string') await memoryDb.setCustomInstructions(req.session.userId, d.customInstructions);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/v1/advisor/memory PUT error:', e.message);
+    res.status(500).json({ error: 'Could not save' });
+  }
+});
+
+router.delete('/v1/advisor/memory', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const memoryDb = require('../db/advisor-memory');
+    await memoryDb.clearMemory(req.session.userId);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/v1/advisor/memory DELETE error:', e.message);
+    res.status(500).json({ error: 'Could not clear memory' });
   }
 });
 
