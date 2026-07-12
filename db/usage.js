@@ -31,6 +31,26 @@ async function increment(userId, feature, period) {
   return Number(r.rows[0].used);
 }
 
+// Atomically consume one use ONLY IF still under `limit`. Returns the new count,
+// or null when already at/over the limit. This closes the check-then-increment
+// race (two concurrent requests can't both slip past the cap). Caller must
+// short-circuit limit <= 0 itself — this is only invoked when limit >= 1, so the
+// INSERT branch (used = 1) is always within limit; the guard protects the
+// UPDATE branch.
+async function incrementIfUnder(userId, feature, limit, period) {
+  const p = period || periodKey();
+  const r = await pool.query(
+    `INSERT INTO usage_counters (user_id, feature, period, used)
+     VALUES ($1, $2, $3, 1)
+     ON CONFLICT (user_id, feature, period)
+     DO UPDATE SET used = usage_counters.used + 1, updated_at = NOW()
+       WHERE usage_counters.used < $4
+     RETURNING used`,
+    [userId, feature, p, limit]
+  );
+  return r.rows.length ? Number(r.rows[0].used) : null;
+}
+
 // Concurrent limit input: how many radars are active right now.
 async function countActiveRadars(userId) {
   const r = await pool.query(
@@ -40,4 +60,4 @@ async function countActiveRadars(userId) {
   return r.rows[0].n;
 }
 
-module.exports = { getCounts, increment, countActiveRadars };
+module.exports = { getCounts, increment, incrementIfUnder, countActiveRadars };

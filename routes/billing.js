@@ -121,18 +121,37 @@ router.post('/webhook',
 
 // ─── POST /billing/checkout ──────────────────────────────────────────────────
 
+// Demo mode simulates a paid upgrade WITHOUT taking payment. getStripe() also
+// returns null when the Stripe module fails to load, so "no stripe" alone is not
+// safe to treat as demo — gate it behind an explicit dev/test flag and fail
+// closed everywhere else (never grant paid plans for free in production).
+function demoModeAllowed() {
+  return ['development', 'test'].includes(process.env.NODE_ENV) && process.env.ALLOW_BILLING_DEMO === 'true';
+}
+
 router.post('/checkout', requireAuth, async (req, res) => {
   const planKey = (req.body.plan || '').toLowerCase();
   const plan = PLANS[planKey];
   if (!plan) return res.redirect('/app/billing');
 
-  const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
   const stripe = getStripe();
 
-  // Demo mode — no Stripe key configured. Simulate success and persist the plan.
+  // No Stripe configured → only the explicitly-enabled dev/test demo may grant a plan.
   if (!stripe) {
+    if (!demoModeAllowed()) {
+      console.warn('[billing] checkout with no Stripe configured and demo mode off — refusing');
+      return res.redirect('/app/billing?billing=error');
+    }
     await setUserPlan(req.session.userId, planKey);
     return res.redirect(`/app/billing?billing=demo&plan=${planKey}`);
+  }
+
+  // Build redirect URLs only from a trusted configured origin — Host/proto are
+  // client/proxy-controlled and could redirect Stripe to an attacker origin.
+  const baseUrl = (process.env.BASE_URL || '').replace(/\/+$/, '');
+  if (!baseUrl) {
+    console.error('[billing] BASE_URL not configured — cannot build Stripe redirect URLs');
+    return res.redirect('/app/billing?billing=error');
   }
 
   try {
@@ -201,10 +220,13 @@ router.get('/success', requireAuth, async (req, res) => {
 router.post('/downgrade', requireAuth, async (req, res) => {
   try {
     await setUserPlan(req.session.userId, 'free');
+    res.redirect('/app/billing?billing=downgraded');
   } catch (err) {
+    // Never report success on a DB failure — the user would still be on (and
+    // billed for) the paid plan while the UI claims they downgraded.
     console.error('Downgrade error:', err.message);
+    res.redirect('/app/billing?billing=error');
   }
-  res.redirect('/app/billing?billing=downgraded');
 });
 
 module.exports = router;

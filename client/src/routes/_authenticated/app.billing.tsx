@@ -59,7 +59,10 @@ function BillingPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getUsage().then((u) => { setUsage(u); setLoading(false); });
+    getUsage()
+      .then((u) => { setUsage(u); })
+      .catch(() => { /* fall through to the "couldn't load" state */ })
+      .finally(() => { setLoading(false); });
   }, []);
 
   const plan = usage?.plan ?? "free";
@@ -72,7 +75,7 @@ function BillingPage() {
         <h1 className="text-[22px] font-bold tracking-display">Plan &amp; Usage</h1>
       </div>
       <p className="text-[13px] text-muted-foreground mb-6">
-        Your subscription and this month's AI usage. Usage resets on the 1st of each month.
+        Your subscription and AI usage. Monthly quotas reset on the 1st of each month; active radars are a live concurrent limit.
       </p>
 
       {banner && (
@@ -83,7 +86,7 @@ function BillingPage() {
 
       {/* Usage */}
       <section className="mb-8">
-        <h2 className="text-[15px] font-bold tracking-display mb-3">This month's usage</h2>
+        <h2 className="text-[15px] font-bold tracking-display mb-3">Your usage</h2>
         <div className="rounded-[14px] border border-border bg-[var(--surface)] p-5">
           {loading ? (
             <p className="text-[13px] text-muted-foreground">Loading usage…</p>
@@ -99,11 +102,15 @@ function BillingPage() {
               <ul className="space-y-4">
                 {Object.entries(usage.features).map(([key, f]) => {
                   const label = FEATURE_LABELS[key] ?? key;
+                  const concurrent = key === "active_radars";
                   const pct = f.limit > 0 ? Math.min(100, Math.round((f.used / f.limit) * 100)) : 0;
                   return (
                     <li key={key}>
                       <div className="flex items-baseline justify-between text-[13px]">
-                        <span className="font-medium">{label}</span>
+                        <span className="font-medium">
+                          {label}
+                          {concurrent && <span className="ml-1.5 text-[11px] text-muted-foreground">(currently active)</span>}
+                        </span>
                         <span className="text-muted-foreground tabular-nums">
                           {f.limit > 0 ? `${f.used} / ${f.limit}` : "Locked on Free"}
                         </span>
@@ -118,7 +125,9 @@ function BillingPage() {
                   );
                 })}
               </ul>
-              <p className="text-[12px] text-muted-foreground mt-4">Resets on {usage.resetsOn}.</p>
+              <p className="text-[12px] text-muted-foreground mt-4">
+                Monthly quotas reset on {usage.resetsOn}. Active radars is a concurrent limit — pause or delete a radar to free a slot.
+              </p>
             </>
           )}
         </div>

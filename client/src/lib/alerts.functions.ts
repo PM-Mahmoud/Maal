@@ -1,3 +1,27 @@
+// Error that carries the server's structured payload (e.g. a 402 usage-limit
+// response with code/upgradeUrl) so callers can route the user to billing,
+// while `message` stays the human-readable upgrade prompt for a toast.
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+  upgrade?: boolean;
+  upgradeUrl?: string;
+  constructor(message: string, status: number, payload?: Record<string, unknown>) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = payload?.code as string | undefined;
+    this.upgrade = payload?.upgrade as boolean | undefined;
+    this.upgradeUrl = payload?.upgradeUrl as string | undefined;
+  }
+}
+
+async function throwApiError(r: Response, fallback: string): Promise<never> {
+  let payload: Record<string, unknown> | undefined;
+  try { payload = await r.json(); } catch { /* non-JSON body */ }
+  throw new ApiError((payload?.error as string) || fallback, r.status, payload);
+}
+
 export async function listAlerts(): Promise<{ alerts: unknown[]; events: unknown[] }> {
   const r = await fetch('/api/v1/alerts', { credentials: 'include' });
   const j = r.ok ? await r.json() : null;
@@ -7,13 +31,9 @@ export async function listAlerts(): Promise<{ alerts: unknown[]; events: unknown
 }
 export async function createAlert(data?: unknown): Promise<unknown> {
   const r = await fetch('/api/v1/alerts', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-  if (!r.ok) {
-    // Surface the server's message (e.g. the usage-limit upgrade prompt) —
-    // silently returning null made the page toast "Radar created" on failure.
-    let msg = 'Could not create radar.';
-    try { const j = await r.json(); msg = j.error || msg; } catch { /* ignore */ }
-    throw new Error(msg);
-  }
+  // Throw (not silent null) so the page can't toast "Radar created" on failure,
+  // and preserve the 402 usage-limit payload (code/upgradeUrl) for a billing CTA.
+  if (!r.ok) return throwApiError(r, 'Could not create radar.');
   return r.json();
 }
 export async function deleteAlert(data?: unknown): Promise<void> {
@@ -22,11 +42,7 @@ export async function deleteAlert(data?: unknown): Promise<void> {
 }
 export async function toggleAlert(data?: unknown): Promise<unknown> {
   const r = await fetch('/api/v1/alerts/toggle', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-  if (!r.ok) {
-    let msg = 'Could not update radar.';
-    try { const j = await r.json(); msg = j.error || msg; } catch { /* ignore */ }
-    throw new Error(msg);
-  }
+  if (!r.ok) return throwApiError(r, 'Could not update radar.');
   return r.json();
 }
 export async function evaluateAlerts(data?: unknown): Promise<{ fired: number }> {

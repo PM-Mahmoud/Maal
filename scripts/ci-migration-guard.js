@@ -46,8 +46,12 @@ for (const f of touchedMigrations) {
   let contentHit = false;
   try {
     const diff = sh(`git diff ${BASE_REF}...HEAD -- "${f}"`);
+    // Match only when the protected table is the one being CREATEd/ALTERed —
+    // i.e. its name sits immediately after TABLE (optionally IF NOT EXISTS).
+    // A foreign-key `REFERENCES users(id)` on a NEW per-user table is safe and
+    // must NOT trip the guard (every per-user table needs that FK).
     contentHit = PROTECTED_NAME_HINTS.some((h) =>
-      new RegExp('(CREATE|ALTER)\\s+TABLE[^;]*\\b' + h.replace('-', '[_-]') + '\\b', 'i').test(diff)
+      new RegExp('(CREATE|ALTER)\\s+TABLE\\s+(IF\\s+NOT\\s+EXISTS\\s+)?"?' + h.replace('-', '[_-]') + '"?\\b', 'i').test(diff)
     );
   } catch (e) { /* file may be deleted; ignore */ }
   if (nameHit || contentHit) protectedTouched.push(f);

@@ -97,30 +97,38 @@ router.post('/auth/logout', (req, res) => {
 const planLimits = require('../lib/plan-limits');
 const usageDb = require('../db/usage');
 
-// Check + consume one use of a monthly AI feature. Sends the 402 itself and
-// returns null when over the limit; otherwise returns { user }. Counting is
-// attempt-based (consumed before the model runs). Fails OPEN on infrastructure
+function send402(res, plan, feature, limit, used) {
+  res.status(402).json({
+    error: planLimits.upgradeMessage(plan, feature),
+    code: 'usage_limit',
+    upgrade: true,
+    upgradeUrl: '/app/billing',
+    feature,
+    plan: planLimits.normalizePlan(plan),
+    limit,
+    used,
+  });
+}
+
+// Check + atomically consume one use of a monthly AI feature. Sends the 402
+// itself and returns null when over the limit; otherwise returns { user }.
+// The check-and-consume is a single atomic DB op (incrementIfUnder) so two
+// concurrent requests can't both slip past the cap. Fails OPEN on infrastructure
 // errors — availability wins, and the failure is logged.
 async function gateMonthlyAiUsage(req, res, feature) {
   const user = await findUserById(req.session.userId);
-  const plan = (user && user.plan) || 'free';
+  const plan = planLimits.normalizePlan(user && user.plan);
+  const limit = planLimits.limitFor(plan, feature);
+  if (limit <= 0) { // Free tier (0) — deny without touching the DB.
+    send402(res, plan, feature, limit, 0);
+    return null;
+  }
   try {
-    const counts = await usageDb.getCounts(req.session.userId);
-    const verdict = planLimits.evaluate(plan, feature, counts[feature]);
-    if (!verdict.allowed) {
-      res.status(402).json({
-        error: planLimits.upgradeMessage(plan, feature),
-        code: 'usage_limit',
-        upgrade: true,
-        upgradeUrl: '/app/billing',
-        feature: verdict.feature,
-        plan: verdict.plan,
-        limit: verdict.limit,
-        used: verdict.used,
-      });
+    const newCount = await usageDb.incrementIfUnder(req.session.userId, feature, limit);
+    if (newCount === null) {
+      send402(res, plan, feature, limit, limit);
       return null;
     }
-    await usageDb.increment(req.session.userId, feature);
   } catch (e) {
     console.error('[usage] metering failed open for ' + feature + ':', e.message);
   }
@@ -655,27 +663,23 @@ router.post('/v1/alerts', async (req, res) => {
     const prompt = String(d.prompt || '').trim().slice(0, 600);
     if (!prompt) return res.status(400).json({ error: 'Describe what Maal should watch.' });
 
-    // Metering: active radars is a CONCURRENT limit (not monthly) — check the
-    // live count against the plan before creating another active radar.
+    // Metering: active radars is a CONCURRENT limit (not monthly). The count +
+    // insert happen atomically inside createRadarIfUnderActiveLimit (per-user
+    // advisory lock) so two concurrent creates can't both exceed the cap.
     const user = await findUserById(req.session.userId);
-    const active = await usageDb.countActiveRadars(req.session.userId).catch(() => 0);
-    const verdict = planLimits.evaluate((user && user.plan) || 'free', 'active_radars', active);
-    if (!verdict.allowed) {
-      return res.status(402).json({
-        error: planLimits.upgradeMessage(verdict.plan, 'active_radars'),
-        code: 'usage_limit', upgrade: true, upgradeUrl: '/app/billing',
-        feature: verdict.feature, plan: verdict.plan, limit: verdict.limit, used: verdict.used,
-      });
-    }
-
+    const plan = planLimits.normalizePlan(user && user.plan);
+    const limit = planLimits.limitFor(plan, 'active_radars');
     const freq = ['daily', 'weekly', 'monthly'].includes(d.frequency) ? d.frequency : 'daily';
-    const id = await radarDb.createRadar(req.session.userId, {
+    const id = await radarDb.createRadarIfUnderActiveLimit(req.session.userId, {
       prompt,
       symbols: extractSymbols(prompt),
       frequency: freq,
       notifyEmail: d.notify_email !== false,
       notifySms: !!d.notify_sms,
-    });
+    }, limit);
+    if (id === null) {
+      return send402(res, plan, 'active_radars', limit, limit);
+    }
     const row = await radarDb.getRadar(id, req.session.userId);
     res.json(radarDb.radarToAlert(row));
   } catch (e) {
@@ -704,19 +708,19 @@ router.post('/v1/alerts/toggle', async (req, res) => {
     if (!d.id) return res.status(400).json({ error: 'id required' });
     const activating = d.active !== false;
     if (activating) {
-      // Re-activating counts toward the concurrent active-radar limit too.
+      // Re-activating counts toward the concurrent active-radar limit — enforce
+      // it atomically (count + update under a per-user lock). Deactivating is
+      // always allowed.
       const user = await findUserById(req.session.userId);
-      const active = await usageDb.countActiveRadars(req.session.userId).catch(() => 0);
-      const verdict = planLimits.evaluate((user && user.plan) || 'free', 'active_radars', active);
-      if (!verdict.allowed) {
-        return res.status(402).json({
-          error: planLimits.upgradeMessage(verdict.plan, 'active_radars'),
-          code: 'usage_limit', upgrade: true, upgradeUrl: '/app/billing',
-          feature: verdict.feature, plan: verdict.plan, limit: verdict.limit, used: verdict.used,
-        });
+      const plan = planLimits.normalizePlan(user && user.plan);
+      const limit = planLimits.limitFor(plan, 'active_radars');
+      const ok = await radarDb.activateRadarIfUnderLimit(d.id, req.session.userId, limit);
+      if (!ok) {
+        return send402(res, plan, 'active_radars', limit, limit);
       }
+    } else {
+      await radarDb.setRadarActive(d.id, req.session.userId, false);
     }
-    await radarDb.setRadarActive(d.id, req.session.userId, activating);
     res.json({ ok: true });
   } catch (e) {
     console.error('/api/v1/alerts/toggle error:', e.message);

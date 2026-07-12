@@ -89,6 +89,12 @@ test('free-tier message pitches Pro; paid-tier message explains the reset', () =
   assert.ok(!upgradeMessage('max', 'advisor_messages').includes('Upgrade to Max'));
 });
 
+test('active_radars (concurrent) message talks about pausing, not a monthly reset', () => {
+  const msg = upgradeMessage('pro', 'active_radars');
+  assert.ok(/pause|delete/i.test(msg), 'should tell user to free a slot');
+  assert.ok(!msg.includes('resets on the 1st'), 'concurrent limit is not a monthly quota');
+});
+
 test('MONTHLY_FEATURES excludes the concurrent active_radars limit', () => {
   assert.ok(MONTHLY_FEATURES.includes('advisor_messages'));
   assert.ok(!MONTHLY_FEATURES.includes('active_radars'));
