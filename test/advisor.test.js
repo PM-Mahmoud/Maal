@@ -91,14 +91,14 @@ async function main() {
         assert.strictEqual(role, 'reasoner');
         assert.strictEqual(msgs[0].role, 'system');
         assert.strictEqual(msgs[msgs.length - 1].content, messages[0].content);
-        assert.strictEqual(opts.maxTokens, 600);
+        assert.strictEqual(opts.maxTokens, 700);
         assert.strictEqual(opts.temperature, 0.6);
         return 'draft answer';
       },
       verifyAndRevise: async ({ messages: promptMessages, draft, opts }) => {
         assert.strictEqual(draft, 'draft answer');
         assert.strictEqual(promptMessages[promptMessages.length - 1].role, 'user');
-        assert.strictEqual(opts.maxTokens, 600);
+        assert.strictEqual(opts.maxTokens, 700);
         return { text: 'verified + revised answer', verified: true, revised: true, issues: ['SG rate was wrong'] };
       },
     },

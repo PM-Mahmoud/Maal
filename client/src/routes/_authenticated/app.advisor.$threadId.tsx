@@ -1,14 +1,45 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { useEffect, useRef, useState } from "react";
+import { Plus, Check } from "lucide-react";
 import { getThreadMessages, sendAdvisorMessage } from "@/lib/advisor.functions";
+import { addWidget, type WidgetSpec } from "@/lib/widgets.functions";
+import { WidgetRenderer } from "@/components/maal/WidgetRenderer";
 import { Disclaimer } from "@/components/maal/Disclaimer";
 
 export const Route = createFileRoute("/_authenticated/app/advisor/$threadId")({
   component: ThreadPage,
 });
 
-type Msg = { id?: string; role: "user" | "assistant" | "system"; content: string };
+type Citation = { label: string };
+type Msg = {
+  id?: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  widgets?: WidgetSpec[];
+  followUps?: string[];
+  citations?: Citation[];
+};
+
+function AddToDashboard({ widget }: { widget: WidgetSpec }) {
+  const [added, setAdded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      onClick={async () => {
+        if (added || busy) return;
+        setBusy(true);
+        const ok = await addWidget(widget.source, widget.title);
+        setBusy(false);
+        if (ok) setAdded(true);
+      }}
+      disabled={added}
+      className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-[7px] border border-border hover:border-foreground/40 disabled:opacity-70 transition-colors"
+    >
+      {added ? <><Check className="size-3" /> Added</> : <><Plus className="size-3" /> Add to Dashboard</>}
+    </button>
+  );
+}
 
 const SUGGESTIONS = [
   "Am I on track to retire?",
@@ -47,8 +78,8 @@ function ThreadPage() {
     setBusy(true);
     requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }));
     try {
-      const { reply } = await send({ data: { threadId, content: t } });
-      setMessages((m) => [...m, { role: "assistant", content: reply }]);
+      const { reply, widgets, followUps, citations } = await send({ data: { threadId, content: t } });
+      setMessages((m) => [...m, { role: "assistant", content: reply, widgets, followUps, citations }]);
       requestAnimationFrame(() => {
         scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
         inputRef.current?.focus();
@@ -90,8 +121,29 @@ function ThreadPage() {
                 {m.content}
               </div>
             ) : (
-              <div className="max-w-[90%] text-[14px] leading-relaxed whitespace-pre-wrap text-foreground">
-                {m.content}
+              <div className="max-w-[90%] w-full">
+                <div className="text-[14px] leading-relaxed whitespace-pre-wrap text-foreground">{m.content}</div>
+                {m.widgets?.map((w, wi) => (
+                  <WidgetRenderer key={wi} widget={w} action={<AddToDashboard widget={w} />} />
+                ))}
+                {m.citations && m.citations.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Based on</span>
+                    {m.citations.map((c, ci) => (
+                      <span key={ci} className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--secondary)] text-muted-foreground">{c.label}</span>
+                    ))}
+                  </div>
+                )}
+                {m.followUps && m.followUps.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {m.followUps.map((q, qi) => (
+                      <button key={qi} onClick={() => submit(q)} disabled={busy}
+                        className="text-left text-[12px] px-3 py-1.5 rounded-full border border-border hover:border-foreground/40 text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors">
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
