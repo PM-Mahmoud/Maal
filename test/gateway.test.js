@@ -94,6 +94,34 @@ async function main() {
     delete process.env.GATEWAY_MODEL_VERIFIER;
   });
 
+  await test('unknown role → descriptive error (no silent fallback)', () => {
+    assert.throws(() => gateway.resolveRole('narrator'), /unknown role "narrator"/);
+  });
+
+  await test('completeAs rejects with a descriptive error when the role has no provider at all', async () => {
+    const saved = {
+      AZURE_OPENAI_ENDPOINT: process.env.AZURE_OPENAI_ENDPOINT,
+      AZURE_OPENAI_API_KEY: process.env.AZURE_OPENAI_API_KEY,
+      AZURE_OPENAI_DEPLOYMENT: process.env.AZURE_OPENAI_DEPLOYMENT,
+      GROQ_API_KEY: process.env.GROQ_API_KEY,
+      ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    };
+    delete process.env.AZURE_OPENAI_ENDPOINT;
+    delete process.env.AZURE_OPENAI_API_KEY;
+    delete process.env.AZURE_OPENAI_DEPLOYMENT;
+    delete process.env.GROQ_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
+    try {
+      assert.strictEqual(gateway.hasAnyProvider(), false);
+      await assert.rejects(
+        () => gateway.completeAs('verifier', [{ role: 'user', content: 'hi' }], {}),
+        /no provider configured for role "verifier"/
+      );
+    } finally {
+      Object.assign(process.env, saved);
+    }
+  });
+
   // ─── Adapters ───────────────────────────────────────────────────────────────
   console.log('\nprovider adapters');
 

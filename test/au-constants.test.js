@@ -53,6 +53,13 @@ test('historical FY2025-26 set keeps its own rates (16% second bracket)', () => 
   assert.strictEqual(c.super.concessionalCap, 30000);
 });
 
+test('date before the earliest constants entry falls back to the oldest set and flags stale', () => {
+  const c = getConstants('2024-01-01'); // FY2023-24 — no entry exists
+  assert.strictEqual(c.stale, true);
+  assert.strictEqual(c.wantedFy, '2023-24');
+  assert.strictEqual(c.fy, '2025-26'); // best-effort fallback to the oldest known set
+});
+
 // ─── FRESHNESS ALARM (annual review contract) ─────────────────────────────────
 console.log('\nfreshness (annual review contract)');
 
@@ -132,6 +139,19 @@ test('$200,000 (above $186,050): flat 10% of total income = $20,000', () => {
 
 test('repayment never exceeds the remaining balance', () => {
   assert.strictEqual(computeHecsRepayment(200000, 5000, D).annualRepayment, 5000);
+});
+
+test('zero HECS balance never triggers a repayment regardless of income', () => {
+  const r = computeHecsRepayment(300000, 0, D);
+  assert.strictEqual(r.annualRepayment, 0);
+  assert.strictEqual(r.yearsToPayOff, null);
+});
+
+test('negative taxable income is clamped to zero (no negative tax)', () => {
+  const r = computeIncomeTax(-5000, D);
+  assert.strictEqual(r.grossIncome, 0);
+  assert.strictEqual(r.totalTax, 0);
+  assert.strictEqual(r.netIncome, 0);
 });
 
 test('band boundaries are continuous (no cliff in the repayment curve)', () => {
