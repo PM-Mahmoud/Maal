@@ -1,8 +1,19 @@
 // Advisor — thread management in localStorage, messages proxy to Express
+import type { WidgetSpec } from "@/lib/widgets.functions";
+
 const THREADS_KEY = "maal_advisor_threads";
 
 type Thread = { id: string; title: string; updated_at: string };
-type Message = { id: string; role: "user" | "assistant"; content: string; created_at: string };
+type Citation = { label: string };
+type Message = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+  widgets?: WidgetSpec[];
+  followUps?: string[];
+  citations?: Citation[];
+};
 
 function loadThreads(): Thread[] {
   try { return JSON.parse(localStorage.getItem(THREADS_KEY) || "[]"); } catch { return []; }
@@ -53,7 +64,9 @@ export async function getThreadMessages(data?: unknown): Promise<Message[]> {
   try { return JSON.parse(localStorage.getItem(`maal_msgs_${threadId}`) || "[]"); } catch { return []; }
 }
 
-export async function sendAdvisorMessage(data?: unknown): Promise<{ reply: string }> {
+type AdvisorReply = { reply: string; widgets?: WidgetSpec[]; followUps?: string[]; citations?: Citation[] };
+
+export async function sendAdvisorMessage(data?: unknown): Promise<AdvisorReply> {
   const { threadId, content } = unwrapArg<{ threadId?: string; content?: string }>(data);
   if (!threadId || !content) return { reply: "" };
 
@@ -88,9 +101,13 @@ export async function sendAdvisorMessage(data?: unknown): Promise<{ reply: strin
           ? `${json.error} You can upgrade at Plan & Usage in the sidebar.`
           : "I'm not able to respond right now.");
 
-    msgs.push({ id: crypto.randomUUID(), role: "assistant", content: reply, created_at: new Date().toISOString() });
+    const widgets: WidgetSpec[] | undefined = r.ok && Array.isArray(json?.widgets) && json.widgets.length ? json.widgets : undefined;
+    const followUps: string[] | undefined = r.ok && Array.isArray(json?.followUps) && json.followUps.length ? json.followUps : undefined;
+    const citations: Citation[] | undefined = r.ok && Array.isArray(json?.citations) && json.citations.length ? json.citations : undefined;
+
+    msgs.push({ id: crypto.randomUUID(), role: "assistant", content: reply, created_at: new Date().toISOString(), widgets, followUps, citations });
     localStorage.setItem(`maal_msgs_${threadId}`, JSON.stringify(msgs));
-    return { reply };
+    return { reply, widgets, followUps, citations };
   } catch {
     return { reply: "Unable to reach advisor. Please try again." };
   }

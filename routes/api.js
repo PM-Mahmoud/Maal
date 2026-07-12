@@ -227,8 +227,10 @@ router.post('/v1/advisor/message', async (req, res) => {
       { role: 'user', content: message },
     ];
     const extra = { transactions: txns, snapshots: snaps, goals, cashRunway, isaacusGrounding };
-    const reply = await advisor.chat(user, profile, maal, clean, docs, extra);
-    res.json({ ok: true, reply, live: true });
+    // Rich web chat: reply text + generative-UI widgets (filled with the user's
+    // real data server-side) + follow-up chips + internal-only citations.
+    const rich = await advisor.chatRich(user, profile, maal, clean, docs, extra);
+    res.json({ ok: true, reply: rich.reply, widgets: rich.widgets, followUps: rich.followUps, citations: rich.citations, live: rich.live });
   } catch (err) {
     console.error('advisor message error:', err.message);
     res.status(500).json({ reply: 'The advisor hit a snag — try again in a moment.', live: false });
@@ -238,6 +240,78 @@ router.post('/v1/advisor/message', async (req, res) => {
 router.get('/v1/advisor/status', (req, res) => {
   const advisor = require('../services/advisor');
   res.json({ live: advisor.hasAdvisor() });
+});
+
+// ─── Dashboard widgets saved from Ask Maal (generative UI) ─────────────────
+// Saved widgets store only their SOURCE — data is recomputed live here from the
+// user's current financial data (same context as the advisor), so a saved chart
+// stays fresh and never shows a stale snapshot.
+async function buildWidgetContext(userId) {
+  const { getProfileByUserId } = require('../db/profiles');
+  const assetsDb = require('../db/assets');
+  const { computeMaalScore } = require('../lib/maal-score');
+  const { getTxnsSince } = require('../db/transactions');
+  const { getSnapshots } = require('../db/snapshots');
+  const goalsDb = require('../db/goals');
+  const rawProfile = (await getProfileByUserId(userId)) || {};
+  const assetSummary = await assetsDb.getAssetSummary(userId);
+  const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
+  const maal = computeMaalScore(profile);
+  const [transactions, snapshots, goals] = await Promise.all([
+    getTxnsSince(userId, 30).catch(() => []),
+    getSnapshots(userId, 90).catch(() => []),
+    goalsDb.listGoals(userId).catch(() => []),
+  ]);
+  return { profile, maal, transactions, snapshots, goals };
+}
+
+router.get('/v1/widgets', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const widgetsDb = require('../db/widgets');
+    const { renderSaved } = require('../services/advisor-widgets');
+    const saved = await widgetsDb.listWidgets(req.session.userId);
+    if (!saved.length) return res.json({ widgets: [] });
+    const ctx = await buildWidgetContext(req.session.userId);
+    const widgets = saved
+      .map((w) => {
+        const spec = renderSaved(w.source, w.title, ctx);
+        return spec ? { id: w.id, ...spec } : null;
+      })
+      .filter(Boolean);
+    res.json({ widgets });
+  } catch (e) {
+    console.error('/api/v1/widgets GET error:', e.message);
+    res.status(500).json({ error: 'Could not load widgets' });
+  }
+});
+
+router.post('/v1/widgets', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const widgetsDb = require('../db/widgets');
+    const { isKnownSource } = require('../services/advisor-widgets');
+    const d = (req.body && req.body.data && typeof req.body.data === 'object') ? req.body.data : (req.body || {});
+    const source = String(d.source || '');
+    if (!isKnownSource(source)) return res.status(400).json({ error: 'Unknown widget source.' });
+    const id = await widgetsDb.addWidget(req.session.userId, source, d.title);
+    res.json({ ok: true, id });
+  } catch (e) {
+    console.error('/api/v1/widgets POST error:', e.message);
+    res.status(500).json({ error: 'Could not save widget' });
+  }
+});
+
+router.delete('/v1/widgets/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const widgetsDb = require('../db/widgets');
+    await widgetsDb.removeWidget(req.params.id, req.session.userId);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/v1/widgets DELETE error:', e.message);
+    res.status(500).json({ error: 'Could not remove widget' });
+  }
 });
 
 // ─── Basiq (open banking) ─────────────────────────────────────────────────

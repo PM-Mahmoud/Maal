@@ -147,26 +147,38 @@ const FALLBACK_REPLY =
   'Add AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, and AZURE_OPENAI_DEPLOYMENT on the server to enable me. ' +
   'In the meantime, try adding your assets and liabilities so your dashboard and Maal Score stay accurate.';
 
-async function chat(user, profile, maal, messages, docs, extra = {}) {
-  if (!hasAdvisor()) return FALLBACK_REPLY;
-  // RAG: retrieve relevant knowledge chunks for the latest user message
+// Assemble the verified answer text for a chat turn. `systemExtra` is appended
+// to the system prompt (e.g. widget instructions for the web surface). Returns
+// the final verified text (raw — including any generative-UI directives).
+async function runChat(user, profile, maal, messages, docs, extra, systemExtra) {
+  // RAG: retrieve relevant knowledge chunks for the latest user message. This is
+  // BACKGROUND knowledge only — the FY constants and the user's app data always
+  // override any figure in a chunk (enforced in the prompt + verifier).
   var knowledgeSection = '';
   if (hasEmbeddings()) {
     var lastUserMsg = messages.slice().reverse().find(function(m) { return m.role === 'user'; });
     if (lastUserMsg) {
       try {
         var ragResult = await retrieveAndFormat(lastUserMsg.content, { topK: 4, minScore: 0.35 });
-        knowledgeSection = ragResult.section || '';
+        if (ragResult.section) {
+          // RAG audit (spec decision 12): knowledge chunks are BACKGROUND
+          // concepts, not authoritative figures. Any number in a chunk is
+          // overridden by the FY constants block above and by the user's own
+          // app data. This stops a stale figure baked into an old article from
+          // leaking into an answer.
+          knowledgeSection = ragResult.section +
+            '\n\nThe knowledge above is general background for explaining concepts. If any figure in it conflicts with the FY constants or the user\'s account data given earlier, the constants and the user\'s data are correct — never quote a rate, threshold or cap from the knowledge above.';
+        }
       } catch (ragErr) {
         console.error('[advisor] RAG retrieval failed:', ragErr.message);
       }
     }
   }
   const promptMessages = [
-    { role: 'system', content: buildSystemPrompt(user, profile, maal, docs, extra) + knowledgeSection },
+    { role: 'system', content: buildSystemPrompt(user, profile, maal, docs, extra) + knowledgeSection + (systemExtra || '') },
     ...messages.slice(-10),
   ];
-  const opts = { maxTokens: 600, temperature: 0.6 };
+  const opts = { maxTokens: 700, temperature: 0.6 };
   const draft = await gateway.completeAs('reasoner', promptMessages, opts);
   // Verify-and-revise pass (blocking, one revision round, ships regardless).
   // Checks math, AU constants, and claims-vs-user-data — never style.
@@ -175,6 +187,26 @@ async function chat(user, profile, maal, messages, docs, extra = {}) {
     console.log('[advisor] verifier revised answer (' + verdict.issues.length + ' issue(s))');
   }
   return verdict.text;
+}
+
+// Text-only chat (SMS, email, any non-web surface): no generative-UI directives.
+async function chat(user, profile, maal, messages, docs, extra = {}) {
+  if (!hasAdvisor()) return FALLBACK_REPLY;
+  return runChat(user, profile, maal, messages, docs, extra, '');
+}
+
+// Rich web chat: the model may emit widget + follow-up directives, which we
+// parse out and fill with the user's real data server-side. Returns
+// { reply, widgets, followUps, citations, live }.
+async function chatRich(user, profile, maal, messages, docs, extra = {}) {
+  const widgets = require('./advisor-widgets');
+  if (!hasAdvisor()) return { reply: FALLBACK_REPLY, widgets: [], followUps: [], citations: [], live: false };
+  const raw = await runChat(user, profile, maal, messages, docs, extra, widgets.widgetInstructions());
+  const parsed = widgets.parseDirectives(raw);
+  const ctx = { profile, maal, snapshots: extra.snapshots, transactions: extra.transactions, goals: extra.goals };
+  const built = widgets.buildWidgets(parsed.widgetRequests, ctx);
+  const citations = widgets.internalCitations(built, extra);
+  return { reply: parsed.text, widgets: built, followUps: parsed.followUps, citations, live: true };
 }
 
 async function extractFigures(text) {
@@ -224,4 +256,4 @@ async function complete(messages, opts) {
   return gateway.completeAs(role, messages, opts);
 }
 
-module.exports = { hasAdvisor: hasAdvisor, chat: chat, complete: complete, extractFigures: extractFigures };
+module.exports = { hasAdvisor: hasAdvisor, chat: chat, chatRich: chatRich, complete: complete, extractFigures: extractFigures };
