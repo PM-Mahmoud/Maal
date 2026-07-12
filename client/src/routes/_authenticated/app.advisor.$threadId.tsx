@@ -65,18 +65,31 @@ function ThreadPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const recognitionRef = useRef<any>(null);
+  const autoSentRef = useRef(false);
 
   useEffect(() => {
     setMessages([]); setError(null);
+    autoSentRef.current = false;
     // Restore any autosaved draft for this thread.
     try { setInput(localStorage.getItem(DRAFT_KEY(threadId)) || ""); } catch { /* ignore */ }
     load({ data: { threadId } }).then((rows) => {
       setMessages(rows as Msg[]);
+      // Handoff from the dashboard "Ask Maal" tile: auto-send the pending
+      // question into this fresh thread, exactly once.
+      let pending = "";
+      try { pending = localStorage.getItem(`maal_autosend_${threadId}`) || ""; } catch { /* ignore */ }
+      if (pending && (rows as Msg[]).length === 0 && !autoSentRef.current) {
+        autoSentRef.current = true;
+        try { localStorage.removeItem(`maal_autosend_${threadId}`); } catch { /* ignore */ }
+        submit(pending);
+        return;
+      }
       requestAnimationFrame(() => {
         scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
         inputRef.current?.focus();
       });
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threadId, load]);
 
   // Draft autosave — persist the composer text so a refresh/redirect doesn't lose it.
