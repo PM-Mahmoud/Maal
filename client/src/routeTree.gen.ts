@@ -33,6 +33,7 @@ import { Route as AuthenticatedAppInsuranceGapRouteImport } from './routes/_auth
 import { Route as AuthenticatedAppGoalsRouteImport } from './routes/_authenticated/app.goals'
 import { Route as AuthenticatedAppDebtPayoffRouteImport } from './routes/_authenticated/app.debt-payoff'
 import { Route as AuthenticatedAppCostOfLivingRouteImport } from './routes/_authenticated/app.cost-of-living'
+import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated/app.billing'
 import { Route as AuthenticatedAppAssetsRouteImport } from './routes/_authenticated/app.assets'
 import { Route as AuthenticatedAppAdvisorIndexRouteImport } from './routes/_authenticated/app.advisor.index'
 import { Route as AuthenticatedAppAdvisorThreadIdRouteImport } from './routes/_authenticated/app.advisor.$threadId'
@@ -169,6 +170,11 @@ const AuthenticatedAppCostOfLivingRoute =
     path: '/cost-of-living',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppBillingRoute = AuthenticatedAppBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
 const AuthenticatedAppAssetsRoute = AuthenticatedAppAssetsRouteImport.update({
   id: '/assets',
   path: '/assets',
@@ -192,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/app/assets': typeof AuthenticatedAppAssetsRoute
+  '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/cost-of-living': typeof AuthenticatedAppCostOfLivingRoute
   '/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
   '/app/goals': typeof AuthenticatedAppGoalsRoute
@@ -219,6 +226,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/app/assets': typeof AuthenticatedAppAssetsRoute
+  '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/cost-of-living': typeof AuthenticatedAppCostOfLivingRoute
   '/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
   '/app/goals': typeof AuthenticatedAppGoalsRoute
@@ -249,6 +257,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/_authenticated/app/assets': typeof AuthenticatedAppAssetsRoute
+  '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
   '/_authenticated/app/cost-of-living': typeof AuthenticatedAppCostOfLivingRoute
   '/_authenticated/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
   '/_authenticated/app/goals': typeof AuthenticatedAppGoalsRoute
@@ -279,6 +288,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/app'
     | '/app/assets'
+    | '/app/billing'
     | '/app/cost-of-living'
     | '/app/debt-payoff'
     | '/app/goals'
@@ -306,6 +316,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/app/assets'
+    | '/app/billing'
     | '/app/cost-of-living'
     | '/app/debt-payoff'
     | '/app/goals'
@@ -335,6 +346,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/app'
     | '/_authenticated/app/assets'
+    | '/_authenticated/app/billing'
     | '/_authenticated/app/cost-of-living'
     | '/_authenticated/app/debt-payoff'
     | '/_authenticated/app/goals'
@@ -535,6 +547,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppCostOfLivingRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/billing': {
+      id: '/_authenticated/app/billing'
+      path: '/billing'
+      fullPath: '/app/billing'
+      preLoaderRoute: typeof AuthenticatedAppBillingRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/assets': {
       id: '/_authenticated/app/assets'
       path: '/assets'
@@ -561,6 +580,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAssetsRoute: typeof AuthenticatedAppAssetsRoute
+  AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
   AuthenticatedAppCostOfLivingRoute: typeof AuthenticatedAppCostOfLivingRoute
   AuthenticatedAppDebtPayoffRoute: typeof AuthenticatedAppDebtPayoffRoute
   AuthenticatedAppGoalsRoute: typeof AuthenticatedAppGoalsRoute
@@ -587,6 +607,7 @@ interface AuthenticatedAppRouteChildren {
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAssetsRoute: AuthenticatedAppAssetsRoute,
+  AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
   AuthenticatedAppCostOfLivingRoute: AuthenticatedAppCostOfLivingRoute,
   AuthenticatedAppDebtPayoffRoute: AuthenticatedAppDebtPayoffRoute,
   AuthenticatedAppGoalsRoute: AuthenticatedAppGoalsRoute,

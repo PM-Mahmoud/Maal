@@ -8,7 +8,7 @@ import {
   LayoutDashboard, MessageCircle, FileSearch, Radar as RadarIcon,
   Wallet, FolderLock, ArrowLeftRight, Target, UserCircle2,
   MessageSquarePlus, Map, LifeBuoy, ChevronDown, LogOut,
-  X, Upload, Lightbulb,
+  X, Upload, Lightbulb, CreditCard,
   PiggyBank, Receipt, Calculator, TrendingDown, Dices, Shield,
   BarChart3, MapPin,
 } from "lucide-react";
@@ -42,6 +42,7 @@ const TOOLS: Item[] = [
 ];
 
 const BOTTOM: { label: string; href: string; icon: any }[] = [
+  { label: "Plan & Usage", href: "/app/billing", icon: CreditCard },
   { label: "Roadmap", href: "/app/roadmap", icon: Map },
 ];
 

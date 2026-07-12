@@ -79,8 +79,14 @@ export async function sendAdvisorMessage(data?: unknown): Promise<{ reply: strin
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: content, history: msgs.slice(-10).map(m => ({ role: m.role, content: m.content })) }),
     });
-    const json = r.ok ? await r.json() : null;
-    const reply = json?.reply ?? json?.message ?? "I'm not able to respond right now.";
+    const json = await r.json().catch(() => null);
+    // 402 usage_limit carries an upgrade prompt in `error` — surface it as the
+    // reply (an explanation with a path forward, never a raw error).
+    const reply = r.ok
+      ? (json?.reply ?? json?.message ?? "I'm not able to respond right now.")
+      : (json?.code === "usage_limit" && json?.error
+          ? `${json.error} You can upgrade at Plan & Usage in the sidebar.`
+          : "I'm not able to respond right now.");
 
     msgs.push({ id: crypto.randomUUID(), role: "assistant", content: reply, created_at: new Date().toISOString() });
     localStorage.setItem(`maal_msgs_${threadId}`, JSON.stringify(msgs));
