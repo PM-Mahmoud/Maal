@@ -266,7 +266,7 @@ async function main() {
     )
   ));
 
-  await test('unparseable JSON from the cheap model is treated as clean, never throws', () => withEnv(
+  await test('unparseable JSON from the cheap model is INCONCLUSIVE (never silently clean), never throws', () => withEnv(
     { EXA_API_KEY: 'exa-test-key' },
     () => withFetchStub(
       exaStub({ [EXA_QUERIES.incomeTax]: 'Tax brackets unchanged from stored constants.' }),
@@ -276,8 +276,33 @@ async function main() {
           const report = await constantsAudit.runDriftCheck();
           const incomeTaxTopic = topicById(report, 'income-tax');
           assert.strictEqual(incomeTaxTopic.sources, 1);
-          assert.strictEqual(incomeTaxTopic.discrepancies, 0);
+          // Unparseable output must NOT be reported as a checked/clean topic —
+          // the model may have flagged a real drift we couldn't read.
+          assert.strictEqual(incomeTaxTopic.status, 'unparseable');
+          assert.strictEqual('discrepancies' in incomeTaxTopic, false);
           assert.deepStrictEqual(report.discrepancies, []);
+          assert.strictEqual(report.status, 'inconclusive');
+          assert.ok(report.failures >= 1);
+        }
+      )
+    )
+  ));
+
+  await test('report status is clean ONLY when every topic checked with no discrepancies', () => withEnv(
+    { EXA_API_KEY: 'exa-test-key' },
+    () => withFetchStub(
+      exaStub({
+        [EXA_QUERIES.incomeTax]: 'Tax brackets unchanged from stored constants.',
+        [EXA_QUERIES.hecs]: 'HELP thresholds unchanged from stored constants.',
+        [EXA_QUERIES.superCaps]: 'Super caps unchanged from stored constants.',
+        [EXA_QUERIES.mls]: 'MLS thresholds unchanged from stored constants.',
+      }),
+      () => withGatewayMocks(
+        { hasRole: () => true, completeAs: async () => '{"discrepancies": []}' },
+        async () => {
+          const report = await constantsAudit.runDriftCheck();
+          assert.strictEqual(report.status, 'clean');
+          assert.strictEqual(report.failures, 0);
         }
       )
     )

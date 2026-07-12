@@ -24,18 +24,28 @@ function hasExa() {
   return !!(process.env.EXA_API_KEY || '').trim();
 }
 
+const EXA_TIMEOUT_MS = Number(process.env.EXA_TIMEOUT_MS) || 20000;
+
 async function exaSearch(query) {
-  const res = await fetch(EXA_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.EXA_API_KEY.trim() },
-    body: JSON.stringify({
-      query,
-      type: 'auto',
-      numResults: 4,
-      includeDomains: ['ato.gov.au'],
-      contents: { highlights: true, maxAgeHours: 24 * 7 },
-    }),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), EXA_TIMEOUT_MS);
+  let res;
+  try {
+    res = await fetch(EXA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.EXA_API_KEY.trim() },
+      body: JSON.stringify({
+        query,
+        type: 'auto',
+        numResults: 4,
+        includeDomains: ['ato.gov.au'],
+        contents: { highlights: true, maxAgeHours: 24 * 7 },
+      }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
     throw new Error('Exa ' + res.status + ': ' + detail.slice(0, 200));
@@ -58,17 +68,20 @@ async function runDriftCheck() {
   const fy = getConstants().fy;
   const topics = [];
   const discrepancies = [];
+  let failures = 0; // topics that could not be fully checked (Exa/model/parse errors, no sources)
 
   for (const topic of TOPICS) {
     let sources;
     try {
       sources = await exaSearch(topic.query);
     } catch (e) {
-      topics.push({ id: topic.id, error: e.message });
+      topics.push({ id: topic.id, status: 'error', error: e.message });
+      failures++;
       continue;
     }
     if (!sources.length) {
-      topics.push({ id: topic.id, sources: 0 });
+      topics.push({ id: topic.id, status: 'no_sources', sources: 0 });
+      failures++;
       continue;
     }
     const evidence = sources
@@ -91,22 +104,32 @@ async function runDriftCheck() {
         },
       ], { maxTokens: 500, temperature: 0 });
     } catch (e) {
-      topics.push({ id: topic.id, sources: sources.length, error: e.message });
+      topics.push({ id: topic.id, status: 'model_error', sources: sources.length, error: e.message });
+      failures++;
       continue;
     }
-    let found = [];
-    try {
-      const m = String(raw || '').match(/\{[\s\S]*\}/);
-      const parsed = m ? JSON.parse(m[0]) : {};
-      found = Array.isArray(parsed.discrepancies) ? parsed.discrepancies : [];
-    } catch (e) { /* unparseable → treat as clean */ }
-    topics.push({ id: topic.id, sources: sources.length, discrepancies: found.length });
+    // A failed parse is INCONCLUSIVE, not clean — the model may have flagged a
+    // real drift we simply couldn't read. Never silently pass it.
+    const m = String(raw || '').match(/\{[\s\S]*\}/);
+    let parsed = null;
+    if (m) { try { parsed = JSON.parse(m[0]); } catch (e) { parsed = null; } }
+    if (!parsed || !Array.isArray(parsed.discrepancies)) {
+      topics.push({ id: topic.id, status: 'unparseable', sources: sources.length });
+      failures++;
+      continue;
+    }
+    const found = parsed.discrepancies;
+    topics.push({ id: topic.id, status: 'checked', sources: sources.length, discrepancies: found.length });
     found.slice(0, 5).forEach(d => discrepancies.push(Object.assign({ topic: topic.id }, d)));
   }
 
-  const report = { fy, checkedAt: new Date().toISOString(), topics, discrepancies };
-  if (discrepancies.length) {
+  // Only 'clean' when every topic was checked and parsed with no discrepancies.
+  const status = discrepancies.length ? 'discrepancies' : (failures ? 'inconclusive' : 'clean');
+  const report = { fy, checkedAt: new Date().toISOString(), status, failures, topics, discrepancies };
+  if (status === 'discrepancies') {
     console.warn('[constants-audit] ' + discrepancies.length + ' potential drift(s) found — human review needed:', JSON.stringify(discrepancies));
+  } else if (status === 'inconclusive') {
+    console.warn('[constants-audit] INCONCLUSIVE — ' + failures + ' of ' + TOPICS.length + ' topics could not be fully checked (see topics[].status); not asserting clean for FY' + fy);
   } else {
     console.log('[constants-audit] clean — constants match official sources for FY' + fy);
   }

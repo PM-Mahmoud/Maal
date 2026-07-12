@@ -135,6 +135,56 @@ async function main() {
     gateway._setFetchForTests(null);
   });
 
+  // ─── Failover ─────────────────────────────────────────────────────────────
+  console.log('\nprovider failover');
+
+  await test('reasoner falls through to the next provider when the first fails', async () => {
+    // reasoner candidates here = [azure, groq]. Azure errors → should try Groq.
+    const urls = [];
+    gateway._setFetchForTests(async (url) => {
+      urls.push(url);
+      if (url.includes('azure.com')) return { ok: false, status: 503, text: async () => 'overloaded' };
+      return openaiReply('from groq');
+    });
+    const out = await gateway.completeAs('reasoner', [{ role: 'user', content: 'hi' }], {});
+    assert.strictEqual(out, 'from groq');
+    assert.ok(urls.some(u => u.includes('azure.com')), 'tried Azure first');
+    assert.ok(urls.some(u => u.includes('groq.com')), 'fell through to Groq');
+    gateway._setFetchForTests(null);
+  });
+
+  await test('completeAs throws the last error only when every provider fails', async () => {
+    gateway._setFetchForTests(async () => ({ ok: false, status: 500, text: async () => 'boom' }));
+    await assert.rejects(() => gateway.completeAs('reasoner', [{ role: 'user', content: 'hi' }], {}), /500/);
+    gateway._setFetchForTests(null);
+  });
+
+  await test('proxy mode (GATEWAY_BASE_URL) without a model throws instead of silently using Azure', async () => {
+    process.env.GATEWAY_BASE_URL = 'https://litellm.internal';
+    process.env.GATEWAY_API_KEY = 'proxy-key';
+    delete process.env.GATEWAY_MODEL;
+    try {
+      let called = false;
+      gateway._setFetchForTests(async () => { called = true; return openaiReply('x'); });
+      await assert.rejects(() => gateway.completeAs('reasoner', [{ role: 'user', content: 'hi' }], {}), /no model is set/);
+      assert.strictEqual(called, false, 'must not fall back to a direct provider');
+    } finally {
+      delete process.env.GATEWAY_BASE_URL;
+      delete process.env.GATEWAY_API_KEY;
+      gateway._setFetchForTests(null);
+    }
+  });
+
+  await test('anthropic verifier picks the first text block, skipping a thinking block', async () => {
+    gateway._setFetchForTests(async () => okJson({ content: [
+      { type: 'thinking', thinking: 'hmm' },
+      { type: 'text', text: '{"pass": true}' },
+    ] }));
+    const out = await gateway.completeAs('verifier', [{ role: 'user', content: 'check' }], {});
+    assert.strictEqual(out, '{"pass": true}');
+    gateway._setFetchForTests(null);
+  });
+
   await test('completeAs(verifier) hoists system prompt to Anthropic top-level `system` field', async () => {
     let captured;
     gateway._setFetchForTests(async (url, init) => { captured = { url, body: JSON.parse(init.body), headers: init.headers }; return anthropicReply('{"pass": true}'); });

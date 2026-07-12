@@ -12,6 +12,7 @@ const {
   getConstants,
   computeIncomeTax,
   computeHecsRepayment,
+  medicareLevy,
   buildConstantsPrompt,
 } = require('../lib/au-constants');
 const { estimateTax } = require('../lib/tax');
@@ -110,6 +111,32 @@ test('$100,000: $20,520 bracket tax (no LITO) + $2,000 Medicare = $22,520', () =
 test('$18,200: zero tax, zero Medicare (below low-income threshold)', () => {
   const r = computeIncomeTax(18200, D);
   assert.strictEqual(r.totalTax, 0);
+});
+
+// ─── Medicare levy low-income shading-in band ─────────────────────────────────
+console.log('\nmedicareLevy (low-income phase-in)');
+
+test('at/below the lower threshold ($28,011): no levy', () => {
+  assert.strictEqual(medicareLevy(28011, D), 0);
+  assert.strictEqual(medicareLevy(25000, D), 0);
+});
+
+test('inside the band: 10c per $1 over the lower threshold, not 2% of the whole', () => {
+  // $30,000 → (30000 - 28011) * 0.10 = $198.90 (a flat 2% would be $600)
+  assert.ok(Math.abs(medicareLevy(30000, D) - 198.9) < 0.01);
+  assert.ok(medicareLevy(30000, D) < 30000 * 0.02, 'phase-in must be below the full 2%');
+});
+
+test('at/above the upper threshold ($35,013): full 2% of total income', () => {
+  assert.ok(Math.abs(medicareLevy(35013, D) - 35013 * 0.02) < 0.5);
+  assert.strictEqual(medicareLevy(50000, D), 1000); // 50000 * 0.02
+});
+
+test('the band is continuous where it meets the full-levy line', () => {
+  const m = getConstants(D).medicare;
+  const atCeilingPhaseIn = (m.lowIncomeSingleUpper - m.lowIncomeSingle) * m.phaseInRate;
+  const atCeilingFull = m.lowIncomeSingleUpper * m.levyRate;
+  assert.ok(Math.abs(atCeilingPhaseIn - atCeilingFull) < 1, 'phase-in and full 2% must meet at the upper threshold');
 });
 
 test('same income taxed MORE in FY2025-26 (16% vs 15% second bracket)', () => {
