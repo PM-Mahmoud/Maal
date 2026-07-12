@@ -118,6 +118,9 @@ app.get('/health', async (_req, res) => {
       azure: !!((process.env.AZURE_OPENAI_API_KEY || '').trim() && (process.env.AZURE_OPENAI_ENDPOINT || '').trim() && (process.env.AZURE_OPENAI_DEPLOYMENT || '').trim()),
       stripe: !!(process.env.STRIPE_SECRET_KEY || '').trim(),
       isaacus: !!(process.env.ISAACUS_API_KEY || '').trim(),
+      verifier: !!(process.env.ANTHROPIC_API_KEY || '').trim(),
+      exa: !!(process.env.EXA_API_KEY || '').trim(),
+      financialdatasets: !!(process.env.FINANCIAL_DATASETS_API_KEY || '').trim(),
     },
   });
 });
@@ -137,6 +140,25 @@ app.get('/internal/radar/run', async (req, res) => {
   } catch (e) {
     console.error('radar cron error:', e.message);
     res.status(500).json({ error: 'radar sweep failed' });
+  }
+});
+
+// ─── AU constants drift-check ──────────────────────────────────────────────
+// Hit monthly by an external scheduler (same pattern/secret as the radar
+// sweep): GET /internal/constants/drift?token=<RADAR_CRON_SECRET>.
+// Compares lib/au-constants.js against official ATO sources (via Exa + the
+// cheap model) and REPORTS discrepancies — propose-only, a human confirms
+// every constants change. Degrades gracefully when EXA_API_KEY is unset.
+app.get('/internal/constants/drift', async (req, res) => {
+  const secret = (process.env.RADAR_CRON_SECRET || '').trim();
+  if (!secret || req.query.token !== secret) return res.status(403).json({ error: 'forbidden' });
+  try {
+    const { runDriftCheck } = require('./services/constants-audit');
+    const report = await runDriftCheck();
+    res.json({ ok: true, ...report });
+  } catch (e) {
+    console.error('constants drift-check error:', e.message);
+    res.status(500).json({ error: 'drift check failed' });
   }
 });
 
