@@ -3,11 +3,21 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { listGoals, upsertGoal, deleteGoal } from "@/lib/goals.functions";
 import { formatAUD } from "@/lib/score";
-import { supabase } from "@/integrations/api";
 
 export const Route = createFileRoute("/_authenticated/app/goals")({ component: GoalsPage });
 
-type Goal = { id: string; name: string; category: string; target_amount: number; current_amount: number; target_date: string | null; description?: string | null; source?: string | null };
+type Goal = {
+  id: string;
+  name: string;
+  category: string;
+  target_amount: number;
+  current_amount: number;
+  progress_pct?: number;
+  auto_tracked?: boolean;
+  source_type?: string;
+  target_date: string | null;
+  description?: string | null;
+};
 
 const TABS = [
   { id: "all", label: "All Goals", cats: null as null | string[] },
@@ -29,15 +39,12 @@ const CATEGORY_OPTIONS = [
 ] as const;
 
 function GoalsPage() {
-  const list = listGoals;
-  const save = upsertGoal;
-  const remove = deleteGoal;
   const [goals, setGoals] = useState<Goal[]>([]);
   const [tab, setTab] = useState<typeof TABS[number]["id"]>("all");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Goal | null>(null);
 
-  async function refresh() { setGoals((await list()) as any); }
+  async function refresh() { setGoals((await listGoals()) as Goal[]); }
   useEffect(() => { refresh(); }, []);
 
   const filtered = useMemo(() => {
@@ -53,7 +60,7 @@ function GoalsPage() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-[32px] tracking-display font-bold">Goals</h1>
-          <p className="text-[13px] text-muted-foreground mt-1">Set targets and let Maal keep score.</p>
+          <p className="text-[13px] text-muted-foreground mt-1">Set targets and let Maal keep score — automatically.</p>
         </div>
         <button onClick={openCreate}
           className="px-4 py-2 rounded-[10px] border border-border bg-[var(--surface)] hover:border-mint/40 text-[13px] font-medium">
@@ -88,7 +95,7 @@ function GoalsPage() {
       ) : (
         <ul className="grid md:grid-cols-2 gap-4">
           {filtered.map((g) => {
-            const pct = g.target_amount > 0 ? Math.min(100, Math.round((g.current_amount / g.target_amount) * 100)) : 0;
+            const pct = g.progress_pct ?? (g.target_amount > 0 ? Math.min(100, Math.round((g.current_amount / g.target_amount) * 100)) : 0);
             const remaining = Math.max(0, g.target_amount - g.current_amount);
             const due = g.target_date ? new Date(g.target_date) : null;
             const daysLeft = due ? Math.ceil((due.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
@@ -97,7 +104,14 @@ function GoalsPage() {
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <p className="text-[14px] font-semibold">{g.name}</p>
-                    <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground mt-0.5">{categoryLabel(g.category)}</p>
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                      {categoryLabel(g.category)}
+                      {g.auto_tracked && (
+                        <span className="inline-flex items-center gap-1 normal-case tracking-normal text-mint">
+                          <span className="w-1.5 h-1.5 rounded-full bg-mint" />{sourceLabel(g.source_type)}
+                        </span>
+                      )}
+                    </p>
                   </div>
                   <span className="text-[11px] text-muted-foreground tabular-nums">{pct}%</span>
                 </div>
@@ -109,7 +123,7 @@ function GoalsPage() {
                   <span>{remaining > 0 ? `${formatAUD(remaining)} to go` : "Reached"}{daysLeft !== null ? ` · ${daysLeft > 0 ? `${daysLeft}d left` : "due"}` : ""}</span>
                   <div className="flex items-center gap-3">
                     <button onClick={() => openEdit(g)} className="hover:text-foreground">Edit</button>
-                    <button onClick={async () => { await remove({ data: { id: g.id } } as any); refresh(); }} className="hover:text-foreground">Delete</button>
+                    <button onClick={async () => { await deleteGoal({ id: g.id }); refresh(); }} className="hover:text-foreground">Delete</button>
                   </div>
                 </div>
               </li>
@@ -130,7 +144,7 @@ function GoalsPage() {
           initial={editing}
           onClose={() => setOpen(false)}
           onSave={async (payload) => {
-            await save({ data: payload } as any);
+            await upsertGoal(payload);
             setOpen(false); refresh();
           }}
         />
@@ -141,6 +155,19 @@ function GoalsPage() {
 
 function categoryLabel(v: string) {
   return CATEGORY_OPTIONS.find((c) => c.v === v)?.l ?? v;
+}
+
+const SOURCE_OPTIONS = [
+  { v: "manual", l: "Manual — I'll update it" },
+  { v: "net_worth", l: "Net worth" },
+  { v: "cash", l: "Total cash" },
+  { v: "super", l: "Super" },
+  { v: "investments", l: "Investments" },
+  { v: "debts", l: "Total debts" },
+] as const;
+
+function sourceLabel(v?: string) {
+  return SOURCE_OPTIONS.find((s) => s.v === v)?.l ?? "Live";
 }
 
 function SuggestionsPanel({ goals }: { goals: Goal[] }) {
@@ -180,10 +207,10 @@ function SuggestionsPanel({ goals }: { goals: Goal[] }) {
 }
 
 const GOAL_TYPES = [
-  { v: "grow", label: "Grow", categories: ["retirement", "invest"] },
-  { v: "save", label: "Save", categories: ["emergency", "home", "education", "travel"] },
-  { v: "payoff", label: "Pay Off", categories: ["debt"] },
-  { v: "invest", label: "Invest", categories: ["invest"] },
+  { v: "grow", label: "Grow", categories: ["retirement", "invest"], sources: ["net_worth", "super", "investments"] },
+  { v: "save", label: "Save", categories: ["emergency", "home", "education", "travel"], sources: ["cash", "net_worth"] },
+  { v: "payoff", label: "Pay Off", categories: ["debt"], sources: ["debts"] },
+  { v: "invest", label: "Invest", categories: ["invest"], sources: ["investments"] },
 ] as const;
 type GoalType = typeof GOAL_TYPES[number]["v"];
 
@@ -197,54 +224,32 @@ function typeForCategory(cat: string): GoalType {
 function GoalModal({ initial, onClose, onSave }: {
   initial: Goal | null;
   onClose: () => void;
-  onSave: (p: any) => Promise<void>;
+  onSave: (p: Record<string, unknown>) => Promise<void>;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [goalType, setGoalType] = useState<GoalType>(initial ? typeForCategory(initial.category) : "grow");
   const [category, setCategory] = useState(initial?.category ?? "retirement");
-  const [source, setSource] = useState(initial?.source ?? "");
-  const [sourceAmount, setSourceAmount] = useState<number>(0);
-  const [target, setTarget] = useState(initial?.target_amount ?? 1);
+  const [sourceType, setSourceType] = useState<string>(initial?.source_type ?? "net_worth");
+  const [targetKind, setTargetKind] = useState<"amount" | "percent">("amount");
+  const [target, setTarget] = useState(initial?.target_amount ?? 0);
+  const [targetPct, setTargetPct] = useState<number>(0);
   const [current, setCurrent] = useState(initial?.current_amount ?? 0);
-  const [pctOfSource, setPctOfSource] = useState<number>(0);
   const [date, setDate] = useState(initial?.target_date ?? new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10));
-  const [sources, setSources] = useState<{ label: string; balance: number }[]>([]);
   const [busy, setBusy] = useState(false);
 
-  // Load possible sources (cash, super, investments)
-  useEffect(() => {
-    (async () => {
-      const [c, s, i] = await Promise.all([
-        supabase.from("cash_accounts").select("label, balance"),
-        supabase.from("super_accounts").select("fund_name, balance"),
-        supabase.from("investments").select("name, value"),
-      ]);
-      const all: { label: string; balance: number }[] = [];
-      (c.data ?? []).forEach((r: any) => all.push({ label: `Cash · ${r.label}`, balance: Number(r.balance) || 0 }));
-      (s.data ?? []).forEach((r: any) => all.push({ label: `Super · ${r.fund_name}`, balance: Number(r.balance) || 0 }));
-      (i.data ?? []).forEach((r: any) => all.push({ label: `Investment · ${r.name}`, balance: Number(r.value) || 0 }));
-      setSources(all);
-    })();
-  }, []);
+  const isManual = sourceType === "manual";
+  const allowedSources = GOAL_TYPES.find((g) => g.v === goalType)?.sources ?? ["net_worth"];
+  const sourceChoices = SOURCE_OPTIONS.filter((s) => s.v === "manual" || allowedSources.includes(s.v as never));
 
-  // Recompute target when % of source changes
-  function setPct(p: number) {
-    setPctOfSource(p);
-    if (sourceAmount > 0 && p > 0) setTarget(Math.round((sourceAmount * p) / 100));
-  }
-  function chooseSource(label: string) {
-    setSource(label);
-    const found = sources.find((s) => s.label === label);
-    setSourceAmount(found?.balance ?? 0);
-    if (pctOfSource > 0 && found) setTarget(Math.round((found.balance * pctOfSource) / 100));
-  }
-
-  // Keep category in sync when goal type changes (unless editing)
+  // Keep category + source in sync when goal type changes.
   function changeType(t: GoalType) {
     setGoalType(t);
-    const def = GOAL_TYPES.find((g) => g.v === t)?.categories[0];
-    if (def) setCategory(def);
+    const def = GOAL_TYPES.find((g) => g.v === t);
+    if (def) {
+      setCategory(def.categories[0]);
+      if (!def.sources.includes(sourceType as never) && sourceType !== "manual") setSourceType(def.sources[0]);
+    }
   }
 
   async function submit(e: React.FormEvent) {
@@ -254,11 +259,13 @@ function GoalModal({ initial, onClose, onSave }: {
         id: initial?.id,
         name: name.trim(),
         category,
-        target_amount: Number(target),
-        current_amount: Number(current),
+        description: (description ?? "").trim() || null,
+        source_type: sourceType,
+        target_kind: isManual ? "amount" : targetKind,
+        target_pct: !isManual && targetKind === "percent" ? Number(targetPct) : null,
+        target_amount: targetKind === "percent" && !isManual ? 0 : Number(target),
+        current_amount: isManual ? Number(current) : 0,
         target_date: date || null,
-        description: description.trim() || null,
-        source: source || null,
       });
     } finally { setBusy(false); }
   }
@@ -276,16 +283,16 @@ function GoalModal({ initial, onClose, onSave }: {
           <h2 className="text-[18px] font-bold tracking-display">{initial ? "Edit Goal" : "Create New Goal"}</h2>
           <button type="button" onClick={onClose} aria-label="Close" className="text-muted-foreground hover:text-foreground text-[18px] leading-none">×</button>
         </div>
-        <p className="text-[12px] text-muted-foreground mb-5">Set up a new financial goal to track your progress.</p>
+        <p className="text-[12px] text-muted-foreground mb-5">Set up a goal and let Maal track it against your live position.</p>
 
         <div className="mb-4">
           <label className={labelCls}>Goal</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} required placeholder="E.g. Emergency Fund, Net Worth" className={inputCls} />
+          <input value={name} onChange={(e) => setName(e.target.value)} required placeholder="E.g. Emergency Fund, Grow Net Worth" className={inputCls} />
         </div>
 
         <div className="mb-4">
           <label className={labelCls}>Description (Optional)</label>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Add details about your goal" rows={2} className={`${inputCls} resize-none`} />
+          <textarea value={description ?? ""} onChange={(e) => setDescription(e.target.value)} placeholder="Add details about your goal" rows={2} className={`${inputCls} resize-none`} />
         </div>
 
         <div className="grid grid-cols-2 gap-3 mb-4">
@@ -296,33 +303,54 @@ function GoalModal({ initial, onClose, onSave }: {
             </select>
           </div>
           <div>
-            <label className={labelCls}>Source</label>
-            <select value={source} onChange={(e) => chooseSource(e.target.value)} className={inputCls}>
-              <option value="">Select a source</option>
-              {sources.map((s) => <option key={s.label} value={s.label}>{s.label} ({formatAUD(s.balance)})</option>)}
+            <label className={labelCls}>Track against</label>
+            <select value={sourceType} onChange={(e) => setSourceType(e.target.value)} className={inputCls}>
+              {sourceChoices.map((s) => <option key={s.v} value={s.v}>{s.l}</option>)}
             </select>
           </div>
         </div>
 
+        {!isManual && (
+          <p className="text-[11px] text-muted-foreground mb-4 -mt-1">
+            {goalType === "payoff"
+              ? "Progress rises automatically as your total debts fall."
+              : `Progress updates automatically from your live ${sourceLabel(sourceType).toLowerCase()}.`}
+          </p>
+        )}
+
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div>
-            <label className={labelCls}>Current Amount</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[13px]">$</span>
-              <input type="number" min={0} value={current} onChange={(e) => setCurrent(Number(e.target.value))} className={`${inputCls} pl-7`} />
+          {isManual && (
+            <div>
+              <label className={labelCls}>Current Amount</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[13px]">$</span>
+                <input type="number" min={0} value={current} onChange={(e) => setCurrent(Number(e.target.value))} className={`${inputCls} pl-7`} />
+              </div>
             </div>
-          </div>
-          <div>
-            <label className={labelCls}>Target Amount</label>
-            <div className="relative mb-2">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[13px]">$</span>
-              <input type="number" min={1} required value={target} onChange={(e) => setTarget(Number(e.target.value))} className={`${inputCls} pl-7`} />
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="number" min={0} max={100} value={pctOfSource} onChange={(e) => setPct(Number(e.target.value))}
-                className={`${inputCls} w-20`} disabled={!source} />
-              <span className="text-[11px] text-muted-foreground">% of Source</span>
-            </div>
+          )}
+          <div className={isManual ? "" : "col-span-2"}>
+            <label className={labelCls}>Target</label>
+            {!isManual && (
+              <div className="inline-flex items-center gap-1 p-0.5 bg-[var(--secondary)] rounded-[8px] mb-2">
+                {(["amount", "percent"] as const).map((k) => (
+                  <button key={k} type="button" onClick={() => setTargetKind(k)}
+                    className={`px-2.5 py-1 rounded-[6px] text-[11px] font-medium ${targetKind === k ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
+                    {k === "amount" ? "$ amount" : "% of source"}
+                  </button>
+                ))}
+              </div>
+            )}
+            {targetKind === "percent" && !isManual ? (
+              <div className="relative">
+                <input type="number" min={0} value={targetPct} onChange={(e) => setTargetPct(Number(e.target.value))} className={`${inputCls} pr-7`} placeholder="e.g. 120" />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[13px]">%</span>
+              </div>
+            ) : (
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[13px]">$</span>
+                <input type="number" min={0} required value={target} onChange={(e) => setTarget(Number(e.target.value))} className={`${inputCls} pl-7`} />
+              </div>
+            )}
           </div>
         </div>
 

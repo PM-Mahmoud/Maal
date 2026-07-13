@@ -1038,6 +1038,71 @@ router.post('/v1/transaction-rules/apply', async (req, res) => {
   }
 });
 
+// ─── Source-linked live goals (PR 7) ──────────────────────────────────────
+// Goals track progress DERIVED from the user's live financials (net worth /
+// cash / super / investments / debts) rather than a static number they type.
+// Registered BEFORE /v1/:table and EXCLUDED from the generic handler so:
+//   1. progress is computed server-side from live data (db/goals.listGoals), and
+//   2. DELETE /v1/goals/:id works (the generic handler only deletes by ?filter=,
+//      so the client's path-param delete previously hit the no-op catch-all).
+// All scoped to req.session.userId.
+
+router.get('/v1/goals', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const goalsDb = require('../db/goals');
+    res.json(await goalsDb.listGoals(req.session.userId));
+  } catch (e) {
+    console.error('/api/v1/goals GET error:', e.message);
+    res.json([]);
+  }
+});
+
+router.post('/v1/goals', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const goalsDb = require('../db/goals');
+    const body = req.body || {};
+    const name = String(body.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'A goal needs a name.' });
+    // Upsert: the client's upsertGoal sends the id when editing.
+    if (body.id) {
+      const updated = await goalsDb.updateGoal(body.id, req.session.userId, body);
+      if (!updated) return res.status(404).json({ error: 'Goal not found.' });
+      return res.json(updated);
+    }
+    res.json(await goalsDb.createGoal(req.session.userId, body));
+  } catch (e) {
+    console.error('/api/v1/goals POST error:', e.message);
+    res.status(500).json({ error: 'Could not save goal.' });
+  }
+});
+
+router.patch('/v1/goals/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const goalsDb = require('../db/goals');
+    const updated = await goalsDb.updateGoal(req.params.id, req.session.userId, req.body || {});
+    if (!updated) return res.status(404).json({ error: 'Goal not found.' });
+    res.json(updated);
+  } catch (e) {
+    console.error('/api/v1/goals PATCH error:', e.message);
+    res.status(500).json({ error: 'Could not update goal.' });
+  }
+});
+
+router.delete('/v1/goals/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const goalsDb = require('../db/goals');
+    await goalsDb.deleteGoal(req.params.id, req.session.userId);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/v1/goals DELETE error:', e.message);
+    res.status(500).json({ error: 'Could not delete goal.' });
+  }
+});
+
 // ─── Generic CRUD for user-scoped asset tables ────────────────────────────
 //
 // Tables the React SPA reads/writes. Every row is scoped to user_id.
@@ -1047,7 +1112,10 @@ router.post('/v1/transaction-rules/apply', async (req, res) => {
 const ASSET_TABLES = new Set([
   'cash_accounts', 'investments', 'properties', 'debts',
   'super_accounts', 'incomes', 'other_assets',
-  'linked_accounts', 'goals', 'transactions',
+  'linked_accounts', 'transactions',
+  // NOTE: 'goals' is deliberately EXCLUDED — it has dedicated routes above that
+  // derive live progress and validate source_type/target_kind. The generic
+  // handler would store a stale current_amount and skip that validation.
   // BUG-5 FIX: 'profiles' table does not exist; the correct table is 'user_profiles'
   // 'user_profiles' is intentionally not in the generic API (profile updates go through /dashboard/profile)
   'score_snapshots',
