@@ -64,7 +64,7 @@ function PortfolioPlanPage() {
           </tbody>
         </table>
       </div>
-      <p className="text-[11px] text-muted-foreground mt-4">Educational allocation framework only. This is not personal financial advice.</p>
+      <p className="text-[11px] text-muted-foreground mt-4">Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.</p>
     </div>
   );
 }
