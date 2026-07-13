@@ -151,6 +151,14 @@ async function runCase(c) {
   };
 }
 
+// True when an error is a provider infra/credential problem (auth, rate-limit,
+// network) rather than a content/compliance failure — these should soft-skip,
+// not hard-fail, exactly like a missing key.
+function isInfraError(msg) {
+  return /\b(401|403|429|Access denied|invalid subscription|unauthori|API key|no provider|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|network|fetch failed|timed? ?out|abort)\b/i
+    .test(String(msg || ''));
+}
+
 async function main() {
   if (!advisor.hasAdvisor()) {
     console.log('evals: SKIPPED — no AI provider configured (AZURE_OPENAI_* / GROQ_API_KEY / etc).');
@@ -171,16 +179,33 @@ async function main() {
         console.log(`    reply: "${r.reply.slice(0, 220).replace(/\n/g, ' ')}${r.reply.length > 220 ? '...' : ''}"`);
       }
     } catch (e) {
-      results.push({ id: c.id, pass: false, hardFail: true, reasons: 'runner error: ' + e.message });
-      console.log('ERROR — ' + e.message);
+      // Distinguish an INFRA/credential failure (auth, rate-limit, network) from
+      // a content/compliance failure. A present-but-invalid key (e.g. the Azure
+      // secret rotated/expired) 401s every case — that's the same class of
+      // "couldn't actually run" as a missing key, so it must NOT be scored as a
+      // hard forbidden-pattern violation.
+      const infra = isInfraError(e.message);
+      results.push({ id: c.id, pass: false, hardFail: !infra, infraFail: infra, reasons: 'runner error: ' + e.message });
+      console.log((infra ? 'INFRA-ERROR — ' : 'ERROR — ') + e.message);
     }
   }
 
   const passed = results.filter((r) => r.pass).length;
   const hardFails = results.filter((r) => r.hardFail).length;
+  const infraFails = results.filter((r) => r.infraFail).length;
   const rate = passed / results.length;
 
-  console.log(`\n${passed}/${results.length} passed (${(rate * 100).toFixed(0)}%), ${hardFails} hard fail(s)\n`);
+  // If nothing could run and every failure was infra (auth/network), the suite
+  // couldn't exercise the model at all — soft-skip like a missing key rather than
+  // hard-block CI on an expired credential. Genuine content failures (rubric
+  // FAILs / forbidden-pattern hardFails) still fall through and fail below.
+  if (passed === 0 && infraFails === results.length) {
+    console.log(`\nevals: SKIPPED — the AI provider errored on every case (infra/credential issue, e.g. an expired key). ${infraFails}/${results.length} infra errors.`);
+    console.log('Refresh the provider secret (AZURE_OPENAI_API_KEY / GROQ_API_KEY) so the eval gate runs for real.');
+    process.exit(0);
+  }
+
+  console.log(`\n${passed}/${results.length} passed (${(rate * 100).toFixed(0)}%), ${hardFails} hard fail(s)${infraFails ? `, ${infraFails} infra error(s)` : ''}\n`);
 
   if (hardFails > 0) {
     console.error('FAILED: at least one hard-forbidden-pattern violation (compliance issue, not averaged).');
