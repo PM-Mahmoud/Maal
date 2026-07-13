@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, Pencil, Play, Trash2, Download, History, BellRing, RotateCcw, CheckCircle2, ArrowRight } from "lucide-react";
+import { ArrowUp, Pencil, Play, Trash2, Download, BellRing, CheckCircle2, ArrowRight } from "lucide-react";
 import { listAlerts, createAlert, deleteAlert, toggleAlert, evaluateAlerts } from "@/lib/alerts.functions";
-import { listTemplates, upsertTemplate, listVersions, revertToVersion, resetTemplate } from "@/lib/radar-templates.functions";
+import { listTemplates } from "@/lib/radar-templates.functions";
 import { getRadarReadiness } from "@/lib/radar-readiness.functions";
 import { exportEventPdf, exportAllEventsPdf } from "@/lib/radar-pdf";
 import { enablePush, disablePush, getPushStatus, pushSupported } from "@/lib/push-client";
@@ -23,10 +23,6 @@ function RadarPage() {
   const toggle = toggleAlert;
   const evaluate = evaluateAlerts;
   const listT = listTemplates;
-  const upsertT = upsertTemplate;
-  const resetT = resetTemplate;
-  const listV = listVersions;
-  const revertV = revertToVersion;
   const readinessFn = getRadarReadiness;
 
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -45,10 +41,6 @@ function RadarPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [showAbout, setShowAbout] = useState(false);
   const [pushStatus, setPushStatus] = useState<"unsupported" | "denied" | "granted" | "default">("default");
-  const [editing, setEditing] = useState<any | null>(null);
-  const [editDraft, setEditDraft] = useState({ title: "", sub: "", prompt: "", change_note: "" });
-  const [historyFor, setHistoryFor] = useState<any | null>(null);
-  const [versions, setVersions] = useState<any[]>([]);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   async function refresh() {
@@ -73,37 +65,6 @@ function RadarPage() {
       taRef.current?.setSelectionRange(t.prompt.length, t.prompt.length);
       taRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
-  }
-
-  function openEdit(t: any) {
-    setEditing(t);
-    setEditDraft({ title: t.title, sub: t.sub ?? "", prompt: t.prompt, change_note: "" });
-  }
-  async function saveEdit() {
-    if (!editing) return;
-    await upsertT({ data: { id: editing.id, title: editDraft.title, sub: editDraft.sub, prompt: editDraft.prompt, change_note: editDraft.change_note || undefined } } as any);
-    setEditing(null);
-    setToast("Template saved. Previous version kept in history.");
-    setTimeout(() => setToast(null), 3500);
-    refresh();
-  }
-  async function openHistory(t: any) {
-    setHistoryFor(t);
-    const r: any = await listV({ data: { templateId: t.id } } as any);
-    setVersions(r.versions ?? []);
-  }
-  async function revert(versionId: string) {
-    await revertV({ data: { versionId } } as any);
-    setHistoryFor(null);
-    setToast("Reverted. A new version was saved so this is undoable.");
-    setTimeout(() => setToast(null), 3500);
-    refresh();
-  }
-  async function resetToDefault(t: any) {
-    await resetT({ data: { id: t.id } } as any);
-    setToast(`${t.title} reset to default.`);
-    setTimeout(() => setToast(null), 3500);
-    refresh();
   }
 
   async function togglePush() {
@@ -380,45 +341,20 @@ function RadarPage() {
         </div>
       )}
 
-      {/* Templates grid — clickable & editable */}
-      <p className="text-center text-[12px] text-muted-foreground mb-4">Start from a template — fully editable, with version history</p>
+      {/* Templates grid — curated AU starting points; click to prefill the composer */}
+      <p className="text-center text-[12px] text-muted-foreground mb-4">Start from a curated Australian template</p>
       <div className="grid md:grid-cols-2 gap-2 mb-10">
         {templates.map((t) => (
-          <div
+          <button
             key={t.id}
-            className={`relative px-4 py-3 border rounded-[10px] bg-[var(--surface)] transition-colors ${templateId === t.id ? "border-foreground/40" : "border-border hover:border-foreground/30"}`}
+            type="button"
+            onClick={() => pickTemplate(t)}
+            disabled={busy}
+            className={`text-left px-4 py-3 border rounded-[10px] bg-[var(--surface)] transition-colors disabled:opacity-50 focus:outline-none ${templateId === t.id ? "border-foreground/40" : "border-border hover:border-foreground/30"}`}
           >
-            <button
-              type="button"
-              onClick={() => pickTemplate(t)}
-              disabled={busy}
-              className="text-left w-full pr-20 disabled:opacity-50 focus:outline-none"
-            >
-              <p className="text-[13px] font-semibold text-foreground flex items-center gap-2">
-                {t.title}
-                {t.is_edited && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground uppercase tracking-wider">edited</span>
-                )}
-              </p>
-              <p className="text-[11.5px] text-muted-foreground mt-0.5 line-clamp-1">{t.sub}</p>
-            </button>
-            <div className="absolute top-2 right-2 flex items-center gap-0.5">
-              <button type="button" onClick={() => openEdit(t)} title="Edit template"
-                className="p-1.5 text-muted-foreground hover:text-foreground rounded-md hover:bg-secondary">
-                <Pencil className="w-3 h-3" />
-              </button>
-              <button type="button" onClick={() => openHistory(t)} title="Version history"
-                className="p-1.5 text-muted-foreground hover:text-foreground rounded-md hover:bg-secondary">
-                <History className="w-3 h-3" />
-              </button>
-              {t.is_edited && (
-                <button type="button" onClick={() => resetToDefault(t)} title="Reset to default"
-                  className="p-1.5 text-muted-foreground hover:text-foreground rounded-md hover:bg-secondary">
-                  <RotateCcw className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-          </div>
+            <p className="text-[13px] font-semibold text-foreground">{t.title}</p>
+            <p className="text-[11.5px] text-muted-foreground mt-0.5 line-clamp-1">{t.sub}</p>
+          </button>
         ))}
         <button
           type="button"
@@ -463,76 +399,6 @@ function RadarPage() {
         </p>
       </div>
 
-      {/* Edit template dialog */}
-      {editing && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setEditing(null)}>
-          <div className="bg-background border border-border rounded-[14px] w-full max-w-lg p-5" onClick={(e) => e.stopPropagation()}>
-            <p className="text-[14px] font-semibold mb-1">Edit template</p>
-            <p className="text-[11.5px] text-muted-foreground mb-4">A snapshot of the current version is saved so you can revert anytime.</p>
-            <label className="block mb-3">
-              <span className="block text-[11px] uppercase tracking-[0.12em] text-muted-foreground mb-1">Title</span>
-              <input value={editDraft.title} onChange={(e) => setEditDraft({ ...editDraft, title: e.target.value })}
-                className="w-full px-3 py-2 border border-border rounded-[8px] bg-transparent text-[13px]" />
-            </label>
-            <label className="block mb-3">
-              <span className="block text-[11px] uppercase tracking-[0.12em] text-muted-foreground mb-1">Subtitle</span>
-              <input value={editDraft.sub} onChange={(e) => setEditDraft({ ...editDraft, sub: e.target.value })}
-                className="w-full px-3 py-2 border border-border rounded-[8px] bg-transparent text-[13px]" />
-            </label>
-            <label className="block mb-3">
-              <span className="block text-[11px] uppercase tracking-[0.12em] text-muted-foreground mb-1">Prompt</span>
-              <textarea value={editDraft.prompt} onChange={(e) => setEditDraft({ ...editDraft, prompt: e.target.value })}
-                rows={5} className="w-full px-3 py-2 border border-border rounded-[8px] bg-transparent text-[13px] resize-none" />
-            </label>
-            <label className="block mb-4">
-              <span className="block text-[11px] uppercase tracking-[0.12em] text-muted-foreground mb-1">Change note (optional)</span>
-              <input value={editDraft.change_note} onChange={(e) => setEditDraft({ ...editDraft, change_note: e.target.value })}
-                placeholder="e.g. Tightened to 8% threshold"
-                className="w-full px-3 py-2 border border-border rounded-[8px] bg-transparent text-[13px]" />
-            </label>
-            <div className="flex items-center justify-end gap-2">
-              <button onClick={() => setEditing(null)} className="px-3 py-1.5 text-[12px] text-muted-foreground hover:text-foreground">Cancel</button>
-              <button onClick={saveEdit} className="px-3 py-1.5 text-[12px] rounded-[8px] bg-foreground text-background hover:opacity-90">Save version</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Version history dialog */}
-      {historyFor && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setHistoryFor(null)}>
-          <div className="bg-background border border-border rounded-[14px] w-full max-w-lg p-5 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <p className="text-[14px] font-semibold">Version history</p>
-            <p className="text-[11.5px] text-muted-foreground mb-4">{historyFor.title}</p>
-            <div className="mb-4 p-3 rounded-[10px] border border-[var(--mint)]/30 bg-[var(--mint)]/5">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--mint)] mb-1">Current</p>
-              <p className="text-[12px] text-foreground whitespace-pre-wrap">{historyFor.prompt}</p>
-            </div>
-            {versions.length === 0 ? (
-              <p className="text-[12px] text-muted-foreground">No previous versions yet. Edits create version snapshots automatically.</p>
-            ) : (
-              <ul className="space-y-3">
-                {versions.map((v: any) => (
-                  <li key={v.id} className="p-3 border border-border rounded-[10px]">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{formatWhen(v.created_at)}</p>
-                      <button onClick={() => revert(v.id)}
-                        className="text-[10px] px-2 py-0.5 border border-border rounded-md hover:bg-secondary inline-flex items-center gap-1">
-                        <RotateCcw className="w-3 h-3" /> Revert
-                      </button>
-                    </div>
-                    {v.change_note && <p className="text-[11px] text-muted-foreground italic mb-1">"{v.change_note}"</p>}
-                    <p className="text-[12px] text-foreground whitespace-pre-wrap line-clamp-4">{v.prompt}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <div className="flex justify-end mt-4">
-              <button onClick={() => setHistoryFor(null)} className="px-3 py-1.5 text-[12px] text-muted-foreground hover:text-foreground">Close</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
