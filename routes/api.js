@@ -911,6 +911,131 @@ router.post('/v1/report', async (req, res) => {
   }
 });
 
+// ─── Transactions depth: categories, rules, subscriptions (PR 6) ───────────
+// All registered BEFORE /v1/:table so they aren't swallowed by the generic
+// handler. Scoped to req.session.userId. Categories live in a separate table,
+// so the protected `transactions` table is never altered.
+
+// GET /v1/transaction-categories — the 18-group taxonomy for pickers.
+router.get('/v1/transaction-categories', (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const { TAXONOMY } = require('../lib/transaction-categories');
+  res.json({ groups: TAXONOMY.map((t) => ({ group: t.group, categories: t.categories })) });
+});
+
+// GET /v1/transactions — transactions with their category. Rows without a stored
+// category get a best-effort auto-category for DISPLAY only (not persisted).
+// Registered before the generic GET /v1/:table so it wins for this table.
+router.get('/v1/transactions', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const txnDb = require('../db/transactions');
+    const { autoCategorize } = require('../lib/transaction-categories');
+    const rows = await txnDb.getTransactionsWithCategory(req.session.userId, 500);
+    const out = rows.map((r) => {
+      if (r.category_group) return r;
+      const auto = autoCategorize(r.description, r.amount);
+      return auto ? { ...r, category_group: auto.group, category: auto.category, category_source: 'auto' } : r;
+    });
+    res.json(out);
+  } catch (e) {
+    console.error('/api/v1/transactions GET error:', e.message);
+    res.status(500).json({ error: 'Could not load transactions' });
+  }
+});
+
+// GET /v1/transactions/subscriptions — detected recurring payments.
+router.get('/v1/transactions/subscriptions', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const txnDb = require('../db/transactions');
+    const { detectSubscriptions } = require('../services/transaction-rules');
+    const txns = await txnDb.getTxnsForSubscriptions(req.session.userId, 400);
+    res.json({ subscriptions: detectSubscriptions(txns) });
+  } catch (e) {
+    console.error('/api/v1/transactions/subscriptions error:', e.message);
+    res.status(500).json({ error: 'Could not detect subscriptions' });
+  }
+});
+
+// PATCH /v1/transactions/:id/category — manually (re)categorise one transaction.
+router.patch('/v1/transactions/:id/category', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const { isKnownGroup } = require('../lib/transaction-categories');
+    const txnDb = require('../db/transactions');
+    const d = (req.body && req.body.data && typeof req.body.data === 'object') ? req.body.data : (req.body || {});
+    if (!isKnownGroup(d.category_group)) return res.status(400).json({ error: 'Unknown category group.' });
+    const ok = await txnDb.setTransactionCategory(req.session.userId, req.params.id, d.category_group, d.category, 'manual');
+    if (!ok) return res.status(404).json({ error: 'Transaction not found.' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/v1/transactions/:id/category error:', e.message);
+    res.status(500).json({ error: 'Could not update category' });
+  }
+});
+
+// Rules CRUD + apply.
+router.get('/v1/transaction-rules', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const txnDb = require('../db/transactions');
+    res.json({ rules: await txnDb.listRules(req.session.userId) });
+  } catch (e) {
+    console.error('/api/v1/transaction-rules GET error:', e.message);
+    res.status(500).json({ error: 'Could not load rules' });
+  }
+});
+
+router.post('/v1/transaction-rules', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const { isKnownGroup } = require('../lib/transaction-categories');
+    const txnDb = require('../db/transactions');
+    const d = (req.body && req.body.data && typeof req.body.data === 'object') ? req.body.data : (req.body || {});
+    if (!String(d.match_text || '').trim()) return res.status(400).json({ error: 'Enter text to match.' });
+    if (!isKnownGroup(d.category_group)) return res.status(400).json({ error: 'Pick a category group.' });
+    if (!['contains', 'equals', 'starts_with'].includes(d.match_type || 'contains')) d.match_type = 'contains';
+    const id = await txnDb.createRule(req.session.userId, d);
+    res.json({ ok: true, id });
+  } catch (e) {
+    console.error('/api/v1/transaction-rules POST error:', e.message);
+    res.status(500).json({ error: 'Could not create rule' });
+  }
+});
+
+router.delete('/v1/transaction-rules/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const txnDb = require('../db/transactions');
+    await txnDb.deleteRule(req.params.id, req.session.userId);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/v1/transaction-rules DELETE error:', e.message);
+    res.status(500).json({ error: 'Could not delete rule' });
+  }
+});
+
+// POST /v1/transaction-rules/apply — categorise all the user's transactions
+// against their current rules (historical + incoming).
+router.post('/v1/transaction-rules/apply', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const txnDb = require('../db/transactions');
+    const { computeAssignments } = require('../services/transaction-rules');
+    const [rules, rows] = await Promise.all([
+      txnDb.listRules(req.session.userId),
+      txnDb.getTransactionsWithCategory(req.session.userId, 2000),
+    ]);
+    const assignments = computeAssignments(rules, rows);
+    const applied = await txnDb.applyCategoryAssignments(req.session.userId, assignments);
+    res.json({ ok: true, applied });
+  } catch (e) {
+    console.error('/api/v1/transaction-rules/apply error:', e.message);
+    res.status(500).json({ error: 'Could not apply rules' });
+  }
+});
+
 // ─── Generic CRUD for user-scoped asset tables ────────────────────────────
 //
 // Tables the React SPA reads/writes. Every row is scoped to user_id.

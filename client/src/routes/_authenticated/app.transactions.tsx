@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SlidersHorizontal, Repeat } from "lucide-react";
 import { listTransactions, seedMockTransactions, clearTransactions, addTransaction } from "@/lib/transactions.functions";
+import { getSubscriptions, type Subscription } from "@/lib/transactions-depth.functions";
+import { RulesModal } from "@/components/maal/transactions/RulesModal";
 import { formatAUD } from "@/lib/score";
 
 export const Route = createFileRoute("/_authenticated/app/transactions")({ component: TransactionsPage });
@@ -30,10 +33,19 @@ function TransactionsPage() {
   const [manualOpen, setManualOpen] = useState(false);
   const [form, setForm] = useState({ occurred_on: new Date().toISOString().slice(0,10), description: "", category: "other", amount: "" });
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [view, setView] = useState<"all" | "subs">("all");
+  const [subs, setSubs] = useState<Subscription[]>([]);
+  const [showRules, setShowRules] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function refresh() { setRows((await list()) as any); }
   useEffect(() => { refresh(); }, []);
+  useEffect(() => { if (view === "subs" && subs.length === 0) getSubscriptions().then(setSubs); }, [view]);
+
+  const monthlySubTotal = useMemo(() => {
+    const per = { weekly: 52 / 12, fortnightly: 26 / 12, monthly: 1, yearly: 1 / 12 } as Record<string, number>;
+    return subs.reduce((a, s) => a + s.amount * (per[s.cadence] ?? 1), 0);
+  }, [subs]);
 
   const filteredBanks = useMemo(
     () => AU_BANKS.filter((b) => b.name.toLowerCase().includes(search.trim().toLowerCase())),
@@ -181,6 +193,8 @@ function TransactionsPage() {
         </aside>
       </div>
 
+      {showRules && <RulesModal onClose={() => setShowRules(false)} onApplied={refresh} />}
+
       {/* Existing transactions table */}
       {rows.length > 0 && (
         <div className="mt-8">
@@ -189,23 +203,67 @@ function TransactionsPage() {
             <Stat label="Money out" value={formatAUD(totalOut)} />
             <Stat label="Net" value={formatAUD(totalIn - totalOut)} accent={totalIn - totalOut >= 0 ? "mint" : "gold"} />
           </div>
-          <div className="border border-border rounded-[12px] bg-[var(--surface)] overflow-hidden">
-            <table className="w-full text-[13px]">
-              <thead className="bg-[var(--secondary)] text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                <tr><th className="text-left px-4 py-2">Date</th><th className="text-left px-4 py-2">Description</th><th className="text-left px-4 py-2">Category</th><th className="text-right px-4 py-2">Amount</th></tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id} className="border-t border-border">
-                    <td className="px-4 py-2 tabular-nums">{r.occurred_on}</td>
-                    <td className="px-4 py-2">{r.description}</td>
-                    <td className="px-4 py-2 capitalize text-muted-foreground">{r.category}</td>
-                    <td className={`px-4 py-2 text-right tabular-nums ${Number(r.amount) >= 0 ? "text-[var(--mint)]" : ""}`}>{formatAUD(Number(r.amount))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+          <div className="flex items-center justify-between mb-3">
+            <div className="inline-flex items-center gap-1 p-1 bg-[var(--secondary)] rounded-[10px]">
+              <button onClick={() => setView("all")} className={`px-3 py-1.5 rounded-[8px] text-[12px] font-medium ${view === "all" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>All transactions</button>
+              <button onClick={() => setView("subs")} className={`px-3 py-1.5 rounded-[8px] text-[12px] font-medium inline-flex items-center gap-1.5 ${view === "subs" ? "bg-background shadow-sm" : "text-muted-foreground"}`}><Repeat className="size-3.5" /> Subscriptions</button>
+            </div>
+            <button onClick={() => setShowRules(true)} className="inline-flex items-center gap-1.5 border border-border px-3 py-1.5 rounded-[8px] text-[12px] font-medium text-muted-foreground hover:text-foreground hover:border-foreground/40">
+              <SlidersHorizontal className="size-3.5" /> Rules
+            </button>
           </div>
+
+          {view === "all" ? (
+            <div className="border border-border rounded-[12px] bg-[var(--surface)] overflow-hidden">
+              <table className="w-full text-[13px]">
+                <thead className="bg-[var(--secondary)] text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                  <tr><th className="text-left px-4 py-2">Date</th><th className="text-left px-4 py-2">Description</th><th className="text-left px-4 py-2">Category</th><th className="text-right px-4 py-2">Amount</th></tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id} className="border-t border-border">
+                      <td className="px-4 py-2 tabular-nums">{r.post_date ?? r.occurred_on}</td>
+                      <td className="px-4 py-2">{r.description}</td>
+                      <td className="px-4 py-2 text-muted-foreground">
+                        {r.category_group ?? r.category ?? "—"}
+                        {r.category_source === "auto" && <span className="ml-1.5 text-[10px] text-muted-foreground/60">auto</span>}
+                      </td>
+                      <td className={`px-4 py-2 text-right tabular-nums ${Number(r.amount) >= 0 ? "text-[var(--mint)]" : ""}`}>{formatAUD(Number(r.amount))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div>
+              {subs.length > 0 && (
+                <p className="text-[12px] text-muted-foreground mb-3">
+                  {subs.length} recurring payment{subs.length === 1 ? "" : "s"} · ~<span className="font-semibold text-foreground">{formatAUD(monthlySubTotal)}</span>/month
+                </p>
+              )}
+              <div className="border border-border rounded-[12px] bg-[var(--surface)] overflow-hidden">
+                <table className="w-full text-[13px]">
+                  <thead className="bg-[var(--secondary)] text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <tr><th className="text-left px-4 py-2">Merchant</th><th className="text-left px-4 py-2">Cadence</th><th className="text-left px-4 py-2">Next</th><th className="text-right px-4 py-2">Amount</th></tr>
+                  </thead>
+                  <tbody>
+                    {subs.map((s, i) => (
+                      <tr key={i} className="border-t border-border">
+                        <td className="px-4 py-2">{s.merchant}</td>
+                        <td className="px-4 py-2 capitalize text-muted-foreground">{s.cadence}</td>
+                        <td className="px-4 py-2 tabular-nums text-muted-foreground">{s.nextEstimate ?? "—"}</td>
+                        <td className="px-4 py-2 text-right tabular-nums">{formatAUD(s.amount)}</td>
+                      </tr>
+                    ))}
+                    {subs.length === 0 && (
+                      <tr><td colSpan={4} className="px-4 py-8 text-center text-[12px] text-muted-foreground">No recurring payments detected yet. Connect an account or import transactions to spot subscriptions.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
