@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SlidersHorizontal, Repeat } from "lucide-react";
 import { listTransactions, seedMockTransactions, clearTransactions, addTransaction } from "@/lib/transactions.functions";
+import { getSubscriptions, type Subscription } from "@/lib/transactions-depth.functions";
+import { RulesModal } from "@/components/maal/transactions/RulesModal";
 import { formatAUD } from "@/lib/score";
 
 export const Route = createFileRoute("/_authenticated/app/transactions")({ component: TransactionsPage });
@@ -30,10 +33,21 @@ function TransactionsPage() {
   const [manualOpen, setManualOpen] = useState(false);
   const [form, setForm] = useState({ occurred_on: new Date().toISOString().slice(0,10), description: "", category: "other", amount: "" });
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [view, setView] = useState<"all" | "subs">("all");
+  const [subs, setSubs] = useState<Subscription[]>([]);
+  const [showRules, setShowRules] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  async function refresh() { setRows((await list()) as any); }
+  // Reset subs on any transactions refresh so the Subscriptions tab re-detects
+  // after a manual add / CSV import instead of showing stale merchants.
+  async function refresh() { setRows((await list()) as any); setSubs([]); }
   useEffect(() => { refresh(); }, []);
+  useEffect(() => { if (view === "subs" && subs.length === 0) getSubscriptions().then(setSubs); }, [view, subs.length]);
+
+  const monthlySubTotal = useMemo(() => {
+    const per = { weekly: 52 / 12, fortnightly: 26 / 12, monthly: 1, yearly: 1 / 12 } as Record<string, number>;
+    return subs.reduce((a, s) => a + s.amount * (per[s.cadence] ?? 1), 0);
+  }, [subs]);
 
   const filteredBanks = useMemo(
     () => AU_BANKS.filter((b) => b.name.toLowerCase().includes(search.trim().toLowerCase())),
@@ -59,24 +73,52 @@ function TransactionsPage() {
     } finally { setBusy(null); }
   }
 
+  // Parse a CSV amount cell, preserving accounting negatives like "(12.34)" and
+  // "-12.34"/"12.34 CR". Returns a finite number or null.
+  function parseAmount(raw: string): number | null {
+    const s = String(raw).trim();
+    const negative = /^\(.*\)$/.test(s) || /\bcr\b/i.test(s) || /^-/.test(s);
+    const n = Number(s.replace(/[()]/g, "").replace(/[^0-9.]/g, ""));
+    if (!isFinite(n)) return null;
+    return negative ? -Math.abs(n) : n;
+  }
+
   async function onCsv(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return;
     setBusy("import"); setImportMsg(null);
     try {
+      // PDF statement parsing isn't supported yet — don't feed a PDF through the
+      // CSV parser (it would produce garbage rows).
+      if (/\.pdf$/i.test(file.name) || file.type === "application/pdf") {
+        setImportMsg("PDF statements aren't supported yet — export a CSV (Date, Description, Amount) and upload that.");
+        return;
+      }
       const text = await file.text();
       const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
       const first = lines[0]?.toLowerCase() ?? "";
       const hasHeader = first.includes("date") && first.includes("amount");
       const body = hasHeader ? lines.slice(1) : lines;
-      let inserted = 0;
+
+      // Parse + validate EVERY row first; only write if the whole file is clean,
+      // so a malformed row can't leave a partial import behind.
+      const parsed: { occurred_on: string; description: string; amount: number }[] = [];
       for (const line of body) {
         const parts = line.split(",").map((p) => p.trim().replace(/^"|"$/g, ""));
         if (parts.length < 3) continue;
         const [date, desc, amt] = parts;
-        const iso = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date(date).toISOString().slice(0, 10);
-        const amount = Number(amt.replace(/[^0-9.\-]/g, ""));
-        if (!iso || !desc || !isFinite(amount)) continue;
-        await addTx({ data: { occurred_on: iso, description: desc.slice(0, 160), category: "other", amount } } as any);
+        const d = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date(date).toISOString().slice(0, 10);
+        const amount = parseAmount(amt);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !desc || amount === null) {
+          setImportMsg(`Couldn't read a row ("${line.slice(0, 40)}"). No transactions were imported — please check the file.`);
+          return;
+        }
+        parsed.push({ occurred_on: d, description: desc.slice(0, 160), amount });
+      }
+      if (!parsed.length) { setImportMsg("No valid rows found. Expected columns: Date, Description, Amount."); return; }
+
+      let inserted = 0;
+      for (const row of parsed) {
+        await addTx({ data: { ...row, category: "other" } } as any);
         inserted++;
       }
       setImportMsg(`Imported ${inserted} row${inserted === 1 ? "" : "s"} from ${file.name}.`);
@@ -181,6 +223,8 @@ function TransactionsPage() {
         </aside>
       </div>
 
+      {showRules && <RulesModal onClose={() => setShowRules(false)} onApplied={refresh} />}
+
       {/* Existing transactions table */}
       {rows.length > 0 && (
         <div className="mt-8">
@@ -189,28 +233,72 @@ function TransactionsPage() {
             <Stat label="Money out" value={formatAUD(totalOut)} />
             <Stat label="Net" value={formatAUD(totalIn - totalOut)} accent={totalIn - totalOut >= 0 ? "mint" : "gold"} />
           </div>
-          <div className="border border-border rounded-[12px] bg-[var(--surface)] overflow-hidden">
-            <table className="w-full text-[13px]">
-              <thead className="bg-[var(--secondary)] text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                <tr><th className="text-left px-4 py-2">Date</th><th className="text-left px-4 py-2">Description</th><th className="text-left px-4 py-2">Category</th><th className="text-right px-4 py-2">Amount</th></tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id} className="border-t border-border">
-                    <td className="px-4 py-2 tabular-nums">{r.occurred_on}</td>
-                    <td className="px-4 py-2">{r.description}</td>
-                    <td className="px-4 py-2 capitalize text-muted-foreground">{r.category}</td>
-                    <td className={`px-4 py-2 text-right tabular-nums ${Number(r.amount) >= 0 ? "text-[var(--mint)]" : ""}`}>{formatAUD(Number(r.amount))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+          <div className="flex items-center justify-between mb-3">
+            <div className="inline-flex items-center gap-1 p-1 bg-[var(--secondary)] rounded-[10px]">
+              <button onClick={() => setView("all")} className={`px-3 py-1.5 rounded-[8px] text-[12px] font-medium ${view === "all" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>All transactions</button>
+              <button onClick={() => setView("subs")} className={`px-3 py-1.5 rounded-[8px] text-[12px] font-medium inline-flex items-center gap-1.5 ${view === "subs" ? "bg-background shadow-sm" : "text-muted-foreground"}`}><Repeat className="size-3.5" /> Subscriptions</button>
+            </div>
+            <button onClick={() => setShowRules(true)} className="inline-flex items-center gap-1.5 border border-border px-3 py-1.5 rounded-[8px] text-[12px] font-medium text-muted-foreground hover:text-foreground hover:border-foreground/40">
+              <SlidersHorizontal className="size-3.5" /> Rules
+            </button>
           </div>
+
+          {view === "all" ? (
+            <div className="border border-border rounded-[12px] bg-[var(--surface)] overflow-hidden">
+              <table className="w-full text-[13px]">
+                <thead className="bg-[var(--secondary)] text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                  <tr><th className="text-left px-4 py-2">Date</th><th className="text-left px-4 py-2">Description</th><th className="text-left px-4 py-2">Category</th><th className="text-right px-4 py-2">Amount</th></tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id} className="border-t border-border">
+                      <td className="px-4 py-2 tabular-nums">{r.post_date ?? r.occurred_on}</td>
+                      <td className="px-4 py-2">{r.description}</td>
+                      <td className="px-4 py-2 text-muted-foreground">
+                        {r.category_group ?? r.category ?? "—"}
+                        {r.category_source === "auto" && <span className="ml-1.5 text-[10px] text-muted-foreground/60">auto</span>}
+                      </td>
+                      <td className={`px-4 py-2 text-right tabular-nums ${Number(r.amount) >= 0 ? "text-[var(--mint)]" : ""}`}>{formatAUD(Number(r.amount))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div>
+              {subs.length > 0 && (
+                <p className="text-[12px] text-muted-foreground mb-3">
+                  {subs.length} recurring payment{subs.length === 1 ? "" : "s"} · ~<span className="font-semibold text-foreground">{formatAUD(monthlySubTotal)}</span>/month
+                </p>
+              )}
+              <div className="border border-border rounded-[12px] bg-[var(--surface)] overflow-hidden">
+                <table className="w-full text-[13px]">
+                  <thead className="bg-[var(--secondary)] text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <tr><th className="text-left px-4 py-2">Merchant</th><th className="text-left px-4 py-2">Cadence</th><th className="text-left px-4 py-2">Next</th><th className="text-right px-4 py-2">Amount</th></tr>
+                  </thead>
+                  <tbody>
+                    {subs.map((s, i) => (
+                      <tr key={i} className="border-t border-border">
+                        <td className="px-4 py-2">{s.merchant}</td>
+                        <td className="px-4 py-2 capitalize text-muted-foreground">{s.cadence}</td>
+                        <td className="px-4 py-2 tabular-nums text-muted-foreground">{s.nextEstimate ?? "—"}</td>
+                        <td className="px-4 py-2 text-right tabular-nums">{formatAUD(s.amount)}</td>
+                      </tr>
+                    ))}
+                    {subs.length === 0 && (
+                      <tr><td colSpan={4} className="px-4 py-8 text-center text-[12px] text-muted-foreground">No recurring payments detected yet. Connect an account or import transactions to spot subscriptions.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       <p className="text-[11px] text-muted-foreground text-center mt-8">
-        Maal does not provide financial advice. Information is for educational purposes only.
+        Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.
       </p>
 
       {/* Manual entry dialog */}

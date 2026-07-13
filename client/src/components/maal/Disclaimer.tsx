@@ -1,8 +1,12 @@
+// The exact mandatory disclaimer required on every page (see CLAUDE.md).
+const MANDATORY_DISCLAIMER =
+  "Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.";
+
 export function Disclaimer({ variant = "footer" }: { variant?: "footer" | "inline" }) {
   if (variant === "inline") {
     return (
       <p className="text-[11px] leading-relaxed text-muted-foreground tracking-wide">
-        Maal does not provide financial advice. Information is for educational purposes only.
+        {MANDATORY_DISCLAIMER}
       </p>
     );
   }
@@ -13,10 +17,7 @@ export function Disclaimer({ variant = "footer" }: { variant?: "footer" | "inlin
           Educational disclaimer
         </p>
         <p className="text-[12px] leading-relaxed text-muted-foreground max-w-3xl">
-          Maal does not provide financial advice. Any information, scores, or action plans are generated from
-          mathematical models for educational purposes only and do not take into account your personal objectives,
-          financial situation, or needs. Consider the appropriateness of the information and seek qualified
-          professional advice before acting.
+          {MANDATORY_DISCLAIMER}
         </p>
       </div>
     </div>
