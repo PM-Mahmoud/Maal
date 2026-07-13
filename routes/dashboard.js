@@ -689,10 +689,15 @@ router.post('/goals', async (req, res) => {
     const name = String(req.body.name || '').trim().slice(0, 120);
     const target = Number(req.body.target);
     if (!name || isNaN(target) || target <= 0) return res.status(400).json({ error: 'Add a name and a target amount.' });
-    const types = ['Grow', 'Save', 'Pay Off', 'Invest'];
-    const type = types.includes(req.body.type) ? req.body.type : 'Save';
-    const id = await goalsDb.createGoal(req.session.userId, { name, type, target, current: Number(req.body.current) || 0 });
-    res.json({ ok: true, id });
+    // Legacy EJS goals are manually-tracked (no live source). Map the old
+    // {name,type,target,current} shape onto the new source-linked columns.
+    const created = await goalsDb.createGoal(req.session.userId, {
+      name,
+      source_type: 'manual',
+      target_amount: target,
+      current_amount: Number(req.body.current) || 0,
+    });
+    res.json({ ok: true, id: created && created.id });
   } catch (err) {
     console.error('goal create error:', err.message);
     res.status(500).json({ error: 'Could not create goal.' });
