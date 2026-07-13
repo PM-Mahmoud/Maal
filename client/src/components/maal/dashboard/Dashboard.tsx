@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { GripVertical, Eye, EyeOff, Maximize2, Minimize2, Plus, Settings2, ArrowUpRight, ArrowUp, Info, ChevronDown, Layers, CreditCard, FileText } from "lucide-react";
+import { GripVertical, Eye, EyeOff, Maximize2, Minimize2, Plus, Settings2, ArrowUpRight, Info, ChevronDown, Layers, CreditCard, FileText } from "lucide-react";
+import { AskMaalTile } from "@/components/maal/dashboard/AskMaalTile";
 import { fetchPortfolio, type Portfolio } from "@/lib/portfolio";
 import { fetchMaalScore, type MaalScore } from "@/lib/maalScore";
 import { fetchProfile } from "@/lib/profile";
@@ -24,8 +25,8 @@ const TILES: TileDef[] = [
   { id: "investments",  title: "Investments Value",    defaultSize: "sm", kind: "kpi_investments" },
   { id: "cash",         title: "Total Cash",           defaultSize: "sm", kind: "kpi_cash" },
   { id: "debts",        title: "Total Debts",          defaultSize: "sm", kind: "kpi_debts" },
+  { id: "ask_composer", title: "Ask Maal",             defaultSize: "wide", kind: "ask_composer" },
   { id: "radar",        title: "Radar",                defaultSize: "lg", kind: "radar" },
-  { id: "ask",          title: "Ask Maal",             defaultSize: "md", kind: "ask" },
   { id: "assets",       title: "Assets",               defaultSize: "md", kind: "assets" },
   { id: "liabilities",  title: "Liabilities",          defaultSize: "md", kind: "liabilities" },
   { id: "setup",        title: "Setup Progress",       defaultSize: "md", kind: "setup" },
@@ -40,7 +41,10 @@ const TILES: TileDef[] = [
 ];
 
 type Layout = { order: string[]; sizes: Record<string, Size>; hidden: string[] };
-const STORAGE_KEY = "maal.dashboard.v2";
+// v3: removed the old small "ask" tile; the Ask Maal composer is now a full-width
+// band placed right below the KPI tiles. Bumped so saved v2 layouts don't pin the
+// old order/tile.
+const STORAGE_KEY = "maal.dashboard.v3";
 
 function defaultLayout(): Layout {
   return {
@@ -202,16 +206,28 @@ export function Dashboard() {
       <div className="grid grid-cols-12 gap-4 auto-rows-min">
         {visibleTiles.map((t) => {
           const size = layout.sizes[t.id] ?? t.defaultSize;
-          const isAsk = t.id === "ask";
+          // The Ask Maal composer brings its own card, so it renders full-width
+          // without the tile chrome (no title header / double border).
+          if (t.kind === "ask_composer") {
+            return (
+              <div key={t.id}
+                draggable
+                onDragStart={() => onDragStart(t.id)}
+                onDragOver={(e) => onDragOver(e, t.id)}
+                onDragEnd={() => (dragId.current = null)}
+                className={sizeClass.wide}
+              >
+                <AskMaalTile />
+              </div>
+            );
+          }
           return (
             <div key={t.id}
               draggable
               onDragStart={() => onDragStart(t.id)}
               onDragOver={(e) => onDragOver(e, t.id)}
               onDragEnd={() => (dragId.current = null)}
-              className={`${sizeClass[size]} group relative rounded-[14px] border p-5 transition hover:border-foreground/30 ${
-                isAsk ? "border-mint/30 bg-mint/[0.06]" : "border-border bg-[var(--surface)]"
-              }`}
+              className={`${sizeClass[size]} group relative rounded-[14px] border border-border bg-[var(--surface)] p-5 transition hover:border-foreground/30`}
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-1.5 min-w-0">
@@ -291,7 +307,6 @@ function TileBody({ kind, period, portfolio, score, snapshots, createdAt }: { ki
   switch (kind) {
     case "maal_score": return <MaalScoreTile score={score} />;
     case "radar": return <RadarTile />;
-    case "ask": return <AskTile />;
     case "assets": return <AssetsTile portfolio={portfolio} />;
     case "liabilities": return <LiabilitiesTile portfolio={portfolio} />;
     case "setup": return <SetupTile portfolio={portfolio} />;
@@ -633,36 +648,6 @@ function RadarTile() {
         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-mint text-background text-[12px] font-semibold">
         <Plus className="size-3.5" /> Create Radar
       </Link>
-    </div>
-  );
-}
-
-function AskTile() {
-  const [q, setQ] = useState("");
-  return (
-    <div>
-      <Link to="/app/advisor" className="block">
-        <div className="rounded-[10px] bg-background/60 border border-border p-3 flex items-center gap-2">
-          <input value={q} onChange={(e) => setQ(e.target.value)}
-            placeholder="Ask me anything about your finances"
-            className="flex-1 bg-transparent text-[13px] outline-none" />
-          <span className="size-7 rounded-md bg-mint text-background grid place-items-center"><ArrowUp className="size-3.5" /></span>
-        </div>
-      </Link>
-      <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground mt-4 mb-2">Ask Maal questions like…</p>
-      <div className="grid grid-cols-2 gap-1.5">
-        {[
-          "Am I taking on too much risk in my portfolio?",
-          "How did my net worth change this month?",
-          "What were my top 3 biggest expenses this month?",
-          "How much of my portfolio is in tech stocks right now?",
-        ].map((s) => (
-          <Link key={s} to="/app/advisor"
-            className="text-left text-[11px] text-muted-foreground hover:text-foreground border border-border rounded-[8px] p-2 leading-snug">
-            {s}
-          </Link>
-        ))}
-      </div>
     </div>
   );
 }
