@@ -12,29 +12,38 @@ export function RulesModal({ onClose, onApplied }: { onClose: () => void; onAppl
 
   async function refresh() { setRules(await listRules()); }
   useEffect(() => { refresh(); getCategoryGroups().then(setGroups); }, []);
+  // Close on Escape for keyboard/screen-reader users.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   const subCats = groups.find((g) => g.group === draft.category_group)?.categories ?? [];
 
   async function add() {
     if (!draft.match_text.trim() || !draft.category_group) return;
     setBusy(true);
-    const ok = await createRule(draft);
-    setBusy(false);
-    if (ok) { setDraft({ match_type: "contains", match_text: "", category_group: "", category: "" }); refresh(); }
+    try {
+      const ok = await createRule(draft);
+      if (ok) { setDraft({ match_type: "contains", match_text: "", category_group: "", category: "" }); refresh(); }
+    } finally { setBusy(false); }
   }
 
   async function apply() {
     setBusy(true);
-    const n = await applyRules();
-    setBusy(false);
-    setToast(`Categorised ${n} transaction${n === 1 ? "" : "s"}.`);
-    setTimeout(() => setToast(null), 3000);
-    onApplied?.();
+    try {
+      const n = await applyRules();
+      setToast(`Categorised ${n} transaction${n === 1 ? "" : "s"}.`);
+      setTimeout(() => setToast(null), 3000);
+      onApplied?.();
+    } finally { setBusy(false); }
   }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="w-full max-w-xl rounded-[16px] border border-border bg-[var(--surface)] p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label="Transaction rules"
+        className="w-full max-w-xl rounded-[16px] border border-border bg-[var(--surface)] p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-[15px] font-bold tracking-display">Transaction rules</h3>
           <button onClick={onClose} aria-label="Close"><X className="size-4 text-muted-foreground hover:text-foreground" /></button>

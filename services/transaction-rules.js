@@ -99,11 +99,16 @@ function inferCadence(dates) {
   return null;
 }
 
+// Payment-processor / network / channel prefixes that lead a description but
+// are NOT the merchant (e.g. "EFTPOS SPOTIFY", "DIRECT DEBIT AGL", "VISA NETFLIX").
+// Stripping them stops different billers collapsing onto the same key.
+const MERCHANT_STOPWORDS = /\b(pty|ltd|au|australia|sydney|melbourne|pos|purchase|card|value|date|eftpos|direct|debit|bpay|visa|mastercard|amex|transfer|transaction|payment|pay|withdrawal|deposit|osko|payid)\b/g;
+
 function normaliseMerchant(desc) {
   const cleaned = String(desc || '')
     .toLowerCase()
     .replace(/[^a-z ]+/g, ' ')           // drop digits + punctuation (ref ids, dates)
-    .replace(/\b(pty|ltd|au|australia|sydney|melbourne|pos|purchase|card|value|date)\b/g, ' ')
+    .replace(MERCHANT_STOPWORDS, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   // Key on the leading merchant word(s). Bank descriptions lead with the

@@ -117,15 +117,26 @@ async function setTransactionCategory(userId, transactionId, group, category, so
   return true;
 }
 
-// Bulk-apply computed assignments (from the rules engine). Only writes rows that
-// belong to the user (assignments come from their own transactions).
+// Bulk-apply computed assignments (from the rules engine) in a SINGLE upsert.
+// The assignments come from the user's own transactions (the apply handler reads
+// them via getTransactionsWithCategory scoped by user_id), and the INSERT filters
+// to transactions owned by the user, so no per-row ownership lookup is needed
+// here (that check stays in the single-row setTransactionCategory helper).
 async function applyCategoryAssignments(userId, assignments) {
-  let applied = 0;
-  for (const a of assignments) {
-    const ok = await setTransactionCategory(userId, a.transaction_id, a.category_group, a.category, 'rule');
-    if (ok) applied++;
-  }
-  return applied;
+  if (!assignments.length) return 0;
+  const ids = assignments.map((a) => a.transaction_id);
+  const groups = assignments.map((a) => a.category_group);
+  const cats = assignments.map((a) => a.category || null);
+  const r = await pool.query(
+    `INSERT INTO transaction_categories (transaction_id, user_id, category_group, category, source, updated_at)
+     SELECT t.id, $1, x.grp, x.cat, 'rule', NOW()
+       FROM unnest($2::bigint[], $3::text[], $4::text[]) AS x(tid, grp, cat)
+       JOIN transactions t ON t.id = x.tid AND t.user_id = $1
+     ON CONFLICT (transaction_id)
+     DO UPDATE SET category_group = EXCLUDED.category_group, category = EXCLUDED.category, source = 'rule', updated_at = NOW()`,
+    [userId, ids, groups, cats]
+  );
+  return r.rowCount;
 }
 
 module.exports = {

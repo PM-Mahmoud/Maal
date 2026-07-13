@@ -1027,7 +1027,9 @@ router.post('/v1/transaction-rules/apply', async (req, res) => {
       txnDb.listRules(req.session.userId),
       txnDb.getTransactionsWithCategory(req.session.userId, 2000),
     ]);
-    const assignments = computeAssignments(rules, rows);
+    // Never let a rule overwrite a category the user set by hand.
+    const eligible = rows.filter((r) => r.category_source !== 'manual');
+    const assignments = computeAssignments(rules, eligible);
     const applied = await txnDb.applyCategoryAssignments(req.session.userId, assignments);
     res.json({ ok: true, applied });
   } catch (e) {
@@ -1049,6 +1051,12 @@ const ASSET_TABLES = new Set([
   // BUG-5 FIX: 'profiles' table does not exist; the correct table is 'user_profiles'
   // 'user_profiles' is intentionally not in the generic API (profile updates go through /dashboard/profile)
   'score_snapshots',
+  // NOTE: 'transaction_rules' and 'transaction_categories' are deliberately
+  // EXCLUDED from the generic handler. Their dedicated routes enforce taxonomy
+  // validation (isKnownGroup) and per-row ownership (setTransactionCategory
+  // checks the transaction belongs to the user). Adding them here would expose
+  // an IDOR on transaction_categories (the generic POST doesn't verify a
+  // supplied transaction_id is the caller's). Do not add them.
 ]);
 
 function parseFilters(raw) {

@@ -49,6 +49,15 @@ test('unmatched positive amount defaults to Income; unmatched debit → null', (
   assert.strictEqual(cats.autoCategorize('zzz obscure', -12), null);
 });
 
+test('each keyword resolves to its OWN sub-category (not the group default)', () => {
+  assert.deepStrictEqual(pick(cats.autoCategorize('ANZ INTEREST PAID', 3)), ['Income', 'Interest']);
+  assert.deepStrictEqual(pick(cats.autoCategorize('THE COFFEE CLUB', -6)), ['Food & Dining', 'Cafes']);
+  assert.deepStrictEqual(pick(cats.autoCategorize('NIB HEALTH INSURANCE', -180)), ['Financial', 'Insurance']);
+  assert.deepStrictEqual(pick(cats.autoCategorize('NETFLIX.COM', -18)), ['Recurring & Subscriptions', 'Streaming']);
+});
+
+function pick(x) { return x ? [x.group, x.category] : null; }
+
 console.log('\nmatchRule');
 
 test('contains / equals / starts_with, case-insensitive', () => {
@@ -121,6 +130,21 @@ test('groups same merchant despite noisy descriptions', () => {
   const subs = detectSubscriptions(txns);
   assert.strictEqual(subs.length, 1);
   assert.strictEqual(subs[0].occurrences, 3);
+});
+
+test('different billers sharing a processor prefix + amount stay SEPARATE', () => {
+  // "EFTPOS SPOTIFY" and "EFTPOS NETFLIX" at the same amount must not collapse
+  // into one subscription just because they share the EFTPOS prefix.
+  const txns = [
+    { id: 1, description: 'EFTPOS SPOTIFY AU', amount: -11.99, post_date: '2026-01-01' },
+    { id: 2, description: 'EFTPOS NETFLIX AU', amount: -11.99, post_date: '2026-01-02' },
+    { id: 3, description: 'EFTPOS SPOTIFY AU', amount: -11.99, post_date: '2026-02-01' },
+    { id: 4, description: 'EFTPOS NETFLIX AU', amount: -11.99, post_date: '2026-02-02' },
+    { id: 5, description: 'EFTPOS SPOTIFY AU', amount: -11.99, post_date: '2026-03-01' },
+    { id: 6, description: 'EFTPOS NETFLIX AU', amount: -11.99, post_date: '2026-03-02' },
+  ];
+  const subs = detectSubscriptions(txns);
+  assert.strictEqual(subs.length, 2, 'spotify and netflix detected as separate subscriptions');
 });
 
 console.log('\n' + passed + ' passed, ' + failed + ' failed');

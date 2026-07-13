@@ -38,9 +38,11 @@ function TransactionsPage() {
   const [showRules, setShowRules] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  async function refresh() { setRows((await list()) as any); }
+  // Reset subs on any transactions refresh so the Subscriptions tab re-detects
+  // after a manual add / CSV import instead of showing stale merchants.
+  async function refresh() { setRows((await list()) as any); setSubs([]); }
   useEffect(() => { refresh(); }, []);
-  useEffect(() => { if (view === "subs" && subs.length === 0) getSubscriptions().then(setSubs); }, [view]);
+  useEffect(() => { if (view === "subs" && subs.length === 0) getSubscriptions().then(setSubs); }, [view, subs.length]);
 
   const monthlySubTotal = useMemo(() => {
     const per = { weekly: 52 / 12, fortnightly: 26 / 12, monthly: 1, yearly: 1 / 12 } as Record<string, number>;
@@ -71,24 +73,52 @@ function TransactionsPage() {
     } finally { setBusy(null); }
   }
 
+  // Parse a CSV amount cell, preserving accounting negatives like "(12.34)" and
+  // "-12.34"/"12.34 CR". Returns a finite number or null.
+  function parseAmount(raw: string): number | null {
+    const s = String(raw).trim();
+    const negative = /^\(.*\)$/.test(s) || /\bcr\b/i.test(s) || /^-/.test(s);
+    const n = Number(s.replace(/[()]/g, "").replace(/[^0-9.]/g, ""));
+    if (!isFinite(n)) return null;
+    return negative ? -Math.abs(n) : n;
+  }
+
   async function onCsv(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return;
     setBusy("import"); setImportMsg(null);
     try {
+      // PDF statement parsing isn't supported yet — don't feed a PDF through the
+      // CSV parser (it would produce garbage rows).
+      if (/\.pdf$/i.test(file.name) || file.type === "application/pdf") {
+        setImportMsg("PDF statements aren't supported yet — export a CSV (Date, Description, Amount) and upload that.");
+        return;
+      }
       const text = await file.text();
       const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
       const first = lines[0]?.toLowerCase() ?? "";
       const hasHeader = first.includes("date") && first.includes("amount");
       const body = hasHeader ? lines.slice(1) : lines;
-      let inserted = 0;
+
+      // Parse + validate EVERY row first; only write if the whole file is clean,
+      // so a malformed row can't leave a partial import behind.
+      const parsed: { occurred_on: string; description: string; amount: number }[] = [];
       for (const line of body) {
         const parts = line.split(",").map((p) => p.trim().replace(/^"|"$/g, ""));
         if (parts.length < 3) continue;
         const [date, desc, amt] = parts;
-        const iso = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date(date).toISOString().slice(0, 10);
-        const amount = Number(amt.replace(/[^0-9.\-]/g, ""));
-        if (!iso || !desc || !isFinite(amount)) continue;
-        await addTx({ data: { occurred_on: iso, description: desc.slice(0, 160), category: "other", amount } } as any);
+        const d = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date(date).toISOString().slice(0, 10);
+        const amount = parseAmount(amt);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !desc || amount === null) {
+          setImportMsg(`Couldn't read a row ("${line.slice(0, 40)}"). No transactions were imported — please check the file.`);
+          return;
+        }
+        parsed.push({ occurred_on: d, description: desc.slice(0, 160), amount });
+      }
+      if (!parsed.length) { setImportMsg("No valid rows found. Expected columns: Date, Description, Amount."); return; }
+
+      let inserted = 0;
+      for (const row of parsed) {
+        await addTx({ data: { ...row, category: "other" } } as any);
         inserted++;
       }
       setImportMsg(`Imported ${inserted} row${inserted === 1 ? "" : "s"} from ${file.name}.`);
@@ -268,7 +298,7 @@ function TransactionsPage() {
       )}
 
       <p className="text-[11px] text-muted-foreground text-center mt-8">
-        Maal does not provide financial advice. Information is for educational purposes only.
+        Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.
       </p>
 
       {/* Manual entry dialog */}

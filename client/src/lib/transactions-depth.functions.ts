@@ -29,25 +29,34 @@ export async function listRules(): Promise<TxnRule[]> {
 }
 
 export async function createRule(rule: { name?: string; match_type: string; match_text: string; category_group: string; category?: string }): Promise<boolean> {
-  const r = await fetch("/api/v1/transaction-rules", {
-    method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rule),
-  });
-  return r.ok;
+  try {
+    const r = await fetch("/api/v1/transaction-rules", {
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rule),
+    });
+    return r.ok;
+  } catch { return false; }
 }
 
-export async function deleteRule(id: number): Promise<void> {
-  await fetch(`/api/v1/transaction-rules/${id}`, { method: "DELETE", credentials: "include" });
+export async function deleteRule(id: number): Promise<boolean> {
+  try {
+    const r = await fetch(`/api/v1/transaction-rules/${id}`, { method: "DELETE", credentials: "include" });
+    return r.ok;
+  } catch { return false; }
 }
 
 export async function applyRules(): Promise<number> {
-  const r = await fetch("/api/v1/transaction-rules/apply", { method: "POST", credentials: "include" });
-  if (!r.ok) return 0;
-  return (await r.json()).applied ?? 0;
+  try {
+    const r = await fetch("/api/v1/transaction-rules/apply", { method: "POST", credentials: "include" });
+    if (!r.ok) return 0;
+    return (await r.json()).applied ?? 0;
+  } catch { return 0; }
 }
 
 export async function setTransactionCategory(id: number, category_group: string, category?: string): Promise<boolean> {
-  const r = await fetch(`/api/v1/transactions/${id}/category`, {
-    method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ category_group, category }),
-  });
-  return r.ok;
+  try {
+    const r = await fetch(`/api/v1/transactions/${id}/category`, {
+      method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ category_group, category }),
+    });
+    return r.ok;
+  } catch { return false; }
 }
