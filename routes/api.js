@@ -911,6 +911,37 @@ router.post('/v1/report', async (req, res) => {
   }
 });
 
+// ─── AI-generated files emailed on request (PR 11) ─────────────────────────
+// POST /api/v1/files/generate { type: csv|excel|pdf, dataset: net_worth|
+// transactions|goals|balances } → builds the file from the user's REAL data and
+// emails it as an attachment. Metered against ai_files (Free = 0 → 402 upgrade
+// prompt; Pro 10 / Max 100 per month). Scoped to the session user.
+router.post('/v1/files/generate', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const d = (req.body && req.body.data && typeof req.body.data === 'object') ? req.body.data : (req.body || {});
+    const filegen = require('../services/filegen');
+    const type = String(d.type || '').toLowerCase();
+    const dataset = String(d.dataset || 'net_worth');
+
+    // Metering: consume one ai_files credit (402 + upgrade prompt when over/free).
+    const gate = await gateMonthlyAiUsage(req, res, 'ai_files');
+    if (!gate) return;
+
+    let out;
+    try {
+      out = await filegen.generateAndEmailFile(req.session.userId, { type, dataset });
+    } catch (e) {
+      console.error('file generate/email failed:', e.message);
+      return res.status(400).json({ error: 'Could not generate that file. Check the type and try again.' });
+    }
+    res.json({ ok: true, ...out });
+  } catch (err) {
+    console.error('/api/v1/files/generate error:', err.message);
+    res.status(500).json({ error: 'Could not generate the file.' });
+  }
+});
+
 // ─── Transactions depth: categories, rules, subscriptions (PR 6) ───────────
 // All registered BEFORE /v1/:table so they aren't swallowed by the generic
 // handler. Scoped to req.session.userId. Categories live in a separate table,
