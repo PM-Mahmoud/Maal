@@ -15,7 +15,9 @@
 
 const https = require('https');
 
-async function sendEmail({ to, subject, html, text }) {
+// attachments: optional [{ filename, content }] where content is base64 (Resend's
+// attachment shape). Used by the AI-generated-files feature (PR 11).
+async function sendEmail({ to, subject, html, text, attachments }) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.warn('[email] RESEND_API_KEY not set — skipping email to', to);
@@ -24,7 +26,9 @@ async function sendEmail({ to, subject, html, text }) {
 
   const fromAddress = process.env.EMAIL_FROM || 'Maal <onboarding@resend.dev>';
 
-  const payload = JSON.stringify({ from: fromAddress, to, subject, html, text });
+  const body = { from: fromAddress, to, subject, html, text };
+  if (Array.isArray(attachments) && attachments.length) body.attachments = attachments;
+  const payload = JSON.stringify(body);
 
   return new Promise((resolve, reject) => {
     const req = https.request({
@@ -132,4 +136,25 @@ async function sendResearchComplete(user, report) {
   return sendEmail({ to: user.email, subject: 'Your Maal research is ready', html, text });
 }
 
-module.exports = { sendEmail, sendWaitlistConfirmation, sendPortfolioDigest, sendResearchComplete };
+// Email a generated data file (CSV / Excel / PDF) as an attachment (PR 11).
+async function sendGeneratedFile(user, file) {
+  if (!user || !user.email || !file || !file.base64) return;
+  const title = file.title || 'Your Maal export';
+  const html = `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:auto;">
+    <p style="font-size:1.2rem;font-weight:700;color:#12B5A6;margin:0 0 4px;">Maal</p>
+    <h1 style="font-size:1.2rem;font-weight:700;color:#0E0E10;margin:0 0 12px;">${esc(title)}</h1>
+    <p style="margin:0 0 16px;color:#333;font-size:0.95rem;line-height:1.6;">Your file is attached (<b>${esc(file.filename)}</b>), generated from your own Maal data.</p>
+    <p style="margin:0 0 20px;"><a href="${BASE_URL}/app" style="background:#0E0E10;color:#fff;padding:0.6rem 1.2rem;border-radius:8px;text-decoration:none;font-size:0.9rem;">Open Maal</a></p>
+    <p style="font-size:0.72rem;color:#888;">Education only — not financial advice.</p>
+  </div>`;
+  const text = `${title}\nYour file is attached (${file.filename}), generated from your own Maal data.\n${BASE_URL}/app\n\nEducation only — not financial advice.`;
+  return sendEmail({
+    to: user.email,
+    subject: title,
+    html,
+    text,
+    attachments: [{ filename: file.filename, content: file.base64 }],
+  });
+}
+
+module.exports = { sendEmail, sendWaitlistConfirmation, sendPortfolioDigest, sendResearchComplete, sendGeneratedFile };
