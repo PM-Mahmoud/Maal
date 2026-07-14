@@ -107,7 +107,89 @@ function rowToResearchReport(row) {
 
 function safeParse(s) { try { return JSON.parse(s); } catch { return []; } }
 
+// ─── Deep research jobs (PR 8) — async pipeline tracking ────────────────────
+// A job row tracks the phase/status of a background research run; the finished
+// report still lands in research_reports (report_id links them). All reads are
+// scoped by user_id (ownership = IDOR guard).
+
+async function createJob(userId, question) {
+  const r = await pool.query(
+    `INSERT INTO research_jobs (user_id, question, status, phase)
+     VALUES ($1, $2, 'running', 'plan') RETURNING id`,
+    [userId, question]
+  );
+  return r.rows[0].id;
+}
+
+async function setJobPhase(id, phase) {
+  await pool.query(
+    `UPDATE research_jobs SET phase = $2, updated_at = NOW() WHERE id = $1`,
+    [id, phase]
+  );
+}
+
+async function completeJob(id, reportId, result) {
+  await pool.query(
+    `UPDATE research_jobs
+        SET status = 'complete', phase = 'done', report_id = $2,
+            result = $3, updated_at = NOW(), completed_at = NOW()
+      WHERE id = $1`,
+    [id, reportId || null, result ? JSON.stringify(result) : null]
+  );
+}
+
+async function failJob(id, message) {
+  await pool.query(
+    `UPDATE research_jobs
+        SET status = 'error', error = $2, updated_at = NOW(), completed_at = NOW()
+      WHERE id = $1`,
+    [id, String(message || 'Research failed.').slice(0, 500)]
+  );
+}
+
+async function getJob(id, userId) {
+  const r = await pool.query(
+    `SELECT id, question, status, phase, report_id, result, error,
+            started_at, updated_at, completed_at
+       FROM research_jobs WHERE id = $1 AND user_id = $2`,
+    [id, userId]
+  );
+  return r.rows[0] || null;
+}
+
+// The stored quant result for a finished report (for the PDF renderer), scoped
+// by user_id. Returns the quant object or null.
+async function getJobQuantByReport(userId, reportId) {
+  const r = await pool.query(
+    `SELECT result FROM research_jobs
+      WHERE user_id = $1 AND report_id = $2 AND result IS NOT NULL
+      ORDER BY completed_at DESC NULLS LAST LIMIT 1`,
+    [userId, reportId]
+  );
+  const row = r.rows[0];
+  if (!row || !row.result) return null;
+  const result = typeof row.result === 'string' ? safeJson(row.result) : row.result;
+  return (result && result.quant) || null;
+}
+
+function safeJson(s) { try { return JSON.parse(s); } catch { return null; } }
+
+// On server boot, a job left 'running' can only be an orphan from a killed
+// process (the pipeline runs in-process). Mark them errored so the client can
+// offer a retry instead of polling forever. Returns the count reaped.
+async function markOrphanJobsFailed() {
+  const r = await pool.query(
+    `UPDATE research_jobs
+        SET status = 'error', error = 'Interrupted — please run this research again.',
+            updated_at = NOW(), completed_at = NOW()
+      WHERE status = 'running'`
+  );
+  return r.rowCount || 0;
+}
+
 module.exports = {
   createReport, completeReport, failReport, listReports, getReport,
   listReportsWithBody, deleteReport, researchBodyFromReport, rowToResearchReport,
+  createJob, setJobPhase, completeJob, failJob, getJob, markOrphanJobsFailed,
+  getJobQuantByReport,
 };

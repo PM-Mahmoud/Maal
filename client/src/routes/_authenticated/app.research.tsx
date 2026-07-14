@@ -1,12 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, ArrowLeft, Trash2 } from "lucide-react";
-import { generateResearch, listResearch, deleteResearch } from "@/lib/research.functions";
+import { ArrowUp, ArrowLeft, Trash2, Download } from "lucide-react";
+import { startResearch, pollResearch, listResearch, deleteResearch, downloadResearchPdf } from "@/lib/research.functions";
 
 export const Route = createFileRoute("/_authenticated/app/research")({ component: ResearchPage });
 
 type Report = { id: string; topic: string; body: any; created_at: string };
+
+// User-facing labels for each pipeline phase (Plan→Gather→Compute→Write→Verify→Render).
+const PHASE_LABEL: Record<string, string> = {
+  plan: "Planning the research…",
+  gather: "Gathering market data & sources…",
+  compute: "Running the numbers (risk, volatility, Monte-Carlo)…",
+  write: "Writing your report…",
+  verify: "Fact-checking against Australian rules…",
+  render: "Finishing up…",
+  done: "Done",
+};
+const PHASE_ORDER = ["plan", "gather", "compute", "write", "verify", "render"];
 
 const PROMPTS = [
   "What if the ASX drops 20% next quarter — how exposed am I?",
@@ -23,15 +35,16 @@ function formatDay(iso: string) {
 
 function ResearchPage() {
   const list = listResearch;
-  const gen = generateResearch;
   const rm = deleteResearch;
 
   const [reports, setReports] = useState<Report[]>([]);
   const [topic, setTopic] = useState("");
   const [loading, setLoading] = useState(false);
+  const [phase, setPhase] = useState<string | null>(null);
   const [active, setActive] = useState<Report | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const pollRef = useRef<number | null>(null);
 
   async function refresh() {
     const r = (await list()) as Report[];
@@ -39,21 +52,47 @@ function ResearchPage() {
   }
   useEffect(() => {
     refresh();
+    return () => { if (pollRef.current) window.clearTimeout(pollRef.current); };
   }, []);
 
   async function runResearch(q: string) {
     if (!q.trim() || loading) return;
     setLoading(true);
     setErr(null);
+    setPhase("plan");
     try {
-      const r = (await gen({ data: { topic: q.trim() } })) as Report;
+      const { jobId } = await startResearch({ data: { topic: q.trim() } });
       setTopic("");
-      setActive(r);
-      await refresh();
+      // Poll until the job completes or errors. Research is quick; poll ~2s.
+      const tick = async () => {
+        try {
+          const s = await pollResearch(jobId);
+          setPhase(s.phase);
+          if (s.status === "complete" && s.report) {
+            setActive(s.report as Report);
+            setLoading(false);
+            setPhase(null);
+            await refresh();
+            return;
+          }
+          if (s.status === "error") {
+            setErr(s.error || "The research engine hit a snag — please try again.");
+            setLoading(false);
+            setPhase(null);
+            return;
+          }
+          pollRef.current = window.setTimeout(tick, 2000);
+        } catch (e: any) {
+          setErr(e?.message ?? "Failed");
+          setLoading(false);
+          setPhase(null);
+        }
+      };
+      pollRef.current = window.setTimeout(tick, 1500);
     } catch (e: any) {
       setErr(e?.message ?? "Failed");
-    } finally {
       setLoading(false);
+      setPhase(null);
     }
   }
 
@@ -120,16 +159,24 @@ function ResearchPage() {
             <p className="text-[11px] text-muted-foreground">
               Education only — not personal financial advice.
             </p>
-            <button
-              onClick={async () => {
-                await rm({ data: { id: active.id } });
-                setActive(null);
-                refresh();
-              }}
-              className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
-            >
-              <Trash2 className="w-3 h-3" /> Delete report
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => downloadResearchPdf(active.id).catch((e) => setErr(e?.message ?? "PDF failed"))}
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-foreground hover:text-mint"
+              >
+                <Download className="w-3.5 h-3.5" /> Download PDF
+              </button>
+              <button
+                onClick={async () => {
+                  await rm({ data: { id: active.id } });
+                  setActive(null);
+                  refresh();
+                }}
+                className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+              >
+                <Trash2 className="w-3 h-3" /> Delete report
+              </button>
+            </div>
           </div>
         </article>
       </div>
@@ -164,7 +211,17 @@ function ResearchPage() {
             aria-label="Ask Maal Research"
           />
           <div className="flex items-end justify-between mt-6">
-            <p className="text-[11px] text-muted-foreground">Grounded in live data · education only</p>
+            {loading && phase ? (
+              <p className="text-[11px] text-mint flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-mint animate-pulse" />
+                {PHASE_LABEL[phase] ?? "Working…"}
+                <span className="text-muted-foreground">
+                  ({Math.min(PHASE_ORDER.indexOf(phase) + 1, PHASE_ORDER.length)}/{PHASE_ORDER.length})
+                </span>
+              </p>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">Grounded in live data · education only</p>
+            )}
             <button
               type="submit"
               disabled={loading || !topic.trim()}
