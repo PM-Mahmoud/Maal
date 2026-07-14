@@ -274,6 +274,36 @@ async function getOtpLockStatus(userId) {
   return rows[0] || null;
 }
 
+// ─── Channels (PR 10) ─────────────────────────────────────────────────────────
+
+// Match an inbound SMS sender to a registered user by phone. Normalises to the
+// digits (+ optional leading +) so '+61 400 000 000' and '0400000000' variants
+// can still match if stored consistently. Returns the full user row or null.
+async function findUserByPhone(phone) {
+  const raw = String(phone || '').trim();
+  if (!raw) return null;
+  const digits = raw.replace(/[^\d]/g, '');
+  if (!digits) return null;
+  const { rows } = await pool.query(
+    `SELECT id, email, name, plan, phone, notification_prefs
+       FROM users
+      WHERE phone = $1 OR regexp_replace(COALESCE(phone,''), '[^0-9]', '', 'g') = $2
+      LIMIT 1`,
+    [raw, digits]
+  );
+  return rows[0] || null;
+}
+
+// Users who opted into the daily portfolio digest (notification_prefs.daily_digest = true).
+async function usersWithDigestOptIn() {
+  const { rows } = await pool.query(
+    `SELECT id, email, name FROM users
+      WHERE COALESCE(notification_prefs->>'daily_digest','false') = 'true'
+        AND email IS NOT NULL`
+  );
+  return rows;
+}
+
 module.exports = {
   ...module.exports,
   setUserPlan,
@@ -283,4 +313,6 @@ module.exports = {
   incrementOtpAttempts,
   resetOtpAttempts,
   getOtpLockStatus,
+  findUserByPhone,
+  usersWithDigestOptIn,
 };

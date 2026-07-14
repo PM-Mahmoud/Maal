@@ -7,6 +7,7 @@ import { listTemplates, upsertTemplate, listVersions, revertToVersion, resetTemp
 import { getRadarReadiness } from "@/lib/radar-readiness.functions";
 import { exportEventPdf, exportAllEventsPdf } from "@/lib/radar-pdf";
 import { enablePush, disablePush, getPushStatus, pushSupported } from "@/lib/push-client";
+import { getNotificationPrefs, setNotificationPref } from "@/lib/notification-prefs.functions";
 
 export const Route = createFileRoute("/_authenticated/app/radar")({ component: RadarPage });
 
@@ -45,6 +46,7 @@ function RadarPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [showAbout, setShowAbout] = useState(false);
   const [pushStatus, setPushStatus] = useState<"unsupported" | "denied" | "granted" | "default">("default");
+  const [dailyDigest, setDailyDigest] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [editDraft, setEditDraft] = useState({ title: "", sub: "", prompt: "", change_note: "" });
   const [historyFor, setHistoryFor] = useState<any | null>(null);
@@ -62,7 +64,17 @@ function RadarPage() {
   useEffect(() => {
     refresh();
     getPushStatus().then(setPushStatus);
+    getNotificationPrefs().then((p) => setDailyDigest(p.daily_digest));
   }, []);
+
+  async function toggleDigest() {
+    const next = !dailyDigest;
+    setDailyDigest(next);
+    const ok = await setNotificationPref("daily_digest", next);
+    if (!ok) { setDailyDigest(!next); setToast("Couldn't update the digest setting."); }
+    else setToast(next ? "Daily email digest on — a snapshot lands in your inbox each morning." : "Daily email digest off.");
+    setTimeout(() => setToast(null), 3500);
+  }
 
   function pickTemplate(t: any) {
     setPrompt(t.prompt);
@@ -159,19 +171,32 @@ function RadarPage() {
               Tell Maal what to watch. It checks on your schedule, alerts you in-app, on your phone and by email the moment something material changes.
             </p>
           </div>
-          {pushSupported() && (
+          <div className="shrink-0 flex items-center gap-2">
             <button
-              onClick={togglePush}
-              className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors ${
-                pushStatus === "granted"
+              onClick={toggleDigest}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors ${
+                dailyDigest
                   ? "border-[var(--mint)]/40 bg-[var(--mint)]/10 text-[var(--mint)]"
                   : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
               }`}
             >
               <BellRing className="w-3.5 h-3.5" />
-              {pushStatus === "granted" ? "Push on" : pushStatus === "denied" ? "Push blocked" : "Enable browser push"}
+              {dailyDigest ? "Daily digest on" : "Daily email digest"}
             </button>
-          )}
+            {pushSupported() && (
+              <button
+                onClick={togglePush}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors ${
+                  pushStatus === "granted"
+                    ? "border-[var(--mint)]/40 bg-[var(--mint)]/10 text-[var(--mint)]"
+                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
+                }`}
+              >
+                <BellRing className="w-3.5 h-3.5" />
+                {pushStatus === "granted" ? "Push on" : pushStatus === "denied" ? "Push blocked" : "Enable browser push"}
+              </button>
+            )}
+          </div>
         </div>
       </header>
 

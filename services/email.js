@@ -85,4 +85,51 @@ async function sendWaitlistConfirmation(email) {
   });
 }
 
-module.exports = { sendEmail, sendWaitlistConfirmation };
+// ─── Outbound channels (PR 10) ─────────────────────────────────────────────
+const BASE_URL = (process.env.BASE_URL || 'https://hellomaal.com').replace(/\/+$/, '');
+const AUD = (n) => '$' + Math.round(Number(n) || 0).toLocaleString('en-AU');
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+// Daily portfolio-summary digest. `model` comes from lib/digest.buildDigestModel.
+async function sendPortfolioDigest(user, model) {
+  if (!user || !user.email || !model) return;
+  const m = model;
+  const arrow = m.direction === 'up' ? '▲' : (m.direction === 'down' ? '▼' : '–');
+  const changeLine = m.weekChangeAbs == null
+    ? 'Not enough history yet to show a weekly change.'
+    : `${arrow} ${AUD(Math.abs(m.weekChangeAbs))} (${m.weekChangePct == null ? '' : (m.weekChangePct > 0 ? '+' : '') + m.weekChangePct + '%'}) over the past week`;
+  const scoreLine = m.score == null ? '' : `<p style="margin:0 0 6px;color:#6B6F76;font-size:0.85rem;">Maal Score: <b>${m.score}/100</b> (${esc(m.band)})</p>`;
+  const runwayLine = m.runwayMonths == null ? '' : `<p style="margin:0;color:#6B6F76;font-size:0.85rem;">Cash runway: <b>${m.runwayMonths} months</b></p>`;
+
+  const html = `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:auto;">
+    <p style="font-size:1.2rem;font-weight:700;color:#12B5A6;margin:0 0 4px;">Maal</p>
+    <h1 style="font-size:1.25rem;font-weight:700;color:#0E0E10;margin:0 0 14px;">Your daily snapshot</h1>
+    <p style="margin:0 0 4px;color:#6B6F76;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.08em;">Net worth</p>
+    <p style="margin:0 0 4px;font-size:1.8rem;font-weight:700;color:#0E0E10;">${AUD(m.netWorth)}</p>
+    <p style="margin:0 0 16px;color:${m.direction === 'down' ? '#C0392B' : '#12B5A6'};font-size:0.9rem;">${esc(changeLine)}</p>
+    <p style="margin:0 0 6px;color:#6B6F76;font-size:0.85rem;">Cash ${AUD(m.cash)} · Investments ${AUD(m.investments)} · Super ${AUD(m.superBalance)} · Debts ${AUD(m.debts)}</p>
+    ${scoreLine}${runwayLine}
+    <p style="margin:20px 0;"><a href="${BASE_URL}/app" style="background:#0E0E10;color:#fff;padding:0.6rem 1.2rem;border-radius:8px;text-decoration:none;font-size:0.9rem;">Open Maal</a></p>
+    <p style="font-size:0.72rem;color:#888;">Education only — not financial advice. You can turn off this digest in Settings.</p>
+  </div>`;
+  const text = `Maal — your daily snapshot\nNet worth: ${AUD(m.netWorth)}\n${changeLine}\nCash ${AUD(m.cash)} · Investments ${AUD(m.investments)} · Super ${AUD(m.superBalance)} · Debts ${AUD(m.debts)}\n${BASE_URL}/app\n\nEducation only — not financial advice.`;
+  return sendEmail({ to: user.email, subject: 'Your Maal daily snapshot', html, text });
+}
+
+// Research-complete notification — a report finished rendering.
+async function sendResearchComplete(user, report) {
+  if (!user || !user.email || !report) return;
+  const title = report.question || report.topic || 'Your research report';
+  const link = `${BASE_URL}/app/research`;
+  const html = `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:auto;">
+    <p style="font-size:1.2rem;font-weight:700;color:#12B5A6;margin:0 0 4px;">Maal</p>
+    <h1 style="font-size:1.2rem;font-weight:700;color:#0E0E10;margin:0 0 12px;">Your research is ready</h1>
+    <p style="margin:0 0 16px;color:#333;font-size:0.95rem;line-height:1.6;">“${esc(title)}” has finished. Open Maal to read the full report and download the PDF.</p>
+    <p style="margin:0 0 20px;"><a href="${esc(link)}" style="background:#0E0E10;color:#fff;padding:0.6rem 1.2rem;border-radius:8px;text-decoration:none;font-size:0.9rem;">View report</a></p>
+    <p style="font-size:0.72rem;color:#888;">Education only — not financial advice.</p>
+  </div>`;
+  const text = `Your Maal research is ready\n"${title}" has finished.\n${link}\n\nEducation only — not financial advice.`;
+  return sendEmail({ to: user.email, subject: 'Your Maal research is ready', html, text });
+}
+
+module.exports = { sendEmail, sendWaitlistConfirmation, sendPortfolioDigest, sendResearchComplete };

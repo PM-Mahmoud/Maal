@@ -198,6 +198,56 @@ app.get('/internal/ingest-knowledge', (req, res) => {
   });
 });
 
+// ─── Daily portfolio digest sweep (PR 10) ─────────────────────────────────
+// Hit once a day by an external scheduler (same shared-secret pattern as the
+// radar sweep): GET /internal/digest/run with Authorization: Bearer
+// <RADAR_CRON_SECRET>. Emails a snapshot to every user who opted into the digest.
+app.get('/internal/digest/run', async (req, res) => {
+  if (!checkCronSecret(req, 'RADAR_CRON_SECRET')) return res.status(403).json({ error: 'forbidden' });
+  try {
+    const { runDailyDigest } = require('./services/digest');
+    const result = await runDailyDigest();
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    console.error('digest sweep error:', e.message);
+    res.status(500).json({ error: 'digest sweep failed' });
+  }
+});
+
+// ─── Inbound SMS webhook (PR 10) — DORMANT until Twilio is provisioned ──────
+// POST /webhooks/twilio/sms. Feature-flagged off by default (TWILIO_INBOUND_ENABLED
+// !== 'true') so it is a no-op until Mahmoud provisions a full Twilio account +
+// AU inbound number. When enabled: verify the Twilio signature, match the sender
+// to a user, run advisor.chat (metered against the advisor-message budget), and
+// reply via TwiML. Unknown senders get a canned reply. Body is the urlencoded
+// form Twilio POSTs (parsed by the global urlencoded middleware).
+app.post('/webhooks/twilio/sms', async (req, res) => {
+  const { buildTwiml, validateTwilioSignature } = require('./lib/twilio-sms');
+  const respondTwiml = (messages) => res.type('text/xml').send(buildTwiml(messages));
+
+  // Dormant unless explicitly enabled — return empty TwiML so Twilio doesn't error.
+  if ((process.env.TWILIO_INBOUND_ENABLED || '').trim() !== 'true') {
+    return respondTwiml([]);
+  }
+
+  try {
+    const authToken = (process.env.TWILIO_AUTH_TOKEN || '').trim();
+    const signature = req.get('X-Twilio-Signature') || '';
+    const url = (process.env.TWILIO_WEBHOOK_URL || '').trim()
+      || `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+    if (!validateTwilioSignature(authToken, url, req.body || {}, signature)) {
+      return res.status(403).type('text/xml').send(buildTwiml([]));
+    }
+
+    const { handleInboundSms } = require('./services/sms');
+    const { messages } = await handleInboundSms({ from: req.body.From, body: req.body.Body });
+    return respondTwiml(messages);
+  } catch (e) {
+    console.error('[twilio] inbound SMS failed:', e.message);
+    return respondTwiml(['Sorry — something went wrong handling your message. Please try again shortly.']);
+  }
+});
+
 // ─── Static assets ────────────────────────────────────────────────────────
 
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
