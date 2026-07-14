@@ -5,7 +5,7 @@
 // pillars) and a smoke test that renderReportPdf produces a valid PDF. No DB.
 
 const assert = require('assert');
-const { buildActionPlan, renderReportPdf } = require('../services/report');
+const { buildActionPlan, renderReportPdf, renderResearchPdf, sanitize } = require('../services/report');
 
 let passed = 0;
 let failed = 0;
@@ -77,6 +77,41 @@ console.log('\nrenderReportPdf (smoke)');
       passed++;
     } catch (e) {
       console.error('  ✗ handles empty profile / null retirement'); console.error(`    ${e.message}`); failed++;
+    }
+
+    // Deep-research PDF (PR 8): branded, multi-section, with quant + chart.
+    try {
+      const quant = {
+        hasData: true,
+        perSymbol: [{
+          symbol: 'AAPL', lastPrice: 210.5, annualizedReturn: 0.18, annualizedVol: 0.27,
+          beta: 1.2, maxDrawdown: -0.31, var95: 0.033,
+          monteCarlo: { sims: 1000, days: 252, terminal: { p5: 8200, p50: 11800, p95: 16900 } },
+        }],
+      };
+      const body = {
+        title: 'Is AAPL too risky for me?',
+        summary: 'A concise summary with a minus sign -5% and approx ~ and sqrt.',
+        sections: [{ heading: 'Volatility', body: 'Lorem ipsum '.repeat(40) }],
+      };
+      const out = await renderResearchPdf({ user: { email: 'a@b.co' }, question: body.title, body, quant, sources: [{ title: 'ATO', url: 'https://ato.gov.au', source: 'ato.gov.au' }] });
+      assert.ok(out.filename.startsWith('maal-research-') && out.filename.endsWith('.pdf'));
+      const buf = Buffer.from(out.base64, 'base64');
+      assert.ok(buf.length > 800, 'research PDF has real bytes');
+      assert.strictEqual(buf.slice(0, 5).toString(), '%PDF-', 'valid PDF header');
+      console.log('  ✓ renderResearchPdf produces a valid branded PDF (' + buf.length + ' bytes)');
+      passed++;
+    } catch (e) {
+      console.error('  ✗ renderResearchPdf produces a valid branded PDF'); console.error(`    ${e.message}`); failed++;
+    }
+
+    // sanitize maps the analysis glyphs to faithful ASCII (not dropped/"?").
+    try {
+      assert.strictEqual(sanitize('−5% ≈ √x × y ÷ z ±1 ≤ ≥'), '-5% ~ sqrtx x y / z +/-1 <= >=');
+      console.log('  ✓ sanitize maps unicode maths glyphs to ASCII');
+      passed++;
+    } catch (e) {
+      console.error('  ✗ sanitize maps unicode maths glyphs to ASCII'); console.error(`    ${e.message}`); failed++;
     }
 
     console.log(`\n${passed} passed, ${failed} failed\n`);

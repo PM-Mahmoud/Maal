@@ -360,6 +360,12 @@ app.use((err, req, res, next) => {
 
 const server = app.listen(port, () => {
   console.log(`Server running on port ${port}`);
+  // Deep-research jobs run in-process (PR 8). A job left 'running' after a
+  // restart is an orphan from a killed process — reap them so the client can
+  // offer a retry instead of polling forever. Best-effort (pre-migration safe).
+  require('./db/research').markOrphanJobsFailed()
+    .then((n) => { if (n) console.log(`[research] reaped ${n} orphaned job(s) on boot`); })
+    .catch((e) => console.error('[research] orphan reap failed:', e.message));
 });
 
 // ─── Graceful shutdown on SIGTERM (Render redeploys) ──────────────────────

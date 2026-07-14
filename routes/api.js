@@ -725,8 +725,12 @@ router.get('/v1/research', async (req, res) => {
   }
 });
 
+// Start an async deep-research job (PR 8). Returns { jobId, status, phase }
+// immediately; the pipeline (Plan→Gather→Compute→Write→Verify→Render) runs as a
+// background promise in-process and the client polls GET /v1/research/:id.
 router.post('/v1/research/generate', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const userId = req.session.userId;
   const question = String((req.body && (req.body.topic || (req.body.data && req.body.data.topic))) || '').trim().slice(0, 600);
   if (!question) return res.status(400).json({ error: 'Ask a research question first.' });
   try {
@@ -738,28 +742,60 @@ router.post('/v1/research/generate', async (req, res) => {
     const { getProfileByUserId } = require('../db/profiles');
     const assetsDb = require('../db/assets');
     const { computeMaalScore } = require('../lib/maal-score');
-    const { runResearch } = require('../services/research');
+    const { runDeepResearch } = require('../services/research');
 
-    const user = await findUserById(req.session.userId);
-    const rawProfile = (await getProfileByUserId(req.session.userId)) || {};
-    const assetSummary = await assetsDb.getAssetSummary(req.session.userId);
+    const user = await findUserById(userId);
+    const rawProfile = (await getProfileByUserId(userId)) || {};
+    const assetSummary = await assetsDb.getAssetSummary(userId);
     const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
     const maal = computeMaalScore(profile);
 
-    const id = await researchDb.createReport(req.session.userId, question);
-    try {
-      const { report, sources } = await runResearch(user, profile, maal, question);
-      await researchDb.completeReport(id, report, sources);
-    } catch (e) {
-      console.error('research generate run failed:', e.message);
-      await researchDb.failReport(id, 'The research engine hit a snag — please try again.');
-      return res.status(500).json({ error: 'The research engine hit a snag — please try again.' });
-    }
-    const row = await researchDb.getReport(id, req.session.userId);
-    res.json(researchDb.rowToResearchReport(row));
+    const jobId = await researchDb.createJob(userId, question);
+    // Fire-and-forget: the pipeline records its own success/failure on the job.
+    setImmediate(() => {
+      runDeepResearch({ jobId, user, profile, maal, question }).catch((e) => {
+        console.error('runDeepResearch crashed:', e.message);
+      });
+    });
+    res.json({ jobId: String(jobId), status: 'running', phase: 'plan' });
   } catch (err) {
     console.error('/api/v1/research/generate error:', err.message);
     res.status(500).json({ error: 'Could not start research.' });
+  }
+});
+
+// Poll a research job's phase/status. When complete, returns the rendered report
+// inline so the client can stop polling and show it.
+router.get('/v1/research/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const researchDb = require('../db/research');
+    const job = await researchDb.getJob(req.params.id, req.session.userId);
+    if (!job) return res.status(404).json({ error: 'Research job not found.' });
+    const elapsedMs = Date.now() - new Date(job.started_at).getTime();
+    const out = { jobId: String(job.id), status: job.status, phase: job.phase, elapsedMs, error: job.error || null };
+    if (job.status === 'complete' && job.report_id) {
+      const row = await researchDb.getReport(job.report_id, req.session.userId);
+      if (row) out.report = researchDb.rowToResearchReport(row);
+    }
+    res.json(out);
+  } catch (err) {
+    console.error('/api/v1/research/:id GET error:', err.message);
+    res.status(500).json({ error: 'Could not load research status.' });
+  }
+});
+
+// Branded PDF download for a finished report the user owns.
+router.get('/v1/research/:id/pdf', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const { generateResearchPdf } = require('../services/report');
+    const out = await generateResearchPdf(req.session.userId, req.params.id);
+    if (!out) return res.status(404).json({ error: 'Report not found.' });
+    res.json(out); // { filename, base64 } — client turns it into a download
+  } catch (err) {
+    console.error('/api/v1/research/:id/pdf error:', err.message);
+    res.status(500).json({ error: 'Could not generate the PDF.' });
   }
 });
 
