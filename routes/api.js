@@ -854,6 +854,9 @@ router.post('/v1/alerts', async (req, res) => {
       frequency: freq,
       notifyEmail: d.notify_email !== false,
       notifySms: !!d.notify_sms,
+      timeAest: d.time_aest,
+      scheduleDay: d.schedule_day,
+      templateSlug: d.template,
     }, limit);
     if (id === null) {
       return send402(res, plan, 'active_radars', limit, limit);
@@ -928,6 +931,38 @@ router.post('/v1/alerts/evaluate', async (req, res) => {
   } catch (e) {
     console.error('/api/v1/alerts/evaluate error:', e.message);
     res.status(500).json({ error: 'Could not evaluate radars.' });
+  }
+});
+
+// ─── Radar templates + readiness (PR 9) ────────────────────────────────────
+// Curated AU template marketplace (browsable by everyone — creating a radar from
+// one still goes through POST /v1/alerts, which enforces the Pro/Max limit) and
+// a readiness score for the user's data. Registered before /v1/:table.
+
+router.get('/v1/radar-templates', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const radarDb = require('../db/radar');
+    res.json({ templates: await radarDb.listTemplates() });
+  } catch (e) {
+    console.error('/api/v1/radar-templates error:', e.message);
+    res.json({ templates: [] });
+  }
+});
+
+router.get('/v1/radar/readiness', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const { getProfileByUserId } = require('../db/profiles');
+    const assetsDb = require('../db/assets');
+    const { computeRadarReadiness } = require('../lib/radar-logic');
+    const rawProfile = (await getProfileByUserId(req.session.userId)) || {};
+    const assetSummary = await assetsDb.getAssetSummary(req.session.userId);
+    const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
+    res.json(computeRadarReadiness(profile));
+  } catch (e) {
+    console.error('/api/v1/radar/readiness error:', e.message);
+    res.json({ score: 0, missing: [], ready: false });
   }
 });
 
