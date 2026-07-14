@@ -7,6 +7,7 @@ const advisor = require('./advisor');
 const marketdata = require('./marketdata');
 const grounding = require('./grounding');
 const radarDb = require('../db/radar');
+const { isRadarDue } = require('../lib/radar-logic');
 const { findUserById } = require('../db/users');
 const { getProfileByUserId } = require('../db/profiles');
 const { sendEmail } = require('./email');
@@ -116,7 +117,10 @@ async function runDueRadars() {
   }
   _sweepRunning = true;
   try {
-    const due = await radarDb.dueRadars();
+    const now = new Date();
+    // dueRadars() is a coarse SQL pre-filter (active + roughly elapsed); apply the
+    // precise local-time / day-of-week schedule check here (deterministic-tested).
+    const due = (await radarDb.dueRadars()).filter((r) => isRadarDue(r, now));
     let ran = 0, alerts = 0;
     for (const radar of due) {
       try {
