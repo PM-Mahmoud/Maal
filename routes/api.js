@@ -480,6 +480,37 @@ router.get('/v1/notifications', async (req, res) => {
 });
 router.post('/v1/notifications/read', (_req, res) => res.json({ ok: true }));
 
+// Notification preferences (PR 10) — currently the daily portfolio digest opt-in.
+// Whitelisted keys only, stored in users.notification_prefs JSONB.
+const NOTIFICATION_PREF_KEYS = new Set(['daily_digest', 'radar_email', 'radar_sms']);
+
+router.get('/v1/notification-prefs', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const user = await findUserById(req.session.userId);
+    const prefs = (user && user.notification_prefs) || {};
+    res.json({ daily_digest: prefs.daily_digest === true, ...prefs });
+  } catch (e) {
+    console.error('/api/v1/notification-prefs GET error:', e.message);
+    res.json({ daily_digest: false });
+  }
+});
+
+router.post('/v1/notification-prefs', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const d = (req.body && req.body.data && typeof req.body.data === 'object') ? req.body.data : (req.body || {});
+    const key = String(d.key || '');
+    if (!NOTIFICATION_PREF_KEYS.has(key)) return res.status(400).json({ error: 'Unknown preference.' });
+    const { setNotificationPref } = require('../db/users');
+    await setNotificationPref(req.session.userId, key, !!d.value);
+    res.json({ ok: true, key, value: !!d.value });
+  } catch (e) {
+    console.error('/api/v1/notification-prefs POST error:', e.message);
+    res.status(500).json({ error: 'Could not update preference.' });
+  }
+});
+
 // ─── Maal Score (authoritative — same engine as the EJS dashboard) ─────────
 // GET /api/v1/score → { ok, score, band, pillars, hasData, history }
 // Computes the real Maal Score for the logged-in user via lib/maal-score.js
