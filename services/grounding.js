@@ -1,64 +1,107 @@
 // services/grounding.js
-// Live web + news grounding via Microsoft Bing Search (v7 REST shape).
-// Pluggable: returns [] when not configured, so research/radar degrade to
-// market-data-only (or pure-model) answers gracefully.
+// Live web + news grounding via Exa (https://api.exa.ai). Replaces the earlier
+// Bing integration (which never went live). Pluggable: returns [] when no
+// EXA_API_KEY is set, so research/radar degrade to market-data-only (or
+// pure-model) answers gracefully.
 //
-// SETUP: create a Bing Search resource in your Azure account, then on Render:
-//   BING_SEARCH_KEY      = <resource key>
-//   BING_SEARCH_ENDPOINT = https://api.bing.microsoft.com   (default; override
-//                          if your Azure resource exposes a custom endpoint)
-// Endpoint is configurable so this also works against an Azure-hosted/Foundry
-// grounding gateway that mirrors the Bing v7 response shape.
+// SETUP (Render): EXA_API_KEY = <key>   (already provisioned)
+// Reference: https://docs.exa.ai/reference/search-api-guide-for-coding-agents
+//   - POST /search with { query, type, numResults, category?, contents }
+//   - contents.highlights = token-efficient excerpts; text/summary/highlights
+//     MUST be nested under `contents`.
+//   - Freshness via contents.maxAgeHours (e.g. 24 for news).
+//
+// The public contract (hasGrounding / searchWeb / searchNews) is unchanged so
+// services/research.js and services/radar.js keep working; deepSearch is new for
+// the PR 8 research Gather phase.
+
+const EXA_URL = 'https://api.exa.ai/search';
+const EXA_TIMEOUT_MS = Number(process.env.EXA_TIMEOUT_MS) || 20000;
 
 function key() {
-  return (process.env.BING_SEARCH_KEY || '').trim();
-}
-function endpoint() {
-  return (process.env.BING_SEARCH_ENDPOINT || 'https://api.bing.microsoft.com').replace(/\/+$/, '');
+  return (process.env.EXA_API_KEY || '').trim();
 }
 function hasGrounding() {
   return !!key();
 }
 
-async function bingGet(path) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 9000);
+function hostOf(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
+}
+
+// Core Exa /search call. Returns the raw results array (or [] on any failure —
+// grounding is always best-effort and must never break the caller).
+async function exaSearch(query, { type = 'auto', numResults = 5, category, maxAgeHours, maxChars } = {}) {
+  if (!hasGrounding() || !query) return [];
+  const contents = { highlights: true };
+  if (maxChars) contents.text = { maxCharacters: maxChars };
+  if (maxAgeHours != null) contents.maxAgeHours = maxAgeHours;
+
+  const body = { query, type, numResults, contents };
+  if (category) body.category = category;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), EXA_TIMEOUT_MS);
   try {
-    const res = await fetch(endpoint() + path, {
-      signal: ctrl.signal,
-      headers: { 'Ocp-Apim-Subscription-Key': key(), Accept: 'application/json' },
+    const res = await fetch(EXA_URL, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key() },
+      body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(`Bing ${res.status}`);
-    return await res.json();
+    if (!res.ok) throw new Error('Exa ' + res.status);
+    const data = await res.json();
+    return Array.isArray(data && data.results) ? data.results : [];
+  } catch (e) {
+    console.error('grounding: Exa search failed:', e.message);
+    return [];
   } finally {
     clearTimeout(timer);
   }
 }
 
+// Best short excerpt for a result: prefer highlights, fall back to a text slice.
+function excerpt(r) {
+  if (Array.isArray(r.highlights) && r.highlights.length) return r.highlights.join(' … ');
+  if (typeof r.text === 'string') return r.text.slice(0, 400);
+  return '';
+}
+
 // Web results → [{ title, snippet, url, source }]
 async function searchWeb(query, count = 5) {
-  if (!hasGrounding() || !query) return [];
-  const data = await bingGet(`/v7.0/search?q=${encodeURIComponent(query)}&count=${count}&mkt=en-AU&safeSearch=Moderate`);
-  const pages = data && data.webPages && Array.isArray(data.webPages.value) ? data.webPages.value : [];
-  return pages.map((p) => ({ title: p.name || '', snippet: p.snippet || '', url: p.url || '', source: hostOf(p.url) }));
+  const results = await exaSearch(query, { type: 'auto', numResults: count });
+  return results.map((r) => ({
+    title: r.title || '',
+    snippet: excerpt(r),
+    url: r.url || '',
+    source: hostOf(r.url),
+  }));
 }
 
 // News results → [{ title, snippet, url, source, datePublished }]
 async function searchNews(query, count = 6) {
-  if (!hasGrounding() || !query) return [];
-  const data = await bingGet(`/v7.0/news/search?q=${encodeURIComponent(query)}&count=${count}&mkt=en-AU&sortBy=Date`);
-  const items = data && Array.isArray(data.value) ? data.value : [];
-  return items.map((n) => ({
-    title: n.name || '',
-    snippet: n.description || '',
-    url: n.url || '',
-    source: (n.provider && n.provider[0] && n.provider[0].name) || hostOf(n.url),
-    datePublished: n.datePublished || null,
+  const results = await exaSearch(query, { type: 'auto', numResults: count, category: 'news', maxAgeHours: 72 });
+  return results.map((r) => ({
+    title: r.title || '',
+    snippet: excerpt(r),
+    url: r.url || '',
+    source: r.author || hostOf(r.url),
+    datePublished: r.publishedDate || null,
   }));
 }
 
-function hostOf(url) {
-  try { return new URL(url).hostname.replace(/^www\./, ''); } catch (e) { return ''; }
+// Deeper Gather for the research pipeline: more results + capped full text.
+// → [{ title, snippet, text, url, source, datePublished }]
+async function deepSearch(query, count = 8) {
+  const results = await exaSearch(query, { type: 'auto', numResults: count, maxChars: 2000 });
+  return results.map((r) => ({
+    title: r.title || '',
+    snippet: excerpt(r),
+    text: typeof r.text === 'string' ? r.text.slice(0, 2000) : '',
+    url: r.url || '',
+    source: hostOf(r.url),
+    datePublished: r.publishedDate || null,
+  }));
 }
 
-module.exports = { hasGrounding, searchWeb, searchNews };
+module.exports = { hasGrounding, searchWeb, searchNews, deepSearch, exaSearch };
