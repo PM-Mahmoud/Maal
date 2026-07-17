@@ -23,47 +23,12 @@ const profile = {
   has_private_health: true, practice_owner: false, insurance_cover: 'partial',
   retirement_age: 65, onboarding_data: {}, completed_onboarding: true,
 };
-const score = {
-  score_type: 'financial_health', score_value: 68, grade: 'Fair',
-  score_breakdown: {}, diagnosis: 'Solid start.', action_plan: [],
-  halal_compliance_score: 70, portfolio_health_score: 60, created_at: new Date(),
-};
-const { computeMaalScore } = require('../lib/maal-score');
-const maalScore = computeMaalScore(profile);
-const { estimateTax } = require('../lib/tax');
-
 const base = { session, user, profile, pageTitle: 'Test' };
 
-// Per-view locals mirroring what each route passes (routes/*.js)
+// Per-view locals mirroring what each route passes (routes/*.js).
+// NOTE: the legacy EJS dashboard-*.ejs views are retired (superseded by the
+// React app at /app) and intentionally no longer rendered here.
 const cases = {
-  'dashboard-overview': { ...base, financialScore: score, superScore: score, ethicalScore: score, maalScore, snapshots: [], taxImpact: estimateTax(profile), connected: { count: 2, cash: 4250, super: 0, invest: 0, debt: 1200 }, recentTransactions: [{ description: 'Woolworths', amount: -84.20, post_date: new Date() }, { description: 'Salary', amount: 5400, post_date: new Date() }], movers: { top: [{ symbol: 'NVDA', price: 1203.4, percent: 4.2 }], bottom: [{ symbol: 'TSLA', price: 178.2, percent: -3.1 }] }, chartTxns: [{ post_date: new Date(), amount: 5400 }, { post_date: new Date(), amount: -84.2 }] },
-  'dashboard-roadmap': { ...base, items: [
-    { id: 1, title: 'Test item', details: 'Some details', status: 'planned', score: 3, upvotes: 4, downvotes: 1, my_vote: 1 },
-    { id: 2, title: 'Another', details: null, status: 'open', score: 0, upvotes: 0, downvotes: 0, my_vote: null },
-  ] },
-  'dashboard-ask': base,
-  'dashboard-research': { ...base, advisorReady: true, reports: [{ id: 1, question: 'What if the ASX drops 20%?', status: 'complete', created_at: new Date() }, { id: 2, question: 'Salary sacrifice vs mortgage?', status: 'error', created_at: new Date() }] },
-  'dashboard-radar': { ...base, advisorReady: true, radars: [{ id: 1, prompt: 'Alert me if NVDA moves more than 10% in a day', frequency: 'daily', notify_email: true, notify_sms: false, last_run_at: new Date(), last_alerted: true, last_result: 'NVDA fell 11% after weak guidance.' }, { id: 2, prompt: 'Watch my spending vs budget', frequency: 'weekly', notify_email: true, notify_sms: true, last_run_at: null, last_alerted: false, last_result: null }] },
-  'dashboard-assets': { ...base, basiqEnabled: true, liveAccounts: [{ institution_name: 'Hooli Bank', institution_type: 'transaction', balance: 4250 }], connected: { count: 1, cash: 4250, super: 0, invest: 0, debt: 0 },
-    cashAccounts: [{ id: 1, label: 'Everyday account', institution: 'CommBank', balance: '15000', source: 'manual' }],
-    investments: [{ id: 1, name: 'ASX shares', kind: 'shares', value: '20000', source: 'manual' }],
-    properties: [{ id: 1, label: 'Home', property_type: 'residential', value: '750000', mortgage_balance: '500000', source: 'manual' }],
-    debts: [{ id: 1, label: 'Credit card', kind: 'credit_card', balance: '3000', interest_rate: '19.9', source: 'manual' }, { id: 2, label: 'Car loan', kind: 'loan', balance: '2000', interest_rate: '7.5', source: 'manual' }],
-    superAccounts: [{ id: 1, label: 'Super fund', fund_name: 'AustralianSuper', balance: '35000', source: 'manual' }],
-    otherAssets: [{ id: 1, label: 'Car', kind: 'vehicle', value: '18000' }, { id: 2, label: 'Gold bars', kind: 'precious_metals', value: '5000' }],
-  },
-  'dashboard-vault': { ...base, files: [{ id: 1, filename: 'NOA-2025.pdf', mime: 'application/pdf', size_bytes: 184320, created_at: new Date() }] },
-  'dashboard-transactions': { ...base, basiqEnabled: true, basiqStatus: 'error', basiqReason: 'Basiq 403 on /users', liveTransactions: [], liveAccounts: [], statementFiles: [{ id: 2, filename: 'cba-may.csv', mime: 'text/csv', size_bytes: 5120, created_at: new Date() }] },
-  'dashboard-goals': { ...base, goals: [{ id: 1, name: 'Emergency fund', type: 'Save', target: 20000, current: 12000, created_at: new Date() }, { id: 2, name: 'Pay off HECS', type: 'Pay Off', target: 42000, current: 8000, created_at: new Date() }] },
-  'dashboard-settings': { ...base, billingStatus: 'success', billingPlanName: 'Maal Pro ($20/mo)' },
-  'dashboard-scores': { ...base, maalScore, maalHistory: [
-    { score_value: maalScore.score, grade: maalScore.band, calculated_at: new Date() },
-    { score_value: maalScore.score - 4, grade: maalScore.band, calculated_at: new Date(Date.now() - 86400000) },
-  ] },
-  'dashboard-recommendations': { ...base, recommendations: [], filter: 'all' },
-  'dashboard-accounts': { ...base, accounts: [], basiqEnabled: true },
-  'dashboard-profile': { ...base, accounts: [], success: null, error: null },
-  'dashboard-history': { ...base, scores: [score], recommendations: [] },
   'auth-login': { error: null, email: '' },
   'auth-signup': { error: null, email: '', name: '' },
   'pricing': { analyticsSnippet: '', user: null },
@@ -82,11 +47,7 @@ async function main() {
   for (const [view, locals] of Object.entries(cases)) {
     const file = path.join(VIEWS, view + '.ejs');
     try {
-      const body = await ejs.renderFile(file, locals, { async: false });
-      // Dashboard pages render inside app-layout — test the wrapper too
-      if (view.startsWith('dashboard-')) {
-        await ejs.renderFile(path.join(VIEWS, 'app-layout.ejs'), { ...locals, body });
-      }
+      await ejs.renderFile(file, locals, { async: false });
       console.log('  OK   ' + view);
     } catch (err) {
       if (err.code === 'ENOENT') { console.log('  SKIP ' + view + ' (no such view)'); continue; }

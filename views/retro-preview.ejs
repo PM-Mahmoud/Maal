@@ -4,16 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
-  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
-  <meta property="og:title" content="Maal — Financial clarity for every Australian">
-  <meta property="og:description" content="Maal reads your assets, debts, super, and income to deliver a 0–100 Financial Wellbeing Score and a plain-English action plan to improve it.">
-  <meta property="og:image" content="https://hellomaal.com/images/og.png">
-  <meta property="og:type" content="website">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="https://hellomaal.com/images/og.png">
-  <title>Maal — Financial clarity for every Australian</title>
-  <meta name="description" content="Maal reads your assets, debts, super, and income to deliver a 0–100 Financial Wellbeing Score and a plain-English action plan to improve it.">
+  <title>Maal — Retro-Futurist preview</title>
+  <meta name="description" content="Retro-futurist design preview of the Maal landing page.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -45,7 +37,7 @@
   <header class="rf-header">
     <div class="rf-header-inner">
       <div class="rf-header-left">
-        <a href="/" class="rf-wordmark">
+        <a href="/retro" class="rf-wordmark">
           <span class="rf-wordmark-badge">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 2v20M2 12h20"/></svg>
           </span>
@@ -59,31 +51,11 @@
         </nav>
       </div>
       <div class="rf-header-right">
-        <% if (locals.user) { %>
-          <a href="/dashboard" class="rf-login">Dashboard</a>
-          <a href="/logout" class="rf-btn rf-btn-ink">Sign out</a>
-        <% } else { %>
-          <a href="/login" class="rf-login">Log in</a>
-          <a href="/score" class="rf-btn rf-btn-ink">Calculate your score</a>
-        <% } %>
-        <button class="rf-hamburger" onclick="rfToggleNav()" aria-label="Toggle menu">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        </button>
+        <a href="/retro/login" class="rf-login">Log in</a>
+        <a href="/score" class="rf-btn rf-btn-ink">Calculate your score</a>
       </div>
     </div>
   </header>
-  <div class="rf-mobile-menu" id="rf-mobile-nav">
-    <a href="/score">Score Calculator</a>
-    <a href="#how">How it Works</a>
-    <a href="#pricing">Pricing</a>
-    <a href="/waitlist">Waitlist</a>
-    <% if (locals.user) { %>
-      <a href="/dashboard">Dashboard</a>
-      <a href="/logout">Sign out</a>
-    <% } else { %>
-      <a href="/login">Log in</a>
-    <% } %>
-  </div>
 
   <!-- Hero -->
   <section class="rf-hero">
@@ -313,7 +285,7 @@
   <footer class="rf-footer">
     <div class="rf-footer-main">
       <div>
-        <a href="/" class="rf-wordmark">
+        <a href="/retro" class="rf-wordmark">
           <span class="rf-wordmark-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 2v20M2 12h20"/></svg></span>
           <span class="rf-wordmark-text" style="color:var(--rf-cream);">Maal</span>
         </a>
@@ -324,7 +296,7 @@
         <ul>
           <li><a href="/score">Score Calculator</a></li>
           <li><a href="/financial-wellbeing-score">Financial Wellbeing Score</a></li>
-          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="#pricing">Pricing</a></li>
           <li><a href="/waitlist">Waitlist</a></li>
         </ul>
       </div>
@@ -339,7 +311,7 @@
       <div class="rf-footer-col">
         <p class="rf-footer-col-title">Account</p>
         <ul>
-          <li><a href="/login">Log in</a></li>
+          <li><a href="/retro/login">Log in</a></li>
           <li><a href="/signup">Sign up</a></li>
         </ul>
       </div>
@@ -356,12 +328,7 @@
     </div>
   </footer>
 
-  <%- analyticsSnippet %>
   <script>
-    // Mobile nav
-    function rfToggleNav() {
-      document.getElementById('rf-mobile-nav').classList.toggle('open');
-    }
     // Score fill
     requestAnimationFrame(function(){ requestAnimationFrame(function(){
       var f = document.getElementById('rf-fill'); if (f) f.style.width = '82%';
