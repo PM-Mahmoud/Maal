@@ -1,0 +1,95 @@
+/* ============================================================
+   Maal — Retro-futurist skin for the centered-card auth pages
+   (forgot-password, reset-password, verify-email, verify-otp,
+   google-link). Loads AFTER theme.css. Token retone + retro fonts
+   + chunky chrome on the shared .auth-card / .btn-primary / form
+   classes. No markup/form/JS changes. (signup is a full retro
+   split rewrite in its own view; login already uses retro.css.)
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root, html[data-theme="light"] {
+  --bg: #F3E9D2;
+  --surface: #FBF5E7;
+  --surface-2: #EFE3CC;
+  --surface-3: #E4D3AF;
+  --fg: #221C15;
+  --fg-muted: #6B6152;
+  --fg-faint: #9A8E7A;
+  --border: #E0D2B4;
+  --border-strong: #221C15;
+  --accent: #D9531F;
+  --accent-strong: #B8410F;
+  --accent-soft: #F6DCC8;
+  --accent-softer: #F8EEE0;
+  --accent-bar: #E7A937;
+  --mint: #D9531F;
+  --ink: #221C15;
+  --on-ink: #FBF5E7;
+  --gold: #B0740F;
+  --gold-soft: #F1E2C4;
+  --danger: #C0341A;
+  --danger-soft: #F6D9CF;
+  --font-display: 'Bricolage Grotesque', 'Geist', system-ui, sans-serif;
+  --font-body: 'Space Grotesk', 'Geist', system-ui, sans-serif;
+}
+html[data-theme="dark"] {
+  --bg: #1C1710; --surface: #26201A; --surface-2: #302A22; --surface-3: #3B3329;
+  --fg: #F3E9D2; --fg-muted: #C3B79E; --fg-faint: #8E836E;
+  --border: #3B3329; --border-strong: #F3E9D2;
+  --accent: #F0754B; --accent-strong: #E4572E; --accent-soft: #3A2A20; --accent-softer: #2C221A;
+  --accent-bar: #E7A937; --mint: #F0754B; --ink: #F3E9D2; --on-ink: #1C1710;
+  --gold: #E7A937; --danger: #F0754B;
+}
+
+body { font-family: var(--font-body); }
+body::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+  opacity: 0.045; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Card */
+.auth-card {
+  border: 2px solid var(--ink) !important;
+  border-radius: 18px !important;
+  box-shadow: 6px 6px 0 var(--ink) !important;
+  background: var(--surface) !important;
+}
+.auth-card h1, .auth-logo { font-family: var(--font-display) !important; font-weight: 800 !important; letter-spacing: -0.02em; }
+
+/* Inputs (form-group + OTP) */
+.form-group input, .otp-inputs input {
+  border: 2px solid var(--ink) !important; border-radius: 10px !important;
+  background: var(--surface) !important;
+}
+.form-group input:focus, .otp-inputs input:focus {
+  border-color: var(--ink) !important; box-shadow: 3px 3px 0 var(--accent) !important;
+}
+.otp-inputs input.filled { border-color: var(--accent) !important; }
+
+/* Primary button → orange pill with hard shadow */
+.btn-primary {
+  background: var(--accent) !important; color: #fff !important;
+  border: 2px solid var(--ink) !important; border-radius: 9999px !important;
+  box-shadow: 2px 2px 0 var(--ink) !important;
+  font-weight: 700 !important; text-transform: uppercase; letter-spacing: .04em;
+  transition: transform .1s ease, box-shadow .1s ease, background .12s;
+}
+.btn-primary:hover { opacity: 1 !important; background: var(--accent-strong) !important; transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink) !important; }
+.btn-primary:disabled { opacity: .5 !important; box-shadow: 2px 2px 0 var(--ink) !important; transform: none !important; }
+
+/* Secondary / SMS button → paper outline pill */
+.btn-sms {
+  border: 2px solid var(--ink) !important; border-radius: 9999px !important;
+  background: var(--surface) !important; box-shadow: 2px 2px 0 var(--ink) !important;
+  font-weight: 700 !important;
+}
+.btn-sms:hover { background: var(--accent-soft) !important; }
+
+/* Alerts */
+.alert-success { background: var(--gold-soft) !important; border: 2px solid var(--ink) !important; color: var(--ink) !important; border-radius: 10px !important; }
+.alert-error, .alert.alert-error { background: var(--danger-soft) !important; border: 2px solid var(--ink) !important; color: var(--danger) !important; border-radius: 10px !important; }
+
+/* Links */
+.auth-footer a, .back-link:hover, .resend-row a, .resend-row button { color: var(--accent) !important; }
