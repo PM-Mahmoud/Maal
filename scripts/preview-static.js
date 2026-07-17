@@ -36,6 +36,26 @@ app.get('/signup', (_req, res, next) => {
     error: null, email: '', name: '',
   }).then(html => res.send(html)).catch(next);
 });
+app.get('/forgot-password', (_req, res, next) => {
+  ejs.renderFile(path.join(VIEWS, 'auth-forgot-password.ejs'), { error: null, success: null })
+    .then(html => res.send(html)).catch(next);
+});
+app.get('/reset-password', (_req, res, next) => {
+  ejs.renderFile(path.join(VIEWS, 'auth-reset-password.ejs'), { error: null, success: null, token: 'demo-token' })
+    .then(html => res.send(html)).catch(next);
+});
+app.get('/verify-otp', (_req, res, next) => {
+  ejs.renderFile(path.join(VIEWS, 'auth-verify-otp.ejs'), { email: 'preview@example.com', error: null })
+    .then(html => res.send(html)).catch(next);
+});
+app.get('/verify-email', (_req, res, next) => {
+  ejs.renderFile(path.join(VIEWS, 'auth-verify-email.ejs'), { success: true, error: null })
+    .then(html => res.send(html)).catch(next);
+});
+app.get('/google-link', (_req, res, next) => {
+  ejs.renderFile(path.join(VIEWS, 'auth-google-link.ejs'), { email: 'preview@example.com' })
+    .then(html => res.send(html)).catch(next);
+});
 
 // ── Public marketing pages ──────────────────────────────────
 app.get('/score', (_req, res, next) => {
