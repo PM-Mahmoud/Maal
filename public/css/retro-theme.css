@@ -1,0 +1,174 @@
+/* ============================================================
+   Maal — Retro-futurist skin for the marketing pages
+   (pricing, about, security, contact, waitlist, score) + the
+   shared navbar/footer partials.
+
+   Loads AFTER theme.css. Redefines theme.css design tokens to the
+   warm retro palette (so page bodies + the .lv-* nav/footer retone
+   for free), swaps to the retro display/body fonts, and layers on
+   chunky retro chrome. Chrome rules use !important because each
+   page's own inline <style> loads after this file.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+/* ---- 1. Warm retro tokens ---- */
+:root, html[data-theme="light"] {
+  --bg: #F3E9D2;
+  --surface: #FBF5E7;
+  --surface-2: #EFE3CC;
+  --surface-3: #E4D3AF;
+  --fg: #221C15;
+  --fg-muted: #6B6152;
+  --fg-faint: #9A8E7A;
+  --border: #E0D2B4;
+  --border-strong: #221C15;
+  --accent: #D9531F;
+  --accent-strong: #B8410F;
+  --accent-soft: #F6DCC8;
+  --accent-softer: #F8EEE0;
+  --accent-bar: #E7A937;
+  --mint: #D9531F;
+  --ink: #221C15;
+  --on-ink: #FBF5E7;
+  --gold: #B0740F;
+  --gold-soft: #F1E2C4;
+  --danger: #C0341A;
+  --danger-soft: #F6D9CF;
+  --font-display: 'Bricolage Grotesque', 'Geist', system-ui, sans-serif;
+  --font-body: 'Space Grotesk', 'Geist', system-ui, sans-serif;
+}
+html[data-theme="dark"] {
+  --bg: #1C1710;
+  --surface: #26201A;
+  --surface-2: #302A22;
+  --surface-3: #3B3329;
+  --fg: #F3E9D2;
+  --fg-muted: #C3B79E;
+  --fg-faint: #8E836E;
+  --border: #3B3329;
+  --border-strong: #F3E9D2;
+  --accent: #F0754B;
+  --accent-strong: #E4572E;
+  --accent-soft: #3A2A20;
+  --accent-softer: #2C221A;
+  --accent-bar: #E7A937;
+  --mint: #F0754B;
+  --ink: #F3E9D2;
+  --on-ink: #1C1710;
+  --gold: #E7A937;
+}
+
+body { font-family: var(--font-body); }
+
+/* film grain (body::before is theme.css's accent bar — leave it) */
+body::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+  opacity: 0.045; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---- 2. Display headings ---- */
+.pr-h1, .ab-h1, .sc-h1, .ct-h1, .wl-h1,
+.compare h2, .ab-roles h2,
+.tier-price-num, .wl-proof-big, .sc-ring-num, .sc-result-box .sc-h1 {
+  font-family: var(--font-display) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.03em;
+}
+
+/* ---- 3. Shared navbar (partials/navbar → .lv-*) ---- */
+.lv-header { background: var(--bg) !important; border-bottom: 2px solid var(--ink) !important; }
+.lv-wordmark-dot { width: 12px !important; height: 12px !important; background: var(--accent) !important; border: 2px solid var(--ink); }
+.lv-wordmark-text { font-family: var(--font-display) !important; font-weight: 800 !important; }
+.lv-header-cta {
+  background: var(--accent) !important; color: #fff !important;
+  border: 2px solid var(--ink) !important; border-radius: 9999px !important;
+  box-shadow: 2px 2px 0 var(--ink); font-weight: 700 !important;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.lv-header-login { font-weight: 700 !important; text-transform: uppercase; letter-spacing: .05em; }
+.lv-mobile-menu { border-bottom: 2px solid var(--ink) !important; background: var(--bg) !important; }
+
+/* ---- 4. Cards → chunky ink borders + hard shadows ---- */
+.tier, .sc-card, .compare-table, .sc-result-box, .sc-email-box, .wl-success, .ab-role {
+  border: 2px solid var(--ink) !important;
+  border-radius: 14px !important;
+  box-shadow: 4px 4px 0 var(--ink) !important;
+  background: var(--surface) !important;
+}
+.ab-role { box-shadow: 3px 3px 0 var(--ink) !important; }
+.tier.featured { background: var(--surface) !important; box-shadow: 6px 6px 0 var(--ink) !important; }
+.tier-badge { background: var(--accent) !important; color: #fff !important; padding: .15rem .5rem !important; border-radius: 9999px !important; border: 1.5px solid var(--ink); }
+.tier-check, .c-check, .sc-signal-dot--up, .sc-band-dot { color: var(--accent) !important; }
+
+/* ---- 5. Buttons → orange pills with hard shadow ---- */
+.tier-cta.solid, .ct-submit, .wl-submit, .sc-next, .sc-intro-start, .sc-email-btn {
+  background: var(--accent) !important; color: #fff !important;
+  border: 2px solid var(--ink) !important; border-radius: 9999px !important;
+  box-shadow: 2px 2px 0 var(--ink) !important;
+  font-weight: 700 !important; text-transform: uppercase; letter-spacing: .04em;
+  transition: transform .1s ease, box-shadow .1s ease, background .12s;
+}
+.tier-cta.solid:hover, .ct-submit:hover, .wl-submit:hover, .sc-next:hover,
+.sc-intro-start:hover, .sc-email-btn:hover {
+  opacity: 1 !important; background: var(--accent-strong) !important;
+  transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink) !important;
+}
+.tier-cta.outline {
+  background: var(--surface) !important; color: var(--ink) !important;
+  border: 2px solid var(--ink) !important; border-radius: 9999px !important;
+  box-shadow: 2px 2px 0 var(--ink) !important; font-weight: 700 !important;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.tier-cta.outline:hover { background: var(--accent-soft) !important; }
+
+/* ---- 6. Inputs → ink border, orange focus ---- */
+.ct-input, .ct-textarea, .wl-input, .sc-input, .sc-email-input {
+  border: 2px solid var(--ink) !important; border-radius: 10px !important;
+  background: var(--surface) !important;
+}
+.ct-input:focus, .ct-textarea:focus, .wl-input:focus, .sc-input:focus, .sc-email-input:focus {
+  border-color: var(--ink) !important; box-shadow: 3px 3px 0 var(--accent) !important;
+}
+
+/* ---- 7. Misc pills / toggles / icons ---- */
+.billing-toggle { background: var(--surface) !important; border: 2px solid var(--ink) !important; }
+.bt-opt.active { background: var(--accent) !important; color: #fff !important; box-shadow: none !important; }
+.sc-card-icon { background: var(--accent) !important; color: #fff !important; border: 2px solid var(--ink); }
+.sc-badge { border: 2px solid var(--ink) !important; box-shadow: 2px 2px 0 var(--ink); }
+.sc-band-pill { border: 1.5px solid var(--ink) !important; background: var(--gold-soft) !important; }
+.sc-progress, .sc-pillar-bar-bg { border: 1.5px solid var(--ink); }
+.sc-progress-fill { background: var(--accent) !important; }
+
+/* ---- 8. Shared footer (partials/footer → .lv-footer) → dark, matches landing ---- */
+.lv-footer { background: #221C15 !important; border-top: 2px solid #221C15 !important; }
+.lv-footer, .lv-footer a, .lv-footer p, .lv-footer span { color: #F3E9D2 !important; }
+.lv-footer .lv-footer-col-title { color: #E7A937 !important; }
+.lv-footer-brand-desc,
+.lv-disclaimer, .lv-disclaimer p,
+.lv-footer-bottom-inner, .lv-footer-bottom-inner span { color: rgba(243,233,210,.6) !important; }
+.lv-footer-col a:hover { color: #E7A937 !important; }
+
+/* ---- 9. Financial Wellbeing Score page (.fw-*) ---- */
+.fw-hero h1, .fw-section-title, .fw-band-range {
+  font-family: var(--font-display) !important; font-weight: 800 !important; letter-spacing: -0.03em;
+}
+.fw-pillar, .fw-band, .fw-faq-item, .fw-not {
+  border: 2px solid var(--ink) !important; border-radius: 14px !important;
+  box-shadow: 4px 4px 0 var(--ink) !important; background: var(--surface) !important;
+}
+.fw-cta-primary {
+  background: var(--accent) !important; color: #fff !important;
+  border: 2px solid var(--ink) !important; border-radius: 9999px !important;
+  box-shadow: 2px 2px 0 var(--ink) !important; font-weight: 700 !important;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.fw-cta-primary:hover { background: var(--accent-strong) !important; transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink) !important; }
+.fw-cta-secondary {
+  background: var(--surface) !important; color: var(--ink) !important;
+  border: 2px solid var(--ink) !important; border-radius: 9999px !important;
+  box-shadow: 2px 2px 0 var(--ink) !important; font-weight: 700 !important;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.fw-cta-secondary:hover { background: var(--accent-soft) !important; }
+.fw-not-dot { background: var(--accent) !important; }
