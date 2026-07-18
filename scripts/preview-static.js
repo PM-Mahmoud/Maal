@@ -92,16 +92,6 @@ app.get('/contact', (_req, res, next) => {
   }).then(html => res.send(html)).catch(next);
 });
 
-// ── Retro-futurist design preview (standalone landing + auth) ─
-app.get('/retro', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'retro-preview.ejs'), {})
-    .then(html => res.send(html)).catch(next);
-});
-app.get('/retro/login', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'retro-login-preview.ejs'), {})
-    .then(html => res.send(html)).catch(next);
-});
-
 app.use((err, _req, res, _next) => {
   console.error(err);
   res.status(500).send('<pre>' + (err.stack || err.message) + '</pre>');

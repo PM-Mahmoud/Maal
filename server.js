@@ -294,14 +294,6 @@ app.use('/api/onboarding', require('./routes/onboarding'));
 app.use('/score', require('./routes/score'));
 app.use('/api/waitlist', require('./routes/waitlist'));
 
-// Retro-futurist design PREVIEW (standalone, does not affect live landing/auth)
-app.get('/retro', (req, res) => {
-  res.render('retro-preview', { layout: false });
-});
-app.get('/retro/login', (req, res) => {
-  res.render('retro-login-preview', { layout: false });
-});
-
 // Public pages
 app.get('/pricing', (req, res) => {
   const { buildAnalyticsSnippet } = require('./lib/landing-context');
