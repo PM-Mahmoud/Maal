@@ -2,6 +2,8 @@
 @source "./";
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
+/* Retro-futurist identity (matches the hellomaal.com landing): Bricolage Grotesque display + Space Grotesk body */
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
@@ -11,8 +13,8 @@
  * The @theme inline block maps CSS custom properties to Tailwind utility
  * classes (e.g. --color-primary -> bg-primary, text-primary).
  *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
+ * The :root and .dark blocks define the actual color values (retro-futurist
+ * palette, hex — matches the hellomaal.com landing).
  *
  * To add a new semantic color:
  * 1. Add the variable to :root (light value) and .dark (dark value)
@@ -27,7 +29,8 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
-  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Space Grotesk", "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque", "Space Grotesk", "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --color-mint: var(--mint);
   --color-gold: var(--gold);
   --color-surface: var(--surface);
@@ -68,80 +71,81 @@
 
 :root {
   --radius: 0.5rem;
-  /* Maal palette - light */
-  --background: #FBFBFB;
-  --surface: #FFFFFF;
-  --foreground: #0E0E10;
-  --card: #FFFFFF;
-  --card-foreground: #0E0E10;
-  --popover: #FFFFFF;
-  --popover-foreground: #0E0E10;
-  --primary: #0E0E10;
-  --primary-foreground: #FFFFFF;
-  --secondary: #F4F4F5;
-  --secondary-foreground: #0E0E10;
-  --muted: #F4F4F5;
-  --muted-foreground: #6B6F76;
-  --accent: #F4F4F5;
-  --accent-foreground: #0E0E10;
-  --destructive: #C2701E;
-  --destructive-foreground: #FFFFFF;
-  --border: #E8E8EA;
-  --input: #E8E8EA;
-  --ring: #12B5A6;
-  --mint: #12B5A6;
-  --gold: #C2701E;
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: #FBFBFB;
-  --sidebar-foreground: #0E0E10;
-  --sidebar-primary: #0E0E10;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F4F4F5;
-  --sidebar-accent-foreground: #0E0E10;
-  --sidebar-border: #E8E8EA;
-  --sidebar-ring: #12B5A6;
+  /* Maal palette - light · retro-futurist (matches hellomaal.com landing) */
+  --background: #F3E9D2;
+  --surface: #FBF5E7;
+  --foreground: #221C15;
+  --card: #FBF5E7;
+  --card-foreground: #221C15;
+  --popover: #FBF5E7;
+  --popover-foreground: #221C15;
+  --primary: #E4572E;
+  --primary-foreground: #FBF5E7;
+  --secondary: #EEE0C4;
+  --secondary-foreground: #221C15;
+  --muted: #EEE0C4;
+  --muted-foreground: #6B6152;
+  --accent: #EEE0C4;
+  --accent-foreground: #221C15;
+  --destructive: #C0341A;
+  --destructive-foreground: #FBF5E7;
+  --border: #E0D2B4;
+  --input: #E0D2B4;
+  --ring: #E4572E;
+  --mint: #2E8B84;
+  --gold: #E7A937;
+  --chart-1: #E4572E;
+  --chart-2: #2E8B84;
+  --chart-3: #E7A937;
+  --chart-4: #C43F1B;
+  --chart-5: #34281E;
+  --sidebar: #F3E9D2;
+  --sidebar-foreground: #221C15;
+  --sidebar-primary: #E4572E;
+  --sidebar-primary-foreground: #FBF5E7;
+  --sidebar-accent: #EEE0C4;
+  --sidebar-accent-foreground: #221C15;
+  --sidebar-border: #E0D2B4;
+  --sidebar-ring: #E4572E;
 }
 
 .dark {
-  --background: #0A0A0B;
-  --surface: #141416;
-  --foreground: #FAFAFA;
-  --card: #141416;
-  --card-foreground: #FAFAFA;
-  --popover: #141416;
-  --popover-foreground: #FAFAFA;
-  --primary: #FAFAFA;
-  --primary-foreground: #0A0A0B;
-  --secondary: #1C1C1F;
-  --secondary-foreground: #FAFAFA;
-  --muted: #1C1C1F;
-  --muted-foreground: #8A8F98;
-  --accent: #1C1C1F;
-  --accent-foreground: #FAFAFA;
-  --destructive: #C2701E;
-  --destructive-foreground: #FAFAFA;
-  --border: #232328;
-  --input: #232328;
-  --ring: #2DD4C4;
-  --mint: #2DD4C4;
-  --gold: #C2701E;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: #0A0A0B;
-  --sidebar-foreground: #FAFAFA;
-  --sidebar-primary: #FAFAFA;
-  --sidebar-primary-foreground: #0A0A0B;
-  --sidebar-accent: #1C1C1F;
-  --sidebar-accent-foreground: #FAFAFA;
-  --sidebar-border: #232328;
-  --sidebar-ring: #2DD4C4;
+  /* Retro-dark (derived from the retro auth pages' dark scheme) */
+  --background: #1C1710;
+  --surface: #26201A;
+  --foreground: #F3E9D2;
+  --card: #26201A;
+  --card-foreground: #F3E9D2;
+  --popover: #26201A;
+  --popover-foreground: #F3E9D2;
+  --primary: #F0754B;
+  --primary-foreground: #1C1710;
+  --secondary: #302A22;
+  --secondary-foreground: #F3E9D2;
+  --muted: #302A22;
+  --muted-foreground: #C3B79E;
+  --accent: #302A22;
+  --accent-foreground: #F3E9D2;
+  --destructive: #F0754B;
+  --destructive-foreground: #1C1710;
+  --border: #3B3329;
+  --input: #3B3329;
+  --ring: #F0754B;
+  --mint: #4DB6AC;
+  --gold: #E7A937;
+  --chart-1: #F0754B;
+  --chart-2: #4DB6AC;
+  --chart-3: #E7A937;
+  --chart-4: #E4572E;
+  --chart-5: #C3B79E;
+  --sidebar: #1C1710;
+  --sidebar-foreground: #F3E9D2;
+  --sidebar-primary: #F0754B;
+  --sidebar-primary-foreground: #1C1710;
+  --sidebar-accent: #302A22;
+  --sidebar-accent-foreground: #F3E9D2;
+  --sidebar-border: #3B3329;
+  --sidebar-ring: #F0754B;
 }
 
 @layer base {
@@ -158,8 +162,9 @@
   }
 
   h1, h2, h3, h4 {
+    font-family: var(--font-display);
     letter-spacing: -0.03em;
-    font-weight: 700;
+    font-weight: 800;
   }
 }
 

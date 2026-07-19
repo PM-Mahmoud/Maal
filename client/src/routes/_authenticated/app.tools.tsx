@@ -8,9 +8,7 @@ const CALCULATORS = [
   { to: "/app/tax-bracket-visualizer", name: "Tax Brackets", cat: "Tax", desc: "Visualise marginal vs effective rates across the stage-3 brackets." },
   { to: "/app/debt-payoff", name: "Debt Payoff", cat: "Debt", desc: "Compare snowball vs avalanche and see your debt-free date." },
   { to: "/app/scenarios-simulator", name: "Scenarios", cat: "Retirement", desc: "Monte Carlo range for your retirement balance to age 60." },
-  { to: "/app/insurance-gap", name: "Insurance Gap", cat: "Protection", desc: "Estimate your life/TPD cover gap." },
   { to: "/app/net-worth-flow", name: "Net Worth Flow", cat: "Cashflow", desc: "Monthly cashflow and net-worth composition." },
-  { to: "/app/cost-of-living", name: "Cost of Living", cat: "Planning", desc: "Compare the cost of living across AU cities." },
 ] as const;
 
 const TOOLS = [
