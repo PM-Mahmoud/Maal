@@ -53,7 +53,7 @@ function Index() {
     <div className="rf-scope">
       {/* Ticker */}
       <div className="rf-ticker">
-        <div className="rf-ticker-track"><TickerItems /><TickerItems /></div>
+        <div className="rf-ticker-track"><TickerItems /><span aria-hidden="true"><TickerItems /></span></div>
       </div>
 
       {/* Header */}

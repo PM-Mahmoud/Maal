@@ -8,15 +8,19 @@ export type WidgetSpec = {
   data: any;
 };
 
+async function throwServerError(r: Response, fallback: string): Promise<never> {
+  let msg: string | undefined;
+  try { msg = (await r.json())?.error; } catch { /* non-JSON body */ }
+  throw new Error(msg || fallback);
+}
+
 export async function listWidgets(): Promise<WidgetSpec[]> {
-  try {
-    const r = await fetch("/api/v1/widgets", { credentials: "include" });
-    if (!r.ok) return [];
-    const j = await r.json();
-    return Array.isArray(j?.widgets) ? j.widgets : [];
-  } catch {
-    return [];
-  }
+  const r = await fetch("/api/v1/widgets", { credentials: "include" });
+  // Throw (not silent []) so a failed load is distinguishable from a
+  // confirmed-empty list at the call site.
+  if (!r.ok) return throwServerError(r, "Could not load saved widgets.");
+  const j = await r.json();
+  return Array.isArray(j?.widgets) ? j.widgets : [];
 }
 
 export async function addWidget(source: string, title?: string): Promise<boolean> {
@@ -30,5 +34,8 @@ export async function addWidget(source: string, title?: string): Promise<boolean
 }
 
 export async function removeWidget(id: number): Promise<void> {
-  await fetch(`/api/v1/widgets/${id}`, { method: "DELETE", credentials: "include" });
+  const r = await fetch(`/api/v1/widgets/${id}`, { method: "DELETE", credentials: "include" });
+  // Throw so an optimistically-removed widget can be restored when the
+  // server-side delete actually failed.
+  if (!r.ok) return throwServerError(r, "Could not remove widget.");
 }

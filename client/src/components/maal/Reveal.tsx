@@ -23,11 +23,12 @@ export function Reveal({ children, delay = 0, as = "div", className = "" }: Prop
       setVisible(true);
       return;
     }
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
           if (e.isIntersecting) {
-            setTimeout(() => setVisible(true), delay);
+            timer = setTimeout(() => setVisible(true), delay);
             io.disconnect();
             break;
           }
@@ -36,7 +37,10 @@ export function Reveal({ children, delay = 0, as = "div", className = "" }: Prop
       { rootMargin: "0px 0px -10% 0px", threshold: 0.12 },
     );
     io.observe(el);
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+      if (timer !== undefined) clearTimeout(timer);
+    };
   }, [delay]);
 
   const Tag = as as any;

@@ -24,21 +24,26 @@ import {
 } from "recharts";
 import { PiggyBank, TrendingUp, Zap, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { formatAUD } from "@/lib/score";
+import { getConstants, combinedMarginalRate } from "@/lib/au-constants";
 
 export const Route = createFileRoute("/_authenticated/app/super-optimizer")({
   component: SuperOptimizer,
 });
 
 /* -------------------------------------------------------------------------- */
-/*  Constants                                                                  */
+/*  Constants — all FY-keyed rates/thresholds come from the shared AU          */
+/*  constants (shared/au-constants.json via @/lib/au-constants), the same      */
+/*  AUTHORITATIVE source the server uses. Nothing tax-related is hardcoded.    */
 /* -------------------------------------------------------------------------- */
 
-const SG_RATE = 0.12; // 12% from July 2025
-const CONCESSIONAL_CAP = 30_000;
-const DIV293_THRESHOLD = 250_000;
-const TAX_RATE_15 = 0.15;
-const TAX_RATE_30 = 0.3; // Division 293
-const MARGINAL_TAX = 0.45; // 45% for $180k+ (ignoring Medicare for simplicity)
+const AU = getConstants();
+const SG_RATE = AU.super.sgRate;
+const CONCESSIONAL_CAP = AU.super.concessionalCap;
+const DIV293_THRESHOLD = AU.super.division293Threshold;
+/** Tax on fund earnings in accumulation (Division 293 does NOT touch this). */
+const EARNINGS_TAX = AU.super.earningsRateInAccumulation;
+/** Extra contributions tax when Division 293 applies. */
+const DIV293_EXTRA = AU.super.division293ExtraRate;
 
 const AGE_OPTIONS = [25, 30, 35, 40, 45, 50, 55, 60];
 const SALARY_OPTIONS = [120_000, 150_000, 180_000, 200_000, 250_000, 300_000, 400_000];
@@ -54,6 +59,15 @@ interface SuperProjection {
   balanceWithExtra: number;
 }
 
+/**
+ * Contributions tax rate on concessional contributions: 15%, plus the
+ * Division 293 extra 15% when income exceeds the threshold. Applied to
+ * CONTRIBUTIONS — fund earnings are always taxed at EARNINGS_TAX.
+ */
+function contributionsTaxRate(salary: number): number {
+  return salary > DIV293_THRESHOLD ? EARNINGS_TAX + DIV293_EXTRA : EARNINGS_TAX;
+}
+
 function calculateProjections(
   currentAge: number,
   currentBalance: number,
@@ -63,22 +77,24 @@ function calculateProjections(
   years: number = 35,
 ): SuperProjection[] {
   const sgContrib = salary * SG_RATE;
+  const contribTax = contributionsTaxRate(salary);
   const data: SuperProjection[] = [];
   let balNoExtra = currentBalance;
   let balWithExtra = currentBalance;
 
   for (let y = 1; y <= years; y++) {
     const age = currentAge + y;
-    // No-extra: just SG
+    // No-extra: just SG. Contribution tax is deducted from the CONTRIBUTION;
+    // fund earnings are taxed separately at the accumulation earnings rate.
     const earningsNo = balNoExtra * returnRate;
-    const taxNo = earningsNo * (salary > DIV293_THRESHOLD ? TAX_RATE_30 : TAX_RATE_15);
-    balNoExtra = balNoExtra + earningsNo - taxNo + sgContrib;
+    const taxNo = earningsNo * EARNINGS_TAX;
+    balNoExtra = balNoExtra + earningsNo - taxNo + sgContrib * (1 - contribTax);
 
-    // With extra: SG + voluntary
+    // With extra: SG + voluntary (capped at the remaining concessional cap)
     const totalContrib = sgContrib + Math.min(extraContribution, CONCESSIONAL_CAP - sgContrib);
     const earningsWith = balWithExtra * returnRate;
-    const taxWith = earningsWith * (salary > DIV293_THRESHOLD ? TAX_RATE_30 : TAX_RATE_15);
-    balWithExtra = balWithExtra + earningsWith - taxWith + totalContrib;
+    const taxWith = earningsWith * EARNINGS_TAX;
+    balWithExtra = balWithExtra + earningsWith - taxWith + totalContrib * (1 - contribTax);
 
     data.push({
       year: y,
@@ -113,7 +129,11 @@ function SuperOptimizer() {
   const sgContrib = salary * SG_RATE;
   const remainingCap = Math.max(0, CONCESSIONAL_CAP - sgContrib);
   const effectiveExtra = Math.min(extra, remainingCap);
-  const taxSaving = effectiveExtra * (MARGINAL_TAX - (salary > DIV293_THRESHOLD ? TAX_RATE_30 : TAX_RATE_15));
+  // Marginal rate derived from the selected income via the shared FY-keyed
+  // brackets (income tax + Medicare) — not a flat assumption.
+  const marginalRate = combinedMarginalRate(salary);
+  const contribTax = contributionsTaxRate(salary);
+  const taxSaving = effectiveExtra * Math.max(0, marginalRate - contribTax);
   const isDiv293 = salary > DIV293_THRESHOLD;
 
   const chartData = projections.filter((_, i) => i % 2 === 0 || i === projections.length - 1);
@@ -183,7 +203,7 @@ function SuperOptimizer() {
                 {isDiv293 && (
                   <p className="flex items-center gap-1.5 text-[11px] text-amber-500">
                     <AlertTriangle className="h-3 w-3" />
-                    Division 293 applies (15% extra tax on contributions)
+                    Division 293 applies ({Math.round(DIV293_EXTRA * 100)}% extra tax on contributions)
                   </p>
                 )}
               </div>
@@ -196,11 +216,11 @@ function SuperOptimizer() {
                   value={[extra]}
                   onValueChange={([v]) => setExtra(v)}
                   min={0}
-                  max={30_000}
+                  max={CONCESSIONAL_CAP}
                   step={500}
                 />
                 <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>$0</span><span>$30k</span>
+                  <span>$0</span><span>{formatAUD(CONCESSIONAL_CAP)}</span>
                 </div>
                 {effectiveExtra < extra && (
                   <p className="text-[11px] text-amber-500">

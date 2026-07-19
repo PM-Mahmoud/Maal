@@ -4,7 +4,12 @@
 
 export async function listResearch(): Promise<unknown[]> {
   const r = await fetch('/api/v1/research', { credentials: 'include' });
-  const j = r.ok ? await r.json() : null;
+  if (!r.ok) {
+    let msg = 'Could not load research history';
+    try { const j = await r.json(); msg = j.error || msg; } catch { /* ignore */ }
+    throw new Error(msg);
+  }
+  const j = await r.json();
   return Array.isArray(j) ? j : [];
 }
 
@@ -25,9 +30,10 @@ export async function startResearch(payload?: { data?: { topic?: string } }): Pr
   return r.json();
 }
 
-// Poll a running job. Returns { status, phase, elapsedMs, report? }.
-export async function pollResearch(jobId: string): Promise<{ status: string; phase: string; elapsedMs: number; error?: string | null; report?: unknown }> {
-  const r = await fetch(`/api/v1/research/${jobId}`, { credentials: 'include' });
+// Poll a running job. Returns { status, phase, elapsedMs, report? }. Accepts an
+// optional AbortSignal so unmount cleanup can cancel an in-flight status request.
+export async function pollResearch(jobId: string, signal?: AbortSignal): Promise<{ status: string; phase: string; elapsedMs: number; error?: string | null; report?: unknown }> {
+  const r = await fetch(`/api/v1/research/${jobId}`, { credentials: 'include', signal });
   if (!r.ok) throw new Error('Could not check research status');
   return r.json();
 }
@@ -50,6 +56,11 @@ export async function downloadResearchPdf(reportId: string): Promise<void> {
 
 export async function deleteResearch(payload?: { data?: { id?: string } }): Promise<void> {
   const id = payload?.data?.id;
-  if (!id) return;
-  await fetch(`/api/v1/research/${id}`, { method: 'DELETE', credentials: 'include' });
+  if (!id) throw new Error('Missing report id');
+  const r = await fetch(`/api/v1/research/${id}`, { method: 'DELETE', credentials: 'include' });
+  if (!r.ok) {
+    let msg = 'Could not delete the report';
+    try { const j = await r.json(); msg = j.error || msg; } catch { /* ignore */ }
+    throw new Error(msg);
+  }
 }

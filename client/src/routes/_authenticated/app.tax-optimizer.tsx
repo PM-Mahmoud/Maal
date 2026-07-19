@@ -24,6 +24,16 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { RotateCcw } from "lucide-react";
 import { formatAUD } from "@/lib/score";
+import {
+  getConstants,
+  computeBracketTax,
+  computeLito,
+  medicareLevy,
+  computeMls,
+  computeHecsRepayment,
+  marginalIncomeTaxRate,
+  mlsBaseThreshold,
+} from "@/lib/au-constants";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app/tax-optimizer")({
@@ -61,13 +71,17 @@ interface TaxBreakdown {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Constants                                                                 */
+/*  Constants — all FY-keyed rates/thresholds come from the shared AU          */
+/*  constants (shared/au-constants.json via @/lib/au-constants), the same      */
+/*  AUTHORITATIVE source the server uses. Nothing tax-related is hardcoded.    */
 /* -------------------------------------------------------------------------- */
 
 const STORAGE_KEY = "maal:tax";
 
-/** FY 2025-26 concessional super cap. */
-const SUPER_CAP_FY25 = 30_000;
+/** Constants set in force today (drives every rate, threshold and label). */
+const AU = getConstants();
+const SUPER_CAP = AU.super.concessionalCap;
+const MLS_BASE = mlsBaseThreshold();
 
 const DEFAULTS: TaxInputs = {
   grossIncome: 180_000,
@@ -79,49 +93,6 @@ const DEFAULTS: TaxInputs = {
   hasPrivateCover: "no",
 };
 
-/**
- * ATO FY2025-26 resident tax brackets (stage-3).
- * `threshold` is the income level above which `rate` applies.
- *   - $0–$18,200:        0%
- *   - $18,201–$45,000:   16%
- *   - $45,001–$135,000:  30%
- *   - $135,001–$190,000: 37%
- *   - $190,001+:         45%
- */
-const TAX_BRACKETS: ReadonlyArray<{ threshold: number; rate: number }> = [
-  { threshold: 0, rate: 0 },
-  { threshold: 18_200, rate: 0.16 },
-  { threshold: 45_000, rate: 0.3 },
-  { threshold: 135_000, rate: 0.37 },
-  { threshold: 190_000, rate: 0.45 },
-];
-
-/**
- * HECS/HELP compulsory repayment rates (simplified table).
- * `lower` is the income at and above which `rate` applies.
- */
-const HECS_THRESHOLDS: ReadonlyArray<{ lower: number; rate: number }> = [
-  { lower: 0, rate: 0 },
-  { lower: 51_550, rate: 0.01 },
-  { lower: 59_520, rate: 0.02 },
-  { lower: 63_090, rate: 0.025 },
-  { lower: 66_880, rate: 0.03 },
-  { lower: 70_900, rate: 0.035 },
-  { lower: 75_250, rate: 0.04 },
-  { lower: 79_900, rate: 0.045 },
-  { lower: 84_860, rate: 0.05 },
-  { lower: 90_200, rate: 0.055 },
-  { lower: 95_900, rate: 0.06 },
-  { lower: 102_000, rate: 0.065 },
-  { lower: 108_200, rate: 0.07 },
-  { lower: 114_800, rate: 0.075 },
-  { lower: 121_700, rate: 0.08 },
-  { lower: 128_900, rate: 0.085 },
-  { lower: 136_400, rate: 0.09 },
-  { lower: 144_100, rate: 0.095 },
-  { lower: 152_100, rate: 0.1 },
-];
-
 const CHART_SLICES = [
   { key: "incomeTax", label: "Income tax", color: "var(--foreground)" },
   { key: "medicare", label: "Medicare Levy", color: "var(--mint)" },
@@ -130,75 +101,12 @@ const CHART_SLICES = [
 ] as const;
 
 /* -------------------------------------------------------------------------- */
-/*  Tax Engine (deterministic, no LLM)                                        */
+/*  Tax Engine (deterministic, no LLM — all figures via @/lib/au-constants)   */
 /* -------------------------------------------------------------------------- */
-
-function computeIncomeTax(taxableIncome: number): number {
-  if (taxableIncome <= 0) return 0;
-  let tax = 0;
-  for (let i = 0; i < TAX_BRACKETS.length; i++) {
-    const cur = TAX_BRACKETS[i];
-    const next = TAX_BRACKETS[i + 1];
-    const upper = next ? next.threshold : Infinity;
-    if (taxableIncome > cur.threshold) {
-      const slice = Math.min(taxableIncome, upper) - cur.threshold;
-      tax += slice * cur.rate;
-    } else {
-      break;
-    }
-  }
-  return tax;
-}
-
-function marginalRateFor(taxableIncome: number): number {
-  let rate = 0;
-  for (const b of TAX_BRACKETS) {
-    if (taxableIncome > b.threshold) {
-      rate = b.rate;
-    } else {
-      break;
-    }
-  }
-  return rate;
-}
-
-/** Medicare Levy — simplified: 2% above $26,000, 0 below. */
-function computeMedicareLevy(taxableIncome: number): number {
-  if (taxableIncome <= 26_000) return 0;
-  return taxableIncome * 0.02;
-}
-
-/** Medicare Levy Surcharge — simplified: 1% if no private cover AND income > $93,000. */
-function computeMLS(taxableIncome: number, hasPrivateCover: boolean): number {
-  if (hasPrivateCover) return 0;
-  if (taxableIncome <= 93_000) return 0;
-  return taxableIncome * 0.01;
-}
-
-/** Low Income Tax Offset — max $700, reducing by 5c per $1 over $37,500, min $0. */
-function computeLITO(taxableIncome: number): number {
-  if (taxableIncome <= 37_500) return 700;
-  const reduction = (taxableIncome - 37_500) * 0.05;
-  return Math.max(0, 700 - reduction);
-}
-
-/** HECS/HELP compulsory repayment (simplified). */
-function computeHecsRepayment(taxableIncome: number, hecsBalance: number): number {
-  if (hecsBalance <= 0) return 0;
-  let rate = 0;
-  for (const t of HECS_THRESHOLDS) {
-    if (taxableIncome >= t.lower) {
-      rate = t.rate;
-    } else {
-      break;
-    }
-  }
-  return taxableIncome * rate;
-}
 
 function computeTax(input: TaxInputs): TaxBreakdown {
   const hasPrivateCover = input.hasPrivateCover === "yes";
-  const superDeduction = Math.min(input.superConcessional, SUPER_CAP_FY25);
+  const superDeduction = Math.min(input.superConcessional, SUPER_CAP);
 
   const taxableIncome = Math.max(
     0,
@@ -209,21 +117,21 @@ function computeTax(input: TaxInputs): TaxBreakdown {
       superDeduction,
   );
 
-  const incomeTax = computeIncomeTax(taxableIncome);
-  const medicareLevy = computeMedicareLevy(taxableIncome);
-  const mls = computeMLS(taxableIncome, hasPrivateCover);
-  const hecsRepayment = computeHecsRepayment(taxableIncome, input.hecsBalance);
-  const lito = computeLITO(taxableIncome);
+  const incomeTax = computeBracketTax(taxableIncome);
+  const medicare = medicareLevy(taxableIncome);
+  const mls = computeMls(taxableIncome, hasPrivateCover);
+  const hecsRepayment = computeHecsRepayment(taxableIncome, input.hecsBalance).annualRepayment;
+  const lito = computeLito(taxableIncome);
 
-  const totalTax = Math.max(0, incomeTax + medicareLevy + mls + hecsRepayment - lito);
+  const totalTax = Math.max(0, incomeTax + medicare + mls + hecsRepayment - lito);
 
   // Compare against a no-deductions scenario to estimate tax saved
   const gross = Math.max(0, input.grossIncome);
-  const noDedIncomeTax = computeIncomeTax(gross);
-  const noDedMedicare = computeMedicareLevy(gross);
-  const noDedMls = computeMLS(gross, hasPrivateCover);
-  const noDedHecs = computeHecsRepayment(gross, input.hecsBalance);
-  const noDedLito = computeLITO(gross);
+  const noDedIncomeTax = computeBracketTax(gross);
+  const noDedMedicare = medicareLevy(gross);
+  const noDedMls = computeMls(gross, hasPrivateCover);
+  const noDedHecs = computeHecsRepayment(gross, input.hecsBalance).annualRepayment;
+  const noDedLito = computeLito(gross);
   const totalTaxNoDed = Math.max(
     0,
     noDedIncomeTax + noDedMedicare + noDedMls + noDedHecs - noDedLito,
@@ -234,12 +142,12 @@ function computeTax(input: TaxInputs): TaxBreakdown {
   return {
     taxableIncome,
     incomeTax,
-    medicareLevy,
+    medicareLevy: medicare,
     mls,
     hecsRepayment,
     lito,
     totalTax,
-    marginalRate: marginalRateFor(taxableIncome),
+    marginalRate: marginalIncomeTaxRate(taxableIncome),
     effectiveRate: input.grossIncome > 0 ? totalTax / input.grossIncome : 0,
     taxSaved,
   };
@@ -451,9 +359,9 @@ function TaxOptimizer() {
     toast.success("Reset to sample inputs");
   };
 
-  const superCapUsed = Math.min(input.superConcessional, SUPER_CAP_FY25);
-  const superCapRemaining = Math.max(0, SUPER_CAP_FY25 - superCapUsed);
-  const superPct = Math.round((superCapUsed / SUPER_CAP_FY25) * 100);
+  const superCapUsed = Math.min(input.superConcessional, SUPER_CAP);
+  const superCapRemaining = Math.max(0, SUPER_CAP - superCapUsed);
+  const superPct = Math.round((superCapUsed / SUPER_CAP) * 100);
 
   return (
     <section id="tax" className="scroll-mt-20 border-t border-hairline bg-surface-2/40">
@@ -466,7 +374,7 @@ function TaxOptimizer() {
             Find dollars hiding in your tax return.
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Built for everyday Australians. Estimate your FY 2025-26 income tax,
+            Built for everyday Australians. Estimate your FY {AU.fy} income tax,
             Medicare Levy, surcharge and HECS repayment — then see how deductions
             and super contributions change the picture.
           </p>
@@ -530,9 +438,9 @@ function TaxOptimizer() {
                 value={input.superConcessional}
                 onChange={(n) => update("superConcessional", n)}
                 min={0}
-                max={30_000}
+                max={SUPER_CAP}
                 step={500}
-                hint={`FY25-26 cap is ${formatAUD(SUPER_CAP_FY25)} (salary sacrifice + personal)`}
+                hint={`FY${AU.fy} cap is ${formatAUD(SUPER_CAP)} (salary sacrifice + personal)`}
               />
 
               <NumberField
@@ -560,7 +468,7 @@ function TaxOptimizer() {
                   </SelectContent>
                 </Select>
                 <p className="text-[11px] text-muted-foreground">
-                  Affects Medicare Levy Surcharge (MLS) above $93,000 income
+                  Affects Medicare Levy Surcharge (MLS) above {formatAUD(MLS_BASE)} income
                 </p>
               </div>
             </div>
@@ -570,7 +478,7 @@ function TaxOptimizer() {
           <Reveal delay={100} className="lg:sticky lg:top-24 lg:self-start">
             <div className="rounded-2xl border border-hairline bg-card p-6 shadow-[0_30px_60px_-30px_oklch(0.16_0_0/0.3)]">
               <p className="text-xs text-muted-foreground">
-                Estimated total tax (FY 2025-26)
+                Estimated total tax (FY {AU.fy})
               </p>
               <p className="mt-1 tracking-display text-4xl tabular-nums sm:text-5xl">
                 {fmtExact(result.totalTax)}

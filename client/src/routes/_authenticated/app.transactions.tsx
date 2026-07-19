@@ -20,6 +20,85 @@ const AU_BANKS = [
 
 const CATS = ["groceries","dining","transport","housing","utilities","health","income","investing","savings","entertainment","other"];
 
+// --- CSV import helpers ----------------------------------------------------
+
+// Minimal RFC-4180-style CSV parser: quoted fields, "" escaped quotes, embedded
+// commas and newlines inside quotes, CRLF or LF row endings. No dependencies.
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  let i = text.charCodeAt(0) === 0xfeff ? 1 : 0; // strip a UTF-8 BOM
+  for (; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; } // escaped quote
+        else inQuotes = false;
+      } else {
+        field += c; // commas and newlines inside quotes are literal
+      }
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === ",") {
+      row.push(field); field = "";
+    } else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++; // CRLF
+      row.push(field); field = "";
+      rows.push(row); row = [];
+    } else {
+      field += c;
+    }
+  }
+  // Flush a trailing field/row when the file doesn't end with a newline.
+  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+// Strict date parsing for CSV cells: accepts YYYY-MM-DD or AU-style DD/MM/YYYY
+// and rejects impossible dates (e.g. 31 Feb) instead of letting Date guess.
+// Returns a normalised YYYY-MM-DD string, or null when the cell is unreadable.
+function parseDateCell(raw: string): string | null {
+  const s = raw.trim();
+  let y = 0, m = 0, d = 0;
+  let match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
+  if (match) {
+    y = Number(match[1]); m = Number(match[2]); d = Number(match[3]);
+  } else {
+    match = /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/.exec(s);
+    if (!match) return null;
+    d = Number(match[1]); m = Number(match[2]); y = Number(match[3]);
+  }
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${y}-${pad(m)}-${pad(d)}`;
+}
+
+// Retry-safety for CSV imports without a bulk endpoint: fingerprints of rows
+// that imported successfully are remembered in this browser, so re-uploading
+// the same file after a partial failure skips them instead of duplicating.
+// (Trade-off: two genuinely identical transactions on the same day import once.)
+const IMPORTED_KEY = "maal_csv_imported_v1";
+const MAX_IMPORTED_KEYS = 5000;
+
+function rowFingerprint(r: { occurred_on: string; description: string; amount: number }): string {
+  return `${r.occurred_on}|${r.description.trim().toLowerCase()}|${r.amount.toFixed(2)}`;
+}
+function loadImportedKeys(): Set<string> {
+  try {
+    const raw = localStorage.getItem(IMPORTED_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(arr) ? arr.map(String) : []);
+  } catch { return new Set(); }
+}
+function saveImportedKeys(keys: Set<string>): void {
+  try { localStorage.setItem(IMPORTED_KEY, JSON.stringify(Array.from(keys).slice(-MAX_IMPORTED_KEYS))); }
+  catch { /* storage blocked or full — non-fatal */ }
+}
+
 function TransactionsPage() {
   const list = listTransactions;
   const seed = seedMockTransactions;
@@ -33,6 +112,9 @@ function TransactionsPage() {
   const [manualOpen, setManualOpen] = useState(false);
   const [form, setForm] = useState({ occurred_on: new Date().toISOString().slice(0,10), description: "", category: "other", amount: "" });
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [importErr, setImportErr] = useState<string | null>(null);
+  const [pageErr, setPageErr] = useState<string | null>(null);
+  const [manualErr, setManualErr] = useState<string | null>(null);
   const [view, setView] = useState<"all" | "subs">("all");
   const [subs, setSubs] = useState<Subscription[]>([]);
   const [showRules, setShowRules] = useState(false);
@@ -40,7 +122,16 @@ function TransactionsPage() {
 
   // Reset subs on any transactions refresh so the Subscriptions tab re-detects
   // after a manual add / CSV import instead of showing stale merchants.
-  async function refresh() { setRows((await list()) as any); setSubs([]); }
+  // A list failure is surfaced explicitly rather than masquerading as "no rows".
+  async function refresh() {
+    try {
+      setRows((await list()) as any);
+      setSubs([]);
+      setPageErr(null);
+    } catch (e: any) {
+      setPageErr(e?.message ?? "Couldn't load transactions.");
+    }
+  }
   useEffect(() => { refresh(); }, []);
   useEffect(() => { if (view === "subs" && subs.length === 0) getSubscriptions().then(setSubs); }, [view, subs.length]);
 
@@ -64,12 +155,15 @@ function TransactionsPage() {
   async function submitManual(e: React.FormEvent) {
     e.preventDefault();
     if (!form.description || !form.amount) return;
-    setBusy("manual");
+    setBusy("manual"); setManualErr(null);
     try {
       await addTx({ data: { ...form, amount: Number(form.amount) } } as any);
       setForm({ occurred_on: new Date().toISOString().slice(0,10), description: "", category: "other", amount: "" });
       setManualOpen(false);
       await refresh();
+    } catch (err: any) {
+      // Keep the modal open so the entry isn't lost and the failure is visible.
+      setManualErr(err?.message ?? "Couldn't save the transaction — please try again.");
     } finally { setBusy(null); }
   }
 
@@ -85,46 +179,81 @@ function TransactionsPage() {
 
   async function onCsv(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return;
-    setBusy("import"); setImportMsg(null);
+    setBusy("import"); setImportMsg(null); setImportErr(null);
     try {
       // PDF statement parsing isn't supported yet — don't feed a PDF through the
       // CSV parser (it would produce garbage rows).
       if (/\.pdf$/i.test(file.name) || file.type === "application/pdf") {
-        setImportMsg("PDF statements aren't supported yet — export a CSV (Date, Description, Amount) and upload that.");
+        setImportErr("PDF statements aren't supported yet — export a CSV (Date, Description, Amount) and upload that.");
         return;
       }
       const text = await file.text();
-      const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-      const first = lines[0]?.toLowerCase() ?? "";
-      const hasHeader = first.includes("date") && first.includes("amount");
-      const body = hasHeader ? lines.slice(1) : lines;
+      const rows = parseCsv(text).filter((r) => r.some((c) => c.trim().length > 0));
+      const headerCells = rows[0]?.map((c) => c.trim().toLowerCase()) ?? [];
+      const hasHeader = headerCells.some((c) => c.includes("date")) && headerCells.some((c) => c.includes("amount"));
+      const body = hasHeader ? rows.slice(1) : rows;
 
       // Parse + validate EVERY row first; only write if the whole file is clean,
-      // so a malformed row can't leave a partial import behind.
+      // so a malformed row can't leave a partial import behind. Errors name the
+      // exact row and field that couldn't be read.
       const parsed: { occurred_on: string; description: string; amount: number }[] = [];
-      for (const line of body) {
-        const parts = line.split(",").map((p) => p.trim().replace(/^"|"$/g, ""));
-        if (parts.length < 3) continue;
-        const [date, desc, amt] = parts;
-        const d = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date(date).toISOString().slice(0, 10);
-        const amount = parseAmount(amt);
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !desc || amount === null) {
-          setImportMsg(`Couldn't read a row ("${line.slice(0, 40)}"). No transactions were imported — please check the file.`);
+      for (let i = 0; i < body.length; i++) {
+        const cells = body[i];
+        if (cells.length < 3) continue; // stray notes/summary lines in bank exports
+        const rowNo = i + (hasHeader ? 2 : 1); // human-facing row number in the file
+        const [rawDate, rawDesc, rawAmt] = cells.map((c) => c.trim());
+        const d = parseDateCell(rawDate);
+        if (!d) {
+          setImportErr(`Row ${rowNo}: couldn't read the date ("${rawDate.slice(0, 24)}") — use YYYY-MM-DD or DD/MM/YYYY. No transactions were imported.`);
           return;
         }
-        parsed.push({ occurred_on: d, description: desc.slice(0, 160), amount });
+        if (!rawDesc) {
+          setImportErr(`Row ${rowNo}: missing a description. No transactions were imported — please check the file.`);
+          return;
+        }
+        const amount = parseAmount(rawAmt);
+        if (amount === null) {
+          setImportErr(`Row ${rowNo}: couldn't read the amount ("${rawAmt.slice(0, 24)}"). No transactions were imported — please check the file.`);
+          return;
+        }
+        parsed.push({ occurred_on: d, description: rawDesc.slice(0, 160), amount });
       }
-      if (!parsed.length) { setImportMsg("No valid rows found. Expected columns: Date, Description, Amount."); return; }
+      if (!parsed.length) { setImportErr("No valid rows found. Expected columns: Date, Description, Amount."); return; }
 
-      let inserted = 0;
-      for (const row of parsed) {
-        await addTx({ data: { ...row, category: "other" } } as any);
-        inserted++;
+      // Idempotency: rows whose fingerprint was already imported (remembered in
+      // this browser) are skipped, so re-uploading the same file after a partial
+      // failure retries only the rows that didn't make it — never duplicates.
+      const seen = loadImportedKeys();
+      let inserted = 0, skipped = 0;
+      const failures: string[] = [];
+      for (let i = 0; i < parsed.length; i++) {
+        const row = parsed[i];
+        const fp = rowFingerprint(row);
+        if (seen.has(fp)) { skipped++; continue; }
+        try {
+          await addTx({ data: { ...row, category: "other" } } as any);
+          seen.add(fp); inserted++;
+        } catch (err: any) {
+          failures.push(`row ${i + 1} (${row.description.slice(0, 24)}): ${err?.message ?? "save failed"}`);
+        }
       }
-      setImportMsg(`Imported ${inserted} row${inserted === 1 ? "" : "s"} from ${file.name}.`);
+      saveImportedKeys(seen);
       await refresh();
+
+      const total = parsed.length;
+      if (failures.length) {
+        setImportErr(
+          `Imported ${inserted} of ${total} row${total === 1 ? "" : "s"}${skipped ? ` (${skipped} already imported — skipped)` : ""}. ` +
+          `Failed: ${failures.slice(0, 3).join("; ")}${failures.length > 3 ? ` (+${failures.length - 3} more)` : ""}. ` +
+          `Re-upload the same file to retry — already-imported rows are skipped.`
+        );
+      } else if (inserted === 0 && skipped > 0) {
+        setImportMsg(`All ${skipped} row${skipped === 1 ? "" : "s"} from ${file.name} ${skipped === 1 ? "was" : "were"} already imported — nothing new to add.`);
+      } else {
+        setImportMsg(`Imported ${inserted} row${inserted === 1 ? "" : "s"} from ${file.name}${skipped ? ` (${skipped} already imported — skipped)` : ""}.`);
+      }
     } catch (err: any) {
-      setImportMsg(err?.message ?? "Import failed");
+      setImportErr(err?.message ?? "Import failed");
     } finally { setBusy(null); if (fileRef.current) fileRef.current.value = ""; }
   }
 
@@ -141,6 +270,10 @@ function TransactionsPage() {
             className="px-3 py-1.5 border border-border rounded-[8px] text-[11px] font-semibold">Clear</button>
         </div>
       </div>
+
+      {pageErr && (
+        <p className="mb-6 px-4 py-3 rounded-[10px] border border-[var(--gold)]/30 bg-[var(--gold)]/10 text-[12px]">{pageErr}</p>
+      )}
 
       {/* How to use banner */}
       <div className="bg-[var(--surface)] border border-border rounded-[12px] p-4 mb-6">
@@ -186,7 +319,7 @@ function TransactionsPage() {
 
           <p className="text-center text-[11px] text-muted-foreground my-3">or</p>
 
-          <button onClick={() => setManualOpen(true)}
+          <button onClick={() => { setManualErr(null); setManualOpen(true); }}
             className="w-full p-4 bg-background border border-border rounded-[10px] text-center hover:border-foreground transition-colors">
             <p className="text-[13px] font-semibold">Manual</p>
             <p className="text-[11px] text-muted-foreground">Add a single transaction by hand</p>
@@ -197,7 +330,7 @@ function TransactionsPage() {
           <div className="mt-5 pt-4 border-t border-dashed border-border flex items-start gap-2">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-0.5 shrink-0 text-muted-foreground"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
             <div className="text-[11px] text-muted-foreground">
-              <p><span className="font-semibold text-foreground">Your data is secure</span> (<a href="#" className="text-[var(--mint)] underline">more on security</a>)</p>
+              <p><span className="font-semibold text-foreground">Your data is secure</span> (<a href="/security" className="text-[var(--mint)] underline">more on security</a>)</p>
               <p className="mt-1">Maal cannot make transactions on your behalf, or make changes to your banking accounts. You can revoke access at any time. We do not store banking credentials on our servers. Your data is never sold.</p>
             </div>
           </div>
@@ -220,6 +353,7 @@ function TransactionsPage() {
           </div>
 
           {importMsg && <p className="text-[11px] text-[var(--mint)] mt-3">{importMsg}</p>}
+          {importErr && <p className="text-[11px] text-[var(--gold)] mt-3">{importErr}</p>}
         </aside>
       </div>
 
@@ -317,6 +451,7 @@ function TransactionsPage() {
                 {CATS.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </Field>
+            {manualErr && <p className="text-[12px] text-[var(--gold)]">{manualErr}</p>}
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={() => setManualOpen(false)} className="px-4 py-2 border border-border rounded-[8px] text-[12px] font-semibold">Cancel</button>
               <button type="submit" disabled={busy === "manual"} className="px-4 py-2 bg-foreground text-background rounded-[8px] text-[12px] font-semibold disabled:opacity-60">{busy === "manual" ? "Saving…" : "Add"}</button>

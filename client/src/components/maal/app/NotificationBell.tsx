@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Bell } from "lucide-react";
-import { supabase } from "@/integrations/api";
 import { listNotifications, markNotificationsRead } from "@/lib/notifications.functions";
 
 function timeAgo(iso: string) {
@@ -26,30 +25,19 @@ export function NotificationBell() {
 
   async function refresh() {
     try {
-      const r: any = await list();
-      setItems(r.notifications ?? []);
+      const r = await list();
+      setItems(Array.isArray(r) ? (r as any[]) : []);
     } catch {}
   }
 
   useEffect(() => {
-    let cancelled = false;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
     refresh();
-    (async () => {
-      const { data } = await supabase.auth.getUser();
-      const uid = data.user?.id;
-      if (!uid || cancelled) return;
-      channel = supabase.channel(`notifications:${uid}:${Math.random().toString(36).slice(2, 8)}`);
-      channel.on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${uid}` },
-        () => refresh(),
-      ).subscribe();
-    })();
-    return () => {
-      cancelled = true;
-      if (channel) supabase.removeChannel(channel);
-    };
+    // Realtime is not available on this backend — the channel API in
+    // integrations/api.ts is an explicit no-op stub, so subscribing here
+    // could never fire. Refetch on window focus instead of pretending.
+    function onFocus() { refresh(); }
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -65,7 +53,7 @@ export function NotificationBell() {
     const next = !open;
     setOpen(next);
     if (next && unread > 0) {
-      await markRead({ data: {} } as any);
+      await markRead();
       setItems((xs) => xs.map((n) => (n.read_at ? n : { ...n, read_at: new Date().toISOString() })));
     }
   }
@@ -88,7 +76,6 @@ export function NotificationBell() {
         <div className="absolute right-0 mt-2 w-[340px] bg-[var(--surface)] border border-border rounded-[12px] shadow-lg z-50 overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <p className="text-[13px] font-semibold">Notifications</p>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-[0.12em]">Realtime</span>
           </div>
           <div className="max-h-[420px] overflow-y-auto">
             {items.length === 0 ? (

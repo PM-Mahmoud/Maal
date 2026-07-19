@@ -59,6 +59,12 @@ function randNormal(rng: () => number, mean: number, std: number): number {
   return mean + z * std;
 }
 
+interface MonteCarloOutcome {
+  results: SimResult[];
+  /** Terminal balance of every simulated run (length === sims) */
+  finalBalances: number[];
+}
+
 function runMonteCarlo(
   startAge: number,
   startBalance: number,
@@ -69,8 +75,8 @@ function runMonteCarlo(
   years: number,
   sims: number = 600,
   seed: number = 42,
-): SimResult[] {
-  const finalBalances: number[][] = Array.from({ length: years }, () => []);
+): MonteCarloOutcome {
+  const balancesByYear: number[][] = Array.from({ length: years }, () => []);
   const rng = mulberry32(seed);
 
   for (let s = 0; s < sims; s++) {
@@ -78,11 +84,11 @@ function runMonteCarlo(
     for (let y = 0; y < years; y++) {
       const r = randNormal(rng, meanReturn, stdReturn);
       bal = Math.max(0, bal * (1 + r) + annualContrib - annualWithdrawal);
-      finalBalances[y].push(bal);
+      balancesByYear[y].push(bal);
     }
   }
 
-  return finalBalances.map((balances, i) => {
+  const results = balancesByYear.map((balances, i) => {
     const sorted = [...balances].sort((a, b) => a - b);
     const idx10 = Math.floor(sorted.length * 0.1);
     const idx50 = Math.floor(sorted.length * 0.5);
@@ -95,6 +101,8 @@ function runMonteCarlo(
       p90: Math.round(sorted[idx90]),
     };
   });
+
+  return { results, finalBalances: balancesByYear[years - 1] ?? [] };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -119,24 +127,19 @@ function ScenariosSimulator() {
   }, [risk]);
 
   const yearsToRetire = 60 - startAge;
-  const results = useMemo(
+  const { results, finalBalances } = useMemo(
     () => runMonteCarlo(startAge, balance, contrib, 0, riskProfile.mean, riskProfile.std, yearsToRetire, 600, seed),
     [startAge, balance, contrib, riskProfile, yearsToRetire, seed],
   );
 
   const finalResult = results[results.length - 1];
   const successRate = useMemo(() => {
-    // Count sims that hit target — using p50 distribution approximation.
-    // Real implementation would track per-sim success; here we approximate
-    // from p10/p90 via linear interpolation (educational tool).
-    if (!finalResult) return 0;
-    const optimistic = finalResult.p90;
-    const pessimistic = finalResult.p10;
-    if (target <= pessimistic) return 95;
-    if (target >= optimistic) return 5;
-    const t = (target - pessimistic) / (optimistic - pessimistic);
-    return Math.round(95 - t * 90);
-  }, [finalResult, target]);
+    // Empirical success rate: share of the simulated terminal balances that
+    // meet or exceed the target (count of hits / total runs).
+    if (finalBalances.length === 0) return 0;
+    const hits = finalBalances.reduce((n, b) => (b >= target ? n + 1 : n), 0);
+    return Math.round((hits / finalBalances.length) * 100);
+  }, [finalBalances, target]);
 
   const chartData = results.filter((_, i) => i % 3 === 0 || i === results.length - 1);
 

@@ -10,14 +10,18 @@
 // server advisor's guardrails. Any AI-authored report content must go through the
 // server advisor endpoint instead.
 
-export async function generateReport(data?: unknown): Promise<unknown> {
+export async function generateReport(data?: unknown): Promise<{ filename: string; base64: string }> {
   const r = await fetch('/api/v1/report', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data ?? {}),
   });
-  if (!r.ok) return null;
+  if (!r.ok) {
+    let payload: Record<string, unknown> | undefined;
+    try { payload = await r.json(); } catch { /* non-JSON */ }
+    throw new FileGenError((payload?.error as string) || 'Could not generate report.', r.status, payload);
+  }
   return r.json();
 }
 

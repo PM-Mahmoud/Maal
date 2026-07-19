@@ -7,6 +7,8 @@ import { fetchMaalScore, type MaalScore } from "@/lib/maalScore";
 import { fetchProfile } from "@/lib/profile";
 import { fetchSnapshots, snapshotValue, snapshotLabel, type Snapshot } from "@/lib/snapshots";
 import { listTransactions } from "@/lib/transactions.functions";
+import { listGoals } from "@/lib/goals.functions";
+import { listVault } from "@/lib/vault.functions";
 import { formatAUD } from "@/lib/score";
 import { supabase } from "@/integrations/api";
 
@@ -94,17 +96,26 @@ export function Dashboard() {
   useEffect(() => { saveLayout(layout); }, [layout]);
 
   useEffect(() => {
+    // Load auth, profile, and portfolio independently: a failure in one must not
+    // block the financial tiles from populating.
     (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      const prof = await fetchProfile();
-      setName(prof?.display_name || u.user?.email?.split("@")[0] || "");
+      const [userRes, profRes, portRes] = await Promise.allSettled([
+        supabase.auth.getUser(),
+        fetchProfile(),
+        fetchPortfolio(),
+      ]);
+      const u = userRes.status === "fulfilled" ? userRes.value.data : null;
+      const prof = profRes.status === "fulfilled" ? profRes.value : null;
+      setName(prof?.display_name || u?.user?.email?.split("@")[0] || "");
       setCreatedAt(prof?.created_at ?? null);
-      setPortfolio(await fetchPortfolio());
+      if (portRes.status === "fulfilled") setPortfolio(portRes.value);
     })();
   }, []);
 
   useEffect(() => { fetchMaalScore().then(setScore); }, []);
-  useEffect(() => { fetchSnapshots(366).then(setSnapshots); }, []);
+  // Fetch enough history to serve every range the trend modal advertises (its
+  // longest is "All" ≈ 84 months ≈ 2604 days; the endpoint caps at 3660).
+  useEffect(() => { fetchSnapshots(2605).then(setSnapshots); }, []);
 
   function toggleHidden(id: string) {
     setLayout((l) => l.hidden.includes(id)
@@ -115,6 +126,23 @@ export function Dashboard() {
     setLayout((l) => ({ ...l, sizes: { ...l.sizes, [id]: nextSize[l.sizes[id] ?? "md"] } }));
   }
   function onDragStart(id: string) { dragId.current = id; }
+  // Keyboard-accessible reordering: focus a tile's grip (or the Ask Maal band)
+  // and use Left/Right arrows to move it. Pointer drag is unchanged.
+  function moveTile(id: string, dir: -1 | 1) {
+    setLayout((l) => {
+      const order = [...l.order];
+      const i = order.indexOf(id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= order.length) return l;
+      [order[i], order[j]] = [order[j], order[i]];
+      return { ...l, order };
+    });
+  }
+  function onTileKeyDown(e: React.KeyboardEvent, id: string) {
+    if (e.target !== e.currentTarget) return;
+    if (e.key === "ArrowLeft") { e.preventDefault(); moveTile(id, -1); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); moveTile(id, 1); }
+  }
   function onDragOver(e: React.DragEvent, overId: string) {
     e.preventDefault();
     const from = dragId.current;
@@ -215,6 +243,9 @@ export function Dashboard() {
                 onDragStart={() => onDragStart(t.id)}
                 onDragOver={(e) => onDragOver(e, t.id)}
                 onDragEnd={() => (dragId.current = null)}
+                tabIndex={0}
+                onKeyDown={(e) => onTileKeyDown(e, t.id)}
+                aria-label={`${t.title} tile. Use left and right arrow keys to reorder.`}
                 className={sizeClass.wide}
               >
                 <AskMaalTile />
@@ -231,10 +262,18 @@ export function Dashboard() {
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <GripVertical className="size-3.5 text-muted-foreground/50 cursor-grab opacity-0 group-hover:opacity-100 transition" />
+                  <button
+                    type="button"
+                    onKeyDown={(e) => onTileKeyDown(e, t.id)}
+                    title={`Reorder ${t.title} tile (left/right arrow keys)`}
+                    aria-label={`Reorder ${t.title} tile. Use left and right arrow keys.`}
+                    className="p-0.5 rounded text-muted-foreground/50 cursor-grab hover:text-muted-foreground focus-visible:text-muted-foreground focus:outline-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition"
+                  >
+                    <GripVertical className="size-3.5" />
+                  </button>
                   <p className="text-[13px] font-semibold truncate">{t.title}</p>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition">
                   <button onClick={() => cycleSize(t.id)} title={`Resize ${t.title} tile`} aria-label={`Resize ${t.title} tile (currently ${size})`}
                     className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary">
                     {size === "wide" ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
@@ -576,6 +615,17 @@ function KpiTile({ kind, portfolio, snapshots, period, createdAt }: { kind: stri
     return { data, labels, real: false };
   }, [kind, value, snapshots, period, createdAt]);
 
+  // Unabridged history for the trend modal — it applies its own range filter, so
+  // the dashboard period selector must not constrain what the dialog can show.
+  const fullSeries = useMemo(() => {
+    const all = (snapshots ?? [])
+      .map((s) => ({ v: snapshotValue(s, kind), label: snapshotLabel(s.date), t: new Date(s.date).getTime() }))
+      .filter((p) => Number.isFinite(p.v));
+    return all.length >= 2
+      ? { data: all.map((p) => p.v), labels: all.map((p) => p.label) }
+      : null;
+  }, [kind, snapshots]);
+
   const first = series?.data[0] ?? 0;
   const last = series?.data[series.data.length - 1] ?? 0;
   const delta = last - first;
@@ -625,8 +675,8 @@ function KpiTile({ kind, portfolio, snapshots, period, createdAt }: { kind: stri
           current={value}
           positive={meta.positive}
           valueFormatted={formatAUD(value)}
-          series={series?.real ? series.data : undefined}
-          labels={series?.real ? series.labels : undefined}
+          series={fullSeries?.data}
+          labels={fullSeries?.labels}
         />
       )}
     </div>
@@ -708,13 +758,20 @@ function LiabilitiesTile({ portfolio }: { portfolio: Portfolio | null }) {
 }
 
 function SetupTile({ portfolio }: { portfolio: Portfolio | null }) {
+  // Goal/document completion from the real records (same sources getActivation
+  // uses); failures leave the step incomplete rather than fabricating progress.
+  const [hasGoal, setHasGoal] = useState(false);
+  const [hasDoc, setHasDoc] = useState(false);
+  useEffect(() => {
+    listGoals().then((g) => setHasGoal(Array.isArray(g) && g.length > 0)).catch(() => {});
+    listVault().then((d) => setHasDoc(Array.isArray(d) && d.length > 0)).catch(() => {});
+  }, []);
   const steps = [
     { label: "Connect your first account", done: !!portfolio && portfolio.cash > 0 },
     { label: "Add an asset", done: !!portfolio && (portfolio.investments + portfolio.property + portfolio.superBalance) > 0 },
     { label: "Add a liability", done: !!portfolio && (portfolio.propertyDebt + portfolio.otherDebt) > 0 },
-    { label: "Set your first goal", done: false },
-    { label: "Upload a financial document", done: false },
-    { label: "Email me", done: false },
+    { label: "Set your first goal", done: hasGoal },
+    { label: "Upload a financial document", done: hasDoc },
   ];
   const pct = Math.round((steps.filter((s) => s.done).length / steps.length) * 100);
   return (
@@ -737,17 +794,19 @@ function SetupTile({ portfolio }: { portfolio: Portfolio | null }) {
 }
 
 function TaxTile({ portfolio }: { portfolio: Portfolio | null }) {
-  const gains = 0;
-  const adjustedNW = portfolio ? portfolio.superBalance + portfolio.investments + portfolio.property + portfolio.cash - portfolio.propertyDebt - portfolio.otherDebt : 0;
+  // Tax on gains needs cost-base data we don't collect yet — show an explicit
+  // unavailable state rather than a fabricated $0.
+  const adjustedNW = portfolio ? portfolio.superBalance + portfolio.investments + portfolio.property + portfolio.cash - portfolio.propertyDebt - portfolio.otherDebt : null;
   return (
     <div>
       <div className="rounded-[10px] border border-border p-3 mb-3">
         <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Estimated Tax on Gains</p>
-        <p className="text-[18px] font-bold tabular-nums">{formatAUD(gains)}</p>
+        <p className="text-[18px] font-bold tabular-nums">—</p>
+        <p className="text-[10px] text-muted-foreground mt-0.5">Not available yet</p>
       </div>
       <div className="rounded-[10px] border border-border p-3">
         <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Adjusted Net Worth</p>
-        <p className="text-[18px] font-bold tabular-nums">{formatAUD(adjustedNW)}</p>
+        <p className="text-[18px] font-bold tabular-nums">{adjustedNW === null ? "—" : formatAUD(adjustedNW)}</p>
       </div>
       <p className="text-[10px] text-muted-foreground mt-3 flex items-center gap-1"><Info className="size-3" /> Indicative only — not financial advice.</p>
     </div>
@@ -805,16 +864,17 @@ function NewsTile() {
 }
 
 function RunwayTile({ portfolio }: { portfolio: Portfolio | null }) {
-  const monthly = 0; // unknown until transactions wired
-  const months = portfolio && monthly > 0 ? Math.floor(portfolio.cash / monthly) : 0;
+  // Monthly burn needs spending data we don't derive here yet — show an explicit
+  // unavailable state for burn/months rather than fabricated zeros. Cash on hand
+  // is real portfolio data.
   return (
     <div className="text-center py-3">
-      <p className="text-[40px] font-bold tabular-nums">{months}</p>
+      <p className="text-[40px] font-bold tabular-nums">—</p>
       <p className="text-[11px] text-muted-foreground">Months</p>
       <div className="grid grid-cols-2 gap-3 mt-4 text-left">
         <div>
-          <p className="text-[16px] font-semibold tabular-nums">{formatAUD(monthly)}</p>
-          <p className="text-[10px] text-muted-foreground">Monthly Burn</p>
+          <p className="text-[16px] font-semibold tabular-nums">—</p>
+          <p className="text-[10px] text-muted-foreground">Monthly Burn · not available yet</p>
         </div>
         <div>
           <p className="text-[16px] font-semibold tabular-nums">{portfolio ? formatAUD(portfolio.cash) : "—"}</p>

@@ -45,14 +45,29 @@ function ResearchPage() {
   const [err, setErr] = useState<string | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const pollRef = useRef<number | null>(null);
+  const mountedRef = useRef(true);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Hard bound on polling: ~5 minutes at ~2s intervals, so a stuck job can never
+  // poll forever.
+  const MAX_POLL_ATTEMPTS = 150;
 
   async function refresh() {
-    const r = (await list()) as Report[];
-    setReports(r);
+    try {
+      const r = (await list()) as Report[];
+      if (mountedRef.current) setReports(r);
+    } catch {
+      // History is non-critical — keep the current list on failure.
+    }
   }
   useEffect(() => {
+    mountedRef.current = true;
     refresh();
-    return () => { if (pollRef.current) window.clearTimeout(pollRef.current); };
+    return () => {
+      mountedRef.current = false;
+      if (pollRef.current) window.clearTimeout(pollRef.current);
+      abortRef.current?.abort();
+    };
   }, []);
 
   async function runResearch(q: string) {
@@ -60,19 +75,30 @@ function ResearchPage() {
     setLoading(true);
     setErr(null);
     setPhase("plan");
+    const abort = new AbortController();
+    abortRef.current = abort;
     try {
       const { jobId } = await startResearch({ data: { topic: q.trim() } });
       setTopic("");
       // Poll until the job completes or errors. Research is quick; poll ~2s.
+      let attempts = 0;
       const tick = async () => {
+        if (!mountedRef.current) return;
         try {
-          const s = await pollResearch(jobId);
+          const s = await pollResearch(jobId, abort.signal);
+          if (!mountedRef.current) return;
           setPhase(s.phase);
-          if (s.status === "complete" && s.report) {
-            setActive(s.report as Report);
+          // Every terminal status stops polling — including "complete" without a
+          // report, which would otherwise spin forever.
+          if (s.status === "complete") {
+            if (s.report) {
+              setActive(s.report as Report);
+              await refresh();
+            } else {
+              setErr("The research finished without a report — please try again.");
+            }
             setLoading(false);
             setPhase(null);
-            await refresh();
             return;
           }
           if (s.status === "error") {
@@ -81,8 +107,15 @@ function ResearchPage() {
             setPhase(null);
             return;
           }
+          if (++attempts >= MAX_POLL_ATTEMPTS) {
+            setErr("The research is taking too long — please try again.");
+            setLoading(false);
+            setPhase(null);
+            return;
+          }
           pollRef.current = window.setTimeout(tick, 2000);
         } catch (e: any) {
+          if (e?.name === "AbortError" || !mountedRef.current) return;
           setErr(e?.message ?? "Failed");
           setLoading(false);
           setPhase(null);
@@ -90,6 +123,7 @@ function ResearchPage() {
       };
       pollRef.current = window.setTimeout(tick, 1500);
     } catch (e: any) {
+      if (e?.name === "AbortError" || !mountedRef.current) return;
       setErr(e?.message ?? "Failed");
       setLoading(false);
       setPhase(null);
@@ -112,7 +146,7 @@ function ResearchPage() {
     return (
       <div className="max-w-6xl mx-auto px-6 md:px-10 py-10">
         <button
-          onClick={() => setActive(null)}
+          onClick={() => { setErr(null); setActive(null); }}
           className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-muted-foreground hover:text-foreground mb-6"
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Back to Research
@@ -155,6 +189,7 @@ function ResearchPage() {
               <p className="text-[13.5px] leading-7">{active.body.considerations}</p>
             </section>
           )}
+          {err && <p role="alert" className="text-[11px] text-[var(--gold)] mt-4">{err}</p>}
           <div className="pt-4 mt-6 border-t border-border flex items-center justify-between">
             <p className="text-[11px] text-muted-foreground">
               Education only — not personal financial advice.
@@ -168,9 +203,14 @@ function ResearchPage() {
               </button>
               <button
                 onClick={async () => {
-                  await rm({ data: { id: active.id } });
-                  setActive(null);
-                  refresh();
+                  try {
+                    await rm({ data: { id: active.id } });
+                    setErr(null);
+                    setActive(null);
+                    refresh();
+                  } catch (e: any) {
+                    setErr(e?.message ?? "Could not delete the report.");
+                  }
                 }}
                 className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
               >
@@ -250,7 +290,7 @@ function ResearchPage() {
               {reports.map((r) => (
                 <li key={r.id}>
                   <button
-                    onClick={() => setActive(r)}
+                    onClick={() => { setErr(null); setActive(r); }}
                     className="w-full text-left flex items-start justify-between gap-3 py-2 group focus:outline-none"
                   >
                     <div className="min-w-0">

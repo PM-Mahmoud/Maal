@@ -1,23 +1,54 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { fetchProfile } from "@/lib/profile";
 import { buildPlan, type PlanInput } from "@/lib/portfolio-plan";
 
 export const Route = createFileRoute("/_authenticated/app/portfolio-plan")({ component: PortfolioPlanPage });
 
+const DEFAULT_INPUT: PlanInput = { age: 35, risk: "balanced" };
+
+// The onboarding wizard persists risk as "conservative" | "balanced" | "growth" |
+// "high_growth" (see app.onboarding.tsx), while PlanInput uses the hyphenated
+// "high-growth". Only an explicit known value maps through — anything unknown or
+// invalid normalizes to "balanced", so a bad stored value can never fall through
+// to buildPlan's else branch (the riskiest high-growth allocation).
+function normalizeRisk(v: unknown): PlanInput["risk"] {
+  if (v === "conservative" || v === "balanced" || v === "growth" || v === "high-growth") return v;
+  if (v === "high_growth") return "high-growth";
+  return "balanced";
+}
+
+// /api/v1/profile returns a server-derived numeric age (from age_band). Guard
+// against missing/implausible values before feeding the glide path.
+function normalizeAge(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 && n < 120 ? Math.round(n) : DEFAULT_INPUT.age;
+}
+
 function PortfolioPlanPage() {
-  const [input, setInput] = useState<PlanInput>({ age: 35, risk: "balanced" });
+  const [input, setInput] = useState<PlanInput>(DEFAULT_INPUT);
+  // Set once the user touches age/risk — a late-resolving profile load must not
+  // clobber their edits.
+  const dirty = useRef(false);
 
   useEffect(() => {
     (async () => {
-      const prof = await fetchProfile();
-      const age = prof?.age ?? 35;
-      const risk = ((prof?.risk as PlanInput["risk"]) ?? "balanced");
-      setInput({ age, risk });
+      try {
+        const prof = await fetchProfile();
+        // Apply the profile only while the inputs are still pristine; on any
+        // failure (or a missing profile) keep the default state.
+        if (!prof || dirty.current) return;
+        setInput({ age: normalizeAge(prof.age), risk: normalizeRisk(prof.risk) });
+      } catch {
+        /* profile load failed — defaults already in place */
+      }
     })();
   }, []);
 
-  const plan = buildPlan(input);
+  const plan = buildPlan({
+    age: Number.isFinite(input.age) ? input.age : DEFAULT_INPUT.age,
+    risk: normalizeRisk(input.risk),
+  });
 
   return (
     <div className="max-w-5xl mx-auto px-6 md:px-10 py-10">
@@ -27,12 +58,12 @@ function PortfolioPlanPage() {
       <div className="grid md:grid-cols-2 gap-3 mb-8">
         <label className="p-4 border border-border rounded-[12px] bg-[var(--surface)]">
           <span className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">Age</span>
-          <input type="number" value={input.age} onChange={(e) => setInput({ ...input, age: Number(e.target.value) })}
+          <input type="number" value={input.age} onChange={(e) => { dirty.current = true; setInput({ ...input, age: Number(e.target.value) }); }}
             className="w-full bg-transparent text-[22px] font-bold tracking-display mt-1 focus:outline-none" />
         </label>
         <label className="p-4 border border-border rounded-[12px] bg-[var(--surface)]">
           <span className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">Risk</span>
-          <select value={input.risk} onChange={(e) => setInput({ ...input, risk: e.target.value as any })}
+          <select value={input.risk} onChange={(e) => { dirty.current = true; setInput({ ...input, risk: normalizeRisk(e.target.value) }); }}
             className="w-full bg-transparent text-[18px] font-semibold mt-1 focus:outline-none">
             <option value="conservative">Conservative</option>
             <option value="balanced">Balanced</option>

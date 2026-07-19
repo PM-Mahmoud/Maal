@@ -15,8 +15,20 @@ export function SavedWidgets() {
 
   async function onRemove(id?: number) {
     if (!id) return;
+    // Optimistic remove; restore (at the original position) if the server
+    // delete fails so the UI never claims a widget is gone when it isn't.
+    const idx = widgets.findIndex((w) => w.id === id);
+    const removed = idx >= 0 ? widgets[idx] : undefined;
     setWidgets((ws) => ws.filter((w) => w.id !== id));
-    await removeWidget(id);
+    try {
+      await removeWidget(id);
+    } catch {
+      if (removed) setWidgets((ws) => {
+        const next = [...ws];
+        next.splice(Math.min(idx, next.length), 0, removed);
+        return next;
+      });
+    }
   }
 
   // Hide the section entirely until we know there's something to show.

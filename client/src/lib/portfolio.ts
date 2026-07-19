@@ -11,6 +11,19 @@ export type Portfolio = {
   cash: number;
   otherDebt: number;
   age: number;
+  /**
+   * Tables that failed to load. Present ONLY when the portfolio is partial —
+   * a failed query contributes nothing rather than silently reading as $0, so
+   * consumers rendering dollar figures or a Maal Score should check this and
+   * surface an unavailable/partial-data state instead of an understated total.
+   */
+  errors?: string[];
+};
+
+// Structural match for the QueryBuilder union result in integrations/api.ts.
+type TableResult = {
+  data: Record<string, any>[] | Record<string, any> | null;
+  error: { message: string } | null;
 };
 
 export async function fetchPortfolio(): Promise<Portfolio> {
@@ -23,20 +36,37 @@ export async function fetchPortfolio(): Promise<Portfolio> {
     supabase.from("debts").select("balance"),
     fetchProfile(),
   ]);
-  const sum = <T extends Record<string, any>>(rows: T[] | null, key: keyof T) =>
-    (rows ?? []).reduce((a, r) => a + Number(r[key] ?? 0), 0);
+
+  const errors: string[] = [];
+  // Inspect each response's error BEFORE aggregating — a failed table query
+  // must not silently become $0 in net worth.
+  const rowsOf = (res: TableResult, table: string): Record<string, any>[] => {
+    if (res.error) {
+      errors.push(`${table}: ${res.error.message}`);
+      return [];
+    }
+    return Array.isArray(res.data) ? res.data : [];
+  };
+  const sum = (rows: Record<string, any>[], key: string) =>
+    rows.reduce((a, r) => a + Number(r[key] ?? 0), 0);
+
+  const propRows = rowsOf(prop, "properties");
+  if (!profile) errors.push("profile: unavailable");
   // Age comes from the real profile endpoint (derived server-side from age_band).
   const age = profile?.age ?? 35;
-  return {
-    income: sum(income.data, "annual_amount"),
-    superBalance: sum(sup.data, "balance"),
-    investments: sum(inv.data, "value"),
-    property: sum(prop.data, "value"),
-    propertyDebt: sum(prop.data, "mortgage_balance"),
-    cash: sum(cash.data, "balance"),
-    otherDebt: sum(debts.data, "balance"),
+
+  const portfolio: Portfolio = {
+    income: sum(rowsOf(income, "incomes"), "annual_amount"),
+    superBalance: sum(rowsOf(sup, "super_accounts"), "balance"),
+    investments: sum(rowsOf(inv, "investments"), "value"),
+    property: sum(propRows, "value"),
+    propertyDebt: sum(propRows, "mortgage_balance"),
+    cash: sum(rowsOf(cash, "cash_accounts"), "balance"),
+    otherDebt: sum(rowsOf(debts, "debts"), "balance"),
     age,
   };
+  if (errors.length) portfolio.errors = errors;
+  return portfolio;
 }
 
 export function portfolioToScoreInputs(p: Portfolio): ScoreInputs {

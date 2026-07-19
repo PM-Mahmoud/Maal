@@ -25,19 +25,32 @@ type Msg = {
 function AddToDashboard({ widget }: { widget: WidgetSpec }) {
   const [added, setAdded] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
   return (
     <button
       onClick={async () => {
         if (added || busy) return;
         setBusy(true);
-        const ok = await addWidget(widget.source, widget.title);
-        setBusy(false);
-        if (ok) setAdded(true);
+        setFailed(false);
+        try {
+          const ok = await addWidget(widget.source, widget.title);
+          if (ok) setAdded(true);
+          else setFailed(true);
+        } catch {
+          setFailed(true);
+        } finally {
+          // Clear the pending state on every path so the button never sticks.
+          setBusy(false);
+        }
       }}
-      disabled={added}
+      disabled={added || busy}
       className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-[7px] border border-border hover:border-foreground/40 disabled:opacity-70 transition-colors"
     >
-      {added ? <><Check className="size-3" /> Added</> : <><Plus className="size-3" /> Add to Dashboard</>}
+      {added
+        ? <><Check className="size-3" /> Added</>
+        : failed
+          ? <><Plus className="size-3" /> Failed — retry</>
+          : <><Plus className="size-3" /> Add to Dashboard</>}
     </button>
   );
 }
@@ -66,13 +79,19 @@ function ThreadPage() {
   const abortRef = useRef<AbortController | null>(null);
   const recognitionRef = useRef<any>(null);
   const autoSentRef = useRef(false);
+  // Generation counter — bumped whenever the thread changes so late responses
+  // from a previous thread's load/send are discarded instead of clobbering the
+  // new thread's state.
+  const genRef = useRef(0);
 
   useEffect(() => {
+    const gen = ++genRef.current;
     setMessages([]); setError(null);
     autoSentRef.current = false;
     // Restore any autosaved draft for this thread.
     try { setInput(localStorage.getItem(DRAFT_KEY(threadId)) || ""); } catch { /* ignore */ }
     load({ data: { threadId } }).then((rows) => {
+      if (genRef.current !== gen) return; // stale — user switched threads mid-load
       setMessages(rows as Msg[]);
       // Handoff from the dashboard "Ask Maal" tile: auto-send the pending
       // question into this fresh thread, exactly once.
@@ -88,7 +107,17 @@ function ThreadPage() {
         scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
         inputRef.current?.focus();
       });
+    }).catch(() => {
+      if (genRef.current === gen) setError("Couldn't load this conversation. Please try again.");
     });
+    return () => {
+      // Invalidate the in-flight load and cancel any active send for this
+      // thread so neither can update the next thread's state.
+      genRef.current++;
+      abortRef.current?.abort();
+      abortRef.current = null;
+      setBusy(false);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threadId, load]);
 
@@ -105,6 +134,7 @@ function ThreadPage() {
   async function submit(text: string) {
     const t = text.trim();
     if (!t || busy) return;
+    const gen = genRef.current;
     setError(null); setInput("");
     try { localStorage.removeItem(DRAFT_KEY(threadId)); } catch { /* ignore */ }
     setMessages((m) => [...m, { role: "user", content: t }]);
@@ -114,6 +144,7 @@ function ThreadPage() {
     requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }));
     try {
       const { reply, widgets, followUps, citations, aborted } = await send({ data: { threadId, content: t } }, { signal: controller.signal });
+      if (genRef.current !== gen) return; // stale — user switched threads mid-send
       if (aborted) {
         setMessages((m) => [...m, { role: "assistant", content: "_(stopped)_" }]);
       } else {
@@ -124,10 +155,14 @@ function ThreadPage() {
         inputRef.current?.focus();
       });
     } catch (e: any) {
-      setError(e?.message ?? "Something went wrong.");
+      if (genRef.current === gen) setError(e?.message ?? "Something went wrong.");
     } finally {
-      setBusy(false);
-      abortRef.current = null;
+      // Only the current thread's send may touch busy/abort state — a stale
+      // send's finally must not clear a newer send's controller.
+      if (genRef.current === gen) {
+        setBusy(false);
+        abortRef.current = null;
+      }
     }
   }
 

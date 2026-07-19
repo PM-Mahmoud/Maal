@@ -7,25 +7,74 @@ export function MemoryPanel({ onClose }: { onClose: () => void }) {
   const [instructions, setInstructions] = useState("");
   const [memory, setMemory] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    getAdvisorMemory().then((m) => {
-      setInstructions(m.customInstructions);
-      setMemory(m.memory);
-      setLoading(false);
-    });
-  }, []);
+    let cancelled = false;
+    setLoading(true);
+    setLoadFailed(false);
+    getAdvisorMemory()
+      .then((m) => {
+        if (cancelled) return;
+        setInstructions(m.customInstructions);
+        setMemory(m.memory);
+        setLoading(false);
+      })
+      .catch(() => {
+        // Keep a failed load distinct from a confirmed-empty memory: editing
+        // stays disabled behind the error state until a load succeeds.
+        if (cancelled) return;
+        setLoadFailed(true);
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [reloadKey]);
 
   async function save() {
-    await saveAdvisorMemory({ customInstructions: instructions.slice(0, 500), memory });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const ok = await saveAdvisorMemory({ customInstructions: instructions.slice(0, 500), memory });
+      if (ok) {
+        // "Saved" is shown only after the server confirms the PUT.
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      } else {
+        setError("Couldn't save. Check your connection and try again.");
+      }
+    } catch {
+      setError("Couldn't save. Check your connection and try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function forget() {
-    await clearAdvisorMemory();
-    setMemory("");
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await clearAdvisorMemory();
+      // DELETE clears only the synthesized memory server-side — clear any
+      // custom instructions explicitly so "Forget everything" forgets both.
+      if (instructions) {
+        const ok = await saveAdvisorMemory({ customInstructions: "" });
+        if (!ok) throw new Error("clear-instructions-failed");
+      }
+      // Local state resets only after the server confirms; prior values are
+      // retained on failure so the user can retry.
+      setMemory("");
+      setInstructions("");
+    } catch {
+      setError("Couldn't clear memory. Check your connection and try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -41,6 +90,16 @@ export function MemoryPanel({ onClose }: { onClose: () => void }) {
 
         {loading ? (
           <p className="text-[13px] text-muted-foreground">Loading…</p>
+        ) : loadFailed ? (
+          <div>
+            <p className="text-[13px] text-[var(--gold)] mb-3">Couldn't load your memory. Check your connection and try again.</p>
+            <button
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="px-3 py-2 rounded-[10px] border border-border text-[13px] font-medium hover:border-foreground/40"
+            >
+              Retry
+            </button>
+          </div>
         ) : (
           <>
             <label className="block text-[12px] font-semibold mb-1.5">Custom instructions</label>
@@ -56,7 +115,9 @@ export function MemoryPanel({ onClose }: { onClose: () => void }) {
 
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-[12px] font-semibold">What Maal remembers about you</label>
-              {memory && <button onClick={forget} className="text-[11px] text-muted-foreground hover:text-red-500">Forget everything</button>}
+              {(memory || instructions) && (
+                <button onClick={forget} disabled={saving} className="text-[11px] text-muted-foreground hover:text-red-500 disabled:opacity-40">Forget everything</button>
+              )}
             </div>
             <p className="text-[11px] text-muted-foreground mb-2">Learned from your chats. You can edit or clear it. Never stores account numbers or balances.</p>
             <textarea
@@ -66,10 +127,12 @@ export function MemoryPanel({ onClose }: { onClose: () => void }) {
               className="w-full h-32 rounded-[10px] border border-border bg-background px-3 py-2 text-[12px] font-mono outline-none focus:border-foreground/40 resize-none"
             />
 
+            {error && <p className="text-[12px] text-[var(--gold)] mt-3">{error}</p>}
+
             <div className="flex items-center justify-end gap-2 mt-4">
               {saved && <span className="text-[12px] text-mint">Saved</span>}
               <button onClick={onClose} className="px-3 py-2 rounded-[10px] border border-border text-[13px] font-medium hover:border-foreground/40">Close</button>
-              <button onClick={save} className="px-4 py-2 rounded-[10px] bg-foreground text-background text-[13px] font-semibold hover:opacity-90">Save</button>
+              <button onClick={save} disabled={saving} className="px-4 py-2 rounded-[10px] bg-foreground text-background text-[13px] font-semibold hover:opacity-90 disabled:opacity-40">Save</button>
             </div>
           </>
         )}

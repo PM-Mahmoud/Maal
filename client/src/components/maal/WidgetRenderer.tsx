@@ -47,11 +47,13 @@ function Table({ data }: { data: any }) {
   const rows: Record<string, any>[] = data?.rows ?? [];
   return (
     <div className="overflow-x-auto">
-      {data?.caption && <p className="text-[12px] text-muted-foreground mb-2">{data.caption}</p>}
       <table className="w-full text-[12.5px]">
+        {data?.caption && (
+          <caption className="text-[12px] text-muted-foreground mb-2 text-left">{data.caption}</caption>
+        )}
         <thead>
           <tr className="text-left text-muted-foreground border-b border-border">
-            {columns.map((c) => <th key={c} className="py-1.5 pr-4 font-medium">{c}</th>)}
+            {columns.map((c) => <th key={c} scope="col" className="py-1.5 pr-4 font-medium">{c}</th>)}
           </tr>
         </thead>
         <tbody>

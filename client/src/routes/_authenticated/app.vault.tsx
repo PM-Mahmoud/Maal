@@ -36,6 +36,7 @@ function VaultPage() {
   const [extractResult, setExtractResult] = useState<{ id: string; fields: ExtractField[] } | null>(null);
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [applyErr, setApplyErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const collections = useMemo(() => {
@@ -53,39 +54,54 @@ function VaultPage() {
     return m;
   }, [docs, collections]);
 
-  async function refresh() { setDocs((await list()) as Doc[]); }
+  // Refresh never rejects — a reload failure surfaces in the aside instead of
+  // becoming an unhandled promise rejection.
+  async function refresh() {
+    try { setDocs((await list()) as Doc[]); }
+    catch (e: any) { setErr(e?.message ?? "Couldn't refresh your documents."); }
+  }
   useEffect(() => { refresh(); }, []);
 
   const uploadFiles = useCallback(async (files: FileList | File[]) => {
     const arr = Array.from(files);
     if (!arr.length) return;
     setErr(null); setBusy("upload");
+    let ok = 0;
+    const failures: string[] = [];
     try {
+      // Upload per-file and keep going after a failure, so one bad file doesn't
+      // strand the rest of the batch; refresh runs either way so successfully
+      // uploaded files never leave the list stale.
       for (const file of arr) {
-        if (file.size > 10 * 1024 * 1024) throw new Error(`${file.name} exceeds the 10MB limit`);
-        await uploadVaultFile(file);
+        if (file.size > 10 * 1024 * 1024) { failures.push(`${file.name} exceeds the 10MB limit`); continue; }
+        try { await uploadVaultFile(file); ok++; }
+        catch (e: any) { failures.push(`${file.name}: ${e?.message ?? "upload failed"}`); }
       }
-      setExpanded((e) => ({ ...e, [target]: true }));
+      if (ok > 0) setExpanded((e) => ({ ...e, [target]: true }));
       await refresh();
-    } catch (e: any) { setErr(e?.message ?? "Upload failed"); }
-    finally { setBusy(null); if (fileRef.current) fileRef.current.value = ""; }
+      if (failures.length) {
+        setErr(ok > 0
+          ? `Uploaded ${ok} of ${arr.length} file${arr.length === 1 ? "" : "s"}. Failed — ${failures.join("; ")}`
+          : `Upload failed — ${failures.join("; ")}`);
+      }
+    } finally { setBusy(null); if (fileRef.current) fileRef.current.value = ""; }
   }, [target]);
 
   async function runExtract(id: string) {
-    setBusy(id); setErr(null); setExtractResult(null); setApplied(false);
+    setBusy(id); setErr(null); setExtractResult(null); setApplied(false); setApplyErr(null);
     try {
       const res: any = await extract({ data: { id } });
       const fields: ExtractField[] = Array.isArray(res?.fields) ? res.fields : [];
       if (fields.length) setExtractResult({ id, fields });
       else setErr("Maal couldn't read any figures from this document. Try a digital PDF, Word, or CSV.");
-      refresh();
+      await refresh();
     } catch (e: any) { setErr(e?.message ?? "Extraction failed"); }
     finally { setBusy(null); }
   }
 
   async function applyExtract() {
     if (!extractResult) return;
-    setApplying(true); setErr(null);
+    setApplying(true); setApplyErr(null);
     try {
       const patch: Record<string, number> = {};
       for (const f of extractResult.fields) patch[f.field] = f.amount;
@@ -93,8 +109,26 @@ function VaultPage() {
       if (!saved) throw new Error("Could not apply figures to your profile.");
       setApplied(true);
       setExtractResult(null);
-    } catch (e: any) { setErr(e?.message ?? "Could not apply figures."); }
+    } catch (e: any) {
+      // Render inside the modal (which stays open) — the page aside is hidden
+      // behind the overlay, so the user would never see the error there.
+      setApplyErr(e?.message ?? "Could not apply figures.");
+    }
     finally { setApplying(false); }
+  }
+
+  function closeExtractModal() { setExtractResult(null); setApplyErr(null); }
+
+  async function onDelete(d: Doc) {
+    setErr(null);
+    try {
+      await rm({ data: { id: d.id, storage_path: d.storage_path } });
+    } catch (e: any) {
+      setErr(e?.message ?? "Couldn't delete the document.");
+    } finally {
+      // Refresh either way so a partial delete never leaves stale rows shown.
+      await refresh();
+    }
   }
 
   function newCollection() {
@@ -119,7 +153,7 @@ function VaultPage() {
 
       {/* Extract → apply figures to profile (feeds the dashboard) */}
       {extractResult && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setExtractResult(null)}>
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={closeExtractModal}>
           <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-[16px] border border-border bg-[var(--surface)] p-6">
             <h2 className="text-[16px] font-bold mb-1">Figures Maal read from this document</h2>
             <p className="text-[12px] text-muted-foreground mb-4">Apply them to your profile to update your dashboard and Maal Score. Nothing is saved until you confirm.</p>
@@ -131,8 +165,9 @@ function VaultPage() {
                 </li>
               ))}
             </ul>
+            {applyErr && <p className="mb-3 text-[12px] text-[var(--gold)]">{applyErr}</p>}
             <div className="flex items-center justify-end gap-2">
-              <button onClick={() => setExtractResult(null)} className="px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-foreground">Not now</button>
+              <button onClick={closeExtractModal} className="px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-foreground">Not now</button>
               <button onClick={applyExtract} disabled={applying}
                 className="px-4 py-2 rounded-[8px] text-[12px] font-semibold bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50">
                 {applying ? "Applying…" : "Apply to my profile"}
@@ -191,7 +226,7 @@ function VaultPage() {
                                 className="px-2.5 py-1 border border-border rounded-[6px] text-[11px] font-semibold disabled:opacity-60">
                                 {busy === d.id ? "Reading…" : d.extracted ? "Re-extract" : "Extract"}
                               </button>
-                              <button onClick={async () => { await rm({ data: { id: d.id, storage_path: d.storage_path } }); refresh(); }}
+                              <button onClick={() => onDelete(d)}
                                 className="text-[11px] text-muted-foreground hover:text-foreground">Delete</button>
                             </div>
                           </li>

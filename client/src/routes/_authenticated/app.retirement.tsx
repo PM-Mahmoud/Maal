@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { fetchPortfolio, type Portfolio } from "@/lib/portfolio";
 import { projectRetirement, ASFA_SINGLE_TARGET, ASFA_COUPLE_TARGET, RETIREMENT_AGE } from "@/lib/retirement";
 import { formatAUD } from "@/lib/score";
@@ -48,6 +49,11 @@ function RetirementPage() {
   const prob = Math.round(projection.probOfHittingTarget * 100);
   const shortfall = projection.shortfallReal;
   const onTrack = shortfall >= 0;
+  // ASFA target is in today's (real) dollars but the trajectories are nominal.
+  // Inflate the target so the chart compares like-for-like. Mirrors the
+  // projection's default inflationPct (2.5) — this page doesn't override it.
+  const INFLATION_PCT = 2.5;
+  const targetNominal = projection.targetReal * Math.pow(1 + INFLATION_PCT / 100, yearsToRetire);
 
   async function onSave() {
     const name = scenarioName.trim() || `${household} · ${contrib}% contrib · ${ret}% return`;
@@ -66,6 +72,11 @@ function RetirementPage() {
       finalMedian: projection!.median[projection!.median.length - 1],
     };
     const row = await save({ data: { name, inputs, result } });
+    if (!row) {
+      // Save failed — keep existing scenarios, never prepend a null row
+      toast.error("Couldn't save scenario — please try again.");
+      return;
+    }
     setScenarios((s) => [row as any, ...s]);
     setScenarioName("");
   }
@@ -77,13 +88,19 @@ function RetirementPage() {
   }
 
   async function removeScenario(id: string) {
-    await del({ data: { id } });
-    setScenarios((s) => s.filter((x) => x.id !== id));
+    try {
+      // deleteScenario destructures { id } from its argument — pass it directly
+      // (wrapping in { data: { id } } produced an undefined id in the DELETE URL).
+      await del({ id });
+      setScenarios((s) => s.filter((x) => x.id !== id));
+    } catch {
+      toast.error("Couldn't delete scenario — please try again.");
+    }
   }
 
   // Chart geometry
   const W = 720, H = 240, pad = 32;
-  const all = [...projection.p90, projection.targetReal];
+  const all = [...projection.p90, targetNominal];
   const maxY = Math.max(...all) * 1.05;
   const xs = (i: number) => pad + (i / (projection.years.length - 1)) * (W - pad * 2);
   const ys = (v: number) => H - pad - (v / maxY) * (H - pad * 2);
@@ -92,7 +109,7 @@ function RetirementPage() {
     .concat(projection.years.map((_, i) => `L${xs(projection.years.length - 1 - i)},${ys(projection.p10[projection.years.length - 1 - i])}`))
     .join(" ") + " Z";
   const medianPath = projection.median.map((v, i) => `${i === 0 ? "M" : "L"}${xs(i)},${ys(v)}`).join(" ");
-  const targetY = ys(projection.targetReal);
+  const targetY = ys(targetNominal);
 
   return (
     <div className="max-w-5xl mx-auto px-6 md:px-10 py-10">

@@ -12,3 +12,4 @@ npm-debug.log*
 !package.json
 !package-lock.json
 !evals/*.json
+!shared/au-constants.json

@@ -46,38 +46,72 @@ function wrapText(doc: jsPDF, text: string, x: number, y: number, w: number, lin
   return y + lines.length * lineH;
 }
 
-function renderEvent(doc: jsPDF, ev: RadarEvent, alert: AlertLite | undefined, y: number) {
+// Compute the wrapped lines and FULL rendered height of an event block without
+// drawing anything, so callers can paginate BEFORE writing (not after an
+// overflow has already been drawn).
+function layoutEvent(doc: jsPDF, ev: RadarEvent, alert: AlertLite | undefined) {
+  doc.setFontSize(14);
+  const messageLines: string[] = doc.splitTextToSize(ev.message || "(no message)", 170);
+  let detailLines: string[] = [];
+  if (ev.detail) {
+    doc.setFontSize(10);
+    detailLines = doc.splitTextToSize(ev.detail, 170);
+  }
+  let promptLines: string[] = [];
+  if (alert?.prompt) {
+    doc.setFontSize(9);
+    promptLines = doc.splitTextToSize(`Radar watch: ${alert.prompt}`, 162);
+  }
+  const promptBoxH = promptLines.length ? promptLines.length * 4.5 + 6 : 0;
+  const height =
+    7 + // meta row (date / frequency / email status)
+    messageLines.length * 6 + 2 +
+    (detailLines.length ? detailLines.length * 5 + 3 : 0) +
+    (promptLines.length ? promptBoxH + 4 : 0) +
+    8; // divider + trailing gap
+  return { messageLines, detailLines, promptLines, promptBoxH, height };
+}
+
+function renderEvent(
+  doc: jsPDF,
+  ev: RadarEvent,
+  alert: AlertLite | undefined,
+  y: number,
+  layout?: ReturnType<typeof layoutEvent>,
+) {
+  const L = layout ?? layoutEvent(doc, ev, alert);
   doc.setFontSize(9);
   doc.setTextColor(107, 111, 118);
   doc.text(fmt(ev.created_at).toUpperCase(), 20, y);
   if (alert?.frequency) {
     doc.text(`· ${alert.frequency}`, 65, y);
   }
-  if (ev.email_status === "queued") {
+  if (ev.email_status === "queued" || ev.email_status === "sent" || ev.email_status === "delivered") {
     doc.setTextColor(18, 181, 166);
-    doc.text("· EMAIL SENT", 90, y);
+    // "sent" is reserved for a delivered status; queued mail is shown as queued.
+    doc.text(ev.email_status === "queued" ? "· EMAIL QUEUED" : "· EMAIL SENT", 90, y);
   }
   y += 7;
 
   doc.setFontSize(14);
   doc.setTextColor(14, 14, 16);
-  y = wrapText(doc, ev.message || "(no message)", 20, y, 170, 6) + 2;
+  doc.text(L.messageLines, 20, y);
+  y += L.messageLines.length * 6 + 2;
 
-  if (ev.detail) {
+  if (L.detailLines.length) {
     doc.setFontSize(10);
     doc.setTextColor(60, 60, 65);
-    y = wrapText(doc, ev.detail, 20, y, 170, 5) + 3;
+    doc.text(L.detailLines, 20, y);
+    y += L.detailLines.length * 5 + 3;
   }
 
-  if (alert?.prompt) {
+  if (L.promptLines.length) {
     doc.setFillColor(244, 244, 245);
-    const lines = doc.splitTextToSize(`Radar watch: ${alert.prompt}`, 162);
-    const boxH = lines.length * 4.5 + 6;
-    doc.roundedRect(20, y, 170, boxH, 2, 2, "F");
+    doc.roundedRect(20, y, 170, L.promptBoxH, 2, 2, "F");
     doc.setFontSize(9);
     doc.setTextColor(107, 111, 118);
-    doc.text(lines, 24, y + 5);
-    y += boxH + 4;
+    doc.text(L.promptLines, 24, y + 5);
+    y += L.promptBoxH + 4;
   }
 
   doc.setDrawColor(232, 232, 234);
@@ -111,9 +145,15 @@ export function exportAllEventsPdf(events: RadarEvent[], alerts: AlertLite[]) {
   doc.text(`${events.length} update${events.length === 1 ? "" : "s"}`, 20, y + 6);
   y += 16;
 
+  const PAGE_BOTTOM = 280; // leave room above the disclaimer line at 285
   for (const ev of events) {
-    if (y > 250) { doc.addPage(); header(doc); y = 38; }
-    y = renderEvent(doc, ev, ev.alert_id ? byId.get(ev.alert_id) : undefined, y);
+    const alert = ev.alert_id ? byId.get(ev.alert_id) : undefined;
+    // Measure the FULL rendered height (message + detail + prompt box) and
+    // paginate BEFORE writing anything, so an oversized update starts on a
+    // fresh page instead of being clipped mid-block.
+    const layout = layoutEvent(doc, ev, alert);
+    if (y + layout.height > PAGE_BOTTOM && y > 38) { doc.addPage(); header(doc); y = 38; }
+    y = renderEvent(doc, ev, alert, y, layout);
   }
   disclaimer(doc, 285);
   doc.save(`maal-radar-history.pdf`);

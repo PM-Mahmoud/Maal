@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { supabase } from "@/integrations/api";
 import { Disclaimer } from "@/components/maal/Disclaimer";
 import { ThemeToggle } from "@/components/maal/ThemeToggle";
@@ -8,7 +9,7 @@ import {
   LayoutDashboard, MessageCircle, FileSearch, Radar as RadarIcon,
   Wallet, FolderLock, ArrowLeftRight, Target, UserCircle2,
   MessageSquarePlus, Map, LifeBuoy, ChevronDown, LogOut,
-  X, Upload, Lightbulb, CreditCard,
+  X, Lightbulb, CreditCard,
   PiggyBank, Receipt, Calculator, TrendingDown, Dices,
   BarChart3,
 } from "lucide-react";
@@ -178,234 +179,240 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Submissions go to the real POST /feedback endpoint (routes/feedback.js →
+// feedback table). The generic /api/v1/:table route stubs unknown tables with
+// a fake `{ ok: true }`, and there is no screenshot-attachment support anywhere
+// in the backend — so the old supabase.from("feedback"|"support_reports")
+// inserts silently discarded submissions and the upload control was fake.
+async function postFeedback(message: string, page: string) {
+  const r = await fetch("/feedback", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, page }),
+  });
+  if (!r.ok) {
+    const j = await r.json().catch(() => null);
+    throw new Error(j?.error || "Could not send. Please try again.");
+  }
+}
+
 function FeedbackModal({ onClose }: { onClose: () => void }) {
   const [feedback, setFeedback] = useState("");
-  const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   async function handleSubmit() {
-    if (!feedback.trim()) return;
+    const message = feedback.trim();
+    if (!message) return;
     setSubmitting(true);
+    setError(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      await supabase.from("feedback" as any).insert({
-        user_id: user?.id ?? null,
-        message: feedback,
-        has_screenshot: !!file,
-      });
-    } catch {}
+      await postFeedback(message, window.location.pathname);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not send. Please try again.");
+      setSubmitting(false);
+      return;
+    }
     setSubmitting(false);
     onClose();
   }
 
-  function onFile(f: File | null) {
-    if (!f) return;
-    if (f.size > 5 * 1024 * 1024) return;
-    setFile(f);
-  }
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div
-        className="w-full max-w-md bg-[var(--surface)] border border-border rounded-[14px] shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between px-5 pt-5">
-          <div>
-            <h2 className="text-[17px] font-bold tracking-display">Share Your Feedback</h2>
-            <p className="text-[12px] text-muted-foreground mt-1">
-              We'd love to hear your thoughts on how we can improve Maal
-            </p>
-          </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="size-4" />
-          </button>
-        </div>
-
-        <div className="px-5 pt-5 space-y-4">
-          <div>
-            <label className="text-[12px] font-semibold">Your Feedback</label>
-            <textarea
-              value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
-              rows={5}
-              placeholder="Share your thoughts, ideas, or report an issue..."
-              className="mt-2 w-full bg-background border border-border rounded-[10px] px-3 py-2.5 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-mint"
-            />
-          </div>
-
-          <div>
-            <label className="text-[12px] font-semibold">Screenshot (Optional)</label>
-            <label className="mt-2 flex flex-col items-center justify-center gap-1.5 border border-dashed border-border rounded-[10px] py-6 cursor-pointer hover:bg-[var(--secondary)]">
-              <div className="size-8 rounded-full bg-[var(--secondary)] flex items-center justify-center">
-                <Upload className="size-4 text-muted-foreground" />
-              </div>
-              <span className="text-[12px] text-muted-foreground">
-                {file ? file.name : "Drag & drop or browse"}
-              </span>
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => onFile(e.target.files?.[0] ?? null)}
-              />
-            </label>
-            <p className="text-[11px] text-muted-foreground mt-1.5 text-center">
-              Upload a screenshot to help us understand the issue better (max 5MB)
-            </p>
-          </div>
-
-          <div className="rounded-[10px] border border-border p-3 bg-[var(--secondary)]/40">
-            <div className="flex items-start gap-2">
-              <Lightbulb className="size-4 text-mint mt-0.5 shrink-0" />
-              <div>
-                <p className="text-[12px] font-semibold">Want to chat directly with our founder?</p>
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  Schedule a 30-minute call to share your feedback, suggestions, ask questions, or just say hi!
+    <DialogPrimitive.Root open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
+        <DialogPrimitive.Content
+          onOpenAutoFocus={(e) => { e.preventDefault(); textareaRef.current?.focus(); }}
+          className="fixed left-[50%] top-[50%] z-50 w-full max-w-md max-h-[90vh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] bg-[var(--surface)] border border-border rounded-[14px] shadow-xl"
+        >
+          <div className="flex items-start justify-between px-5 pt-5">
+            <div>
+              <DialogPrimitive.Title asChild>
+                <h2 className="text-[17px] font-bold tracking-display">Share Your Feedback</h2>
+              </DialogPrimitive.Title>
+              <DialogPrimitive.Description asChild>
+                <p className="text-[12px] text-muted-foreground mt-1">
+                  We'd love to hear your thoughts on how we can improve Maal
                 </p>
-                <a href="#" className="inline-block mt-2 text-[12px] font-medium text-mint hover:underline">
-                  Book a call with Shain →
-                </a>
+              </DialogPrimitive.Description>
+            </div>
+            <DialogPrimitive.Close
+              aria-label="Close feedback dialog"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-4" />
+            </DialogPrimitive.Close>
+          </div>
+
+          <div className="px-5 pt-5 space-y-4">
+            <div>
+              <label htmlFor="feedback-message" className="text-[12px] font-semibold">Your Feedback</label>
+              <textarea
+                id="feedback-message"
+                ref={textareaRef}
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                rows={5}
+                placeholder="Share your thoughts, ideas, or report an issue..."
+                className="mt-2 w-full bg-background border border-border rounded-[10px] px-3 py-2.5 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-mint"
+              />
+            </div>
+
+            {error && (
+              <p role="alert" className="text-[12px] font-medium text-red-500">{error}</p>
+            )}
+
+            <div className="rounded-[10px] border border-border p-3 bg-[var(--secondary)]/40">
+              <div className="flex items-start gap-2">
+                <Lightbulb className="size-4 text-mint mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[12px] font-semibold">Want to chat directly with our founder?</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Schedule a 30-minute call to share your feedback, suggestions, ask questions, or just say hi!
+                  </p>
+                  <a href="#" className="inline-block mt-2 text-[12px] font-medium text-mint hover:underline">
+                    Book a call with Shain →
+                  </a>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center justify-end gap-2 px-5 py-4 mt-4 border-t border-border">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-[8px] text-[13px] font-medium border border-border hover:bg-[var(--secondary)]"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!feedback.trim() || submitting}
-            className="px-4 py-2 rounded-[8px] text-[13px] font-medium bg-foreground text-background disabled:opacity-50"
-          >
-            {submitting ? "Submitting..." : "Submit Feedback"}
-          </button>
-        </div>
-      </div>
-    </div>
+          <div className="flex items-center justify-end gap-2 px-5 py-4 mt-4 border-t border-border">
+            <DialogPrimitive.Close asChild>
+              <button
+                type="button"
+                className="px-4 py-2 rounded-[8px] text-[13px] font-medium border border-border hover:bg-[var(--secondary)]"
+              >
+                Cancel
+              </button>
+            </DialogPrimitive.Close>
+            <button
+              onClick={handleSubmit}
+              disabled={!feedback.trim() || submitting}
+              className="px-4 py-2 rounded-[8px] text-[13px] font-medium bg-foreground text-background disabled:opacity-50"
+            >
+              {submitting ? "Submitting..." : "Submit Feedback"}
+            </button>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }
 
 function SupportModal({ onClose }: { onClose: () => void }) {
   const [description, setDescription] = useState("");
-  const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   async function handleSubmit() {
-    if (!description.trim()) return;
+    const message = description.trim();
+    if (!message) return;
     setSubmitting(true);
+    setError(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      await supabase.from("support_reports" as any).insert({
-        user_id: user?.id ?? null,
-        description,
-        has_screenshot: !!file,
-      });
-    } catch {}
+      // No support_reports table/route exists — persist through the real
+      // feedback endpoint, tagged as a support report via the page field.
+      await postFeedback(message, `support:${window.location.pathname}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not send. Please try again.");
+      setSubmitting(false);
+      return;
+    }
     setSubmitting(false);
     onClose();
   }
 
-  function onFile(f: File | null) {
-    if (!f) return;
-    if (f.size > 5 * 1024 * 1024) return;
-    setFile(f);
-  }
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div
-        className="w-full max-w-md bg-[var(--surface)] border border-border rounded-[14px] shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between px-5 pt-5">
-          <div>
-            <h2 className="text-[17px] font-bold tracking-display">Report an Error</h2>
-            <p className="text-[12px] text-muted-foreground mt-1">
-              Please describe the issue you encountered so we can fix it
-            </p>
-          </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="size-4" />
-          </button>
-        </div>
-
-        <div className="px-5 pt-5 space-y-4">
-          <div>
-            <label className="text-[12px] font-semibold">Error Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={5}
-              placeholder="Please describe what went wrong, including any error messages you saw..."
-              className="mt-2 w-full bg-background border border-border rounded-[10px] px-3 py-2.5 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-mint"
-            />
-          </div>
-
-          <div>
-            <label className="text-[12px] font-semibold">Screenshot (Optional)</label>
-            <label className="mt-2 flex flex-col items-center justify-center gap-1.5 border border-dashed border-border rounded-[10px] py-6 cursor-pointer hover:bg-[var(--secondary)]">
-              <div className="size-8 rounded-full bg-[var(--secondary)] flex items-center justify-center">
-                <Upload className="size-4 text-muted-foreground" />
-              </div>
-              <span className="text-[12px] text-muted-foreground">
-                {file ? file.name : "Drag & drop or browse"}
-              </span>
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => onFile(e.target.files?.[0] ?? null)}
-              />
-            </label>
-            <p className="text-[11px] text-muted-foreground mt-1.5 text-center">
-              Upload a screenshot to help us understand the issue better (max 5MB)
-            </p>
-          </div>
-
-          <p className="text-[12px] text-muted-foreground">
-            You can also email us directly at{" "}
-            <a href="mailto:support@maal.app" className="text-mint hover:underline">support@maal.app</a>{" "}
-            with any issues or bugs.
-          </p>
-
-          <div className="rounded-[10px] border border-border p-3 bg-[var(--secondary)]/40">
-            <div className="flex items-start gap-2">
-              <Lightbulb className="size-4 text-mint mt-0.5 shrink-0" />
-              <div>
-                <p className="text-[12px] font-semibold">Want to chat directly with our founder?</p>
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  For urgent or complex issues, schedule a call with our founder who can help resolve your problem directly.
+    <DialogPrimitive.Root open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
+        <DialogPrimitive.Content
+          onOpenAutoFocus={(e) => { e.preventDefault(); textareaRef.current?.focus(); }}
+          className="fixed left-[50%] top-[50%] z-50 w-full max-w-md max-h-[90vh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] bg-[var(--surface)] border border-border rounded-[14px] shadow-xl"
+        >
+          <div className="flex items-start justify-between px-5 pt-5">
+            <div>
+              <DialogPrimitive.Title asChild>
+                <h2 className="text-[17px] font-bold tracking-display">Report an Error</h2>
+              </DialogPrimitive.Title>
+              <DialogPrimitive.Description asChild>
+                <p className="text-[12px] text-muted-foreground mt-1">
+                  Please describe the issue you encountered so we can fix it
                 </p>
-                <a href="#" className="inline-block mt-2 text-[12px] font-medium text-mint hover:underline">
-                  Book a call with Shain →
-                </a>
+              </DialogPrimitive.Description>
+            </div>
+            <DialogPrimitive.Close
+              aria-label="Close support dialog"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-4" />
+            </DialogPrimitive.Close>
+          </div>
+
+          <div className="px-5 pt-5 space-y-4">
+            <div>
+              <label htmlFor="support-description" className="text-[12px] font-semibold">Error Description</label>
+              <textarea
+                id="support-description"
+                ref={textareaRef}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={5}
+                placeholder="Please describe what went wrong, including any error messages you saw..."
+                className="mt-2 w-full bg-background border border-border rounded-[10px] px-3 py-2.5 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-mint"
+              />
+            </div>
+
+            {error && (
+              <p role="alert" className="text-[12px] font-medium text-red-500">{error}</p>
+            )}
+
+            <p className="text-[12px] text-muted-foreground">
+              You can also email us directly at{" "}
+              <a href="mailto:support@maal.app" className="text-mint hover:underline">support@maal.app</a>{" "}
+              with any issues or bugs.
+            </p>
+
+            <div className="rounded-[10px] border border-border p-3 bg-[var(--secondary)]/40">
+              <div className="flex items-start gap-2">
+                <Lightbulb className="size-4 text-mint mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[12px] font-semibold">Want to chat directly with our founder?</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    For urgent or complex issues, schedule a call with our founder who can help resolve your problem directly.
+                  </p>
+                  <a href="#" className="inline-block mt-2 text-[12px] font-medium text-mint hover:underline">
+                    Book a call with Shain →
+                  </a>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center justify-end gap-2 px-5 py-4 mt-4 border-t border-border">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-[8px] text-[13px] font-medium border border-border hover:bg-[var(--secondary)]"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!description.trim() || submitting}
-            className="px-4 py-2 rounded-[8px] text-[13px] font-medium bg-foreground text-background disabled:opacity-50"
-          >
-            {submitting ? "Submitting..." : "Submit Report"}
-          </button>
-        </div>
-      </div>
-    </div>
+          <div className="flex items-center justify-end gap-2 px-5 py-4 mt-4 border-t border-border">
+            <DialogPrimitive.Close asChild>
+              <button
+                type="button"
+                className="px-4 py-2 rounded-[8px] text-[13px] font-medium border border-border hover:bg-[var(--secondary)]"
+              >
+                Cancel
+              </button>
+            </DialogPrimitive.Close>
+            <button
+              onClick={handleSubmit}
+              disabled={!description.trim() || submitting}
+              className="px-4 py-2 rounded-[8px] text-[13px] font-medium bg-foreground text-background disabled:opacity-50"
+            >
+              {submitting ? "Submitting..." : "Submit Report"}
+            </button>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }
