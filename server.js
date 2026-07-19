@@ -117,6 +117,7 @@ app.get('/health', async (_req, res) => {
       advisor: !!((process.env.AZURE_OPENAI_API_KEY || process.env.GROQ_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.AI_API_KEY || '').trim()),
       azure: !!((process.env.AZURE_OPENAI_API_KEY || '').trim() && (process.env.AZURE_OPENAI_ENDPOINT || '').trim() && (process.env.AZURE_OPENAI_DEPLOYMENT || '').trim()),
       stripe: !!(process.env.STRIPE_SECRET_KEY || '').trim(),
+      email: !!(process.env.RESEND_API_KEY || '').trim(),
       isaacus: !!(process.env.ISAACUS_API_KEY || '').trim(),
       verifier: require('./services/gateway').hasRole('verifier'),
       exa: !!(process.env.EXA_API_KEY || '').trim(),

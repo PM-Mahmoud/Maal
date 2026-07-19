@@ -10,7 +10,8 @@
  *   3. Add RESEND_API_KEY to your Render environment variables
  *   4. Optional: verify your domain in Resend for custom from address
  *
- * If RESEND_API_KEY is missing, emails are skipped silently (app still works).
+ * If RESEND_API_KEY is missing, emails are skipped (app still works) but an
+ * error is logged loudly — users will be stuck at /verify-email.
  */
 
 const https = require('https');
@@ -20,8 +21,11 @@ const https = require('https');
 async function sendEmail({ to, subject, html, text, attachments }) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    console.warn('[email] RESEND_API_KEY not set — skipping email to', to);
+    console.error('[email] RESEND_API_KEY not set — email NOT sent. Set RESEND_API_KEY (and EMAIL_FROM with a verified domain) in the host env or users will be stuck at /verify-email.');
     return;
+  }
+  if ((process.env.EMAIL_FROM || '').trim() === '') {
+    console.warn('[email] EMAIL_FROM not set — using Resend sandbox sender, which only delivers to the Resend account owner. Set EMAIL_FROM to a verified domain address.');
   }
 
   const fromAddress = process.env.EMAIL_FROM || 'Maal <onboarding@resend.dev>';

@@ -63,7 +63,7 @@ async function sendOtpEmail(email, name, otp) {
   </table>
 </body></html>`;
   sendEmail({ to: email, subject: 'Your Maal verification code', html, text: `Your Maal verification code: ${otp}\nExpires in 10 minutes.` })
-    .catch(err => console.error('[auth] OTP email failed:', err.message));
+    .catch(err => console.error('[auth] OTP email FAILED — user will not receive their code and will be stuck at /verify-email. Check RESEND_API_KEY / EMAIL_FROM (verified domain) in the host env and Resend dashboard Logs. Error:', err.message));
 }
 
 // ─── Page: /login ─────────────────────────────────────────────────────────────

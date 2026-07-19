@@ -5,18 +5,13 @@ import { SlidersHorizontal, Repeat } from "lucide-react";
 import { listTransactions, seedMockTransactions, clearTransactions, addTransaction } from "@/lib/transactions.functions";
 import { getSubscriptions, type Subscription } from "@/lib/transactions-depth.functions";
 import { RulesModal } from "@/components/maal/transactions/RulesModal";
+import { InstitutionLogo } from "@/components/maal/InstitutionLogo";
 import { formatAUD } from "@/lib/score";
 
 export const Route = createFileRoute("/_authenticated/app/transactions")({ component: TransactionsPage });
 
-const AU_BANKS = [
-  { name: "CommBank", initials: "CB", color: "#FFE600", text: "#000" },
-  { name: "Westpac", initials: "W", color: "#D5002B", text: "#fff" },
-  { name: "ANZ", initials: "ANZ", color: "#004986", text: "#fff" },
-  { name: "NAB", initials: "NAB", color: "#E50000", text: "#fff" },
-  { name: "ING", initials: "ING", color: "#FF6200", text: "#fff" },
-  { name: "Macquarie", initials: "M", color: "#000", text: "#fff" },
-];
+// Logos resolve via InstitutionLogo (registry in lib/institutions.ts, monogram fallback).
+const AU_BANKS = ["CommBank", "Westpac", "ANZ", "NAB", "ING", "Macquarie"];
 
 const CATS = ["groceries","dining","transport","housing","utilities","health","income","investing","savings","entertainment","other"];
 
@@ -141,7 +136,7 @@ function TransactionsPage() {
   }, [subs]);
 
   const filteredBanks = useMemo(
-    () => AU_BANKS.filter((b) => b.name.toLowerCase().includes(search.trim().toLowerCase())),
+    () => AU_BANKS.filter((b) => b.toLowerCase().includes(search.trim().toLowerCase())),
     [search]
   );
 
@@ -306,10 +301,10 @@ function TransactionsPage() {
 
           <div className="grid grid-cols-3 gap-2 mb-3">
             {filteredBanks.map((b) => (
-              <button key={b.name} onClick={() => connectStub(b.name)}
+              <button key={b} onClick={() => connectStub(b)}
                 className="flex flex-col items-center gap-2 p-4 bg-background border border-border rounded-[10px] hover:border-foreground transition-colors">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center text-[11px] font-bold" style={{ background: b.color, color: b.text }}>{b.initials}</div>
-                <p className="text-[11px] font-medium">{b.name}</p>
+                <InstitutionLogo name={b} size={40} />
+                <p className="text-[11px] font-medium">{b}</p>
               </button>
             ))}
             {filteredBanks.length === 0 && (
