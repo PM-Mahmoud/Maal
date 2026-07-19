@@ -29,10 +29,8 @@ import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppPortfolioPlanRouteImport } from './routes/_authenticated/app.portfolio-plan'
 import { Route as AuthenticatedAppOnboardingRouteImport } from './routes/_authenticated/app.onboarding'
 import { Route as AuthenticatedAppNetWorthFlowRouteImport } from './routes/_authenticated/app.net-worth-flow'
-import { Route as AuthenticatedAppInsuranceGapRouteImport } from './routes/_authenticated/app.insurance-gap'
 import { Route as AuthenticatedAppGoalsRouteImport } from './routes/_authenticated/app.goals'
 import { Route as AuthenticatedAppDebtPayoffRouteImport } from './routes/_authenticated/app.debt-payoff'
-import { Route as AuthenticatedAppCostOfLivingRouteImport } from './routes/_authenticated/app.cost-of-living'
 import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated/app.billing'
 import { Route as AuthenticatedAppAssetsRouteImport } from './routes/_authenticated/app.assets'
 import { Route as AuthenticatedAppAdvisorIndexRouteImport } from './routes/_authenticated/app.advisor.index'
@@ -147,12 +145,6 @@ const AuthenticatedAppNetWorthFlowRoute =
     path: '/net-worth-flow',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
-const AuthenticatedAppInsuranceGapRoute =
-  AuthenticatedAppInsuranceGapRouteImport.update({
-    id: '/insurance-gap',
-    path: '/insurance-gap',
-    getParentRoute: () => AuthenticatedAppRoute,
-  } as any)
 const AuthenticatedAppGoalsRoute = AuthenticatedAppGoalsRouteImport.update({
   id: '/goals',
   path: '/goals',
@@ -162,12 +154,6 @@ const AuthenticatedAppDebtPayoffRoute =
   AuthenticatedAppDebtPayoffRouteImport.update({
     id: '/debt-payoff',
     path: '/debt-payoff',
-    getParentRoute: () => AuthenticatedAppRoute,
-  } as any)
-const AuthenticatedAppCostOfLivingRoute =
-  AuthenticatedAppCostOfLivingRouteImport.update({
-    id: '/cost-of-living',
-    path: '/cost-of-living',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppBillingRoute = AuthenticatedAppBillingRouteImport.update({
@@ -199,10 +185,8 @@ export interface FileRoutesByFullPath {
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/app/assets': typeof AuthenticatedAppAssetsRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
-  '/app/cost-of-living': typeof AuthenticatedAppCostOfLivingRoute
   '/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
   '/app/goals': typeof AuthenticatedAppGoalsRoute
-  '/app/insurance-gap': typeof AuthenticatedAppInsuranceGapRoute
   '/app/net-worth-flow': typeof AuthenticatedAppNetWorthFlowRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
@@ -227,10 +211,8 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/app/assets': typeof AuthenticatedAppAssetsRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
-  '/app/cost-of-living': typeof AuthenticatedAppCostOfLivingRoute
   '/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
   '/app/goals': typeof AuthenticatedAppGoalsRoute
-  '/app/insurance-gap': typeof AuthenticatedAppInsuranceGapRoute
   '/app/net-worth-flow': typeof AuthenticatedAppNetWorthFlowRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
@@ -258,10 +240,8 @@ export interface FileRoutesById {
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/_authenticated/app/assets': typeof AuthenticatedAppAssetsRoute
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
-  '/_authenticated/app/cost-of-living': typeof AuthenticatedAppCostOfLivingRoute
   '/_authenticated/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
   '/_authenticated/app/goals': typeof AuthenticatedAppGoalsRoute
-  '/_authenticated/app/insurance-gap': typeof AuthenticatedAppInsuranceGapRoute
   '/_authenticated/app/net-worth-flow': typeof AuthenticatedAppNetWorthFlowRoute
   '/_authenticated/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/_authenticated/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
@@ -289,10 +269,8 @@ export interface FileRouteTypes {
     | '/app'
     | '/app/assets'
     | '/app/billing'
-    | '/app/cost-of-living'
     | '/app/debt-payoff'
     | '/app/goals'
-    | '/app/insurance-gap'
     | '/app/net-worth-flow'
     | '/app/onboarding'
     | '/app/portfolio-plan'
@@ -317,10 +295,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/app/assets'
     | '/app/billing'
-    | '/app/cost-of-living'
     | '/app/debt-payoff'
     | '/app/goals'
-    | '/app/insurance-gap'
     | '/app/net-worth-flow'
     | '/app/onboarding'
     | '/app/portfolio-plan'
@@ -347,10 +323,8 @@ export interface FileRouteTypes {
     | '/_authenticated/app'
     | '/_authenticated/app/assets'
     | '/_authenticated/app/billing'
-    | '/_authenticated/app/cost-of-living'
     | '/_authenticated/app/debt-payoff'
     | '/_authenticated/app/goals'
-    | '/_authenticated/app/insurance-gap'
     | '/_authenticated/app/net-worth-flow'
     | '/_authenticated/app/onboarding'
     | '/_authenticated/app/portfolio-plan'
@@ -519,13 +493,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppNetWorthFlowRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
-    '/_authenticated/app/insurance-gap': {
-      id: '/_authenticated/app/insurance-gap'
-      path: '/insurance-gap'
-      fullPath: '/app/insurance-gap'
-      preLoaderRoute: typeof AuthenticatedAppInsuranceGapRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
     '/_authenticated/app/goals': {
       id: '/_authenticated/app/goals'
       path: '/goals'
@@ -538,13 +505,6 @@ declare module '@tanstack/react-router' {
       path: '/debt-payoff'
       fullPath: '/app/debt-payoff'
       preLoaderRoute: typeof AuthenticatedAppDebtPayoffRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/cost-of-living': {
-      id: '/_authenticated/app/cost-of-living'
-      path: '/cost-of-living'
-      fullPath: '/app/cost-of-living'
-      preLoaderRoute: typeof AuthenticatedAppCostOfLivingRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/billing': {
@@ -581,10 +541,8 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAssetsRoute: typeof AuthenticatedAppAssetsRoute
   AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
-  AuthenticatedAppCostOfLivingRoute: typeof AuthenticatedAppCostOfLivingRoute
   AuthenticatedAppDebtPayoffRoute: typeof AuthenticatedAppDebtPayoffRoute
   AuthenticatedAppGoalsRoute: typeof AuthenticatedAppGoalsRoute
-  AuthenticatedAppInsuranceGapRoute: typeof AuthenticatedAppInsuranceGapRoute
   AuthenticatedAppNetWorthFlowRoute: typeof AuthenticatedAppNetWorthFlowRoute
   AuthenticatedAppOnboardingRoute: typeof AuthenticatedAppOnboardingRoute
   AuthenticatedAppPortfolioPlanRoute: typeof AuthenticatedAppPortfolioPlanRoute
@@ -608,10 +566,8 @@ interface AuthenticatedAppRouteChildren {
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAssetsRoute: AuthenticatedAppAssetsRoute,
   AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
-  AuthenticatedAppCostOfLivingRoute: AuthenticatedAppCostOfLivingRoute,
   AuthenticatedAppDebtPayoffRoute: AuthenticatedAppDebtPayoffRoute,
   AuthenticatedAppGoalsRoute: AuthenticatedAppGoalsRoute,
-  AuthenticatedAppInsuranceGapRoute: AuthenticatedAppInsuranceGapRoute,
   AuthenticatedAppNetWorthFlowRoute: AuthenticatedAppNetWorthFlowRoute,
   AuthenticatedAppOnboardingRoute: AuthenticatedAppOnboardingRoute,
   AuthenticatedAppPortfolioPlanRoute: AuthenticatedAppPortfolioPlanRoute,

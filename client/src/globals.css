@@ -13,8 +13,8 @@
  * The @theme inline block maps CSS custom properties to Tailwind utility
  * classes (e.g. --color-primary -> bg-primary, text-primary).
  *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
+ * The :root and .dark blocks define the actual color values (retro-futurist
+ * palette, hex — matches the hellomaal.com landing).
  *
  * To add a new semantic color:
  * 1. Add the variable to :root (light value) and .dark (dark value)

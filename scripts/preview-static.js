@@ -187,19 +187,30 @@ app.get('/api/v1/goals', (_req, res) => res.json([
 ]));
 app.get('/api/v1/vault', (_req, res) => res.json([]));
 app.get('/api/v1/widgets', (_req, res) => res.json([]));
-app.get('/api/v1/alerts', (_req, res) => res.json([
-  { id: 'a1', name: 'BHP price watch', prompt: 'Alert me if BHP drops more than 5% in a week', active: true, last_status: 'OK' },
-]));
+app.get('/api/v1/alerts', (_req, res) => res.json({
+  alerts: [
+    { id: 'a1', name: 'BHP price watch', prompt: 'Alert me if BHP drops more than 5% in a week', active: true, last_status: 'OK' },
+  ],
+  events: [],
+}));
 app.get('/api/v1/notifications', (_req, res) => res.json([]));
 app.get('/api/v1/notification-prefs', (_req, res) => res.json({}));
-app.get('/api/v1/advisor/memory', (_req, res) => res.json({ memory: null, custom_instructions: null }));
-app.get('/api/v1/basiq/status', (_req, res) => res.json({ connected: false }));
+app.get('/api/v1/advisor/memory', (_req, res) => res.json({ memory: null, customInstructions: null }));
+app.get('/api/v1/basiq/status', (_req, res) => res.json({ connected: false, live: false }));
 app.get('/api/v1/transaction-categories', (_req, res) => res.json([]));
 app.get('/api/v1/transaction-rules', (_req, res) => res.json([]));
 app.get('/api/v1/radar-templates', (_req, res) => res.json([]));
 app.get('/api/v1/radar-template-versions', (_req, res) => res.json([]));
 app.get('/api/v1/research', (_req, res) => res.json([]));
-app.get('/api/v1/usage', (_req, res) => res.json({ plan: 'pro', usage: {} }));
+app.get('/api/v1/usage', (_req, res) => res.json({
+  plan: 'pro', period: '2026-07', resetsOn: '2026-08-01',
+  features: {
+    advisor_messages: { used: 37, limit: 500 },
+    research_runs: { used: 2, limit: 10 },
+    ai_files: { used: 1, limit: 10 },
+    active_radars: { used: 1, limit: 10 },
+  },
+}));
 
 // Generic table mocks for the supabase-compatible adapter (/api/v1/<table>)
 const PREVIEW_TABLES = {

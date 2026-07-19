@@ -9,8 +9,8 @@ import {
   Wallet, FolderLock, ArrowLeftRight, Target, UserCircle2,
   MessageSquarePlus, Map, LifeBuoy, ChevronDown, LogOut,
   X, Upload, Lightbulb, CreditCard,
-  PiggyBank, Receipt, Calculator, TrendingDown, Dices, Shield,
-  BarChart3, MapPin,
+  PiggyBank, Receipt, Calculator, TrendingDown, Dices,
+  BarChart3,
 } from "lucide-react";
 
 type Item = { to: string; label: string; icon: any; soon?: boolean };
@@ -36,9 +36,7 @@ const TOOLS: Item[] = [
   { to: "/app/tax-bracket-visualizer", label: "Tax Brackets", icon: Calculator },
   { to: "/app/debt-payoff", label: "Debt Payoff", icon: TrendingDown },
   { to: "/app/scenarios-simulator", label: "Scenarios", icon: Dices },
-  { to: "/app/insurance-gap", label: "Insurance Gap", icon: Shield },
   { to: "/app/net-worth-flow", label: "Net Worth Flow", icon: BarChart3 },
-  { to: "/app/cost-of-living", label: "Cost of Living", icon: MapPin },
 ];
 
 const BOTTOM: { label: string; href: string; icon: any }[] = [
