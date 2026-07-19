@@ -15,6 +15,8 @@ type Goal = {
   progress_pct?: number;
   auto_tracked?: boolean;
   source_type?: string;
+  target_kind?: string;
+  target_pct?: number | null;
   target_date: string | null;
   description?: string | null;
 };
@@ -231,9 +233,9 @@ function GoalModal({ initial, onClose, onSave }: {
   const [goalType, setGoalType] = useState<GoalType>(initial ? typeForCategory(initial.category) : "grow");
   const [category, setCategory] = useState(initial?.category ?? "retirement");
   const [sourceType, setSourceType] = useState<string>(initial?.source_type ?? "net_worth");
-  const [targetKind, setTargetKind] = useState<"amount" | "percent">("amount");
+  const [targetKind, setTargetKind] = useState<"amount" | "percent">(initial?.target_kind === "percent" ? "percent" : "amount");
   const [target, setTarget] = useState(initial?.target_amount ?? 0);
-  const [targetPct, setTargetPct] = useState<number>(0);
+  const [targetPct, setTargetPct] = useState<number>(initial?.target_kind === "percent" && initial?.target_pct != null ? Number(initial.target_pct) : 0);
   const [current, setCurrent] = useState(initial?.current_amount ?? 0);
   const [date, setDate] = useState(initial?.target_date ?? new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10));
   const [busy, setBusy] = useState(false);
@@ -286,25 +288,25 @@ function GoalModal({ initial, onClose, onSave }: {
         <p className="text-[12px] text-muted-foreground mb-5">Set up a goal and let Maal track it against your live position.</p>
 
         <div className="mb-4">
-          <label className={labelCls}>Goal</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} required placeholder="E.g. Emergency Fund, Grow Net Worth" className={inputCls} />
+          <label htmlFor="goal-name" className={labelCls}>Goal</label>
+          <input id="goal-name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="E.g. Emergency Fund, Grow Net Worth" className={inputCls} />
         </div>
 
         <div className="mb-4">
-          <label className={labelCls}>Description (Optional)</label>
-          <textarea value={description ?? ""} onChange={(e) => setDescription(e.target.value)} placeholder="Add details about your goal" rows={2} className={`${inputCls} resize-none`} />
+          <label htmlFor="goal-description" className={labelCls}>Description (Optional)</label>
+          <textarea id="goal-description" value={description ?? ""} onChange={(e) => setDescription(e.target.value)} placeholder="Add details about your goal" rows={2} className={`${inputCls} resize-none`} />
         </div>
 
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
-            <label className={labelCls}>Goal Type</label>
-            <select value={goalType} onChange={(e) => changeType(e.target.value as GoalType)} className={inputCls}>
+            <label htmlFor="goal-type" className={labelCls}>Goal Type</label>
+            <select id="goal-type" value={goalType} onChange={(e) => changeType(e.target.value as GoalType)} className={inputCls}>
               {GOAL_TYPES.map((g) => <option key={g.v} value={g.v}>{g.label}</option>)}
             </select>
           </div>
           <div>
-            <label className={labelCls}>Track against</label>
-            <select value={sourceType} onChange={(e) => setSourceType(e.target.value)} className={inputCls}>
+            <label htmlFor="goal-source" className={labelCls}>Track against</label>
+            <select id="goal-source" value={sourceType} onChange={(e) => setSourceType(e.target.value)} className={inputCls}>
               {sourceChoices.map((s) => <option key={s.v} value={s.v}>{s.l}</option>)}
             </select>
           </div>
@@ -321,15 +323,15 @@ function GoalModal({ initial, onClose, onSave }: {
         <div className="grid grid-cols-2 gap-3 mb-4">
           {isManual && (
             <div>
-              <label className={labelCls}>Current Amount</label>
+              <label htmlFor="goal-current" className={labelCls}>Current Amount</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[13px]">$</span>
-                <input type="number" min={0} value={current} onChange={(e) => setCurrent(Number(e.target.value))} className={`${inputCls} pl-7`} />
+                <input id="goal-current" type="number" min={0} value={current} onChange={(e) => setCurrent(Number(e.target.value))} className={`${inputCls} pl-7`} />
               </div>
             </div>
           )}
           <div className={isManual ? "" : "col-span-2"}>
-            <label className={labelCls}>Target</label>
+            <label htmlFor={targetKind === "percent" && !isManual ? "goal-target-pct" : "goal-target"} className={labelCls}>Target</label>
             {!isManual && (
               <div className="inline-flex items-center gap-1 p-0.5 bg-[var(--secondary)] rounded-[8px] mb-2">
                 {(["amount", "percent"] as const).map((k) => (
@@ -342,21 +344,21 @@ function GoalModal({ initial, onClose, onSave }: {
             )}
             {targetKind === "percent" && !isManual ? (
               <div className="relative">
-                <input type="number" min={0} value={targetPct} onChange={(e) => setTargetPct(Number(e.target.value))} className={`${inputCls} pr-7`} placeholder="e.g. 120" />
+                <input id="goal-target-pct" type="number" min={0} value={targetPct} onChange={(e) => setTargetPct(Number(e.target.value))} className={`${inputCls} pr-7`} placeholder="e.g. 120" />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[13px]">%</span>
               </div>
             ) : (
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[13px]">$</span>
-                <input type="number" min={0} required value={target} onChange={(e) => setTarget(Number(e.target.value))} className={`${inputCls} pl-7`} />
+                <input id="goal-target" type="number" min={0} required value={target} onChange={(e) => setTarget(Number(e.target.value))} className={`${inputCls} pl-7`} />
               </div>
             )}
           </div>
         </div>
 
         <div className="mb-6">
-          <label className={labelCls}>Target Date</label>
-          <input type="date" value={date ?? ""} onChange={(e) => setDate(e.target.value)} className={`${inputCls} w-auto`} />
+          <label htmlFor="goal-date" className={labelCls}>Target Date</label>
+          <input id="goal-date" type="date" value={date ?? ""} onChange={(e) => setDate(e.target.value)} className={`${inputCls} w-auto`} />
         </div>
 
         <div className="flex items-center justify-end gap-2">

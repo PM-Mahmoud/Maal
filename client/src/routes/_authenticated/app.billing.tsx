@@ -45,6 +45,9 @@ const FEATURE_LABELS: Record<string, string> = {
   ai_files: "AI file exports",
 };
 
+// Tier ordering used to distinguish upgrades from downgrades.
+const PLAN_RANK: Record<string, number> = { free: 0, pro: 1, max: 2 };
+
 const BANNERS: Record<string, { tone: "good" | "bad"; text: string }> = {
   success: { tone: "good", text: "Payment received — your plan is now active. Welcome aboard!" },
   demo: { tone: "good", text: "Plan updated (demo mode — no payment was taken)." },
@@ -139,6 +142,14 @@ function BillingPage() {
         <div className="grid md:grid-cols-3 gap-4">
           {PLANS.map((p) => {
             const current = p.key === plan;
+            const currentRank = PLAN_RANK[plan] ?? 0;
+            const targetRank = PLAN_RANK[p.key];
+            const isUpgrade = !current && targetRank > currentRank;
+            // Paid→paid downgrades (e.g. Max → Pro) have no supported endpoint:
+            // /billing/downgrade always lands on Free, and /billing/checkout
+            // would open a SECOND subscription alongside the current one.
+            // Never route those through checkout — offer a support request.
+            const isPaidDowngrade = !current && p.key !== "free" && targetRank < currentRank;
             return (
               <div key={p.key} className={`rounded-[14px] border p-5 bg-[var(--surface)] flex flex-col ${current ? "border-foreground" : "border-border"}`}>
                 <div className="flex items-center justify-between">
@@ -176,15 +187,30 @@ function BillingPage() {
                         Switch to Free
                       </button>
                     </form>
-                  ) : (
+                  ) : isUpgrade ? (
                     <form method="post" action="/billing/checkout">
                       <input type="hidden" name="plan" value={p.key} />
                       <button type="submit" className="w-full px-4 py-2 rounded-[10px] bg-foreground text-background text-[13px] font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5">
                         <Sparkles className="size-3.5" /> Upgrade to {p.name}
                       </button>
                     </form>
+                  ) : (
+                    // Paid → lower-paid tier (e.g. Max → Pro): no change-plan
+                    // endpoint exists, so don't send the user through checkout
+                    // (which would bill a second subscription).
+                    <a
+                      href={`mailto:support@maal.app?subject=${encodeURIComponent(`Plan change request: ${plan} to ${p.key}`)}`}
+                      className="w-full px-4 py-2 rounded-[10px] border border-border text-[13px] font-semibold hover:border-foreground transition-colors inline-flex items-center justify-center"
+                    >
+                      Request switch to {p.name}
+                    </a>
                   )}
                 </div>
+                {isPaidDowngrade && (
+                  <p className="text-[11px] text-muted-foreground mt-2">
+                    Plan downgrades between paid tiers are handled by support so your billing is adjusted, not duplicated.
+                  </p>
+                )}
               </div>
             );
           })}

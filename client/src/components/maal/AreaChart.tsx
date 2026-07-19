@@ -126,7 +126,9 @@ export function AreaChart({
   const first = pts[0];
   const prev = hoverIdx != null && hoverIdx > 0 ? pts[hoverIdx - 1] : null;
   const deltaFromFirst = sel.v - first.v;
-  const pctFromFirst = first.v ? (deltaFromFirst / Math.abs(first.v)) * 100 : 0;
+  // Percentage is undefined when the baseline is zero — render nothing
+  // rather than a fabricated "0.0%".
+  const pctFromFirst = first.v ? (deltaFromFirst / Math.abs(first.v)) * 100 : null;
   const deltaPrev = prev ? sel.v - prev.v : null;
   const pctPrev = prev && prev.v ? ((sel.v - prev.v) / Math.abs(prev.v)) * 100 : null;
 
@@ -141,7 +143,7 @@ export function AreaChart({
     hoverIdx != null
       ? `${sel.label}: ${formatY ? formatY(sel.v) : sel.v}, ${
           deltaFromFirst >= 0 ? "up" : "down"
-        } ${formatY ? formatY(Math.abs(deltaFromFirst)) : Math.abs(deltaFromFirst)} (${pctFromFirst.toFixed(1)} percent) since start.`
+        } ${formatY ? formatY(Math.abs(deltaFromFirst)) : Math.abs(deltaFromFirst)}${pctFromFirst !== null ? ` (${pctFromFirst.toFixed(1)} percent)` : ""} since start.`
       : "";
 
   return (
@@ -253,7 +255,7 @@ export function AreaChart({
                 {formatY ? formatY(sel.v) : sel.v.toString()}
               </text>
               <text x={12} y={62} fontSize="11" fill={deltaFromFirst >= 0 ? "var(--mint)" : "var(--foreground)"} className="tabular-nums">
-                {deltaFromFirst >= 0 ? "▲" : "▼"} {formatY ? formatY(Math.abs(deltaFromFirst)) : Math.abs(deltaFromFirst)} ({pctFromFirst >= 0 ? "+" : ""}{pctFromFirst.toFixed(1)}%) vs start
+                {deltaFromFirst >= 0 ? "▲" : "▼"} {formatY ? formatY(Math.abs(deltaFromFirst)) : Math.abs(deltaFromFirst)}{pctFromFirst !== null ? ` (${pctFromFirst >= 0 ? "+" : ""}${pctFromFirst.toFixed(1)}%)` : ""} vs start
               </text>
               {deltaPrev !== null && (
                 <text x={12} y={80} fontSize="11" fill="var(--muted-foreground)" className="tabular-nums">

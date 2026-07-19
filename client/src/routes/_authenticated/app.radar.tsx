@@ -46,12 +46,19 @@ function RadarPage() {
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   async function refresh() {
-    const [r, t, ready]: any = await Promise.all([list(), listT(), readinessFn()]);
-    // Guard: r may be [] (stub) or { alerts, events }
-    setAlerts(Array.isArray(r?.alerts) ? r.alerts : Array.isArray(r) ? [] : []);
-    setEvents(Array.isArray(r?.events) ? r.events : Array.isArray(r) ? [] : []);
-    setTemplates(Array.isArray(t?.templates) ? t.templates : Array.isArray(t) ? [] : []);
-    setReadiness(ready && typeof ready === 'object' && !Array.isArray(ready) ? ready : null);
+    try {
+      const [r, t, ready]: any = await Promise.all([list(), listT(), readinessFn()]);
+      // listAlerts throws on non-OK and always resolves to { alerts, events }
+      setAlerts(Array.isArray(r?.alerts) ? r.alerts : []);
+      setEvents(Array.isArray(r?.events) ? r.events : []);
+      setTemplates(Array.isArray(t?.templates) ? t.templates : Array.isArray(t) ? [] : []);
+      setReadiness(ready && typeof ready === 'object' && !Array.isArray(ready) ? ready : null);
+    } catch (e: any) {
+      // Load failed — keep whatever state we had and say so, rather than
+      // rendering a misleading empty list.
+      setToast(e?.message ?? "Couldn't load radars.");
+      setTimeout(() => setToast(null), 5000);
+    }
   }
   useEffect(() => {
     refresh();
@@ -119,6 +126,11 @@ function RadarPage() {
       setToast(r.fired ? `${r.fired} radar${r.fired > 1 ? "s" : ""} triggered — update sent.` : "No conditions met right now.");
       setTimeout(() => setToast(null), 3500);
       refresh();
+    } catch (e: any) {
+      // Evaluation failed (API error) — surface it; "No conditions met" is
+      // reserved for a successful run with zero fires.
+      setToast(e?.message ?? "Couldn't run the radar check.");
+      setTimeout(() => setToast(null), 5000);
     } finally { setEvalBusy(null); }
   }
 
@@ -274,14 +286,18 @@ function RadarPage() {
                               {evalBusy === a.id ? <span className="w-3 h-3 border-2 border-current border-r-transparent rounded-full animate-spin inline-block" /> : <Play className="w-3 h-3" />}
                             </button>
                             <button onClick={async () => {
-                              try { await toggle({ data: { id: a.id, active: !a.active } } as any); }
+                              try { await toggle({ data: { id: a.id, active: !a.active } } as any); refresh(); }
                               catch (e: any) { setToast(e?.message ?? "Couldn't update radar."); setTimeout(() => setToast(null), 5000); }
-                              refresh();
                             }}
                               className="text-[10px] text-muted-foreground hover:text-foreground">
                               {a.active ? "Pause" : "Resume"}
                             </button>
-                            <button onClick={async () => { await rm({ data: { id: a.id } } as any); refresh(); }}
+                            <button onClick={async () => {
+                              // Refresh only on success — a failed delete keeps
+                              // the existing list and surfaces the error.
+                              try { await rm({ data: { id: a.id } } as any); refresh(); }
+                              catch (e: any) { setToast(e?.message ?? "Couldn't delete radar."); setTimeout(() => setToast(null), 5000); }
+                            }}
                               aria-label="Delete radar"
                               className="text-muted-foreground hover:text-foreground">
                               <Trash2 className="w-3 h-3" />
@@ -303,8 +319,9 @@ function RadarPage() {
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-[12.5px] text-foreground line-clamp-2">{e.message}</p>
                           {e.email_status && (
-                            <span className={`shrink-0 text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider ${e.email_status === "queued" ? "bg-[var(--mint)]/15 text-[var(--mint)]" : "bg-secondary text-muted-foreground"}`}>
-                              {e.email_status === "queued" ? "sent" : "skipped"}
+                            <span className={`shrink-0 text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider ${(e.email_status === "queued" || e.email_status === "sent" || e.email_status === "delivered") ? "bg-[var(--mint)]/15 text-[var(--mint)]" : "bg-secondary text-muted-foreground"}`}>
+                              {/* "sent" is reserved for a delivered status; queued mail shows as queued */}
+                              {e.email_status === "queued" ? "queued" : (e.email_status === "sent" || e.email_status === "delivered") ? "sent" : "skipped"}
                             </span>
                           )}
                         </div>

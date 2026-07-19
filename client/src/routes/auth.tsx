@@ -93,12 +93,13 @@ function AuthPage() {
           <form onSubmit={onSubmit} className="space-y-3">
             <input
               type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com" autoComplete="email"
+              placeholder="you@example.com" autoComplete="email" aria-label="Email address"
               className="w-full h-11 px-3.5 rounded-[8px] border border-border bg-[var(--surface)] text-[14px] focus:outline-none focus:border-foreground"
             />
             <input
               type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)}
               placeholder="Password (min 6 characters)" autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              aria-label="Password"
               className="w-full h-11 px-3.5 rounded-[8px] border border-border bg-[var(--surface)] text-[14px] focus:outline-none focus:border-foreground"
             />
             <button

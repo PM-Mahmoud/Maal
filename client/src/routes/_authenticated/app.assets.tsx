@@ -77,13 +77,22 @@ type Cat = {
   filter?: { key: string; values: string[] }; // narrow rows of shared tables
   amountKey: string;
   nameKey: string;
+  // Optional liability column on the same row to net against the amount when
+  // totalling (e.g. a property's mortgage_balance → the total shows equity).
+  netAgainst?: string;
 };
+
+/** Row amount used for category totals — net of any same-row liability. */
+function rowAmount(cat: Cat, r: any): number {
+  const gross = Number(r[cat.amountKey] ?? 0);
+  return cat.netAgainst ? gross - Number(r[cat.netAgainst] ?? 0) : gross;
+}
 
 const CATS: Cat[] = [
   { key: "bank", side: "asset", group: "accounts", title: "Banks & Brokerages", blurb: "Banking and brokerage accounts", Icon: Landmark, table: "cash_accounts", amountKey: "balance", nameKey: "label" },
   { key: "public", side: "asset", group: "accounts", title: "Investment Accounts", blurb: "Stocks, ETFs and managed funds", Icon: LineChart, table: "investments", filter: { key: "kind", values: ["etf", "stock", "managed_fund", "other"] }, amountKey: "value", nameKey: "name" },
 
-  { key: "real_estate", side: "asset", group: "assets", title: "Real Estate", blurb: "Residential & commercial property", Icon: Home, table: "properties", amountKey: "value", nameKey: "label" },
+  { key: "real_estate", side: "asset", group: "assets", title: "Real Estate", blurb: "Residential & commercial property", Icon: Home, table: "properties", amountKey: "value", nameKey: "label", netAgainst: "mortgage_balance" },
   { key: "crypto", side: "asset", group: "assets", title: "Crypto Holdings", blurb: "Wallets, exchanges and on-chain", Icon: PiggyBank, table: "investments", filter: { key: "kind", values: ["crypto"] }, amountKey: "value", nameKey: "name" },
   { key: "private", side: "asset", group: "assets", title: "Private Investments", blurb: "PE, VC, SAFEs & angel deals", Icon: Briefcase, table: "other_assets", filter: { key: "kind", values: ["private_investment"] }, amountKey: "value", nameKey: "label" },
   { key: "vehicle", side: "asset", group: "assets", title: "Vehicles", blurb: "Cars and other vehicles", Icon: Car, table: "other_assets", filter: { key: "kind", values: ["vehicle"] }, amountKey: "value", nameKey: "label" },
@@ -92,7 +101,7 @@ const CATS: Cat[] = [
   { key: "other_asset", side: "asset", group: "assets", title: "Other Assets", blurb: "Anything else of value", Icon: Anchor, table: "other_assets", filter: { key: "kind", values: ["other"] }, amountKey: "value", nameKey: "label" },
 
   { key: "credit_card", side: "liability", group: "liabilities", title: "Credit Cards", blurb: "Personal & business cards", Icon: CreditCard, table: "debts", filter: { key: "kind", values: ["credit_card"] }, amountKey: "balance", nameKey: "label" },
-  { key: "loan", side: "liability", group: "liabilities", title: "Mortgages & Loans", blurb: "Mortgages, personal & car loans", Icon: TrendingDown, table: "debts", filter: { key: "kind", values: ["personal", "car", "hecs"] }, amountKey: "balance", nameKey: "label" },
+  { key: "loan", side: "liability", group: "liabilities", title: "Mortgages & Loans", blurb: "Mortgages, personal & car loans", Icon: TrendingDown, table: "debts", filter: { key: "kind", values: ["mortgage", "personal", "car", "hecs"] }, amountKey: "balance", nameKey: "label" },
   { key: "other_liability", side: "liability", group: "liabilities", title: "Other Liabilities", blurb: "Taxes owed, private debts", Icon: HandCoins, table: "debts", filter: { key: "kind", values: ["other"] }, amountKey: "balance", nameKey: "label" },
 ];
 
@@ -251,7 +260,7 @@ function useCategoryRows(cat: Cat) {
 
 function CategoryCard({ cat, onAdd }: { cat: Cat; onAdd: (c: Cat) => void }) {
   const { rows, loading, deleteRow } = useCategoryRows(cat);
-  const total = rows.reduce((a, r) => a + Number(r[cat.amountKey] ?? 0), 0);
+  const total = rows.reduce((a, r) => a + rowAmount(cat, r), 0);
   const isEmpty = !loading && rows.length === 0;
 
   return (
@@ -299,7 +308,7 @@ function CategoryCard({ cat, onAdd }: { cat: Cat; onAdd: (c: Cat) => void }) {
                     <span className="tabular-nums text-[13px] font-semibold">{formatAUD(Number(r[cat.amountKey] ?? 0))}</span>
                     <button
                       onClick={() => deleteRow(r.id)}
-                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-opacity"
+                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-muted-foreground hover:text-foreground transition-opacity rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                       aria-label="Remove"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -311,7 +320,7 @@ function CategoryCard({ cat, onAdd }: { cat: Cat; onAdd: (c: Cat) => void }) {
             {/* Footer total */}
             <div className="px-4 py-2.5 border-t border-border flex items-center justify-between text-[12px]">
               <span className="text-muted-foreground">{rows.length} {rows.length === 1 ? "entry" : "entries"}</span>
-              <span className="tabular-nums font-semibold">= {formatAUD(total)}</span>
+              <span className="tabular-nums font-semibold">{cat.netAgainst ? "equity = " : "= "}{formatAUD(total)}</span>
             </div>
           </>
         )}
@@ -322,7 +331,7 @@ function CategoryCard({ cat, onAdd }: { cat: Cat; onAdd: (c: Cat) => void }) {
 
 function CategoryRow({ cat, onAdd }: { cat: Cat; onAdd: (c: Cat) => void }) {
   const { rows, deleteRow } = useCategoryRows(cat);
-  const total = rows.reduce((a, r) => a + Number(r[cat.amountKey] ?? 0), 0);
+  const total = rows.reduce((a, r) => a + rowAmount(cat, r), 0);
 
   return (
     <div className="rounded-[12px] border border-border bg-[var(--surface)] overflow-hidden">
@@ -346,7 +355,7 @@ function CategoryRow({ cat, onAdd }: { cat: Cat; onAdd: (c: Cat) => void }) {
               <span className="truncate">{r[cat.nameKey] || "Untitled"}</span>
               <div className="flex items-center gap-2">
                 <span className="tabular-nums">{formatAUD(Number(r[cat.amountKey] ?? 0))}</span>
-                <button onClick={() => deleteRow(r.id)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground" aria-label="Remove">
+                <button onClick={() => deleteRow(r.id)} className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-muted-foreground hover:text-foreground rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]" aria-label="Remove">
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -755,10 +764,11 @@ function specFor(cat: Cat): FormSpec {
         fields: [
           { key: "label", label: "Loan name", placeholder: "e.g. CommBank home loan", full: true, required: true },
           { key: "kind", label: "Type", type: "select", options: [
+            { value: "mortgage", label: "Mortgage" },
             { value: "personal", label: "Personal loan" },
             { value: "car", label: "Car loan" },
             { value: "hecs", label: "HECS / HELP" },
-            { value: "other", label: "Mortgage / other" },
+            { value: "other", label: "Other" },
           ]},
           { key: "balance", label: "Current balance (AUD)", type: "number", required: true },
           { key: "rate", label: "Interest rate %", type: "number", placeholder: "6.10" },

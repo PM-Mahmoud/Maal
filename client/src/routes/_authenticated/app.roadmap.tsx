@@ -17,19 +17,31 @@ type ChangelogItem = {
   title: string;
   body: string;
   date: string;
-  ago: string;
   votes: number;
 };
 
+// Compute the relative age ("14d", "1mo") from the item's date at render time
+// so labels stay accurate as the current date moves instead of going stale.
+function relativeAge(dateStr: string): string {
+  const then = new Date(dateStr).getTime();
+  if (!Number.isFinite(then)) return "";
+  const days = Math.max(0, Math.floor((Date.now() - then) / 86_400_000));
+  if (days < 1) return "today";
+  if (days < 30) return `${days}d`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo`;
+  return `${Math.floor(months / 12)}y`;
+}
+
 const CHANGELOG: ChangelogItem[] = [
-  { kind: "feature", title: "Custom Reports Delivered to Your Inbox", body: "Available on Pro and Max. Maal can now build any file you ask for and email it to you as an attachment. Ask her to put together a financial model in Excel, a portfolio rebalance plan as a PDF, a tax-loss harvesting summary, or any custom report, and she does the work in chat then delivers the file straight to your inbox. Just say \"build me a financial model in Excel and send it to my email,\" and it lands in your inbox a moment later.", date: "Jun 5, 2026", ago: "14d", votes: 24 },
-  { kind: "feature", title: "Voice Notes via SMS", body: "Send Maal a voice note from your phone and she will transcribe and respond to it like any other message. Faster than typing when you are on the go. Works on any iPhone or Android, just record and send to Maal's number like you would with any contact.", date: "Jun 3, 2026", ago: "16d", votes: 14 },
-  { kind: "improvement", title: "Improvement", body: "If you start typing a message and click away, refresh the page, or get redirected, your draft is now saved automatically and waiting for you when you return. No more retyping a question you already wrote out in Ask Maal.", date: "Jun 2, 2026", ago: "17d", votes: 17 },
-  { kind: "improvement", title: "Improvement", body: "A quick \"Add asset or liability\" button now lives on the dashboard so you can drop in a new property, account, or holding without hunting through Portfolio settings.", date: "Jun 1, 2026", ago: "18d", votes: 9 },
-  { kind: "improvement", title: "Improvement", body: "Maal now keeps long conversations running smoothly. When a chat gets too long to fit her working memory, she automatically summarizes what you have discussed and continues in a fresh session with full context carried over, so you never lose your place in a deep research thread.", date: "May 27, 2026", ago: "23d", votes: 12 },
-  { kind: "feature", title: "Inline Source Citations", body: "Maal now cites her sources inline as she writes. Clickable source pills appear at the end of each cited sentence so you can see exactly where the information came from. Every message also has a Sources widget that lists everything she referenced in one place.", date: "May 13, 2026", ago: "1mo", votes: 48 },
-  { kind: "feature", title: "CSV Uploads in Chat", body: "You can now upload CSV files directly to Maal and ask her to analyze them. Useful for transaction exports, custom holdings lists, or any tabular data you want her to reason over.", date: "May 12, 2026", ago: "1mo", votes: 44 },
-  { kind: "improvement", title: "Improvement", body: "Cleaned up Radar email previews, SMS summaries, and inbound email replies so notifications read clean and human, with no leftover formatting markup.", date: "May 9, 2026", ago: "1mo", votes: 25 },
+  { kind: "feature", title: "Custom Reports Delivered to Your Inbox", body: "Available on Pro and Max. Maal can now build any file you ask for and email it to you as an attachment. Ask her to put together a financial model in Excel, a portfolio rebalance plan as a PDF, a tax-loss harvesting summary, or any custom report, and she does the work in chat then delivers the file straight to your inbox. Just say \"build me a financial model in Excel and send it to my email,\" and it lands in your inbox a moment later.", date: "Jun 5, 2026", votes: 24 },
+  { kind: "feature", title: "Voice Notes via SMS", body: "Send Maal a voice note from your phone and she will transcribe and respond to it like any other message. Faster than typing when you are on the go. Works on any iPhone or Android, just record and send to Maal's number like you would with any contact.", date: "Jun 3, 2026", votes: 14 },
+  { kind: "improvement", title: "Improvement", body: "If you start typing a message and click away, refresh the page, or get redirected, your draft is now saved automatically and waiting for you when you return. No more retyping a question you already wrote out in Ask Maal.", date: "Jun 2, 2026", votes: 17 },
+  { kind: "improvement", title: "Improvement", body: "A quick \"Add asset or liability\" button now lives on the dashboard so you can drop in a new property, account, or holding without hunting through Portfolio settings.", date: "Jun 1, 2026", votes: 9 },
+  { kind: "improvement", title: "Improvement", body: "Maal now keeps long conversations running smoothly. When a chat gets too long to fit her working memory, she automatically summarizes what you have discussed and continues in a fresh session with full context carried over, so you never lose your place in a deep research thread.", date: "May 27, 2026", votes: 12 },
+  { kind: "feature", title: "Inline Source Citations", body: "Maal now cites her sources inline as she writes. Clickable source pills appear at the end of each cited sentence so you can see exactly where the information came from. Every message also has a Sources widget that lists everything she referenced in one place.", date: "May 13, 2026", votes: 48 },
+  { kind: "feature", title: "CSV Uploads in Chat", body: "You can now upload CSV files directly to Maal and ask her to analyze them. Useful for transaction exports, custom holdings lists, or any tabular data you want her to reason over.", date: "May 12, 2026", votes: 44 },
+  { kind: "improvement", title: "Improvement", body: "Cleaned up Radar email previews, SMS summaries, and inbound email replies so notifications read clean and human, with no leftover formatting markup.", date: "May 9, 2026", votes: 25 },
 ];
 
 type RoadmapItem = { title: string; body: string; votes: number; category: string };
@@ -110,7 +122,7 @@ function RoadmapPage() {
                       )}
                     </h3>
                   </div>
-                  <span className="text-[11px] text-muted-foreground shrink-0">{c.ago}</span>
+                  <span className="text-[11px] text-muted-foreground shrink-0">{relativeAge(c.date)}</span>
                 </div>
                 <p className="mt-3 text-[13px] text-muted-foreground leading-relaxed">{c.body}</p>
                 <div className="mt-4 flex items-center justify-between">

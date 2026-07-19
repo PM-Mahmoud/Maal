@@ -16,15 +16,22 @@ export function AskMaalTile() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   async function ask(text: string) {
     const t = text.trim();
     if (!t || busy) return;
     setBusy(true);
+    setErr(null);
     try {
       const thread = (await createThread()) as { id: string };
       try { localStorage.setItem(`maal_autosend_${thread.id}`, t); } catch { /* ignore */ }
       navigate({ to: "/app/advisor/$threadId", params: { threadId: thread.id } });
+    } catch {
+      // Keep (or restore, for chip clicks) the entered question so the user can
+      // retry without retyping.
+      setQ(t);
+      setErr("Couldn't start your chat — check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -52,6 +59,11 @@ export function AskMaalTile() {
           <ArrowRight className="size-4" />
         </button>
       </form>
+      {err && (
+        <p role="alert" className="mt-2 text-[11px] text-[var(--gold)]">
+          {err} Your question is still above — hit ask again to retry.
+        </p>
+      )}
       <div className="flex flex-wrap gap-2 mt-3">
         {CHIPS.map((c) => (
           <button key={c} onClick={() => ask(c)} disabled={busy}

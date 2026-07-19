@@ -24,9 +24,13 @@ async function throwApiError(r: Response, fallback: string): Promise<never> {
 
 export async function listAlerts(): Promise<{ alerts: unknown[]; events: unknown[] }> {
   const r = await fetch('/api/v1/alerts', { credentials: 'include' });
-  const j = r.ok ? await r.json() : null;
-  // Server returns { alerts, events } or [] stub — normalise both
-  if (Array.isArray(j)) return { alerts: [], events: [] };
+  // Throw (not silent empty state) so the page can't render "no radars yet"
+  // when the request actually failed.
+  if (!r.ok) return throwApiError(r, 'Could not load radars.');
+  const j = await r.json();
+  // Server returns { alerts, events }; a bare array IS the alert list (older/
+  // stub shape) — keep it instead of dropping it to an empty list.
+  if (Array.isArray(j)) return { alerts: j, events: [] };
   return { alerts: j?.alerts ?? [], events: j?.events ?? [] };
 }
 export async function createAlert(data?: unknown): Promise<unknown> {
@@ -38,7 +42,8 @@ export async function createAlert(data?: unknown): Promise<unknown> {
 }
 export async function deleteAlert(data?: unknown): Promise<void> {
   const { id } = ((data as any)?.data ?? data ?? {}) as { id?: string };
-  await fetch(`/api/v1/alerts/${id}`, { method: 'DELETE', credentials: 'include' });
+  const r = await fetch(`/api/v1/alerts/${id}`, { method: 'DELETE', credentials: 'include' });
+  if (!r.ok) return throwApiError(r, 'Could not delete radar.');
 }
 export async function toggleAlert(data?: unknown): Promise<unknown> {
   const r = await fetch('/api/v1/alerts/toggle', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
@@ -47,5 +52,8 @@ export async function toggleAlert(data?: unknown): Promise<unknown> {
 }
 export async function evaluateAlerts(data?: unknown): Promise<{ fired: number }> {
   const r = await fetch('/api/v1/alerts/evaluate', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-  return r.ok ? r.json() : { fired: 0 };
+  // Throw (not {fired: 0}) so "No conditions met" only shows for a genuine
+  // successful evaluation with zero fires, never for a failed request.
+  if (!r.ok) return throwApiError(r, 'Could not run radar evaluation.');
+  return r.json();
 }

@@ -83,7 +83,16 @@ export const supabaseAuth = {
   },
 
   async signOut() {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    try {
+      const r = await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+      if (!r.ok) {
+        const json = await r.json().catch(() => null);
+        // Keep the local session intact — the server still considers us signed in.
+        return { error: { message: json?.error || "Sign out failed" } };
+      }
+    } catch (e) {
+      return { error: { message: e instanceof Error ? e.message : "Network error" } };
+    }
     _session = null;
     notifyListeners("SIGNED_OUT");
     return { error: null };
@@ -173,11 +182,13 @@ class QueryBuilder<T = Record<string, unknown>> {
         body: this._body ? JSON.stringify(this._body) : undefined,
       });
       const json = await r.json();
-      if (!r.ok) return { data: this._single ? null : [], error: { message: json.error || "Request failed" } };
+      if (!r.ok) {
+        return { data: this._single ? null : [], error: { message: json.error || "Request failed" } } as QueryResult<T> | ManyResult<T>;
+      }
       return { data: json, error: null };
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Network error";
-      return { data: this._single ? null : [], error: { message: msg } };
+      return { data: this._single ? null : [], error: { message: msg } } as QueryResult<T> | ManyResult<T>;
     }
   }
 }

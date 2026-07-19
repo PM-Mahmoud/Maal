@@ -1,0 +1,163 @@
+{
+  "2025-26": {
+    "fy": "2025-26",
+    "effectiveFrom": "2025-07-01",
+    "reviewed": "2026-07-12",
+    "sources": [
+      "https://www.ato.gov.au/tax-rates-and-codes/tax-rates-australian-residents",
+      "https://www.ato.gov.au/tax-rates-and-codes/study-and-training-support-loans-rates-and-repayment-thresholds",
+      "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/contributions-caps"
+    ],
+    "_notes": [
+      "Stage-3 brackets (from 1 July 2024): 16% second bracket.",
+      "Medicare: single, no dependants (2025-26, uplifted 2.9% retrospectively to 1 July 2025). Below lowIncomeSingle = no levy; between it and lowIncomeSingleUpper the levy shades in at 10c per $1 over the lower threshold; above the upper threshold the full 2% applies. Single-taxpayer case only (family thresholds not modelled).",
+      "MLS tiers are for singles (family = double, +$1,500 per MLS dependent child after the first).",
+      "HECS-HELP marginal repayment system (from 1 July 2025): nothing below the threshold, 15c/$ then 17c/$ on income ABOVE each boundary; once repayment income exceeds tenPercentAbove, repayment = 10% of total. indexationRate is the 1 June 2025 debt indexation.",
+      "upTo: null represents Infinity (no upper bound) — wrappers convert on load."
+    ],
+    "incomeTaxBrackets": [
+      { "upTo": 18200, "rate": 0 },
+      { "upTo": 45000, "rate": 0.16 },
+      { "upTo": 135000, "rate": 0.3 },
+      { "upTo": 190000, "rate": 0.37 },
+      { "upTo": null, "rate": 0.45 }
+    ],
+    "medicare": {
+      "levyRate": 0.02,
+      "lowIncomeSingle": 28011,
+      "lowIncomeSingleUpper": 35013,
+      "phaseInRate": 0.1
+    },
+    "mlsSinglesTiers": [
+      { "upTo": 101000, "rate": 0 },
+      { "upTo": 118000, "rate": 0.01 },
+      { "upTo": 158000, "rate": 0.0125 },
+      { "upTo": null, "rate": 0.015 }
+    ],
+    "hecs": {
+      "system": "marginal",
+      "minThreshold": 67000,
+      "band1To": 125000,
+      "band1Rate": 0.15,
+      "band2Rate": 0.17,
+      "tenPercentAbove": 179286,
+      "topRate": 0.1,
+      "indexationRate": 0.032
+    },
+    "super": {
+      "sgRate": 0.12,
+      "concessionalCap": 30000,
+      "nonConcessionalCap": 120000,
+      "nonConcessionalBringForward": 360000,
+      "transferBalanceCap": 2000000,
+      "division293Threshold": 250000,
+      "division293ExtraRate": 0.15,
+      "preservationAgeDefault": 60,
+      "earningsRateInAccumulation": 0.15,
+      "earningsRateInPension": 0
+    },
+    "cgt": { "discountMinHoldMonths": 12, "discountRate": 0.5 },
+    "lito": {
+      "maxOffset": 700,
+      "fullOffsetUpTo": 37500,
+      "phaseOut1Rate": 0.05,
+      "phaseOut1End": 45000,
+      "phaseOut2Rate": 0.015,
+      "phaseOut2End": 66667
+    },
+    "asfa": { "comfortableSingle": 595000, "comfortableCouple": 690000 },
+    "keyDates": {
+      "eofy": "June 30",
+      "newFY": "July 1",
+      "hecsIndexation": "June 1",
+      "taxReturnDeadline": "October 31",
+      "taxAgentDeadline": "May 15",
+      "sgQ1Due": "October 28",
+      "sgQ2Due": "January 28",
+      "sgQ3Due": "April 28",
+      "sgQ4Due": "July 28"
+    }
+  },
+
+  "2026-27": {
+    "fy": "2026-27",
+    "effectiveFrom": "2026-07-01",
+    "reviewed": "2026-07-12",
+    "sources": [
+      "https://www.ato.gov.au/tax-rates-and-codes/tax-rates-australian-residents",
+      "https://www.ato.gov.au/tax-rates-and-codes/study-and-training-support-loans-rates-and-repayment-thresholds",
+      "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/contributions-caps",
+      "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy-surcharge/medicare-levy-surcharge-income-thresholds-and-rates"
+    ],
+    "_notes": [
+      "Second bracket cut 16% -> 15% from 1 July 2026 (Treasury Laws Amendment (More Cost of Living Relief) Act 2025); falls again to 14% on 1 July 2027.",
+      "2026-27 Medicare low-income thresholds are indexed retrospectively in the following budget and not yet legislated; the 2025-26 figures are carried forward until the ATO confirms them (the drift-check will flag any gap).",
+      "HECS thresholds indexed 2.8% for 2026-27. Sanity: 15c on ($129,717 - $69,528) = $9,028, which is exactly the base of the 17c band; the marginal curve meets 10%-of-total at $186,050. Continuous - verified.",
+      "Super concessional cap $32,500 is AWOTE-indexed from 1 July 2026.",
+      "upTo: null represents Infinity (no upper bound) — wrappers convert on load."
+    ],
+    "incomeTaxBrackets": [
+      { "upTo": 18200, "rate": 0 },
+      { "upTo": 45000, "rate": 0.15 },
+      { "upTo": 135000, "rate": 0.3 },
+      { "upTo": 190000, "rate": 0.37 },
+      { "upTo": null, "rate": 0.45 }
+    ],
+    "medicare": {
+      "levyRate": 0.02,
+      "lowIncomeSingle": 28011,
+      "lowIncomeSingleUpper": 35013,
+      "phaseInRate": 0.1
+    },
+    "mlsSinglesTiers": [
+      { "upTo": 105000, "rate": 0 },
+      { "upTo": 123000, "rate": 0.01 },
+      { "upTo": 164000, "rate": 0.0125 },
+      { "upTo": null, "rate": 0.015 }
+    ],
+    "hecs": {
+      "system": "marginal",
+      "minThreshold": 69528,
+      "band1To": 129717,
+      "band1Rate": 0.15,
+      "band2Rate": 0.17,
+      "tenPercentAbove": 186050,
+      "topRate": 0.1,
+      "indexationRate": 0.028
+    },
+    "super": {
+      "sgRate": 0.12,
+      "concessionalCap": 32500,
+      "nonConcessionalCap": 130000,
+      "nonConcessionalBringForward": 390000,
+      "bringForwardTsbLimit": 1840000,
+      "transferBalanceCap": 2100000,
+      "division293Threshold": 250000,
+      "division293ExtraRate": 0.15,
+      "preservationAgeDefault": 60,
+      "earningsRateInAccumulation": 0.15,
+      "earningsRateInPension": 0
+    },
+    "cgt": { "discountMinHoldMonths": 12, "discountRate": 0.5 },
+    "lito": {
+      "maxOffset": 700,
+      "fullOffsetUpTo": 37500,
+      "phaseOut1Rate": 0.05,
+      "phaseOut1End": 45000,
+      "phaseOut2Rate": 0.015,
+      "phaseOut2End": 66667
+    },
+    "asfa": { "comfortableSingle": 595000, "comfortableCouple": 690000 },
+    "keyDates": {
+      "eofy": "June 30",
+      "newFY": "July 1",
+      "hecsIndexation": "June 1",
+      "taxReturnDeadline": "October 31",
+      "taxAgentDeadline": "May 15",
+      "sgQ1Due": "October 28",
+      "sgQ2Due": "January 28",
+      "sgQ3Due": "April 28",
+      "sgQ4Due": "July 28"
+    }
+  }
+}

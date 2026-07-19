@@ -26,9 +26,13 @@ function ReportPage() {
   const [lastFile, setLastFile] = useState<string | null>(null);
 
   async function build() {
-    setBusy(true); setError(null);
+    setBusy(true); setError(null); setLastFile(null);
     try {
-      const { filename, base64 } = await gen();
+      const res = await gen();
+      if (!res || typeof res.filename !== "string" || typeof res.base64 !== "string") {
+        throw new Error("The report response was malformed — please try again.");
+      }
+      const { filename, base64 } = res;
       const bin = atob(base64);
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);

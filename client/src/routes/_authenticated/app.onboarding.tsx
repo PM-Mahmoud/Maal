@@ -30,6 +30,31 @@ const STEPS = [
   "Goals & risk",
 ] as const;
 
+// Sane upper bound for a single money field — catches pasted garbage without
+// rejecting any realistic figure.
+const MONEY_MAX = 1_000_000_000;
+
+// Parse a money field once: blank means "not provided" (0); anything else must
+// be a finite, non-negative number within a sane range. Throws with the field
+// label so the user knows what to fix.
+function parseMoney(label: string, v: string): number {
+  const t = v.trim();
+  if (t === "") return 0;
+  const n = Number(t);
+  if (!Number.isFinite(n) || n < 0 || n > MONEY_MAX)
+    throw new Error(`${label} must be a number between 0 and ${MONEY_MAX.toLocaleString("en-AU")}.`);
+  return n;
+}
+
+function parseRetirementAge(v: string): number {
+  const t = v.trim();
+  if (t === "") return 67; // default when left blank
+  const n = Number(t);
+  if (!Number.isFinite(n) || n < 18 || n > 100)
+    throw new Error("Target retirement age must be a number between 18 and 100.");
+  return Math.round(n);
+}
+
 function OnboardingWizard() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
@@ -58,38 +83,94 @@ function OnboardingWizard() {
   }, []);
 
   const u = (k: keyof State, v: string) => setS((x) => ({ ...x, [k]: v }));
-  const n = (v: string) => (v === "" ? 0 : Number(v));
 
   async function finish() {
+    if (saving) return; // never run two submit flows at once
+    // Validate every numeric input BEFORE any persistence — invalid input
+    // exits the flow with a field-specific message rather than being silently
+    // coerced (NaN → skipped, or garbage saved).
+    let vals: {
+      annual_income: number; super_balance: number; investments_value: number;
+      cash_balance: number; hecs_balance: number; monthly_expenses: number;
+      retirement_age: number;
+    };
+    try {
+      vals = {
+        annual_income: parseMoney("Annual income", s.annual_income),
+        super_balance: parseMoney("Super balance", s.super_balance),
+        investments_value: parseMoney("Investments", s.investments_value),
+        cash_balance: parseMoney("Cash & savings", s.cash_balance),
+        hecs_balance: parseMoney("HECS / HELP balance", s.hecs_balance),
+        monthly_expenses: parseMoney("Monthly expenses", s.monthly_expenses),
+        retirement_age: parseRetirementAge(s.retirement_age),
+      };
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Check the numbers you entered.");
+      return;
+    }
+
     setSaving(true);
     try {
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth.user?.id;
       if (!uid) throw new Error("Not signed in");
+
       // Profile fields (name, age band, risk, retirement age, monthly expenses)
       // → user_profiles via the real endpoint. Asset amounts go to their own
       // tables below, so the merged Maal Score picks them up without double-counting.
-      await saveProfile({
+      // `onboarded` is deliberately NOT set here — it flips only after every
+      // write below succeeds, so a mid-flow failure can't strand the user in
+      // an "onboarded" state with missing records.
+      const prof = await saveProfile({
         display_name: s.display_name,
         age_band: s.age_band,
         risk: s.risk,
-        retirement_age: Number(s.retirement_age) || 67,
-        monthly_expenses: n(s.monthly_expenses),
-        onboarded: true,
+        retirement_age: vals.retirement_age,
+        monthly_expenses: vals.monthly_expenses,
       });
-      const writes: Promise<any>[] = [];
-      const push = (q: any) => writes.push(Promise.resolve(q));
-      if (n(s.annual_income) > 0)
-        push(supabase.from("incomes").insert({ user_id: uid, annual_amount: n(s.annual_income) }));
-      if (n(s.super_balance) > 0)
-        push(supabase.from("super_accounts").insert({ user_id: uid, fund_name: "My super", balance: n(s.super_balance) }));
-      if (n(s.investments_value) > 0)
-        push(supabase.from("investments").insert({ user_id: uid, name: "Portfolio", value: n(s.investments_value), kind: "etf" }));
-      if (n(s.cash_balance) > 0)
-        push(supabase.from("cash_accounts").insert({ user_id: uid, label: "Savings", balance: n(s.cash_balance), kind: "savings" }));
-      if (n(s.hecs_balance) > 0)
-        push(supabase.from("debts").insert({ user_id: uid, label: "HECS", balance: n(s.hecs_balance), kind: "hecs" }));
-      await Promise.all(writes);
+      if (!prof) throw new Error("Couldn't save your profile. Check your connection and try again.");
+
+      // Idempotent write: fetch the row onboarding would have created (stable
+      // label/kind key) first; UPDATE it when present, INSERT when not — so a
+      // retry after a partial failure updates instead of duplicating.
+      async function putRecord(
+        table: string,
+        match: Record<string, string>,
+        body: Record<string, unknown>,
+        label: string,
+      ) {
+        let q: any = supabase.from(table).select("id");
+        for (const [col, val] of Object.entries(match)) q = q.eq(col, val);
+        const found = await q.maybeSingle();
+        if (found.error) throw new Error(`Couldn't save your ${label}: ${found.error.message}`);
+        const res = found.data?.id != null
+          ? await (supabase.from(table) as any).update(body).eq("id", found.data.id)
+          : await (supabase.from(table) as any).insert(body);
+        if (res.error) throw new Error(`Couldn't save your ${label}: ${res.error.message}`);
+      }
+
+      // Deterministic order — each step names itself in the error so the user
+      // knows exactly which write failed.
+      if (vals.annual_income > 0)
+        await putRecord("incomes", { label: "Primary income" },
+          { user_id: uid, label: "Primary income", annual_amount: vals.annual_income }, "income");
+      if (vals.super_balance > 0)
+        await putRecord("super_accounts", { fund_name: "My super" },
+          { user_id: uid, fund_name: "My super", balance: vals.super_balance }, "super balance");
+      if (vals.investments_value > 0)
+        await putRecord("investments", { name: "Portfolio", kind: "etf" },
+          { user_id: uid, name: "Portfolio", value: vals.investments_value, kind: "etf" }, "investments");
+      if (vals.cash_balance > 0)
+        // cash_accounts has account_type (not kind) — matches the assets page.
+        await putRecord("cash_accounts", { label: "Savings" },
+          { user_id: uid, label: "Savings", balance: vals.cash_balance, account_type: "savings" }, "cash & savings");
+      if (vals.hecs_balance > 0)
+        await putRecord("debts", { label: "HECS", kind: "hecs" },
+          { user_id: uid, label: "HECS", balance: vals.hecs_balance, kind: "hecs" }, "HECS balance");
+
+      // Everything persisted — only now mark onboarding complete.
+      const done = await saveProfile({ onboarded: true });
+      if (!done) throw new Error("Your details are saved, but onboarding couldn't be marked complete — tap Finish again.");
       toast.success("Onboarding complete");
       navigate({ to: "/app" });
     } catch (e) {

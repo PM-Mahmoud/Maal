@@ -104,11 +104,29 @@ function generateId(): string {
   return `d_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
 }
 
+/** Coerce typed/pasted/stored values to a finite, non-negative number. */
+function clampNonNegative(value: unknown): number {
+  const n = typeof value === "number" ? value : parseFloat(String(value));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
 function loadDebts(): Debt[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Debt[]) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    // Sanitize persisted rows so invalid stored values can't reach the engines
+    return parsed
+      .filter((d): d is Partial<Debt> => !!d && typeof d === "object")
+      .map((d) => ({
+        id: typeof d.id === "string" && d.id ? d.id : generateId(),
+        name: typeof d.name === "string" ? d.name : "",
+        balance: clampNonNegative(d.balance),
+        rate: clampNonNegative(d.rate),
+        minPayment: clampNonNegative(d.minPayment),
+      }));
   } catch {
     return [];
   }
@@ -154,19 +172,19 @@ function calculatePayoff(
     };
   }
 
-  // Working copies
-  const balances = debts.map((d) => d.balance);
-  const monthlyRates = debts.map((d) => d.rate / 100 / 12);
-  const minPayments = debts.map((d) => d.minPayment);
+  // Working copies (clamped — no negative balance/rate/payment reaches the math)
+  const balances = debts.map((d) => clampNonNegative(d.balance));
+  const monthlyRates = debts.map((d) => clampNonNegative(d.rate) / 100 / 12);
+  const minPayments = debts.map((d) => clampNonNegative(d.minPayment));
   const cumulativeInterest = debts.map(() => 0);
   const payoffMonth = debts.map(() => -1);
 
   // Sort order determines which debt gets extra payment first
   const indices = debts.map((_, i) => i);
   if (strategy === "snowball") {
-    indices.sort((a, b) => debts[a].balance - debts[b].balance);
+    indices.sort((a, b) => balances[a] - balances[b]);
   } else {
-    indices.sort((a, b) => debts[b].rate - debts[a].rate);
+    indices.sort((a, b) => monthlyRates[b] - monthlyRates[a]);
   }
 
   const snapshots: MonthlySnapshot[] = [];
@@ -183,6 +201,17 @@ function calculatePayoff(
     });
     snap.total = Math.round(snap.total);
     snapshots.push(snap);
+  }
+
+  // Already debt-free — nothing to simulate
+  if (balances.every((b) => b <= 0.01)) {
+    return {
+      snapshots,
+      totalInterest: 0,
+      debtFreeMonth: 0,
+      debtFreeDate: "—",
+      payoffOrder: [],
+    };
   }
 
   while (month < maxMonths) {
@@ -234,7 +263,10 @@ function calculatePayoff(
 
       if (balances[idx] <= 0.01) {
         availableExtra += balances[idx] * -1; // refund overpayment
-        availableExtra += minPayments[idx]; // redirect future minimums
+        // Do NOT re-add this debt's minimum here — it was already applied in
+        // this month's minimum-payment loop above. The freed minimum only
+        // rolls into the extra pool from the NEXT month (cleared-debt
+        // rollover loop), so the same dollar is never spent twice.
         balances[idx] = 0;
         if (payoffMonth[idx] === -1) {
           payoffMonth[idx] = month;
@@ -288,11 +320,16 @@ function calculatePayoff(
 function calculateMinOnly(debts: Debt[]): MinOnlyResult {
   if (debts.length === 0) return { totalInterest: 0, totalMonths: 0 };
 
-  const balances = debts.map((d) => d.balance);
-  const monthlyRates = debts.map((d) => d.rate / 100 / 12);
-  const minPayments = debts.map((d) => d.minPayment);
+  const balances = debts.map((d) => clampNonNegative(d.balance));
+  const monthlyRates = debts.map((d) => clampNonNegative(d.rate) / 100 / 12);
+  const minPayments = debts.map((d) => clampNonNegative(d.minPayment));
   const cumulativeInterest = debts.map(() => 0);
   const payoffMonth = debts.map(() => -1);
+
+  // Already debt-free — nothing to simulate
+  if (balances.every((b) => b <= 0.01)) {
+    return { totalInterest: 0, totalMonths: 0 };
+  }
 
   let month = 0;
   const maxMonths = 600;
@@ -424,7 +461,16 @@ function DebtPayoff() {
   }, []);
 
   const updateDebt = useCallback((id: string, field: keyof Debt, value: string | number) => {
-    setDebts((prev) => prev.map((d) => (d.id === id ? { ...d, [field]: value } : d)));
+    setDebts((prev) =>
+      prev.map((d) => {
+        if (d.id !== id) return d;
+        // Numeric fields are clamped — typed/pasted negatives or NaN become 0
+        if (field === "balance" || field === "rate" || field === "minPayment") {
+          return { ...d, [field]: clampNonNegative(value) };
+        }
+        return { ...d, [field]: value };
+      }),
+    );
   }, []);
 
   /* ---- Chart data ---- */

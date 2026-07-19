@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calculator, TrendingDown, Percent, Wallet, Receipt, ArrowDownRight } from "lucide-react";
 import { formatAUD } from "@/lib/score";
+import { getConstants, computeBracketTax, medicareLevy } from "@/lib/au-constants";
 
 export const Route = createFileRoute("/_authenticated/app/tax-bracket-visualizer")({
   component: TaxBracketVisualizer,
@@ -17,8 +18,12 @@ export const Route = createFileRoute("/_authenticated/app/tax-bracket-visualizer
 const fmtExact = (n: number) => "$" + Math.round(n).toLocaleString("en-AU");
 
 /* -------------------------------------------------------------------------- */
-/*  AU 2025-26 tax brackets (excl. Medicare levy — shown separately)           */
+/*  Tax brackets + Medicare — derived from the shared FY-keyed AU constants   */
+/*  (shared/au-constants.json via @/lib/au-constants), the same AUTHORITATIVE  */
+/*  source the server uses. Nothing tax-related is hardcoded.                  */
 /* -------------------------------------------------------------------------- */
+
+const AU = getConstants();
 
 interface Bracket {
   min: number;
@@ -27,17 +32,24 @@ interface Bracket {
   label: string;
 }
 
-const BRACKETS: Bracket[] = [
-  { min: 0, max: 18_200, rate: 0, label: "Tax-free" },
-  { min: 18_201, max: 45_000, rate: 0.16, label: "16c" },
-  { min: 45_001, max: 135_000, rate: 0.3, label: "30c" },
-  { min: 135_001, max: 190_000, rate: 0.37, label: "37c" },
-  { min: 190_001, max: null, rate: 0.45, label: "45c" },
-];
-
-const MEDICARE_LEVY_RATE = 0.02;
-const MEDICARE_LEVY_THRESHOLD = 24_276; // single
-const MEDICARE_LEVY_PHASE_IN_LIMIT = MEDICARE_LEVY_THRESHOLD * 1.1;
+/**
+ * Continuous brackets built from the constants: each bracket starts where the
+ * previous one ends, with an inclusive upper boundary (exactly $18,200 /
+ * $45,000 / $135,000 / $190,000 still sits in the bracket below).
+ */
+const BRACKETS: Bracket[] = (() => {
+  let lower = 0;
+  return AU.incomeTaxBrackets.map((b) => {
+    const bracket: Bracket = {
+      min: lower,
+      max: b.upTo === Infinity ? null : b.upTo,
+      rate: b.rate,
+      label: b.rate === 0 ? "Tax-free" : `${Math.round(b.rate * 100)}c`,
+    };
+    lower = b.upTo;
+    return bracket;
+  });
+})();
 
 interface BracketResult extends Bracket {
   taxableInThisBracket: number;
@@ -72,25 +84,18 @@ function calculateTax(
     }
   }
 
-  // Medicare levy — phased in above threshold
-  let medicare = 0;
-  if (taxable > MEDICARE_LEVY_THRESHOLD) {
-    const fullLevy = taxable * MEDICARE_LEVY_RATE;
-    if (taxable < MEDICARE_LEVY_PHASE_IN_LIMIT) {
-      // phase in: 10c per dollar above threshold
-      medicare = Math.min(fullLevy, (taxable - MEDICARE_LEVY_THRESHOLD) * 0.1);
-    } else {
-      medicare = fullLevy;
-    }
-  }
+  // Medicare levy from the shared constants (2% with low-income shade-in band)
+  const medicare = medicareLevy(taxable);
 
   const totalWithMedicare = totalTax + medicare;
   const net = income - totalWithMedicare;
   const effectiveRate = income > 0 ? (totalWithMedicare / income) * 100 : 0;
 
-  // marginal rate (top bracket with taxable > 0)
-  const topBracket = [...brackets].reverse().find((b) => b.taxableInThisBracket > 0);
-  const marginalRate = topBracket ? topBracket.rate * 100 : 0;
+  // Combined marginal rate (income tax + Medicare) derived from adjacent
+  // results, so it always matches the deduction-savings figure: it is the
+  // actual tax on the next dollar earned, Medicare-inclusive.
+  const totalFor = (ti: number) => computeBracketTax(ti) + medicareLevy(ti);
+  const marginalRate = (totalFor(taxable + 1) - totalFor(taxable)) * 100;
 
   return {
     taxable,
@@ -141,7 +146,7 @@ function TaxBracketVisualizer() {
             See exactly where your <span className="text-gradient-mint">tax dollars go.</span>
           </h2>
           <p className="mt-3 text-muted-foreground">
-            AU FY 2025-26 financial year brackets. Drag the sliders to see how
+            AU FY {AU.fy} financial year brackets. Drag the sliders to see how
             deductions shift you between brackets — and what the ATO actually keeps.
           </p>
         </Reveal>
@@ -251,7 +256,7 @@ function TaxBracketVisualizer() {
                   <h3 className="tracking-display text-base">Bracket breakdown</h3>
                   <Badge variant="outline" className="text-[10px] gap-1">
                     <Calculator className="h-3 w-3" />
-                    FY 2025-26
+                    FY {AU.fy}
                   </Badge>
                 </div>
 
@@ -360,8 +365,8 @@ function TaxBracketVisualizer() {
                     </p>
                     <p className="mt-1.5">
                       At <strong className="text-foreground">{formatAUD(income)}</strong>, every extra dollar earns you{" "}
-                      <strong className="text-emerald-500">{((100 - result.marginalRate) / 100).toFixed(2)}</strong> after tax.
-                      Salary sacrificing saves at the marginal rate.
+                      <strong className="text-emerald-500">{((100 - result.marginalRate) / 100).toFixed(2)}</strong> after
+                      income tax + Medicare. Salary sacrificing saves at the marginal rate.
                     </p>
                   </div>
                 </div>

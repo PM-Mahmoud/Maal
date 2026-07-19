@@ -30,6 +30,12 @@ interface FlowLink {
   amount: number;
 }
 
+/** Percentage of a whole — 0 when the denominator is 0, so bar widths and rates
+ *  never render NaN/Infinity when sliders are zeroed. */
+function pct(part: number, whole: number): number {
+  return whole > 0 ? (part / whole) * 100 : 0;
+}
+
 /** Build a flow diagram for net-worth composition. */
 function buildFlow(inputs: {
   salary: number;
@@ -76,7 +82,7 @@ function buildFlow(inputs: {
   const totalExpenses = expenses;
   const totalSavings = savings;
   const netWorth = inputs.propertyEquity + inputs.super + inputs.investments + inputs.savings;
-  const savingsRate = income > 0 ? (savings / income) * 100 : 0;
+  const savingsRate = pct(savings, income);
 
   return { nodes, links, income, totalExpenses, totalSavings, netWorth, savingsRate };
 }
@@ -192,7 +198,7 @@ function NetWorthFlow() {
                         <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-surface-2">
                           <div
                             className={`h-full ${color.bar} transition-all duration-700`}
-                            style={{ width: `${(node.amount / flow.income) * 100}%` }}
+                            style={{ width: `${pct(node.amount, flow.income)}%` }}
                           />
                         </div>
                       </div>
@@ -270,24 +276,26 @@ function NetWorthFlow() {
                   Net worth composition
                 </p>
                 <div className="flex h-3 overflow-hidden rounded-full bg-surface-2">
+                  {/* Every segment uses the same current values that make up
+                      flow.netWorth — no projected annual figures mixed in. */}
                   <div
                     className="bg-amber-500 transition-all duration-700"
-                    style={{ width: `${(propertyEquity / flow.netWorth) * 100}%` }}
+                    style={{ width: `${pct(propertyEquity, flow.netWorth)}%` }}
                     title="Property"
                   />
                   <div
                     className="bg-mint transition-all duration-700"
-                    style={{ width: `${((superContrib * 12 * 25) / flow.netWorth) * 100}%` }}
-                    title="Super (projected)"
+                    style={{ width: `${pct(superContrib, flow.netWorth)}%` }}
+                    title="Super"
                   />
                   <div
                     className="bg-emerald-500 transition-all duration-700"
-                    style={{ width: `${((investments * 12 * 10) / flow.netWorth) * 100}%` }}
+                    style={{ width: `${pct(investments, flow.netWorth)}%` }}
                     title="Investments"
                   />
                   <div
                     className="bg-blue-500 transition-all duration-700"
-                    style={{ width: `${((savings * 12 * 5) / flow.netWorth) * 100}%` }}
+                    style={{ width: `${pct(savings, flow.netWorth)}%` }}
                     title="Savings"
                   />
                 </div>
@@ -296,7 +304,7 @@ function NetWorthFlow() {
                     <span className="h-2 w-2 rounded-full bg-amber-500" /> Property
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-mint" /> Super (proj.)
+                    <span className="h-2 w-2 rounded-full bg-mint" /> Super
                   </span>
                   <span className="inline-flex items-center gap-1">
                     <span className="h-2 w-2 rounded-full bg-emerald-500" /> Investments
