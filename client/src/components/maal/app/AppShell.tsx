@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { supabase } from "@/integrations/api";
 import { Disclaimer } from "@/components/maal/Disclaimer";
+import { MaalMark } from "@/components/maal/MaalMark";
 import { ThemeToggle } from "@/components/maal/ThemeToggle";
 import { NotificationBell } from "@/components/maal/app/NotificationBell";
 import {
@@ -82,7 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background flex">
       <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-border bg-[var(--surface)] sticky top-0 h-screen">
         <div className="px-5 h-14 flex items-center gap-2 border-b border-border">
-          <span className="size-2 rounded-full bg-mint" />
+          <MaalMark size={18} />
           <Link to="/app" className="text-[16px] font-bold tracking-display">Maal</Link>
         </div>
 
@@ -156,7 +157,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <NotificationBell />
         </header>
         <header className="md:hidden sticky top-[3px] z-30 h-14 bg-background/90 backdrop-blur border-b border-border flex items-center justify-between px-4">
-          <Link to="/app" className="text-[15px] font-bold tracking-display">Maal</Link>
+          <Link to="/app" className="text-[15px] font-bold tracking-display">
+            <span className="flex items-center gap-2"><MaalMark size={16} />Maal</span>
+          </Link>
           <div className="flex items-center gap-2">
             <NotificationBell />
             <select

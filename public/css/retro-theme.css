@@ -172,3 +172,33 @@ body::after {
 }
 .fw-cta-secondary:hover { background: var(--accent-soft) !important; }
 .fw-not-dot { background: var(--accent) !important; }
+
+/* ============================================================
+   Polish pass (2026-07-19)
+   1. Press feedback on this skin's pill CTAs (they only had
+      hover): hard shadow collapses 2px→1px + translate, matching
+      the retro .rf-btn pattern. !important mirrors the chrome
+      rules — it also overrides theme.css's scale(.98) press on
+      .lv-header-cta so retro pages get the retro press.
+   2. Keyboard focus ring: 2px var(--accent) + 2px offset — the
+      retro orange accent token (light #D9531F / dark #F0754B),
+      !important so it wins over theme.css's teal ring on these
+      pages. Mouse focus shows no outline.
+   No keyframed animations in this skin → no motion guard needed.
+   ============================================================ */
+.tier-cta.solid:active, .ct-submit:active, .wl-submit:active, .sc-next:active,
+.sc-intro-start:active, .sc-email-btn:active, .fw-cta-primary:active, .lv-header-cta:active,
+.tier-cta.outline:active, .fw-cta-secondary:active {
+  transform: translate(1px,1px) !important;
+  box-shadow: 1px 1px 0 var(--ink) !important;
+}
+
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px !important;
+}
+a:focus:not(:focus-visible), button:focus:not(:focus-visible), input:focus:not(:focus-visible),
+select:focus:not(:focus-visible), textarea:focus:not(:focus-visible), [tabindex]:focus:not(:focus-visible) {
+  outline: none;
+}

@@ -93,3 +93,30 @@ body::after {
 
 /* Links */
 .auth-footer a, .back-link:hover, .resend-row a, .resend-row button { color: var(--accent) !important; }
+
+/* ============================================================
+   Polish pass (2026-07-19)
+   1. Press feedback: .btn-primary / .btn-sms get the retro press
+      (hard shadow collapses 2px→1px + translate), matching the
+      .rf-btn pattern. !important mirrors this file's existing
+      chrome rules. .btn-sms also gains the transition it lacked.
+   2. Keyboard focus ring: 2px var(--accent) + 2px offset — in
+      this skin --accent is the retro orange (light #D9531F /
+      dark #F0754B), matching the skin's own input-focus shadow.
+      !important so the skin ring wins over theme.css's teal ring
+      on these pages. Mouse focus shows no outline.
+   No keyframed animations in this skin → no motion guard needed.
+   ============================================================ */
+.btn-primary:active { transform: translate(1px,1px) !important; box-shadow: 1px 1px 0 var(--ink) !important; }
+.btn-sms { transition: transform .1s ease, box-shadow .1s ease; }
+.btn-sms:active { transform: translate(1px,1px) !important; box-shadow: 1px 1px 0 var(--ink) !important; }
+
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px !important;
+}
+a:focus:not(:focus-visible), button:focus:not(:focus-visible), input:focus:not(:focus-visible),
+select:focus:not(:focus-visible), textarea:focus:not(:focus-visible), [tabindex]:focus:not(:focus-visible) {
+  outline: none;
+}

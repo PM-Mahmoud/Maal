@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/api";
+import { MaalMark } from "./MaalMark";
 
 export function SiteHeader() {
   const [authed, setAuthed] = useState(false);
@@ -15,7 +16,7 @@ export function SiteHeader() {
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-10">
           <Link to="/" className="flex items-center gap-2">
-            <span className="size-2 rounded-full bg-[var(--mint)]" />
+            <MaalMark size={18} />
             <span className="text-[17px] font-bold tracking-display">Maal</span>
           </Link>
           <nav className="hidden md:flex items-center gap-7 text-[13px] text-muted-foreground">

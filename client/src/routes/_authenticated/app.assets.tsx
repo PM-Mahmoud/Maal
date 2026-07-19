@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/api";
 import { toast } from "sonner";
 import { formatAUD } from "@/lib/score";
+import { INSTITUTIONS } from "@/lib/institutions";
+import { InstitutionLogo } from "@/components/maal/InstitutionLogo";
 import {
   Dialog,
   DialogContent,
@@ -297,12 +299,21 @@ function CategoryCard({ cat, onAdd }: { cat: Cat; onAdd: (c: Cat) => void }) {
             <ul className="divide-y divide-border flex-1">
               {rows.map((r) => (
                 <li key={r.id} className="px-4 py-2.5 flex items-center justify-between gap-3 group">
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-medium truncate">{r[cat.nameKey] || "Untitled"}</p>
-                    <p className="text-[11px] text-muted-foreground truncate">
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-[color:var(--accent)]/12 text-[color:var(--accent)] text-[10px] font-semibold mr-1.5">Manual</span>
-                      {r.institution || r.ticker || r.account_type || r.kind || cat.title}
-                    </p>
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {(r.institution || r.ticker || r.account_type) && (
+                      <InstitutionLogo
+                        name={r.institution || r.ticker || r.account_type}
+                        logoUrl={r.logo_url}
+                        size={28}
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-medium truncate">{r[cat.nameKey] || "Untitled"}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-[color:var(--accent)]/12 text-[color:var(--accent)] text-[10px] font-semibold mr-1.5">Manual</span>
+                        {r.institution || r.ticker || r.account_type || r.kind || cat.title}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="tabular-nums text-[13px] font-semibold">{formatAUD(Number(r[cat.amountKey] ?? 0))}</span>
@@ -425,19 +436,21 @@ function AddPanel({ onPick }: { onPick: (c: Cat) => void }) {
 /*  Right rail: Connect Accounts panel (visual stub)                   */
 /* ------------------------------------------------------------------ */
 
-const INSTITUTIONS: { name: string; bg: string; fg: string; initials: string }[] = [
-  { name: "CommBank", bg: "#FAD300", fg: "#000", initials: "CB" },
-  { name: "ANZ", bg: "#004B87", fg: "#fff", initials: "ANZ" },
-  { name: "Westpac", bg: "#D5002B", fg: "#fff", initials: "W" },
-  { name: "NAB", bg: "#E81E2C", fg: "#fff", initials: "NAB" },
-  { name: "Macquarie", bg: "#1B1B1B", fg: "#fff", initials: "M" },
-  { name: "Bendigo", bg: "#0F5EA8", fg: "#fff", initials: "BB" },
-  { name: "ING", bg: "#FF6200", fg: "#fff", initials: "ING" },
-  { name: "UBank", bg: "#19E5C1", fg: "#000", initials: "U" },
-  { name: "HSBC", bg: "#DB0011", fg: "#fff", initials: "H" },
-  { name: "St.George", bg: "#0F8F4D", fg: "#fff", initials: "SG" },
-  { name: "BankSA", bg: "#FFC72C", fg: "#000", initials: "BSA" },
-  { name: "Suncorp", bg: "#FFC629", fg: "#000", initials: "S" },
+/** Banks shown in the Connect Accounts panel, in display order. Brand colors,
+ *  logos and display names come from the shared registry in lib/institutions. */
+const CONNECT_BANKS: string[] = [
+  "commbank",
+  "anz",
+  "westpac",
+  "nab",
+  "macquarie",
+  "bendigo",
+  "ing",
+  "ubank",
+  "hsbc",
+  "stgeorge",
+  "banksa",
+  "suncorp",
 ];
 
 function ConnectPanel() {
@@ -501,31 +514,37 @@ function ConnectPanel() {
           {syncMsg && <p className="text-[11px] text-muted-foreground mt-2">{syncMsg}</p>}
 
           <div className="grid grid-cols-3 gap-2 mt-2">
-            {INSTITUTIONS.slice(0, 9).map((b) => (
-              <div
-                key={b.name}
-                title={b.name}
-                className="aspect-square rounded-[10px] flex items-center justify-center text-[10px] font-bold tracking-tight"
-                style={{ background: b.bg, color: b.fg }}
-              >
-                {b.initials}
-              </div>
-            ))}
+            {CONNECT_BANKS.slice(0, 9).map((slug) => {
+              const info = INSTITUTIONS[slug];
+              if (!info) return null;
+              return (
+                <div
+                  key={slug}
+                  title={info.name}
+                  className="aspect-square rounded-[10px] flex items-center justify-center"
+                >
+                  <InstitutionLogo name={info.name} size={44} />
+                </div>
+              );
+            })}
           </div>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-3 gap-2 mb-3">
-            {INSTITUTIONS.map((b) => (
-              <div
-                key={b.name}
-                title={b.name}
-                className="aspect-square rounded-[10px] flex items-center justify-center text-[10px] font-bold tracking-tight opacity-40"
-                style={{ background: b.bg, color: b.fg }}
-              >
-                {b.initials}
-              </div>
-            ))}
+            {CONNECT_BANKS.map((slug) => {
+              const info = INSTITUTIONS[slug];
+              if (!info) return null;
+              return (
+                <div
+                  key={slug}
+                  title={info.name}
+                  className="aspect-square rounded-[10px] flex items-center justify-center opacity-40"
+                >
+                  <InstitutionLogo name={info.name} size={44} />
+                </div>
+              );
+            })}
           </div>
           <p className="text-[11px] text-muted-foreground">Open Banking not configured — set BASIQ_API_KEY in Render to enable.</p>
         </>

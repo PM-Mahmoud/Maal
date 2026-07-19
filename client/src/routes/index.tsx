@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, type CSSProperties } from "react";
+import { MaalMark } from "../components/maal/MaalMark";
 import "../retro-landing.css";
 
 export const Route = createFileRoute("/")({
@@ -45,7 +46,7 @@ function Index() {
 
   const badge = (
     <span className="rf-wordmark-badge">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 2v20M2 12h20" /></svg>
+      <MaalMark size={18} />
     </span>
   );
 

@@ -532,3 +532,36 @@ img, svg { display: block; }
 .rf-trust-icon { width: 34px; height: 34px; border-radius: 10px; background: var(--rf-orange); border: 2px solid var(--rf-cream); display: grid; place-items: center; flex-shrink: 0; color: var(--rf-cream); }
 .rf-trust-t { display: block; font-weight: 700; font-size: 0.92rem; margin-bottom: 0.2rem; }
 .rf-trust-s { display: block; font-size: 0.85rem; color: rgba(243,233,210,.7); line-height: 1.55; }
+
+/* ============================================================
+   Polish pass (2026-07-19)
+   1. Press feedback on the two interactive elements missing it
+      (.rf-btn already presses): hard shadow collapses +
+      translate, matching the .rf-btn pattern. .rf-hamburger also
+      gains the transition it never had; .rf-auth-google already
+      transitioned transform/box-shadow.
+   2. Keyboard focus ring: 2px var(--rf-teal) + 2px offset
+      (fixed cream palette — this skin has no dark variant).
+      Mouse focus shows no outline.
+   3. Reduced motion: ticker marquee + spinning stars stop;
+      reveals appear instantly; the score-bar fill snaps.
+   ============================================================ */
+.rf-hamburger { transition: transform .12s ease, box-shadow .12s ease; }
+.rf-hamburger:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 var(--rf-shadow); }
+.rf-auth-google:active { transform: translate(1px,1px); box-shadow: 2px 2px 0 var(--rf-shadow); }
+
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--rf-teal);
+  outline-offset: 2px;
+}
+a:focus:not(:focus-visible), button:focus:not(:focus-visible), input:focus:not(:focus-visible),
+select:focus:not(:focus-visible), textarea:focus:not(:focus-visible), [tabindex]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rf-ticker-track, .rf-star-deco { animation: none !important; }
+  .rf-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .rf-score-fill { transition-duration: .01ms !important; }
+}
