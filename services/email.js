@@ -71,7 +71,7 @@ async function sendWaitlistConfirmation(email) {
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" style="background:#0F2E24;border:1px solid rgba(201,168,76,0.15);border-radius:16px;overflow:hidden;max-width:560px;width:100%;">
         <tr><td style="padding:40px 40px 32px;">
-          <p style="margin:0 0 24px;font-size:1.5rem;font-weight:600;color:#C9A84C;">◈ Maal</p>
+          <p style="margin:0 0 24px;font-size:1.5rem;font-weight:600;color:#C9A84C;"><img src="https://hellomaal.com/images/apple-touch-icon.png" width="28" height="28" alt="" style="display:inline-block;vertical-align:-6px;border-radius:6px;margin-right:6px;">Maal</p>
           <h1 style="margin:0 0 16px;font-size:1.5rem;font-weight:600;color:#F0EFE9;">You're on the Maal waitlist.</h1>
           <p style="margin:0 0 20px;font-size:0.95rem;color:#8A8D83;line-height:1.7;">Early access is coming for everyday Australians. When your spot is ready, you'll be the first to know.</p>
           <p style="margin:0;font-size:0.85rem;color:rgba(138,141,131,0.6);line-height:1.5;">Maal is for informational purposes only and does not constitute personal financial advice.</p>
@@ -106,7 +106,7 @@ async function sendPortfolioDigest(user, model) {
   const runwayLine = m.runwayMonths == null ? '' : `<p style="margin:0;color:#6B6F76;font-size:0.85rem;">Cash runway: <b>${m.runwayMonths} months</b></p>`;
 
   const html = `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:auto;">
-    <p style="font-size:1.2rem;font-weight:700;color:#12B5A6;margin:0 0 4px;">Maal</p>
+    <p style="font-size:1.2rem;font-weight:700;color:#12B5A6;margin:0 0 4px;"><img src="https://hellomaal.com/images/apple-touch-icon.png" width="28" height="28" alt="" style="display:inline-block;vertical-align:-6px;border-radius:6px;margin-right:6px;">Maal</p>
     <h1 style="font-size:1.25rem;font-weight:700;color:#0E0E10;margin:0 0 14px;">Your daily snapshot</h1>
     <p style="margin:0 0 4px;color:#6B6F76;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.08em;">Net worth</p>
     <p style="margin:0 0 4px;font-size:1.8rem;font-weight:700;color:#0E0E10;">${AUD(m.netWorth)}</p>
@@ -126,7 +126,7 @@ async function sendResearchComplete(user, report) {
   const title = report.question || report.topic || 'Your research report';
   const link = `${BASE_URL}/app/research`;
   const html = `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:auto;">
-    <p style="font-size:1.2rem;font-weight:700;color:#12B5A6;margin:0 0 4px;">Maal</p>
+    <p style="font-size:1.2rem;font-weight:700;color:#12B5A6;margin:0 0 4px;"><img src="https://hellomaal.com/images/apple-touch-icon.png" width="28" height="28" alt="" style="display:inline-block;vertical-align:-6px;border-radius:6px;margin-right:6px;">Maal</p>
     <h1 style="font-size:1.2rem;font-weight:700;color:#0E0E10;margin:0 0 12px;">Your research is ready</h1>
     <p style="margin:0 0 16px;color:#333;font-size:0.95rem;line-height:1.6;">“${esc(title)}” has finished. Open Maal to read the full report and download the PDF.</p>
     <p style="margin:0 0 20px;"><a href="${esc(link)}" style="background:#0E0E10;color:#fff;padding:0.6rem 1.2rem;border-radius:8px;text-decoration:none;font-size:0.9rem;">View report</a></p>
@@ -141,7 +141,7 @@ async function sendGeneratedFile(user, file) {
   if (!user || !user.email || !file || !file.base64) return;
   const title = file.title || 'Your Maal export';
   const html = `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:auto;">
-    <p style="font-size:1.2rem;font-weight:700;color:#12B5A6;margin:0 0 4px;">Maal</p>
+    <p style="font-size:1.2rem;font-weight:700;color:#12B5A6;margin:0 0 4px;"><img src="https://hellomaal.com/images/apple-touch-icon.png" width="28" height="28" alt="" style="display:inline-block;vertical-align:-6px;border-radius:6px;margin-right:6px;">Maal</p>
     <h1 style="font-size:1.2rem;font-weight:700;color:#0E0E10;margin:0 0 12px;">${esc(title)}</h1>
     <p style="margin:0 0 16px;color:#333;font-size:0.95rem;line-height:1.6;">Your file is attached (<b>${esc(file.filename)}</b>), generated from your own Maal data.</p>
     <p style="margin:0 0 20px;"><a href="${BASE_URL}/app" style="background:#0E0E10;color:#fff;padding:0.6rem 1.2rem;border-radius:8px;text-decoration:none;font-size:0.9rem;">Open Maal</a></p>

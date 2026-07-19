@@ -961,3 +961,36 @@ input.input-error:focus, select.input-error:focus, textarea.input-error:focus {
   z-index: 0;
 }
 .modal > * { position: relative; z-index: 1; }
+
+/* ============================================================
+   Polish pass (2026-07-19) — interaction consistency
+   1. Press feedback: .btn already presses (scale .98, ~line 674);
+      extended here to icon + vote buttons (transitions widened,
+      not replaced).
+   2. Focus ring broadened beyond .btn/.field to every link, form
+      control, tabindex and role=button target — same 2px
+      var(--accent) + 2px offset; dark theme's --accent is already
+      #2DD4C4 so no dark override needed. Mouse focus shows no
+      outline. (.input-error:focus keeps its danger ring — higher
+      specificity; .field inputs keep their soft box-shadow ring.)
+   3. Tiny consistency fix: .btn-icon (5px) and .vote-btn (6px)
+      radii → var(--radius-sm) 8px to match the button system.
+   Reduced motion: app.css has no keyframed/decorative
+   animations, so no guard is needed in this file.
+   ============================================================ */
+.btn-icon { transition: background 0.12s, color 0.12s, transform 0.12s ease-out; }
+.vote-btn { transition: background 0.15s, color 0.15s, transform 0.12s ease-out; }
+.btn-icon:active, .vote-btn:active { transform: scale(0.94); }
+
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, [tabindex]:focus-visible, [role="button"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+a:focus:not(:focus-visible), button:focus:not(:focus-visible), input:focus:not(:focus-visible),
+select:focus:not(:focus-visible), textarea:focus:not(:focus-visible), [tabindex]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* radius fix — unify with the 8px button system */
+.btn-icon, .vote-btn { border-radius: var(--radius-sm); }

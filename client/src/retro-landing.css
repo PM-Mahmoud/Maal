@@ -197,3 +197,31 @@
 /* Reveal */
 .rf-scope .rf-reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; }
 .rf-scope .rf-reveal.is-visible { opacity: 1; transform: none; }
+
+/* ============================================================
+   Polish pass (2026-07-19)
+   1. Button press: .rf-btn already presses (shadow collapses
+      3px→1px + translate(2px,2px), .12s ease) — verified, kept.
+   2. Keyboard focus ring: 2px var(--rf-teal) + 2px offset (this
+      skin is fixed-palette cream with no dark variant; --rf-teal
+      is its teal accent token). Mouse focus shows no outline.
+   3. Reduced motion: stop the ticker marquee + spinning star
+      decorations; reveal blocks appear instantly; the score-bar
+      fill snaps instead of tweening.
+   ============================================================ */
+.rf-scope a:focus-visible, .rf-scope button:focus-visible, .rf-scope input:focus-visible,
+.rf-scope select:focus-visible, .rf-scope textarea:focus-visible, .rf-scope [tabindex]:focus-visible {
+  outline: 2px solid var(--rf-teal);
+  outline-offset: 2px;
+}
+.rf-scope a:focus:not(:focus-visible), .rf-scope button:focus:not(:focus-visible),
+.rf-scope input:focus:not(:focus-visible), .rf-scope select:focus:not(:focus-visible),
+.rf-scope textarea:focus:not(:focus-visible), .rf-scope [tabindex]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rf-scope .rf-ticker-track, .rf-scope .rf-star-deco { animation: none !important; }
+  .rf-scope .rf-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .rf-scope .rf-score-fill { transition-duration: .01ms !important; }
+}

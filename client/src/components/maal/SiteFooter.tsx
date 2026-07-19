@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Disclaimer } from "./Disclaimer";
+import { MaalMark } from "./MaalMark";
 
 export function SiteFooter() {
   return (
@@ -8,7 +9,7 @@ export function SiteFooter() {
         <div className="grid md:grid-cols-[1.5fr_1fr_1fr_1fr] gap-12">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <span className="size-2 rounded-full bg-[var(--mint)]" />
+              <MaalMark size={18} />
               <span className="text-[17px] font-bold tracking-display">Maal</span>
             </div>
             <p className="text-[13px] text-muted-foreground max-w-[34ch] leading-relaxed">

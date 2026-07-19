@@ -362,3 +362,43 @@
   }
 }
 @keyframes dot-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ============================================================
+   Polish pass (2026-07-19) — interaction consistency
+   1. Keyboard focus ring: 2px var(--mint) + 2px offset on every
+      interactive element. NOTE: in this app --accent is a cream
+      surface token, so the teal accent-analogue --mint
+      (light #2E8B84 / dark #4DB6AC) is the ring color.
+      --tw-ring-* are zeroed under :focus-visible so shadcn's
+      ring-1 utilities don't double up with this outline; element
+      box-shadows (retro hard shadows) are untouched. Rules are
+      intentionally UNLAYERED so they beat Tailwind's layered
+      utilities (e.g. focus-visible:outline-none on Button).
+   2. Mouse users: no outline when focus didn't come from the
+      keyboard (:focus:not(:focus-visible)).
+   3. Button press: shadcn buttons already ship active states
+      (translate(2px,2px) + hard-shadow collapse in button.tsx
+      cva) — verified, nothing to add.
+   4. Reduced motion: extends the guard in the utilities layer
+      above to the looping loading/decorative animations that
+      exist in this app — Tailwind animate-pulse (Skeleton,
+      "Thinking…") + animate-spin (radar/research/calculator
+      spinners) and .dot-pulse. No new skeleton styling: hooks
+      already exist and are styled by Tailwind.
+   ============================================================ */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible,
+[tabindex]:focus-visible, [role="button"]:focus-visible, [role="link"]:focus-visible,
+[role="checkbox"]:focus-visible, [role="switch"]:focus-visible, [role="tab"]:focus-visible {
+  outline: 2px solid var(--mint);
+  outline-offset: 2px;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-ring-offset-shadow: 0 0 #0000;
+}
+a:focus:not(:focus-visible), button:focus:not(:focus-visible), input:focus:not(:focus-visible),
+select:focus:not(:focus-visible), textarea:focus:not(:focus-visible), [tabindex]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot-pulse, .animate-pulse, .animate-spin { animation: none !important; }
+}

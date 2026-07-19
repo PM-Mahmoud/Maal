@@ -945,4 +945,59 @@ html.dark .lv-footer-col a, html[data-theme="dark"] .lv-footer-col a { color: rg
 .lv-cta-block .lv-cta-primary:hover { opacity: .88; }
 .lv-cta-block .lv-cta-outline { border: 1px solid rgba(255,255,255,.28); color: var(--on-ink); background: transparent; }
 .lv-cta-block .lv-cta-outline:hover { background: rgba(255,255,255,.08); }
+
+/* ============================================================
+   Polish pass (2026-07-19) — Sahha layer addendum
+   1. Button press feedback: subtle scale(.98) on :active,
+      ≤120ms ease-out, for every CTA that didn't already have one
+      (.lv-header-cta / .lv-hero-primary already press; .hero-cta,
+      .price-cta and .closing-cta already transition transform so
+      they only needed the :active rule). Existing transitions are
+      redeclared WITH their original properties so nothing snaps.
+   2. One keyboard-focus ring: 2px var(--accent) + 2px offset on
+      links/buttons/inputs/selects/textareas/[tabindex]; dark
+      theme gets the lighter teal #2DD4C4. Mouse focus keeps no
+      outline (:focus:not(:focus-visible)). (Retro skins loaded
+      after this file re-assert their own ring with !important.)
+   3. Reduced motion: the guard above (~line 718) already covers
+      shimmer/ring-pulse/reveal/hover — this extends it to the
+      long score-bar width tweens.
+   ============================================================ */
+
+/* 1 — press feedback (transitions widened to include transform) */
+.nav-cta { transition: background 0.2s, transform 0.12s ease-out; }
+.hero-cta-secondary { transition: background 0.2s, transform 0.12s ease-out; }
+.btn-gold, .cta-button { transition: background 0.2s, transform 0.12s ease-out; }
+.lv-cta-primary { transition: opacity 0.15s, transform 0.12s ease-out; }
+.lv-cta-outline { transition: background 0.15s, transform 0.12s ease-out; }
+.lv-price-cta { transition: opacity 0.15s, transform 0.12s ease-out; }
+.lv-hero-secondary { transition: opacity 0.15s, transform 0.12s ease-out; }
+.nav-cta:active, .hero-cta:active, .hero-cta-secondary:active,
+.btn-gold:active, .cta-button:active, .price-cta:active, .closing-cta:active,
+.lv-cta-primary:active, .lv-cta-outline:active, .lv-price-cta:active, .lv-hero-secondary:active {
+  transform: scale(0.98);
+}
+
+/* 2 — consistent keyboard focus ring */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+html.dark a:focus-visible, html.dark button:focus-visible, html.dark input:focus-visible,
+html.dark select:focus-visible, html.dark textarea:focus-visible, html.dark [tabindex]:focus-visible,
+html[data-theme="dark"] a:focus-visible, html[data-theme="dark"] button:focus-visible,
+html[data-theme="dark"] input:focus-visible, html[data-theme="dark"] select:focus-visible,
+html[data-theme="dark"] textarea:focus-visible, html[data-theme="dark"] [tabindex]:focus-visible {
+  outline-color: #2DD4C4;
+}
+a:focus:not(:focus-visible), button:focus:not(:focus-visible), input:focus:not(:focus-visible),
+select:focus:not(:focus-visible), textarea:focus:not(:focus-visible), [tabindex]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* 3 — reduced motion: extend the guard above to long bar-fill tweens */
+@media (prefers-reduced-motion: reduce) {
+  .lv-score-bar-fill, .score-fill { transition-duration: .01ms !important; }
+}
 html.dark .lv-cta-block, html[data-theme="dark"] .lv-cta-block { border: 1px solid var(--border); }
