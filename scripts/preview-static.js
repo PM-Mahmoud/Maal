@@ -1,7 +1,8 @@
 // scripts/preview-static.js
 // Serves key pages rendered with mock locals (no database) so the design
 // can be reviewed in a browser. Run: node scripts/preview-static.js
-// Pages: / (landing), /login, /signup, public pages, and the retro previews.
+// Pages: / (landing), /login, /signup, public pages — plus a mock API layer
+// so the React dashboard (/app) renders without a database.
 //
 // NOTE: The legacy EJS /dashboard/* is retired (server.js 301-redirects it to
 // the React app at /app/*). This preview no longer renders those dead views —
@@ -90,16 +91,6 @@ app.get('/contact', (_req, res, next) => {
     analyticsSnippet: '',
     user: null, success: false, name: '', email: '', message: '',
   }).then(html => res.send(html)).catch(next);
-});
-
-// ── Retro-futurist design preview (standalone landing + auth) ─
-app.get('/retro', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'retro-preview.ejs'), {})
-    .then(html => res.send(html)).catch(next);
-});
-app.get('/retro/login', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'retro-login-preview.ejs'), {})
-    .then(html => res.send(html)).catch(next);
 });
 
 // ── Mock API for the React dashboard preview (no database) ──────
