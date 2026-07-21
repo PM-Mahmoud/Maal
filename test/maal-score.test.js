@@ -136,5 +136,62 @@ test('parity holds with multiple rows per type too (e.g. two properties, two deb
   assert.deepStrictEqual(computeMaalScore(derivedProfile), computeMaalScore(flatProfile));
 });
 
+// ─── The score must respond to what the user actually enters ─────────────────
+// Regression origin: users reported that editing their profile never moved the
+// score. Three inputs were being ignored entirely — cash_savings and
+// monthly_expenses were never read, and income lived in a table the score's
+// merge didn't consult.
+console.log('\nprofile inputs actually move the score');
+
+const { mergeAssetSummaryIntoProfile } = require('../db/assets');
+
+test('entering real cash on hand raises the savings pillar', () => {
+  const base = { annual_income: 120000, monthly_expenses: 4000 };
+  const withCash = { ...base, cash_savings: 48000 }; // 12 months of buffer
+  const pillar = (r) => r.pillars.find((x) => x.key === 'savings').score;
+  assert.ok(pillar(computeMaalScore(withCash)) > pillar(computeMaalScore(base)),
+    'cash on hand must improve the savings buffer pillar');
+});
+
+test('stated monthly expenses are used instead of the income heuristic', () => {
+  const lean = { annual_income: 120000, cash_savings: 30000, monthly_expenses: 2000 };
+  const heavy = { annual_income: 120000, cash_savings: 30000, monthly_expenses: 9000 };
+  const pillar = (r) => r.pillars.find((x) => x.key === 'savings').score;
+  assert.ok(pillar(computeMaalScore(lean)) > pillar(computeMaalScore(heavy)),
+    'the same cash must last longer, and score higher, at a lower burn rate');
+});
+
+test('income recorded only in the incomes table reaches the score', () => {
+  // A React-onboarded user: income lives in `incomes`, not the flat column.
+  const summary = summarizeAssets({ incomes: [{ annual_amount: '150000' }] });
+  const merged = mergeAssetSummaryIntoProfile({}, summary);
+  assert.strictEqual(merged.annual_income, 150000, 'income must be merged, not dropped');
+  assert.strictEqual(computeMaalScore(merged).hasData, true);
+});
+
+test('flat annual_income still wins when no income rows exist (no regression)', () => {
+  const merged = mergeAssetSummaryIntoProfile({ annual_income: 90000 }, summarizeAssets({}));
+  assert.strictEqual(merged.annual_income, 90000);
+});
+
+test('age comes from the chosen age band, not the legacy years_in_practice proxy', () => {
+  // Same finances, different ages: a 60-year-old with this super balance is
+  // behind the benchmark, a 27-year-old is comfortably ahead of it.
+  const money = { annual_income: 120000, super_balance: 90000, cash_savings: 20000 };
+  const young = computeMaalScore({ ...money, onboarding_data: { age_band: 'under-30' } });
+  const older = computeMaalScore({ ...money, onboarding_data: { age_band: '60+' } });
+  const superPillar = (r) => r.pillars.find((x) => x.key === 'super').score;
+  assert.ok(superPillar(young) > superPillar(older),
+    'the same balance must score better for a younger saver');
+});
+
+test('a numeric age on the normalised profile is honoured too', () => {
+  const money = { annual_income: 120000, super_balance: 90000 };
+  assert.notStrictEqual(
+    computeMaalScore({ ...money, age: 27 }).score,
+    computeMaalScore({ ...money, age: 62 }).score,
+  );
+});
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);
