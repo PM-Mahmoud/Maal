@@ -373,6 +373,7 @@ app.post('/contact', async (req, res) => {
       message,
       from: `${name} <${email}>`,
       page: 'contact form',
+      replyTo: email, // hitting Reply answers the sender directly
     }).catch(err => console.error(
       `[contact] Notification email failed (message IS saved in Postgres): ${err.message}`
     ));

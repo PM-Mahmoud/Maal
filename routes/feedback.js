@@ -29,13 +29,17 @@ router.post('/feedback', async (req, res) => {
     const kind = page.startsWith('support:') ? 'support report' : 'feedback';
     (async () => {
       let from = `user #${userId}`;
+      let replyTo;
       try {
         const user = await findUserById(userId);
-        if (user && user.email) from = `${user.email} (user #${userId})`;
+        if (user && user.email) {
+          from = `${user.email} (user #${userId})`;
+          replyTo = user.email; // so hitting Reply answers the user directly
+        }
       } catch (e) {
         console.error('[feedback] Could not look up submitter:', e.message);
       }
-      await sendTeamNotification({ kind, message, from, page });
+      await sendTeamNotification({ kind, message, from, page, replyTo });
     })().catch(err => console.error(
       `[feedback] Notification email failed (submission IS saved in Postgres): ${err.message}`
     ));
