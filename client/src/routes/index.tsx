@@ -105,9 +105,9 @@ function Index() {
               <div className="rf-score-num"><span className="rf-score-big">82</span><span className="rf-score-outof">/ 100</span></div>
               <div className="rf-score-bar"><div className="rf-score-fill" id="rf-fill" /></div>
               <div className="rf-score-rows">
-                <div className="rf-score-row"><span><span className="rf-dot" style={{ background: "var(--rf-orange)" }} />Credit Score</span><b>742 / 1,200</b></div>
-                <div className="rf-score-row"><span><span className="rf-dot" style={{ background: "var(--rf-teal)" }} />Debt Score</span><b>68 / 100</b></div>
-                <div className="rf-score-row"><span><span className="rf-dot" style={{ background: "var(--rf-gold)" }} />Super &amp; Retirement</span><b>78%</b></div>
+                <div className="rf-score-row"><span><span className="rf-dot" style={{ background: "var(--rf-orange)" }} />Savings buffer</span><b>74 / 100</b></div>
+                <div className="rf-score-row"><span><span className="rf-dot" style={{ background: "var(--rf-teal)" }} />Debt health</span><b>68 / 100</b></div>
+                <div className="rf-score-row"><span><span className="rf-dot" style={{ background: "var(--rf-gold)" }} />Super &amp; retirement</span><b>78 / 100</b></div>
               </div>
               <p className="rf-score-caption">One score across the parts of money Australians actually deal with.</p>
             </div>
@@ -118,7 +118,7 @@ function Index() {
       {/* Stats strip */}
       <div className="rf-strip">
         <div className="rf-strip-grid">
-          <div className="rf-strip-item"><div className="rf-strip-big">3 scores</div><div className="rf-strip-small">Credit, debt &amp; financial wellbeing</div></div>
+          <div className="rf-strip-item"><div className="rf-strip-big">1 score</div><div className="rf-strip-small">Five pillars: savings, debt, super, trajectory &amp; protection</div></div>
           <div className="rf-strip-item"><div className="rf-strip-big">100+</div><div className="rf-strip-small">Institutions via Basiq open banking</div></div>
           <div className="rf-strip-item"><div className="rf-strip-big">Built for AU</div><div className="rf-strip-small">Super, HECS &amp; ATO native</div></div>
           <div className="rf-strip-item"><div className="rf-strip-big">Read-only</div><div className="rf-strip-small">Maal can never move your money</div></div>
@@ -233,7 +233,9 @@ function Index() {
             <div className="rf-why-item"><div className="rf-why-title">Education, not instructions</div><p className="rf-why-body">Maal explains what’s happening in your finances and why it matters. The decisions stay yours.</p></div>
           </div>
           <p className="rf-lede" style={{ marginTop: "2rem" }}>
-            Most money tools show you a number. Maal turns your actual accounts, super and debt into one score — with
+            The Maal Score isn’t a credit score. A credit score measures how safe you are to lend to — it exists for
+            lenders. The Maal Score measures your whole financial wellbeing, and it exists for you. Maal turns your
+            actual accounts, super and debt into one score — with
             AI that answers your questions, flags what’s changed, and builds reports on request. We make money from
             subscriptions, not from selling you products — so the plan keeps updating as your life does, without a
             sales pitch at the end.
