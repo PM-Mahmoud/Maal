@@ -111,7 +111,8 @@ router.post('/login', authLimiter,
       // Resend OTP and send to verify page
       const otp = generateOtp();
       await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
-      await sendOtpEmail(user.email, user.name, otp);
+      try { await sendOtpEmail(user.email, user.name, otp); }
+      catch (e) { console.error('[login] OTP email failed (continuing to /verify-email):', e.message); }
       req.session.pendingEmail = user.email;
       return req.session.save(() => res.redirect('/verify-email'));
     }
@@ -121,7 +122,8 @@ router.post('/login', authLimiter,
     if (user.two_factor_enabled) {
       const otp = generateOtp();
       await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
-      await sendOtpEmail(user.email, user.name, otp);
+      try { await sendOtpEmail(user.email, user.name, otp); }
+      catch (e) { console.error('[login] 2FA OTP email failed (continuing to /verify-email):', e.message); }
       req.session.pendingEmail = user.email;
       return req.session.save(() => res.redirect('/verify-email'));
     }
@@ -209,10 +211,16 @@ router.post('/signup', authLimiter,
       req.session.pendingPhone = phone.trim();
     }
 
-    // Generate and send OTP
+    // Generate and send OTP. Email failure must NOT fail the signup — the user
+    // row already exists, so a 500 here strands them ("account already exists"
+    // on retry). Land them on /verify-email where they can hit resend instead.
     const otp = generateOtp();
     await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
-    await sendOtpEmail(email, name, otp);
+    try {
+      await sendOtpEmail(email, name, otp);
+    } catch (e) {
+      console.error('[signup] OTP email failed (user created, continuing to /verify-email):', e.message);
+    }
 
     // Store pending email in session for the verify page
     req.session.pendingEmail = email;
