@@ -82,7 +82,6 @@ function Index() {
         <div className="rf-wrap">
           <div className="rf-hero-grid">
             <div>
-              <span className="rf-kicker">✦ Built for Australia</span>
               <h1 className="rf-hero-h1">Your money,<br /><span className="rf-underline">in <span className="rf-mark">balance.</span></span></h1>
               <p className="rf-hero-sub">
                 Your accounts, super and debt — turned into one score and a plan, free in 2 minutes.
@@ -119,7 +118,7 @@ function Index() {
       <div className="rf-strip">
         <div className="rf-strip-grid">
           <div className="rf-strip-item"><div className="rf-strip-big">1 score</div><div className="rf-strip-small">Five pillars: savings, debt, super, trajectory &amp; protection</div></div>
-          <div className="rf-strip-item"><div className="rf-strip-big">100+</div><div className="rf-strip-small">Institutions via Basiq open banking</div></div>
+          <div className="rf-strip-item"><div className="rf-strip-big">100+</div><div className="rf-strip-small">Institutions via Basiq open banking — coming soon</div></div>
           <div className="rf-strip-item"><div className="rf-strip-big">Built for AU</div><div className="rf-strip-small">Super, HECS &amp; ATO native</div></div>
           <div className="rf-strip-item"><div className="rf-strip-big">Read-only</div><div className="rf-strip-small">Maal can never move your money</div></div>
         </div>
@@ -215,7 +214,7 @@ function Index() {
           <div className="rf-how-grid">
             <div className="rf-step"><div className="rf-step-num">01</div><h3 className="rf-step-title">Tell Maal what you have</h3><p className="rf-step-body">Add your income, super balance, HECS, mortgage, savings, and any investments. Takes a few minutes — no bank login needed to start.</p></div>
             <div className="rf-step"><div className="rf-step-num">02</div><h3 className="rf-step-title">Get your Maal Score</h3><p className="rf-step-body">A weighted 0–100 read of your financial health across five pillars: savings buffer, debt health, super adequacy, wealth trajectory, and protection.</p></div>
-            <div className="rf-step"><div className="rf-step-num">03</div><h3 className="rf-step-title">Follow your action plan</h3><p className="rf-step-body">A prioritised list of moves to lift your score, ranked by impact. The plan adapts as your situation changes.</p></div>
+            <div className="rf-step"><div className="rf-step-num">03</div><h3 className="rf-step-title">Improve with Ask Maal, Radar &amp; Research</h3><p className="rf-step-body">Ask questions grounded in your own data, run research on markets and super, and let Radar watch for changes that matter — so you keep improving your financial situation.</p></div>
           </div>
         </div>
       </section>
@@ -223,24 +222,17 @@ function Index() {
       {/* Why */}
       <section className="rf-section">
         <div className="rf-wrap rf-reveal">
-          <span className="rf-eyebrow">Why Maal · Read-only · Bank-level security via Basiq (CDR-regulated)</span>
+          <span className="rf-eyebrow">Why Maal · Read-only · Bank-level security via Basiq (CDR-regulated) — coming soon</span>
           <h2 className="rf-h2">Built for the financial life <span className="rf-mark">Australians</span> actually have.</h2>
-          <p className="rf-lede">Super guarantee, HECS indexation, tax brackets — updated for FY2025–26. Super, franking credits, EOFY, the ATO, property, debt and open banking all shape how Australians build wealth. Maal brings them into one clear picture.</p>
+          <p className="rf-lede">Super guarantee, HECS indexation, tax brackets — updated for FY2025–26. Super, EOFY, the ATO, property, debt and open banking all shape how Australians build wealth. Maal brings them into one clear picture.</p>
           <div className="rf-why-list">
             <div className="rf-why-item"><div className="rf-why-title">Clarity by design</div><p className="rf-why-body">Net worth, debt, super, spending and investments in one place — explained in plain language so you always know where you stand.</p></div>
-            <div className="rf-why-item"><div className="rf-why-title">Australian to the core</div><p className="rf-why-body">Superannuation, HECS-HELP, franking credits, EOFY, the ATO — Maal speaks Australian finance natively, not as a US import.</p></div>
-            <div className="rf-why-item"><div className="rf-why-title">Secure and read-only</div><p className="rf-why-body">Bank connections via Basiq under the Consumer Data Right. Maal can never move money. Credentials are never stored. Your data is never sold.</p></div>
+            <div className="rf-why-item"><div className="rf-why-title">Australian to the core</div><p className="rf-why-body">Superannuation, HECS-HELP, EOFY, the ATO — Maal is built around the way money actually works in Australia.</p></div>
+            <div className="rf-why-item"><div className="rf-why-title">Secure and read-only</div><p className="rf-why-body">Bank connections via Basiq under the Consumer Data Right — coming soon. Maal can never move money. Credentials are never stored. Your data is never sold.</p></div>
             <div className="rf-why-item"><div className="rf-why-title">Education, not instructions</div><p className="rf-why-body">Maal explains what’s happening in your finances and why it matters. The decisions stay yours.</p></div>
+            <div className="rf-why-item"><div className="rf-why-title">Not a credit score</div><p className="rf-why-body">A credit score measures how safe you are to lend to — it exists for lenders. The Maal Score measures your whole financial wellbeing, and it exists for you.</p></div>
           </div>
-          <p className="rf-lede" style={{ marginTop: "2rem" }}>
-            The Maal Score isn’t a credit score. A credit score measures how safe you are to lend to — it exists for
-            lenders. The Maal Score measures your whole financial wellbeing, and it exists for you. Maal turns your
-            actual accounts, super and debt into one score — with
-            AI that answers your questions, flags what’s changed, and builds reports on request. We make money from
-            subscriptions, not from selling you products — so the plan keeps updating as your life does, without a
-            sales pitch at the end.
-          </p>
-          <p style={{ marginTop: "1rem", fontSize: 12, lineHeight: 1.7, opacity: 0.7 }}>
+          <p style={{ marginTop: "1.5rem", fontSize: 12, lineHeight: 1.7, opacity: 0.7 }}>
             Maal’s score and insights are general and educational only — not personal financial advice. They don’t
             take into account your full financial situation, and Maal doesn’t recommend specific products or
             investments. For advice tailored to you, speak with a licensed financial adviser.

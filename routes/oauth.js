@@ -10,8 +10,17 @@ function getIp(req) {
   return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 }
 
-function googleAuthUrl(state) {
-  const base = process.env.BASE_URL || 'https://hellomaal.com';
+// The OAuth redirect_uri must exactly match a URI registered in Google Console
+// AND the host the user's session cookie lives on. Production serves the site
+// on www.hellomaal.com (apex 301s to www), so a hardcoded apex BASE_URL causes
+// redirect_uri_mismatch / state failures. Derive the base from the request host.
+function requestBase(req) {
+  const host = req.get('host');
+  if (host) return `${req.protocol}://${host}`;
+  return process.env.BASE_URL || 'https://www.hellomaal.com';
+}
+
+function googleAuthUrl(state, base) {
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID,
     redirect_uri: `${base}/auth/google/callback`,
@@ -24,8 +33,7 @@ function googleAuthUrl(state) {
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
 }
 
-async function exchangeCode(code) {
-  const base = process.env.BASE_URL || 'https://hellomaal.com';
+async function exchangeCode(code, base) {
   const payload = new URLSearchParams({
     code,
     client_id: process.env.GOOGLE_CLIENT_ID,
@@ -75,7 +83,8 @@ router.get('/auth/google', (req, res) => {
   }
   const state = require('crypto').randomBytes(16).toString('hex');
   req.session.oauthState = state;
-  req.session.save(() => res.redirect(googleAuthUrl(state)));
+  req.session.oauthBase = requestBase(req);
+  req.session.save(() => res.redirect(googleAuthUrl(state, req.session.oauthBase)));
 });
 
 // ─── GET /auth/google/callback ────────────────────────────────────────────────
@@ -87,7 +96,8 @@ router.get('/auth/google/callback', async (req, res) => {
   if (state !== req.session.oauthState) return res.redirect('/login?error=invalid_state');
 
   try {
-    const tokens = await exchangeCode(code);
+    // Token exchange must present the same redirect_uri used at kick-off.
+    const tokens = await exchangeCode(code, req.session.oauthBase || requestBase(req));
     if (!tokens.access_token) return res.redirect('/login?error=google_token_failed');
 
     const profile = await getGoogleProfile(tokens.access_token);
@@ -136,7 +146,8 @@ router.get('/auth/google/callback', async (req, res) => {
       req.session.emailVerified = true;
       req.session.save((err) => {
         if (err) console.error('[oauth] Session save error:', err.message);
-        res.redirect('/dashboard');
+        // EJS dashboard is retired — land directly on the React app.
+        res.redirect('/app');
       });
     });
   } catch (err) {
