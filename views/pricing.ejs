@@ -77,7 +77,8 @@
         <div class="tier-top"><span class="tier-name">Free</span></div>
         <div class="tier-price">
           <span class="tier-price-num">$0</span>
-          <span class="tier-price-per">forever, no card required</span>
+          <span class="tier-price-per price-monthly">forever, no card required</span>
+          <span class="tier-price-per price-annual" style="display:none">forever, no card required</span>
         </div>
         <p class="tier-desc">Start building your full financial picture with Maal.</p>
         <ul class="tier-list">
@@ -109,14 +110,16 @@
           <li><span class="tier-check">&#10003;</span> Ask for any report — an EOFY super summary, a net worth snapshot — and Maal emails it to you</li>
           <li><span class="tier-check">&#10003;</span> Priority support</li>
         </ul>
-        <a href="/signup" class="tier-cta solid">Get Pro</a>
+        <a href="/signup" class="tier-cta solid" data-plan-cta data-plan="pro">Get Pro</a>
       </div>
 
       <div class="tier">
         <div class="tier-top"><span class="tier-name">Max</span></div>
         <div class="tier-price">
-          <span class="tier-price-num">$200</span>
-          <span class="tier-price-per">AUD / month</span>
+          <span class="tier-price-num price-monthly">$200</span>
+          <span class="tier-price-num price-annual" style="display:none">$2,000</span>
+          <span class="tier-price-per price-monthly">AUD / month</span>
+          <span class="tier-price-per price-annual" style="display:none">AUD / year</span>
         </div>
         <p class="tier-desc">For people who want a second set of eyes on serious money — with Mahmoud, personally.</p>
         <ul class="tier-list">
@@ -165,7 +168,19 @@
   <%- include('partials/footer') %>
   <%- analyticsSnippet %>
   <script>
+    // Carry the chosen billing period through signup so the app can preselect
+    // it at checkout. Without this, picking Annual changed the displayed price
+    // but the user still landed on monthly billing.
+    function syncCtas(period) {
+      document.querySelectorAll('[data-plan-cta]').forEach(function (a) {
+        var plan = a.getAttribute('data-plan');
+        var interval = period === 'annual' ? 'year' : 'month';
+        a.setAttribute('href', '/signup?plan=' + plan + '&interval=' + interval);
+      });
+    }
+
     function setPeriod(period) {
+      syncCtas(period);
       document.querySelectorAll('.bt-opt').forEach(function(b) { b.classList.toggle('active', b.dataset.period === period); });
       document.querySelectorAll('.price-monthly').forEach(function(el) { el.style.display = period === 'monthly' ? '' : 'none'; });
       document.querySelectorAll('.price-annual').forEach(function(el) { el.style.display = period === 'annual' ? '' : 'none'; });

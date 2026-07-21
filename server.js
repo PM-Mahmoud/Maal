@@ -117,6 +117,11 @@ app.get('/health', async (_req, res) => {
       advisor: !!((process.env.AZURE_OPENAI_API_KEY || process.env.GROQ_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.AI_API_KEY || '').trim()),
       azure: !!((process.env.AZURE_OPENAI_API_KEY || '').trim() && (process.env.AZURE_OPENAI_ENDPOINT || '').trim() && (process.env.AZURE_OPENAI_DEPLOYMENT || '').trim()),
       stripe: !!(process.env.STRIPE_SECRET_KEY || '').trim(),
+      // Stripe Checkout ALSO needs these two. Without BASE_URL the checkout
+      // route cannot build redirect URLs and every upgrade fails with a generic
+      // error, which is invisible from the outside — hence surfacing it here.
+      stripeWebhook: !!(process.env.STRIPE_WEBHOOK_SECRET || '').trim(),
+      baseUrl: !!(process.env.BASE_URL || '').trim(),
       email: !!(process.env.RESEND_API_KEY || '').trim(),
       isaacus: !!(process.env.ISAACUS_API_KEY || '').trim(),
       verifier: require('./services/gateway').hasRole('verifier'),
