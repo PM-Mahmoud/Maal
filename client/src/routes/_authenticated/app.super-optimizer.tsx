@@ -25,9 +25,10 @@ import {
 import { PiggyBank, TrendingUp, Zap, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { formatAUD } from "@/lib/score";
 import { getConstants, combinedMarginalRate } from "@/lib/au-constants";
+import { cappedTotalContribution, remainingConcessionalCap } from "../../../../shared/super-contrib.mjs";
 
 export const Route = createFileRoute("/_authenticated/app/super-optimizer")({
-  component: SuperOptimizer,
+  component: SuperOptimiser,
 });
 
 /* -------------------------------------------------------------------------- */
@@ -91,7 +92,10 @@ function calculateProjections(
     balNoExtra = balNoExtra + earningsNo - taxNo + sgContrib * (1 - contribTax);
 
     // With extra: SG + voluntary (capped at the remaining concessional cap)
-    const totalContrib = sgContrib + Math.min(extraContribution, CONCESSIONAL_CAP - sgContrib);
+    // Shared, deterministically-tested clamp (test/super-contrib.test.js): when
+    // SG alone already exceeds the cap the headroom must floor at zero, or the
+    // with-extra projection dips below the SG-only baseline.
+    const totalContrib = cappedTotalContribution(sgContrib, extraContribution, CONCESSIONAL_CAP);
     const earningsWith = balWithExtra * returnRate;
     const taxWith = earningsWith * EARNINGS_TAX;
     balWithExtra = balWithExtra + earningsWith - taxWith + totalContrib * (1 - contribTax);
@@ -110,7 +114,7 @@ function calculateProjections(
 /*  Component                                                                  */
 /* -------------------------------------------------------------------------- */
 
-function SuperOptimizer() {
+function SuperOptimiser() {
   const [age, setAge] = useState(35);
   const [balance, setBalance] = useState(120_000);
   const [salary, setSalary] = useState(180_000);
@@ -127,7 +131,7 @@ function SuperOptimizer() {
   const diff = finalWithExtra - finalNoExtra;
 
   const sgContrib = salary * SG_RATE;
-  const remainingCap = Math.max(0, CONCESSIONAL_CAP - sgContrib);
+  const remainingCap = remainingConcessionalCap(sgContrib, CONCESSIONAL_CAP);
   const effectiveExtra = Math.min(extra, remainingCap);
   // Marginal rate derived from the selected income via the shared FY-keyed
   // brackets (income tax + Medicare) — not a flat assumption.
@@ -145,7 +149,7 @@ function SuperOptimizer() {
           <div className="flex items-center gap-3">
             <span className="section-number">🧮</span>
             <span className="text-xs font-medium uppercase tracking-widest text-mint">
-              Super Optimizer
+              Super Optimiser
             </span>
           </div>
           <h2 className="mt-3 tracking-display text-3xl sm:text-4xl">

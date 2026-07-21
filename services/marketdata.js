@@ -117,21 +117,21 @@ function normalizeNews(n) {
 }
 
 // ─── Global indices ───────────────────────────────────────────────────────────
-// Major world indices with Finnhub symbols, display names, and regions.
-// Cached for 5 minutes — indices update continuously during market hours.
+// Market snapshot rows. Finnhub's free tier cannot quote raw index symbols
+// (^GSPC, ^AXJO, … return no data), so we quote liquid US-listed ETF proxies
+// instead and label each row with the market it tracks. Cached for 5 minutes.
+//
+// IMPORTANT: `price` is the ETF's USD share price, NOT the underlying index
+// level — every row carries currency:'USD' and isProxy:true so the dashboard
+// and the advisor prompt can't present these as index points or as AUD.
 const GLOBAL_INDICES = [
-  { symbol: '^AXJO',    name: 'ASX 200',         region: 'AU',  exchange: 'ASX' },
-  { symbol: '^GSPC',    name: 'S&P 500',          region: 'US',  exchange: 'NYSE' },
-  { symbol: '^IXIC',    name: 'NASDAQ Composite', region: 'US',  exchange: 'NASDAQ' },
-  { symbol: '^DJI',     name: 'Dow Jones',        region: 'US',  exchange: 'NYSE' },
-  { symbol: '^FTSE',    name: 'FTSE 100',         region: 'UK',  exchange: 'LSE' },
-  { symbol: '^GDAXI',   name: 'DAX',              region: 'DE',  exchange: 'XETRA' },
-  { symbol: '^FCHI',    name: 'CAC 40',           region: 'FR',  exchange: 'Euronext' },
-  { symbol: '^N225',    name: 'Nikkei 225',       region: 'JP',  exchange: 'TSE' },
-  { symbol: '^HSI',     name: 'Hang Seng',        region: 'HK',  exchange: 'HKEX' },
-  { symbol: '^STOXX50E',name: 'Euro Stoxx 50',    region: 'EU',  exchange: 'Euronext' },
-  { symbol: '^KS11',    name: 'KOSPI',            region: 'KR',  exchange: 'KRX' },
-  { symbol: '^BSESN',   name: 'Sensex',           region: 'IN',  exchange: 'BSE' },
+  { symbol: 'EWA',  name: 'Australia (EWA)',      region: 'AU', exchange: 'NYSE Arca', currency: 'USD', isProxy: true, tracks: 'MSCI Australia' },
+  { symbol: 'SPY',  name: 'S&P 500 (SPY)',        region: 'US', exchange: 'NYSE Arca', currency: 'USD', isProxy: true, tracks: 'S&P 500' },
+  { symbol: 'QQQ',  name: 'Nasdaq 100 (QQQ)',     region: 'US', exchange: 'NASDAQ',    currency: 'USD', isProxy: true, tracks: 'Nasdaq 100' },
+  { symbol: 'DIA',  name: 'Dow Jones (DIA)',      region: 'US', exchange: 'NYSE Arca', currency: 'USD', isProxy: true, tracks: 'Dow Jones Industrial Average' },
+  { symbol: 'VGK',  name: 'Europe (VGK)',         region: 'EU', exchange: 'NYSE Arca', currency: 'USD', isProxy: true, tracks: 'FTSE Developed Europe' },
+  { symbol: 'EWJ',  name: 'Japan (EWJ)',          region: 'JP', exchange: 'NYSE Arca', currency: 'USD', isProxy: true, tracks: 'MSCI Japan' },
+  { symbol: 'VT',   name: 'World (VT)',           region: 'Global', exchange: 'NYSE Arca', currency: 'USD', isProxy: true, tracks: 'FTSE Global All Cap' },
 ];
 
 // Fetch live quotes for all major global indices.
@@ -180,9 +180,11 @@ function formatIndicesForPrompt(indices) {
   if (!live.length) return '';
   const lines = live.map(i => {
     const sign = i.changePercent >= 0 ? '+' : '';
-    return `${i.name} (${i.region}): ${i.price.toLocaleString()} ${sign}${i.changePercent}%`;
+    const unit = i.currency ? ' ' + i.currency : '';
+    const proxy = i.isProxy ? ` [ETF proxy${i.tracks ? ' for ' + i.tracks : ''}, not the index level]` : '';
+    return `${i.name} (${i.region}): ${i.price.toLocaleString()}${unit} ${sign}${i.changePercent}%${proxy}`;
   });
-  return 'Global markets right now:\n' + lines.join('\n');
+  return 'Global markets right now (ETF share prices in USD, used as proxies for their indices):\n' + lines.join('\n');
 }
 
 // Upcoming earnings for a set of tickers (next ~90 days), soonest first.

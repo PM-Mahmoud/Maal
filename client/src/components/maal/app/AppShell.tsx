@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { supabase } from "@/integrations/api";
+import { supabase, handleUnauthenticated } from "@/integrations/api";
 import { Disclaimer } from "@/components/maal/Disclaimer";
 import { MaalMark } from "@/components/maal/MaalMark";
 import { ThemeToggle } from "@/components/maal/ThemeToggle";
@@ -33,12 +33,11 @@ const PORTFOLIO: Item[] = [
 ];
 
 const TOOLS: Item[] = [
-  { to: "/app/super-optimizer", label: "Super Optimizer", icon: PiggyBank },
-  { to: "/app/tax-optimizer", label: "Tax Optimizer", icon: Receipt },
+  { to: "/app/super-optimizer", label: "Super Optimiser", icon: PiggyBank },
+  { to: "/app/tax-optimizer", label: "Tax Optimiser", icon: Receipt },
   { to: "/app/tax-bracket-visualizer", label: "Tax Brackets", icon: Calculator },
   { to: "/app/debt-payoff", label: "Debt Payoff", icon: TrendingDown },
   { to: "/app/scenarios-simulator", label: "Scenarios", icon: Dices },
-  { to: "/app/net-worth-flow", label: "Net Worth Flow", icon: BarChart3 },
 ];
 
 const BOTTOM: { label: string; href: string; icon: any }[] = [
@@ -194,6 +193,10 @@ async function postFeedback(message: string, page: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message, page }),
   });
+  if (r.status === 401) {
+    handleUnauthenticated();
+    throw new Error("Your session has expired — please sign in again.");
+  }
   if (!r.ok) {
     const j = await r.json().catch(() => null);
     throw new Error(j?.error || "Could not send. Please try again.");

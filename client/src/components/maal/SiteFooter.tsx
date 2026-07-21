@@ -30,10 +30,14 @@ export function SiteFooter() {
             { label: "Privacy", to: "/" },
             { label: "Terms", to: "/" },
           ]} />
-          <FooterCol title="Account" links={[
-            { label: "Log in", to: "/auth" },
-            { label: "Sign up", to: "/auth" },
-          ]} />
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-4">Account</p>
+            {/* plain anchors: login/signup are server-rendered EJS, not client routes */}
+            <ul className="space-y-2.5 text-[13px]">
+              <li><a href="/login" className="text-foreground/80 hover:text-foreground">Log in</a></li>
+              <li><a href="/signup" className="text-foreground/80 hover:text-foreground">Sign up</a></li>
+            </ul>
+          </div>
         </div>
       </div>
       <Disclaimer />

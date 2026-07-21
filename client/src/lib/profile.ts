@@ -23,9 +23,12 @@ export type Profile = {
   created_at: string | null;
 };
 
+import { handleUnauthenticated } from "@/integrations/api";
+
 export async function fetchProfile(): Promise<Profile | null> {
   try {
     const r = await fetch("/api/v1/profile", { credentials: "include" });
+    if (r.status === 401) handleUnauthenticated();
     if (!r.ok) return null;
     return (await r.json()) as Profile;
   } catch {
@@ -42,6 +45,7 @@ export async function saveProfile(patch: Partial<Profile>): Promise<Profile | nu
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
+    if (r.status === 401) handleUnauthenticated();
     if (!r.ok) return null;
     return (await r.json()) as Profile;
   } catch {

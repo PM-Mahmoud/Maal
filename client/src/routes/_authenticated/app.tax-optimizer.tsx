@@ -37,7 +37,7 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app/tax-optimizer")({
-  component: TaxOptimizer,
+  component: TaxOptimiser,
 });
 
 /** Precise AUD formatter for tax figures where exact dollars matter. */
@@ -314,7 +314,7 @@ function ChartTooltip({
 /*  Component                                                                 */
 /* -------------------------------------------------------------------------- */
 
-function TaxOptimizer() {
+function TaxOptimiser() {
   const [input, setInput] = useState<TaxInputs>(DEFAULTS);
   const mountedRef = useRef(false);
 
@@ -368,7 +368,7 @@ function TaxOptimizer() {
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
         <Reveal className="max-w-2xl">
           <span className="text-xs font-medium uppercase tracking-widest text-mint">
-            Tax Optimizer
+            Tax Optimiser
           </span>
           <h2 className="mt-3 tracking-display text-3xl sm:text-4xl">
             Find dollars hiding in your tax return.

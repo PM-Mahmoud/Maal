@@ -2,6 +2,8 @@
 // Real daily net-worth history from the backend (GET /api/v1/snapshots), for the
 // dashboard KPI sparklines and trend modal. Replaces the flat placeholder series.
 
+import { handleUnauthenticated } from "@/integrations/api";
+
 export type Snapshot = {
   date: string;
   netWorth: number;
@@ -15,6 +17,7 @@ export type Snapshot = {
 export async function fetchSnapshots(days = 366): Promise<Snapshot[]> {
   try {
     const r = await fetch(`/api/v1/snapshots?days=${days}`, { credentials: "include" });
+    if (r.status === 401) handleUnauthenticated();
     if (!r.ok) return [];
     const j = await r.json();
     return Array.isArray(j) ? j : [];

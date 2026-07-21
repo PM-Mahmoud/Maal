@@ -4,6 +4,8 @@
 // engine the EJS dashboard uses. This replaces the client-side score reimpl in
 // lib/score.ts for anything user-facing (that duplicate should be retired).
 
+import { handleUnauthenticated } from "@/integrations/api";
+
 export type MaalPillar = {
   key: string;
   label: string;
@@ -23,6 +25,7 @@ export type MaalScore = {
 export async function fetchMaalScore(): Promise<MaalScore | null> {
   try {
     const r = await fetch("/api/v1/score", { credentials: "include" });
+    if (r.status === 401) handleUnauthenticated();
     if (!r.ok) return null;
     const j = await r.json();
     if (!j || j.ok === false) return null;

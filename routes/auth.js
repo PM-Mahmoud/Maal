@@ -69,7 +69,7 @@ async function sendOtpEmail(email, name, otp) {
 // ─── Page: /login ─────────────────────────────────────────────────────────────
 
 router.get('/login', (req, res) => {
-  if (req.session.userId) return res.redirect('/dashboard');
+  if (req.session.userId) return res.redirect('/app');
   res.render('auth-login', { layout: false, error: null, email: '' });
 });
 
@@ -114,6 +114,8 @@ router.post('/login', authLimiter,
       try { await sendOtpEmail(user.email, user.name, otp); }
       catch (e) { console.error('[login] OTP email failed (continuing to /verify-email):', e.message); }
       req.session.pendingEmail = user.email;
+      // Unverified existing account finishing signup verification → onboarding.
+      req.session.otpPurpose = 'verify';
       return req.session.save(() => res.redirect('/verify-email'));
     }
 
@@ -125,6 +127,8 @@ router.post('/login', authLimiter,
       try { await sendOtpEmail(user.email, user.name, otp); }
       catch (e) { console.error('[login] 2FA OTP email failed (continuing to /verify-email):', e.message); }
       req.session.pendingEmail = user.email;
+      // 2FA on an established account — completing it is a login, not signup.
+      req.session.otpPurpose = 'login';
       return req.session.save(() => res.redirect('/verify-email'));
     }
 
@@ -164,7 +168,7 @@ router.post('/login', authLimiter,
           typeof req.query.redirect === 'string' &&
           req.query.redirect.startsWith('/') &&
           !req.query.redirect.startsWith('//')
-        ) ? req.query.redirect : '/dashboard';
+        ) ? req.query.redirect : '/app';
         res.redirect(redir);
       });
     });
@@ -174,7 +178,7 @@ router.post('/login', authLimiter,
 // ─── Page: /signup ────────────────────────────────────────────────────────────
 
 router.get('/signup', (req, res) => {
-  if (req.session.userId) return res.redirect('/dashboard');
+  if (req.session.userId) return res.redirect('/app');
   res.render('auth-signup', { layout: false, error: null, email: '', name: '' });
 });
 
@@ -222,8 +226,11 @@ router.post('/signup', authLimiter,
       console.error('[signup] OTP email failed (user created, continuing to /verify-email):', e.message);
     }
 
-    // Store pending email in session for the verify page
+    // Store pending email in session for the verify page. Set the purpose
+    // explicitly: a stale 'login' left over from an abandoned passwordless
+    // sign-in would otherwise skip this new user past onboarding.
     req.session.pendingEmail = email;
+    req.session.otpPurpose = 'signup';
     req.session.save((err) => {
       if (err) console.error('[signup] Session save error:', err.message);
       res.redirect('/verify-email');
@@ -281,6 +288,7 @@ router.post('/signup/email-code', authLimiter,
     await sendOtpEmail(email, name, otp);
 
     req.session.pendingEmail = email;
+    req.session.otpPurpose = 'signup';
     req.session.save((err) => {
       if (err) console.error('[signup/email-code] Session save error:', err.message);
       res.redirect('/verify-email');
@@ -337,7 +345,9 @@ router.post('/verify-email', otpLimiter, async (req, res) => {
     req.session.emailVerified = true;
     req.session.save((err) => {
       if (err) console.error('[verify-otp] Session save error:', err.message);
-      res.redirect(isPasswordlessLogin ? '/dashboard' : '/onboarding');
+      // React app owns both destinations now: the EJS /dashboard is retired and
+      // the EJS /onboarding wizard is legacy — new users get the React flow.
+      res.redirect(isPasswordlessLogin ? '/app' : '/app/onboarding');
     });
   });
 });

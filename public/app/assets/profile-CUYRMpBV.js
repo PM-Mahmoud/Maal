@@ -1,1 +1,0 @@
-async function e(){try{const n=await fetch("/api/v1/profile",{credentials:"include"});return n.ok?await n.json():null}catch{return null}}async function r(n){try{const t=await fetch("/api/v1/profile",{method:"PATCH",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(n)});return t.ok?await t.json():null}catch{return null}}export{e as f,r as s};
