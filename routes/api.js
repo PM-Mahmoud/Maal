@@ -1261,7 +1261,12 @@ const ASSET_TABLES = new Set([
   // handler would store a stale current_amount and skip that validation.
   // BUG-5 FIX: 'profiles' table does not exist; the correct table is 'user_profiles'
   // 'user_profiles' is intentionally not in the generic API (profile updates go through /dashboard/profile)
-  'score_snapshots',
+  // NOTE: 'maal_score_snapshots' is deliberately EXCLUDED. Daily score history is
+  // written server-side by GET /api/v1/score and read back through the same
+  // endpoint; exposing it to the generic handler would let a client fabricate or
+  // delete their own score history. (The old 'score_snapshots' allowlist entry
+  // was removed with the dead client-side snapshotScore write — no such table
+  // ever existed.)
   // NOTE: 'transaction_rules' and 'transaction_categories' are deliberately
   // EXCLUDED from the generic handler. Their dedicated routes enforce taxonomy
   // validation (isKnownGroup) and per-row ownership (setTransactionCategory

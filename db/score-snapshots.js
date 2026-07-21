@@ -22,12 +22,15 @@ async function recordScoreSnapshot(userId, { score, band, pillars }) {
 }
 
 async function getScoreSnapshots(userId, days) {
+  // Exactly `days` calendar dates: today plus (days - 1) prior. `days - 366`
+  // would otherwise return 367 rows for a 366-day request.
+  const window = Math.max(1, Math.floor(Number(days) || 1));
   const result = await pool.query(
     `SELECT snap_date, score, band, pillars
      FROM maal_score_snapshots
-     WHERE user_id = $1 AND snap_date >= CURRENT_DATE - $2::int
+     WHERE user_id = $1 AND snap_date >= CURRENT_DATE - ($2 - 1)::int
      ORDER BY snap_date ASC`,
-    [userId, days]
+    [userId, window]
   );
   return result.rows;
 }

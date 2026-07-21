@@ -83,12 +83,7 @@ export function scoreFromPortfolio(p: Portfolio) {
   return computeMaalScore(portfolioToScoreInputs(p));
 }
 
-export async function snapshotScore(userId: string, p: Portfolio) {
-  const { total, netWorth, pillars } = scoreFromPortfolio(p);
-  await supabase.from("score_snapshots").insert({
-    user_id: userId,
-    total,
-    net_worth: netWorth,
-    pillars: pillars as any,
-  });
-}
+// NOTE: the old snapshotScore() was removed. It wrote to a `score_snapshots`
+// table that never existed (via the generic API) and was never called. Daily
+// score history is now recorded SERVER-SIDE in maal_score_snapshots by
+// GET /api/v1/score, so the client can't fabricate its own score history.
