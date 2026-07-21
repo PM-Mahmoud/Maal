@@ -161,4 +161,26 @@ async function sendGeneratedFile(user, file) {
   });
 }
 
-module.exports = { sendEmail, sendWaitlistConfirmation, sendPortfolioDigest, sendResearchComplete, sendGeneratedFile };
+// ─── Internal notification ────────────────────────────────────────────────
+// Every other sender in this file writes to a USER. This one writes to us:
+// in-app feedback, support reports and public contact-form messages, so nobody
+// has to poll the `feedback` table to notice someone asked for help.
+//
+// Callers must treat this as best-effort — the submission is already durable in
+// Postgres before this is invoked, so a mail outage must never fail the request.
+const FEEDBACK_INBOX = process.env.FEEDBACK_EMAIL || 'mahmoud121999@gmail.com';
+
+async function sendTeamNotification({ kind, message, from, page }) {
+  const when = new Date().toISOString();
+  const html = `<div style="font-family:system-ui,sans-serif;line-height:1.6;max-width:600px;">
+    <h2 style="margin:0 0 12px;font-size:1rem;">New ${esc(kind)}</h2>
+    <p style="margin:0 0 4px;color:#555;font-size:0.8rem;"><b>From:</b> ${esc(from)}</p>
+    <p style="margin:0 0 4px;color:#555;font-size:0.8rem;"><b>Page:</b> ${esc(page || 'unknown')}</p>
+    <p style="margin:0 0 16px;color:#555;font-size:0.8rem;"><b>When:</b> ${esc(when)}</p>
+    <div style="padding:16px;background:#f5f5f5;border-radius:8px;white-space:pre-wrap;font-size:0.9rem;">${esc(message)}</div>
+  </div>`;
+  const text = `New ${kind}\nFrom: ${from}\nPage: ${page || 'unknown'}\nWhen: ${when}\n\n${message}`;
+  return sendEmail({ to: FEEDBACK_INBOX, subject: `[Maal ${kind}] from ${from}`, html, text });
+}
+
+module.exports = { sendEmail, sendWaitlistConfirmation, sendPortfolioDigest, sendResearchComplete, sendGeneratedFile, sendTeamNotification };

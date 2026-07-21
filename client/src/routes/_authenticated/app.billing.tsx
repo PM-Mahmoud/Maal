@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { CreditCard, Check, Sparkles } from "lucide-react";
 import { z } from "zod";
 import { getUsage, type Usage } from "@/lib/usage.functions";
+import { SUPPORT_EMAIL } from "@/components/maal/app/AppShell";
 
 const searchSchema = z.object({
   billing: z.enum(["success", "cancel", "demo", "downgraded", "error"]).optional(),
@@ -199,7 +200,7 @@ function BillingPage() {
                     // endpoint exists, so don't send the user through checkout
                     // (which would bill a second subscription).
                     <a
-                      href={`mailto:support@maal.app?subject=${encodeURIComponent(`Plan change request: ${plan} to ${p.key}`)}`}
+                      href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Plan change request: ${plan} to ${p.key}`)}`}
                       className="w-full px-4 py-2 rounded-[10px] border border-border text-[13px] font-semibold hover:border-foreground transition-colors inline-flex items-center justify-center"
                     >
                       Request switch to {p.name}

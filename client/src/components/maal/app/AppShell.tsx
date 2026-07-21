@@ -15,6 +15,11 @@ import {
   BarChart3,
 } from "lucide-react";
 
+// Single source for the two contact details users see in-app. The old
+// support@maal.app address had no MX record, so every mail sent to it bounced.
+export const SUPPORT_EMAIL = "hello@hellomaal.com";
+export const FOUNDER_CALENDAR_URL = "https://calendar.app.google/oh9aghBVTuQ4fvCH7";
+
 type Item = { to: string; label: string; icon: any; soon?: boolean };
 
 const TOP: Item[] = [
@@ -278,8 +283,9 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
                   <p className="text-[11px] text-muted-foreground mt-1">
                     Schedule a 30-minute call to share your feedback, suggestions, ask questions, or just say hi!
                   </p>
-                  <a href="#" className="inline-block mt-2 text-[12px] font-medium text-mint hover:underline">
-                    Book a call with Shain →
+                  <a href={FOUNDER_CALENDAR_URL} target="_blank" rel="noreferrer noopener"
+                    className="inline-block mt-2 text-[12px] font-medium text-mint hover:underline">
+                    Book a call with Mahmoud →
                   </a>
                 </div>
               </div>
@@ -380,7 +386,7 @@ function SupportModal({ onClose }: { onClose: () => void }) {
 
             <p className="text-[12px] text-muted-foreground">
               You can also email us directly at{" "}
-              <a href="mailto:support@maal.app" className="text-mint hover:underline">support@maal.app</a>{" "}
+              <a href={`mailto:${SUPPORT_EMAIL}`} className="text-mint hover:underline">{SUPPORT_EMAIL}</a>{" "}
               with any issues or bugs.
             </p>
 
@@ -392,8 +398,9 @@ function SupportModal({ onClose }: { onClose: () => void }) {
                   <p className="text-[11px] text-muted-foreground mt-1">
                     For urgent or complex issues, schedule a call with our founder who can help resolve your problem directly.
                   </p>
-                  <a href="#" className="inline-block mt-2 text-[12px] font-medium text-mint hover:underline">
-                    Book a call with Shain →
+                  <a href={FOUNDER_CALENDAR_URL} target="_blank" rel="noreferrer noopener"
+                    className="inline-block mt-2 text-[12px] font-medium text-mint hover:underline">
+                    Book a call with Mahmoud →
                   </a>
                 </div>
               </div>

@@ -59,13 +59,9 @@
         </nav>
       </div>
       <div class="rf-header-right">
-        <% if (locals.user) { %>
-          <a href="/dashboard" class="rf-login">Dashboard</a>
-          <a href="/logout" class="rf-btn rf-btn-ink">Sign out</a>
-        <% } else { %>
-          <a href="/login" class="rf-login">Log in</a>
-          <a href="/score" class="rf-btn rf-btn-ink">Get your free score</a>
-        <% } %>
+        <%# Authenticated navigation lives only in the app shell at /app. %>
+        <a href="/login" class="rf-login">Log in</a>
+        <a href="/score" class="rf-btn rf-btn-ink">Get your free score</a>
         <button class="rf-hamburger" onclick="rfToggleNav()" aria-label="Toggle menu">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
@@ -76,12 +72,7 @@
     <a href="/score">Score Calculator</a>
     <a href="#how">How it Works</a>
     <a href="#pricing">Pricing</a>
-    <% if (locals.user) { %>
-      <a href="/dashboard">Dashboard</a>
-      <a href="/logout">Sign out</a>
-    <% } else { %>
-      <a href="/login">Log in</a>
-    <% } %>
+    <a href="/login">Log in</a>
   </div>
 
   <!-- Hero -->

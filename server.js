@@ -360,6 +360,17 @@ app.post('/contact', async (req, res) => {
   try {
     const userId = req.session && req.session.userId ? req.session.userId : null;
     await addFeedback(userId, `Name: ${name}\nEmail: ${email}\n\n${message}`, 'contact');
+    // Best-effort notification — the message is already durable in Postgres, so
+    // a mail outage must not turn a successful submission into an error page.
+    const { sendTeamNotification } = require('./services/email');
+    sendTeamNotification({
+      kind: 'contact message',
+      message,
+      from: `${name} <${email}>`,
+      page: 'contact form',
+    }).catch(err => console.error(
+      `[contact] Notification email failed (message IS saved in Postgres): ${err.message}`
+    ));
     res.render('contact', { ...renderArgs, success: true, name: '', email: '', message: '' });
   } catch (err) {
     console.error('[contact] Failed to save message:', err.message);
