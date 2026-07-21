@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { supabase } from "@/integrations/api";
+import { supabase, handleUnauthenticated } from "@/integrations/api";
 import { Disclaimer } from "@/components/maal/Disclaimer";
 import { MaalMark } from "@/components/maal/MaalMark";
 import { ThemeToggle } from "@/components/maal/ThemeToggle";
@@ -193,6 +193,10 @@ async function postFeedback(message: string, page: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message, page }),
   });
+  if (r.status === 401) {
+    handleUnauthenticated();
+    throw new Error("Your session has expired — please sign in again.");
+  }
   if (!r.ok) {
     const j = await r.json().catch(() => null);
     throw new Error(j?.error || "Could not send. Please try again.");

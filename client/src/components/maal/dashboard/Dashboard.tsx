@@ -840,7 +840,10 @@ function MarketTile() {
             <span className="font-semibold">{focus.name}</span>
             <span className={focus.changePercent >= 0 ? "text-mint" : "text-[hsl(0_70%_55%)]"}>{focus.changePercent >= 0 ? "▲" : "▼"} {focus.changePercent.toFixed(2)}%</span>
           </div>
-          <p className="text-[13px] tabular-nums">{focus.price.toLocaleString()}</p>
+          <p className="text-[13px] tabular-nums">
+            {focus.price.toLocaleString()}
+            {focus.currency ? <span className="text-muted-foreground text-[11px] ml-1">{focus.currency}</span> : null}
+          </p>
         </div>
       )}
       <ul className="space-y-1.5">
@@ -851,6 +854,9 @@ function MarketTile() {
           </li>
         ))}
       </ul>
+      {items.some((i) => i.isProxy) && (
+        <p className="text-[10px] text-muted-foreground mt-3">ETF share prices in USD, used as proxies for their indices — not index levels.</p>
+      )}
     </div>
   );
 }

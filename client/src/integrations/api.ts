@@ -31,7 +31,7 @@ function notifyListeners(event: string) {
 // When the server session dies (expiry, restart, logout elsewhere) the cached
 // _session goes stale: pages half-render and every API call surfaces a raw
 // "Not authenticated" error. Centralise 401 handling — drop the cache and send
-// the user to /auth for a clean re-login instead.
+// the user to /login for a clean re-login instead.
 let _redirecting = false;
 export function handleUnauthenticated() {
   _session = null;
@@ -195,10 +195,16 @@ class QueryBuilder<T = Record<string, unknown>> {
         headers: this._body ? { "Content-Type": "application/json" } : {},
         body: this._body ? JSON.stringify(this._body) : undefined,
       });
-      const json = await r.json();
+      // Handle 401 BEFORE parsing: an empty/non-JSON 401 body would throw in
+      // r.json(), land in the catch, and skip session recovery entirely.
+      if (r.status === 401) {
+        handleUnauthenticated();
+        return { data: this._single ? null : [], error: { message: "Not authenticated" } } as QueryResult<T> | ManyResult<T>;
+      }
+      let json: any = null;
+      try { json = await r.json(); } catch { /* non-JSON body */ }
       if (!r.ok) {
-        if (r.status === 401) handleUnauthenticated();
-        return { data: this._single ? null : [], error: { message: json.error || "Request failed" } } as QueryResult<T> | ManyResult<T>;
+        return { data: this._single ? null : [], error: { message: json?.error || "Request failed" } } as QueryResult<T> | ManyResult<T>;
       }
       return { data: json, error: null };
     } catch (e: unknown) {

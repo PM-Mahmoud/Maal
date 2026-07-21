@@ -465,7 +465,7 @@ function ConnectPanel() {
         if (r.status === 401) handleUnauthenticated();
         return r.ok ? r.json() : null;
       })
-      .then(j => (j ? setStatus(j) : setStatusFailed(true)))
+      .then(j => (j && typeof j.live === "boolean" ? setStatus(j) : setStatusFailed(true)))
       .catch(() => setStatusFailed(true));
   }, []);
 

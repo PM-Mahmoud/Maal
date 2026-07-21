@@ -1,5 +1,7 @@
 // lib/widgets.functions.ts — dashboard widgets saved from Ask Maal.
 
+import { handleUnauthenticated } from "@/integrations/api";
+
 export type WidgetSpec = {
   id?: number;
   source: string;
@@ -9,6 +11,9 @@ export type WidgetSpec = {
 };
 
 async function throwServerError(r: Response, fallback: string): Promise<never> {
+  // A 401 means the session is stale — recover it centrally instead of
+  // surfacing a per-widget error.
+  if (r.status === 401) handleUnauthenticated();
   let msg: string | undefined;
   try { msg = (await r.json())?.error; } catch { /* non-JSON body */ }
   throw new Error(msg || fallback);
@@ -30,6 +35,7 @@ export async function addWidget(source: string, title?: string): Promise<boolean
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ source, title }),
   });
+  if (r.status === 401) handleUnauthenticated();
   return r.ok;
 }
 

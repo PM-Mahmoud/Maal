@@ -114,6 +114,8 @@ router.post('/login', authLimiter,
       try { await sendOtpEmail(user.email, user.name, otp); }
       catch (e) { console.error('[login] OTP email failed (continuing to /verify-email):', e.message); }
       req.session.pendingEmail = user.email;
+      // Unverified existing account finishing signup verification → onboarding.
+      req.session.otpPurpose = 'verify';
       return req.session.save(() => res.redirect('/verify-email'));
     }
 
@@ -125,6 +127,8 @@ router.post('/login', authLimiter,
       try { await sendOtpEmail(user.email, user.name, otp); }
       catch (e) { console.error('[login] 2FA OTP email failed (continuing to /verify-email):', e.message); }
       req.session.pendingEmail = user.email;
+      // 2FA on an established account — completing it is a login, not signup.
+      req.session.otpPurpose = 'login';
       return req.session.save(() => res.redirect('/verify-email'));
     }
 
@@ -222,8 +226,11 @@ router.post('/signup', authLimiter,
       console.error('[signup] OTP email failed (user created, continuing to /verify-email):', e.message);
     }
 
-    // Store pending email in session for the verify page
+    // Store pending email in session for the verify page. Set the purpose
+    // explicitly: a stale 'login' left over from an abandoned passwordless
+    // sign-in would otherwise skip this new user past onboarding.
     req.session.pendingEmail = email;
+    req.session.otpPurpose = 'signup';
     req.session.save((err) => {
       if (err) console.error('[signup] Session save error:', err.message);
       res.redirect('/verify-email');
@@ -281,6 +288,7 @@ router.post('/signup/email-code', authLimiter,
     await sendOtpEmail(email, name, otp);
 
     req.session.pendingEmail = email;
+    req.session.otpPurpose = 'signup';
     req.session.save((err) => {
       if (err) console.error('[signup/email-code] Session save error:', err.message);
       res.redirect('/verify-email');
