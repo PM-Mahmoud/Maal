@@ -525,19 +525,29 @@ router.get('/v1/score', async (req, res) => {
     const { getProfileByUserId } = require('../db/profiles');
     const assetsDb = require('../db/assets');
     const { computeMaalScore } = require('../lib/maal-score');
-    const { getScoresByUserId, shapeScoreHistory } = require('../db/scores');
+    const { recordScoreSnapshot, getScoreSnapshots, shapeScoreSnapshotHistory } = require('../db/score-snapshots');
 
     const profile = (await getProfileByUserId(req.session.userId)) || {};
     const assetSummary = await assetsDb.getAssetSummary(req.session.userId);
     const effectiveProfile = assetsDb.mergeAssetSummaryIntoProfile(profile, assetSummary);
     const score = computeMaalScore(effectiveProfile);
 
+    // Record today's score (upsert, at most one row/user/day) so the React
+    // dashboard accrues a real daily history. Best-effort: recording or reading
+    // history must never fail the live score. Only persist once the user has
+    // actual data, so an empty profile doesn't seed a flat zero line.
     let history = [];
+    if (score.hasData) {
+      try {
+        await recordScoreSnapshot(req.session.userId, score);
+      } catch (e) {
+        console.error('/api/v1/score record error:', e.message);
+      }
+    }
     try {
-      const rows = await getScoresByUserId(req.session.userId, 60);
-      history = shapeScoreHistory(rows, 'maal_score');
+      const rows = await getScoreSnapshots(req.session.userId, 366);
+      history = shapeScoreSnapshotHistory(rows);
     } catch (e) {
-      // History is best-effort — never fail the live score on a history read.
       console.error('/api/v1/score history error:', e.message);
     }
 

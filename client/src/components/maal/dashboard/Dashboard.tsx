@@ -442,6 +442,7 @@ function MaalScoreTile({ score }: { score: MaalScore | null }) {
       <div className="mt-3 h-[6px] rounded-full bg-secondary overflow-hidden">
         <div className="h-full bg-foreground rounded-full" style={{ width: `${Math.max(0, Math.min(100, score.score))}%` }} />
       </div>
+      <ScoreHistorySparkline history={score.history} />
       <div className="mt-4 space-y-2.5">
         {score.pillars.map((p) => (
           <div key={p.key} title={p.note}>
@@ -455,6 +456,47 @@ function MaalScoreTile({ score }: { score: MaalScore | null }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// Daily Maal Score history, recorded server-side once per day. Needs at least
+// two points to draw a line, so it stays hidden on day one and appears as the
+// history accrues.
+function ScoreHistorySparkline({ history }: { history?: Array<{ value: number; at: string }> }) {
+  const pts = (history ?? []).filter((p) => Number.isFinite(p.value));
+  if (pts.length < 2) return null;
+
+  const W = 240;
+  const H = 32;
+  const vals = pts.map((p) => p.value);
+  const lo = Math.min(...vals);
+  const hi = Math.max(...vals);
+  const span = hi - lo || 1; // avoid divide-by-zero on a flat series
+  const d = pts
+    .map((p, i) => {
+      const x = (i / (pts.length - 1)) * W;
+      const y = H - ((p.value - lo) / span) * H;
+      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  const first = pts[0].value;
+  const last = pts[pts.length - 1].value;
+  const delta = last - first;
+
+  return (
+    <div className="mt-4">
+      <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.12em] text-muted-foreground mb-1">
+        <span>Score history</span>
+        {delta !== 0 && (
+          <span className={delta > 0 ? "text-mint" : "text-[hsl(0_70%_55%)]"}>
+            {delta > 0 ? "+" : ""}{delta} since {pts.length} {pts.length === 1 ? "day" : "days"} tracked
+          </span>
+        )}
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" aria-hidden>
+        <path d={d} fill="none" stroke="currentColor" strokeWidth={1.5} className="text-foreground" vectorEffect="non-scaling-stroke" />
+      </svg>
     </div>
   );
 }
