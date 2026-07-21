@@ -24,7 +24,6 @@ export function SiteHeader() {
             <a href="/score" className="hover:text-foreground transition-colors">Score Calculator</a>
             <a href="/#how" className="hover:text-foreground transition-colors">How it Works</a>
             <a href="/pricing" className="hover:text-foreground transition-colors">Pricing</a>
-            <a href="/waitlist" className="hover:text-foreground transition-colors">Waitlist</a>
           </nav>
         </div>
         <div className="flex items-center gap-3">
@@ -52,7 +51,7 @@ export function SiteHeader() {
                 href="/score"
                 className="bg-foreground text-background px-4 py-2 rounded-[8px] text-[13px] font-semibold hover:bg-foreground/90 active:scale-[0.98] transition-all"
               >
-                Calculate your score
+                Get your free score
               </a>
             </>
           )}

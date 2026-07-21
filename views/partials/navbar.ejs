@@ -9,7 +9,6 @@
         <a href="/score">Score Calculator</a>
         <a href="/#how">How it Works</a>
         <a href="/pricing">Pricing</a>
-        <a href="/waitlist">Waitlist</a>
       </nav>
     </div>
     <div class="lv-header-right">
@@ -18,7 +17,7 @@
         <a href="/logout" class="lv-header-login">Sign out</a>
       <% } else { %>
         <a href="/login" class="lv-header-login">Log in</a>
-        <a href="/score" class="lv-header-cta">Calculate your score</a>
+        <a href="/score" class="lv-header-cta">Get your free score</a>
       <% } %>
       <button class="lv-hamburger" onclick="toggleMobileNav()" aria-label="Toggle menu">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -34,13 +33,12 @@
   <a href="/score">Score Calculator</a>
   <a href="/#how">How it Works</a>
   <a href="/pricing">Pricing</a>
-  <a href="/waitlist">Waitlist</a>
   <% if (locals.user) { %>
     <a href="/dashboard">Dashboard</a>
     <a href="/logout">Sign out</a>
   <% } else { %>
     <a href="/login">Log in</a>
-    <a href="/score">Calculate your score</a>
+    <a href="/score">Get your free score</a>
   <% } %>
 </div>
 <script>
