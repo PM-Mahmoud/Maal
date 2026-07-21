@@ -68,16 +68,21 @@ test('garbage `used` values never grant access', () => {
 
 console.log('\nperiodKey() — resets on the 1st');
 
-test('period key is YYYY-MM and flips exactly at month boundaries', () => {
-  assert.strictEqual(periodKey('2026-07-12'), '2026-07');
-  assert.strictEqual(periodKey('2026-07-31T23:59:59'), '2026-07');
-  assert.strictEqual(periodKey('2026-08-01T00:00:00'), '2026-08');
-  assert.strictEqual(periodKey('2026-12-31'), '2026-12');
-  assert.strictEqual(periodKey('2027-01-01'), '2027-01');
+test('period key is YYYY-MM and flips at the AUSTRALIAN month boundary', () => {
+  // periodKey is pinned to Australia/Sydney, so assertions use explicit UTC
+  // instants (…Z) rather than bare local strings, which would resolve against
+  // whatever timezone the test runner happens to be in (UTC on CI, AEST here).
+  // July is AEST (UTC+10), so Sydney midnight on 1 Aug = 31 Jul 14:00 UTC.
+  assert.strictEqual(periodKey('2026-07-12T00:00:00Z'), '2026-07');
+  assert.strictEqual(periodKey('2026-07-31T13:59:59Z'), '2026-07', 'still July in Sydney');
+  assert.strictEqual(periodKey('2026-07-31T14:00:00Z'), '2026-08', 'just ticked over to August in Sydney');
+  // Dec→Jan: AEDT (UTC+11) in summer, so Sydney midnight 1 Jan = 31 Dec 13:00 UTC.
+  assert.strictEqual(periodKey('2026-12-31T12:59:59Z'), '2026-12');
+  assert.strictEqual(periodKey('2026-12-31T13:00:00Z'), '2027-01');
 });
 
 test('usage in a new month starts from a different key (implicit reset)', () => {
-  assert.notStrictEqual(periodKey('2026-07-31'), periodKey('2026-08-01'));
+  assert.notStrictEqual(periodKey('2026-07-31T13:00:00Z'), periodKey('2026-08-01T13:00:00Z'));
 });
 
 console.log('\nupgradeMessage()');
