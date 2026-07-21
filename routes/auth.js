@@ -164,7 +164,7 @@ router.post('/login', authLimiter,
           typeof req.query.redirect === 'string' &&
           req.query.redirect.startsWith('/') &&
           !req.query.redirect.startsWith('//')
-        ) ? req.query.redirect : '/dashboard';
+        ) ? req.query.redirect : '/app';
         res.redirect(redir);
       });
     });

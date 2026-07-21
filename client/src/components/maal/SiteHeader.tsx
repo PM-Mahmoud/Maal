@@ -44,9 +44,9 @@ export function SiteHeader() {
             </>
           ) : (
             <>
-              <Link to="/auth" className="text-[13px] font-medium text-muted-foreground hover:text-foreground">
+              <a href="/login" className="text-[13px] font-medium text-muted-foreground hover:text-foreground">
                 Log in
-              </Link>
+              </a>
               <a
                 href="/score"
                 className="bg-foreground text-background px-4 py-2 rounded-[8px] text-[13px] font-semibold hover:bg-foreground/90 active:scale-[0.98] transition-all"

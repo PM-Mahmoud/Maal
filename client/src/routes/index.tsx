@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, type CSSProperties } from "react";
 import { MaalMark } from "../components/maal/MaalMark";
 import "../retro-landing.css";
@@ -69,7 +69,7 @@ function Index() {
             </nav>
           </div>
           <div className="rf-header-right">
-            <Link to="/auth" className="rf-login">Log in</Link>
+            <a href="/login" className="rf-login">Log in</a>
             <a href="/score" className="rf-btn rf-btn-ink">Get your free score</a>
           </div>
         </div>
@@ -250,7 +250,7 @@ function Index() {
               <p className="rf-price-name">Free</p>
               <div className="rf-price-amt"><span className="rf-price-big">$0</span><span className="rf-price-per">forever</span></div>
               <p className="rf-price-desc">Maal Score, basic dashboard, manual entry.</p>
-              <Link to="/auth" className="rf-btn rf-btn-ghost rf-btn-block">Start free</Link>
+              <a href="/signup" className="rf-btn rf-btn-ghost rf-btn-block">Start free</a>
             </div>
             <div className="rf-price featured">
               <span className="rf-price-popular">Most popular</span>
@@ -309,7 +309,7 @@ function Index() {
           <div className="rf-footer-col">
             <p className="rf-footer-col-title">Account</p>
             <ul>
-              <li><Link to="/auth">Log in</Link></li>
+              <li><a href="/login">Log in</a></li>
               <li><a href="/signup">Sign up</a></li>
             </ul>
           </div>

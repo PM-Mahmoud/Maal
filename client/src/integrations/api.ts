@@ -38,7 +38,7 @@ export function handleUnauthenticated() {
   notifyListeners("SIGNED_OUT");
   if (!_redirecting && window.location.pathname.startsWith("/app")) {
     _redirecting = true;
-    window.location.assign("/auth");
+    window.location.assign("/login");
   }
 }
 

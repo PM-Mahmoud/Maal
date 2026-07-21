@@ -371,15 +371,20 @@ app.post('/contact', async (req, res) => {
 app.use('/api', require('./routes/api'));
 
 // ─── Server-side gate for the React app shell ─────────────────────────────
+// The React /auth page is RETIRED — /login and /signup (EJS) are the only auth
+// surfaces. Redirect the bare path; /auth/google* (OAuth) is registered earlier
+// and never reaches this handler.
+app.get('/auth', (req, res) => res.redirect(301, '/login'));
+
 // The authenticated React dashboard lives at /app/*. Its route guard is
 // client-side only, so without this the SPA shell was served 200 to anyone
 // (data is still protected server-side by /api/v1 user_id scoping, but the shell
 // shouldn't render for logged-out users). Redirect unauthenticated /app/* to the
-// login — same target as the client guard (_authenticated/route.tsx → /auth),
+// login — same target as the client guard (_authenticated/route.tsx → /login),
 // which sends the user on to /app after sign-in. Authenticated requests fall
 // through to the SPA catch-all below.
 app.get(/^\/app(\/.*)?$/, (req, res, next) => {
-  if (!req.session.userId) return res.redirect('/auth');
+  if (!req.session.userId) return res.redirect('/login');
   next();
 });
 
