@@ -23,7 +23,6 @@ export function SiteFooter() {
               <li><a href="/score" className="text-foreground/80 hover:text-foreground">Score Calculator</a></li>
               <li><a href="/financial-wellbeing-score" className="text-foreground/80 hover:text-foreground">Financial Wellbeing Score</a></li>
               <li><a href="/pricing" className="text-foreground/80 hover:text-foreground">Pricing</a></li>
-              <li><a href="/waitlist" className="text-foreground/80 hover:text-foreground">Waitlist</a></li>
             </ul>
           </div>
           <FooterCol title="Company" links={[

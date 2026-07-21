@@ -66,12 +66,11 @@ function Index() {
               <a href="/score">Score Calculator</a>
               <a href="#how">How it Works</a>
               <a href="/pricing">Pricing</a>
-              <a href="/waitlist">Waitlist</a>
             </nav>
           </div>
           <div className="rf-header-right">
             <Link to="/auth" className="rf-login">Log in</Link>
-            <a href="/score" className="rf-btn rf-btn-ink">Calculate your score</a>
+            <a href="/score" className="rf-btn rf-btn-ink">Get your free score</a>
           </div>
         </div>
       </header>
@@ -84,15 +83,13 @@ function Index() {
           <div className="rf-hero-grid">
             <div>
               <span className="rf-kicker">✦ Built for Australia</span>
-              <h1 className="rf-hero-h1">Your financial life,<br /><span className="rf-underline"><span className="rf-mark">scored.</span></span></h1>
+              <h1 className="rf-hero-h1">Your money,<br /><span className="rf-underline">in <span className="rf-mark">balance.</span></span></h1>
               <p className="rf-hero-sub">
-                Maal is the all-in-one for everyday Australians — it reads your statements, bank accounts and
-                transactions, then turns them into one clear financial wellbeing score and a plain-English plan to
-                improve it. Super, HECS, portfolio, spending: one clear picture.
+                Your accounts, super and debt — turned into one score and a plan, free in 2 minutes.
               </p>
               <div className="rf-hero-actions">
-                <a href="/score" className="rf-btn rf-btn-lg">Get your score free</a>
-                <Link to="/auth" className="rf-btn rf-btn-lg rf-btn-ghost">Log in →</Link>
+                <a href="/score" className="rf-btn rf-btn-lg">Get your free score</a>
+                <a href="#how" className="rf-btn rf-btn-lg rf-btn-ghost">See how it works →</a>
               </div>
               <p className="rf-hero-note">Free to start. No card required. Read-only bank connections via Basiq. Education only — never financial advice.</p>
             </div>
@@ -132,8 +129,8 @@ function Index() {
       <section className="rf-section">
         <div className="rf-wrap rf-reveal">
           <span className="rf-eyebrow">Products</span>
-          <h2 className="rf-h2">Financial clarity, <span className="rf-mark">out of the box.</span></h2>
-          <p className="rf-lede">Not another budgeting app. Maal reads your statements, accounts and transactions — then turns them into education you can act on.</p>
+          <h2 className="rf-h2">Everything about your money, <span className="rf-mark">finally in one place.</span></h2>
+          <p className="rf-lede">Not another budgeting app. Maal turns your accounts, super and debt into a single number — and a plan to move it.</p>
           <div className="rf-products-grid">
             <a href="/score" className="rf-product rf-p-orange">
               <span className="rf-product-eyebrow">Scores</span>
@@ -226,15 +223,26 @@ function Index() {
       {/* Why */}
       <section className="rf-section">
         <div className="rf-wrap rf-reveal">
-          <span className="rf-eyebrow">Why Maal</span>
+          <span className="rf-eyebrow">Why Maal · Read-only · Bank-level security via Basiq (CDR-regulated)</span>
           <h2 className="rf-h2">Built for the financial life <span className="rf-mark">Australians</span> actually have.</h2>
-          <p className="rf-lede">Super, HECS, franking credits, EOFY, the ATO, property, debt and open banking all shape how Australians build wealth. Maal brings them into one clear picture.</p>
+          <p className="rf-lede">Super guarantee, HECS indexation, tax brackets — updated for FY2025–26. Super, franking credits, EOFY, the ATO, property, debt and open banking all shape how Australians build wealth. Maal brings them into one clear picture.</p>
           <div className="rf-why-list">
             <div className="rf-why-item"><div className="rf-why-title">Clarity by design</div><p className="rf-why-body">Net worth, debt, super, spending and investments in one place — explained in plain language so you always know where you stand.</p></div>
             <div className="rf-why-item"><div className="rf-why-title">Australian to the core</div><p className="rf-why-body">Superannuation, HECS-HELP, franking credits, EOFY, the ATO — Maal speaks Australian finance natively, not as a US import.</p></div>
             <div className="rf-why-item"><div className="rf-why-title">Secure and read-only</div><p className="rf-why-body">Bank connections via Basiq under the Consumer Data Right. Maal can never move money. Credentials are never stored. Your data is never sold.</p></div>
             <div className="rf-why-item"><div className="rf-why-title">Education, not instructions</div><p className="rf-why-body">Maal explains what’s happening in your finances and why it matters. The decisions stay yours.</p></div>
           </div>
+          <p className="rf-lede" style={{ marginTop: "2rem" }}>
+            Most money tools show you a number. Maal turns your actual accounts, super and debt into one score — with
+            AI that answers your questions, flags what’s changed, and builds reports on request. We make money from
+            subscriptions, not from selling you products — so the plan keeps updating as your life does, without a
+            sales pitch at the end.
+          </p>
+          <p style={{ marginTop: "1rem", fontSize: 12, lineHeight: 1.7, opacity: 0.7 }}>
+            Maal’s score and insights are general and educational only — not personal financial advice. They don’t
+            take into account your full financial situation, and Maal doesn’t recommend specific products or
+            investments. For advice tailored to you, speak with a licensed financial adviser.
+          </p>
         </div>
       </section>
 
@@ -242,7 +250,7 @@ function Index() {
       <section className="rf-section rf-section-alt">
         <div className="rf-wrap rf-reveal">
           <span className="rf-eyebrow">Pricing</span>
-          <h2 className="rf-h2">One product. Three honest tiers.</h2>
+          <h2 className="rf-h2">Start free. Upgrade when Maal starts paying for itself.</h2>
           <div className="rf-price-grid">
             <div className="rf-price">
               <p className="rf-price-name">Free</p>
@@ -275,8 +283,7 @@ function Index() {
             <h2 className="rf-cta-h2">Stop guessing.<br />Start scoring.</h2>
             <p className="rf-cta-sub">Two minutes to your first Maal Score. No bank login. No credit card.</p>
             <div className="rf-cta-actions">
-              <a href="/score" className="rf-btn rf-btn-lg rf-btn-ink">Calculate your score</a>
-              <a href="/waitlist" className="rf-btn rf-btn-lg rf-btn-ghost">Join the waitlist</a>
+              <a href="/score" className="rf-btn rf-btn-lg rf-btn-ink">Get your free score</a>
             </div>
           </div>
         </div>
@@ -295,7 +302,6 @@ function Index() {
               <li><a href="/score">Score Calculator</a></li>
               <li><a href="/financial-wellbeing-score">Financial Wellbeing Score</a></li>
               <li><a href="/pricing">Pricing</a></li>
-              <li><a href="/waitlist">Waitlist</a></li>
             </ul>
           </div>
           <div className="rf-footer-col">
