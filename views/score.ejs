@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/png" href="/favicon.png">
-  <title>Free Maal Score Calculator — 2 minutes</title>
+  <title>Free Maal Score Calculator in 2 minutes</title>
   <meta name="description" content="Get your 0–100 Maal Financial Health Score in 2 minutes. No bank login, no credit card.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -119,7 +119,7 @@
       },
       { title: 'Wealth', question: 'Roughly what do you own?',
         fields: [
-          { key: 'assets', label: 'Total assets', prefix: '$', step: 1000, min: 0, hint: 'Home, investments, savings — everything you own.' }
+          { key: 'assets', label: 'Total assets', prefix: '$', step: 1000, min: 0, hint: 'Home, investments, savings: everything you own.' }
         ]
       },
       { title: 'Debt', question: 'And what do you owe?',
@@ -207,7 +207,7 @@
       var html = '<p class="sc-kicker">Free Maal Score</p>';
       html += '<h1 class="sc-h1">Get your free Maal Score.</h1>';
       html += '<p class="sc-intro-body">Answer a few questions about your income, savings, debts, super, HECS and investments. Maal will estimate your financial wellbeing score and show the main drivers behind it.</p>';
-      html += '<p class="sc-intro-trust">Takes about two minutes. No bank login required. Educational only — not financial advice.</p>';
+      html += '<p class="sc-intro-trust">Takes about two minutes. No bank login required. Educational only, not financial advice.</p>';
       html += '<button class="sc-intro-start" id="sc-intro-start">Get started</button>';
       root.innerHTML = html;
 
@@ -358,7 +358,7 @@
         html += '<span class="sc-pillar-score">' + p.score + '</span>';
         html += '</div>';
         html += '<div class="sc-pillar-bar-bg"><div class="sc-pillar-bar-fill" data-score="' + p.score + '" style="width:0%;background:' + color + '"></div></div>';
-        if (p.key === 'protection') html += '<p class="sc-hint" style="margin-top:.35rem;">Estimated — this quick calculator doesn\'t ask about insurance or retirement planning yet.</p>';
+        if (p.key === 'protection') html += '<p class="sc-hint" style="margin-top:.35rem;">Estimated, because this quick calculator doesn\'t ask about insurance or retirement planning yet.</p>';
         html += '</div>';
       });
       html += '</div>';
@@ -376,7 +376,7 @@
 
       if (!emailSent) {
         html += '<div class="sc-email-box" id="sc-email-container">';
-        html += '<p class="sc-email-title">Email me my full report — score breakdown, what\'s holding me back, and my next 3 moves.</p>';
+        html += '<p class="sc-email-title">Email me my full report: score breakdown, what\'s holding me back, and my next 3 moves.</p>';
         html += '<p class="sc-email-body">We won\'t sell or share your email.</p>';
         html += '<div class="sc-email-row">';
         html += '<input class="sc-email-input" id="sc-email" type="email" placeholder="you@example.com" autocomplete="email">';

@@ -12,13 +12,12 @@
       </nav>
     </div>
     <div class="lv-header-right">
-      <% if (locals.user) { %>
-        <a href="/dashboard" class="lv-header-login">Dashboard</a>
-        <a href="/logout" class="lv-header-login">Sign out</a>
-      <% } else { %>
-        <a href="/login" class="lv-header-login">Log in</a>
-        <a href="/score" class="lv-header-cta">Get your free score</a>
-      <% } %>
+      <%# Public pages never show authenticated navigation. Dashboard and Sign
+          out live in exactly one place, the app shell at /app, so a signed-in
+          visitor browsing the marketing site doesn't get two competing navs
+          (and doesn't hit the retired GET /logout link this partial used). %>
+      <a href="/login" class="lv-header-login">Log in</a>
+      <a href="/score" class="lv-header-cta">Get your free score</a>
       <button class="lv-hamburger" onclick="toggleMobileNav()" aria-label="Toggle menu">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <line x1="3" y1="6" x2="21" y2="6"/>
@@ -33,13 +32,8 @@
   <a href="/score">Score Calculator</a>
   <a href="/#how">How it Works</a>
   <a href="/pricing">Pricing</a>
-  <% if (locals.user) { %>
-    <a href="/dashboard">Dashboard</a>
-    <a href="/logout">Sign out</a>
-  <% } else { %>
-    <a href="/login">Log in</a>
-    <a href="/score">Get your free score</a>
-  <% } %>
+  <a href="/login">Log in</a>
+  <a href="/score">Get your free score</a>
 </div>
 <script>
 function toggleMobileNav() {

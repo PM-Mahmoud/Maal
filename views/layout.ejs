@@ -6,13 +6,13 @@
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
   <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
-  <meta property="og:title" content="Maal — Financial clarity for every Australian">
+  <meta property="og:title" content="Maal: Financial clarity for every Australian">
   <meta property="og:description" content="Maal reads your assets, debts, super, and income to deliver a 0–100 Financial Wellbeing Score and a plain-English action plan to improve it.">
   <meta property="og:image" content="https://hellomaal.com/images/og.png">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://hellomaal.com/images/og.png">
-  <title>Maal — Financial clarity for every Australian</title>
+  <title>Maal: Financial clarity for every Australian</title>
   <meta name="description" content="Maal reads your assets, debts, super, and income to deliver a 0–100 Financial Wellbeing Score and a plain-English action plan to improve it.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -59,13 +59,9 @@
         </nav>
       </div>
       <div class="rf-header-right">
-        <% if (locals.user) { %>
-          <a href="/dashboard" class="rf-login">Dashboard</a>
-          <a href="/logout" class="rf-btn rf-btn-ink">Sign out</a>
-        <% } else { %>
-          <a href="/login" class="rf-login">Log in</a>
-          <a href="/score" class="rf-btn rf-btn-ink">Get your free score</a>
-        <% } %>
+        <%# Authenticated navigation lives only in the app shell at /app. %>
+        <a href="/login" class="rf-login">Log in</a>
+        <a href="/score" class="rf-btn rf-btn-ink">Get your free score</a>
         <button class="rf-hamburger" onclick="rfToggleNav()" aria-label="Toggle menu">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
@@ -76,12 +72,7 @@
     <a href="/score">Score Calculator</a>
     <a href="#how">How it Works</a>
     <a href="#pricing">Pricing</a>
-    <% if (locals.user) { %>
-      <a href="/dashboard">Dashboard</a>
-      <a href="/logout">Sign out</a>
-    <% } else { %>
-      <a href="/login">Log in</a>
-    <% } %>
+    <a href="/login">Log in</a>
   </div>
 
   <!-- Hero -->
@@ -93,13 +84,13 @@
         <div>
           <h1 class="rf-hero-h1">Your money,<br><span class="rf-underline">in <span class="rf-mark">balance.</span></span></h1>
           <p class="rf-hero-sub">
-            Your accounts, super and debt — turned into one score and a plan, free in 2 minutes.
+            Your accounts, super and debt, turned into one score and a plan. Free in 2 minutes.
           </p>
           <div class="rf-hero-actions">
             <a href="/score" class="rf-btn rf-btn-lg">Get your free score</a>
             <a href="#how" class="rf-btn rf-btn-lg rf-btn-ghost">See how it works →</a>
           </div>
-          <p class="rf-hero-note">Free to start. No card required. Read-only bank connections via Basiq. Education only — never financial advice.</p>
+          <p class="rf-hero-note">Free to start. No card required. Read-only bank connections via Basiq. Education only, never financial advice.</p>
         </div>
 
         <div class="rf-card">
@@ -133,7 +124,7 @@
   <div class="rf-strip">
     <div class="rf-strip-grid">
       <div class="rf-strip-item"><div class="rf-strip-big">1 score</div><div class="rf-strip-small">Five pillars: savings, debt, super, trajectory &amp; protection</div></div>
-      <div class="rf-strip-item"><div class="rf-strip-big">100+</div><div class="rf-strip-small">Institutions via Basiq open banking — coming soon</div></div>
+      <div class="rf-strip-item"><div class="rf-strip-big">100+</div><div class="rf-strip-small">Institutions via Basiq open banking (coming soon)</div></div>
       <div class="rf-strip-item"><div class="rf-strip-big">Built for AU</div><div class="rf-strip-small">Super, HECS &amp; ATO native</div></div>
       <div class="rf-strip-item"><div class="rf-strip-big">Read-only</div><div class="rf-strip-small">Maal can never move your money</div></div>
     </div>
@@ -144,7 +135,7 @@
     <div class="rf-wrap rf-reveal">
       <span class="rf-eyebrow">Products</span>
       <h2 class="rf-h2">Everything about your money, <em>finally in one place.</em></h2>
-      <p class="rf-lede">Not another budgeting app. Maal turns your accounts, super and debt into a single number — and a plan to move it.</p>
+      <p class="rf-lede">Not another budgeting app. Maal turns your accounts, super and debt into a single number, and a plan to move it.</p>
 
       <div class="rf-products-grid">
         <a href="/signup" class="rf-product rf-p-orange">
@@ -181,7 +172,7 @@
           <div class="rf-product-mock">
             <div style="display:flex;flex-direction:column;gap:0.6rem;width:100%;">
               <div class="rf-inner" style="border-radius:12px;padding:0.625rem 1rem;font-size:12.5px;">📈 NVDA moved +11% today</div>
-              <div class="rf-inner" style="border-radius:12px;padding:0.625rem 1rem;font-size:12px;">We flagged it — here's what drove it.</div>
+              <div class="rf-inner" style="border-radius:12px;padding:0.625rem 1rem;font-size:12px;">We flagged it. Here's what drove it.</div>
             </div>
           </div>
           <div class="rf-product-foot"><span>Radar</span><span>→</span></div>
@@ -241,7 +232,7 @@
         <div class="rf-step">
           <div class="rf-step-num">03</div>
           <h3 class="rf-step-title">Improve with Ask Maal, Radar &amp; Research</h3>
-          <p class="rf-step-body">Ask questions grounded in your own data, run research on markets and super, and let Radar watch for changes that matter — so you keep improving your financial situation.</p>
+          <p class="rf-step-body">Ask questions grounded in your own data, run research on markets and super, and let Radar watch for changes that matter, so you keep improving your financial situation.</p>
         </div>
       </div>
     </div>
@@ -250,18 +241,18 @@
   <!-- Why -->
   <section class="rf-section">
     <div class="rf-wrap rf-reveal">
-      <span class="rf-eyebrow">Why Maal · Read-only · Bank-level security via Basiq (CDR-regulated) — coming soon</span>
+      <span class="rf-eyebrow">Why Maal · Read-only · Bank-level security via Basiq (CDR-regulated), coming soon</span>
       <h2 class="rf-h2">Built for the financial life <em>Australians</em> actually have.</h2>
-      <p class="rf-lede">Super guarantee, HECS indexation, tax brackets — updated for FY2025–26. Super, EOFY, the ATO, property, debt and open banking all shape how Australians build wealth. Maal brings them into one clear picture.</p>
+      <p class="rf-lede">Super guarantee, HECS indexation, tax brackets, all updated for FY2025–26. Super, EOFY, the ATO, property, debt and open banking all shape how Australians build wealth. Maal brings them into one clear picture.</p>
       <div class="rf-why-list">
-        <div class="rf-why-item"><div class="rf-why-title">Clarity by design</div><p class="rf-why-body">Net worth, debt, super, spending and investments in one place — explained in plain language so you always know where you stand.</p></div>
-        <div class="rf-why-item"><div class="rf-why-title">Australian to the core</div><p class="rf-why-body">Superannuation, HECS-HELP, EOFY, the ATO — Maal is built around the way money actually works in Australia.</p></div>
-        <div class="rf-why-item"><div class="rf-why-title">Secure and read-only</div><p class="rf-why-body">Bank connections via Basiq under the Consumer Data Right — coming soon. Maal can never move money. Credentials are never stored. Your data is never sold.</p></div>
+        <div class="rf-why-item"><div class="rf-why-title">Clarity by design</div><p class="rf-why-body">Net worth, debt, super, spending and investments in one place, explained in plain language so you always know where you stand.</p></div>
+        <div class="rf-why-item"><div class="rf-why-title">Australian to the core</div><p class="rf-why-body">Superannuation, HECS-HELP, EOFY and the ATO: Maal is built around the way money actually works in Australia.</p></div>
+        <div class="rf-why-item"><div class="rf-why-title">Secure and read-only</div><p class="rf-why-body">Bank connections via Basiq under the Consumer Data Right (coming soon). Maal can never move money. Credentials are never stored. Your data is never sold.</p></div>
         <div class="rf-why-item"><div class="rf-why-title">Education, not instructions</div><p class="rf-why-body">Maal explains what's happening in your finances and why it matters. The decisions stay yours.</p></div>
-        <div class="rf-why-item"><div class="rf-why-title">Not a credit score</div><p class="rf-why-body">A credit score measures how safe you are to lend to — it exists for lenders. The Maal Score measures your whole financial wellbeing, and it exists for you.</p></div>
+        <div class="rf-why-item"><div class="rf-why-title">Not a credit score</div><p class="rf-why-body">A credit score measures how safe you are to lend to, and it exists for lenders. The Maal Score measures your whole financial wellbeing, and it exists for you.</p></div>
       </div>
       <p style="margin-top:1.5rem;font-size:12px;line-height:1.7;opacity:.7;">
-        Maal's score and insights are general and educational only — not personal financial advice. They don't
+        Maal's score and insights are general and educational only, not personal financial advice. They don't
         take into account your full financial situation, and Maal doesn't recommend specific products or
         investments. For advice tailored to you, speak with a licensed financial adviser.
       </p>

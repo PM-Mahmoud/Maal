@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { Reveal } from "@/components/maal/Reveal";
 import { Disclaimer } from "@/components/maal/Disclaimer";
-import { Slider } from "@/components/ui/slider";
+import { SliderWithInput } from "@/components/maal/SliderWithInput";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -165,60 +165,50 @@ function ScenariosSimulator() {
           {/* Controls */}
           <Reveal delay={50}>
             <Card className="border-hairline p-5 space-y-5">
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Current age</Label>
-                <Slider
-                  value={[startAge]}
-                  onValueChange={([v]) => setStartAge(v)}
-                  min={25}
-                  max={55}
-                  step={1}
-                />
-                <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>25</span>
-                  <span className="font-medium text-foreground">{startAge}</span>
-                  <span>55</span>
-                </div>
-              </div>
+              <SliderWithInput
+                label="Current age"
+                value={startAge}
+                onChange={setStartAge}
+                min={18}
+                max={75}
+                step={1}
+                hardMax={100}
+                format={(v) => `${v}`}
+                suffix="yrs"
+              />
 
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Starting balance — <span className="text-foreground font-medium">{formatAUD(balance)}</span>
-                </Label>
-                <Slider
-                  value={[balance]}
-                  onValueChange={([v]) => setBalance(v)}
-                  min={0}
-                  max={500_000}
-                  step={10_000}
-                />
-              </div>
+              <SliderWithInput
+                label="Starting balance"
+                value={balance}
+                onChange={setBalance}
+                min={0}
+                max={2_000_000}
+                step={10_000}
+                format={formatAUD}
+                prefix="$"
+              />
 
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Annual contribution — <span className="text-foreground font-medium">{formatAUD(contrib)}/yr</span>
-                </Label>
-                <Slider
-                  value={[contrib]}
-                  onValueChange={([v]) => setContrib(v)}
-                  min={0}
-                  max={30_000}
-                  step={500}
-                />
-              </div>
+              <SliderWithInput
+                label="Annual contribution"
+                value={contrib}
+                onChange={setContrib}
+                min={0}
+                max={100_000}
+                step={500}
+                format={(v) => `${formatAUD(v)}/yr`}
+                prefix="$"
+              />
 
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Retirement target — <span className="text-foreground font-medium">{formatAUD(target)}</span>
-                </Label>
-                <Slider
-                  value={[target]}
-                  onValueChange={([v]) => setTarget(v)}
-                  min={500_000}
-                  max={3_000_000}
-                  step={50_000}
-                />
-              </div>
+              <SliderWithInput
+                label="Retirement target"
+                value={target}
+                onChange={setTarget}
+                min={0}
+                max={5_000_000}
+                step={50_000}
+                format={formatAUD}
+                prefix="$"
+              />
 
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Risk profile</Label>

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { Reveal } from "@/components/maal/Reveal";
 import { Disclaimer } from "@/components/maal/Disclaimer";
-import { Slider } from "@/components/ui/slider";
+import { SliderWithInput } from "@/components/maal/SliderWithInput";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -166,44 +166,39 @@ function SuperOptimiser() {
           {/* Controls */}
           <Reveal delay={50}>
             <Card className="border-hairline p-5 space-y-5">
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Current age</Label>
-                <Select value={String(age)} onValueChange={(v) => setAge(Number(v))}>
-                  <SelectTrigger className="rounded-md"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {AGE_OPTIONS.map((a) => (
-                      <SelectItem key={a} value={String(a)}>{a}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <SliderWithInput
+                label="Current age"
+                value={age}
+                onChange={setAge}
+                min={18}
+                max={75}
+                step={1}
+                hardMax={100}
+                suffix="yrs"
+              />
+
+              <SliderWithInput
+                label="Super balance"
+                value={balance}
+                onChange={setBalance}
+                min={0}
+                max={2_000_000}
+                step={5_000}
+                format={formatAUD}
+                prefix="$"
+              />
 
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Super balance — <span className="text-foreground font-medium">{formatAUD(balance)}</span>
-                </Label>
-                <Slider
-                  value={[balance]}
-                  onValueChange={([v]) => setBalance(v)}
+                <SliderWithInput
+                  label="Taxable income"
+                  value={salary}
+                  onChange={setSalary}
                   min={0}
                   max={500_000}
                   step={5_000}
+                  format={formatAUD}
+                  prefix="$"
                 />
-                <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>$0</span><span>$500k</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Taxable income</Label>
-                <Select value={String(salary)} onValueChange={(v) => setSalary(Number(v))}>
-                  <SelectTrigger className="rounded-md"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {SALARY_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={String(s)}>{formatAUD(s)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
                 {isDiv293 && (
                   <p className="flex items-center gap-1.5 text-[11px] text-amber-500">
                     <AlertTriangle className="h-3 w-3" />
@@ -213,19 +208,16 @@ function SuperOptimiser() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Extra concessional — <span className="text-foreground font-medium">{formatAUD(extra)}/yr</span>
-                </Label>
-                <Slider
-                  value={[extra]}
-                  onValueChange={([v]) => setExtra(v)}
+                <SliderWithInput
+                  label="Extra concessional"
+                  value={extra}
+                  onChange={setExtra}
                   min={0}
                   max={CONCESSIONAL_CAP}
                   step={500}
+                  format={(v) => `${formatAUD(v)}/yr`}
+                  prefix="$"
                 />
-                <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>$0</span><span>{formatAUD(CONCESSIONAL_CAP)}</span>
-                </div>
                 {effectiveExtra < extra && (
                   <p className="text-[11px] text-amber-500">
                     Capped at {formatAUD(effectiveExtra)} — SG uses {formatAUD(sgContrib)} of your {formatAUD(CONCESSIONAL_CAP)} cap.
@@ -233,21 +225,17 @@ function SuperOptimiser() {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Expected return — <span className="text-foreground font-medium">{returnRate}%</span>
-                </Label>
-                <Slider
-                  value={[returnRate]}
-                  onValueChange={([v]) => setReturnRate(v)}
-                  min={3}
-                  max={12}
-                  step={0.5}
-                />
-                <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>3%</span><span>12%</span>
-                </div>
-              </div>
+              <SliderWithInput
+                label="Expected return"
+                value={returnRate}
+                onChange={setReturnRate}
+                min={0}
+                max={12}
+                step={0.5}
+                hardMax={30}
+                format={(v) => `${v}%`}
+                suffix="%"
+              />
 
               <div className="rounded-lg border border-hairline bg-surface-2/60 p-3 space-y-1.5 text-xs">
                 <p className="flex items-center gap-1.5 text-muted-foreground">

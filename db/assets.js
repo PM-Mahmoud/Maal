@@ -413,6 +413,10 @@ function mergeAssetSummaryIntoProfile(profile, assetSummary) {
     investment_portfolio: s.investmentsTotal > 0 ? s.investmentsTotal : (Number(p.investment_portfolio) || 0),
     property_value: s.propertyTotal > 0 ? s.propertyTotal : (Number(p.property_value) || 0),
     total_debt: s.debtsTotal > 0 ? s.debtsTotal : (Number(p.total_debt) || 0),
+    // Income was computed by summarizeAssets but never merged, so a user whose
+    // income lives only in the `incomes` table scored as if they earned $0 —
+    // which floors the savings, debt and trajectory pillars at once.
+    annual_income: s.incomeTotal > 0 ? s.incomeTotal : (Number(p.annual_income) || 0),
     // hecs_balance intentionally untouched — stays a flat column, see the plan
   };
 }

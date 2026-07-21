@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { Reveal } from "@/components/maal/Reveal";
 import { Disclaimer } from "@/components/maal/Disclaimer";
-import { Slider } from "@/components/ui/slider";
+import { SliderWithInput } from "@/components/maal/SliderWithInput";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -155,33 +155,27 @@ function TaxBracketVisualizer() {
           {/* Controls */}
           <Reveal delay={50}>
             <Card className="border-hairline p-5 space-y-5">
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Gross income — <span className="text-foreground font-medium">{formatAUD(income)}</span>
-                </Label>
-                <Slider
-                  value={[income]}
-                  onValueChange={([v]) => setIncome(v)}
-                  min={0}
-                  max={400_000}
-                  step={5_000}
-                />
-                <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>$0</span>
-                  <span>$400k</span>
-                </div>
-              </div>
+              <SliderWithInput
+                label="Gross income"
+                value={income}
+                onChange={setIncome}
+                min={0}
+                max={500_000}
+                step={5_000}
+                format={formatAUD}
+                prefix="$"
+              />
 
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Deductions — <span className="text-foreground font-medium">{formatAUD(deductions)}</span>
-                </Label>
-                <Slider
-                  value={[deductions]}
-                  onValueChange={([v]) => setDeductions(v)}
+                <SliderWithInput
+                  label="Deductions"
+                  value={deductions}
+                  onChange={setDeductions}
                   min={0}
-                  max={30_000}
+                  max={100_000}
                   step={500}
+                  format={formatAUD}
+                  prefix="$"
                 />
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {DEDUCTION_PRESETS.map((p) => (

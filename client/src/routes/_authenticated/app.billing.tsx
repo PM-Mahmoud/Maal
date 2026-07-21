@@ -3,11 +3,17 @@ import { useEffect, useState } from "react";
 import { CreditCard, Check, Sparkles } from "lucide-react";
 import { z } from "zod";
 import { getUsage, type Usage } from "@/lib/usage.functions";
+import { SUPPORT_EMAIL } from "@/components/maal/app/AppShell";
 
 const searchSchema = z.object({
-  billing: z.enum(["success", "cancel", "demo", "downgraded", "error"]).optional(),
+  billing: z.enum([
+    "success", "cancel", "demo", "downgraded", "cancel_scheduled",
+    "error", "error_config", "error_stripe",
+  ]).optional(),
   plan: z.string().optional(),
 });
+
+type Interval = "month" | "year";
 
 export const Route = createFileRoute("/_authenticated/app/billing")({
   component: BillingPage,
@@ -49,17 +55,26 @@ const FEATURE_LABELS: Record<string, string> = {
 const PLAN_RANK: Record<string, number> = { free: 0, pro: 1, max: 2 };
 
 const BANNERS: Record<string, { tone: "good" | "bad"; text: string }> = {
-  success: { tone: "good", text: "Payment received — your plan is now active. Welcome aboard!" },
-  demo: { tone: "good", text: "Plan updated (demo mode — no payment was taken)." },
+  success: { tone: "good", text: "Payment received. Your plan is now active, welcome aboard!" },
+  demo: { tone: "good", text: "Plan updated (demo mode, no payment was taken)." },
   downgraded: { tone: "good", text: "You're back on the Free plan." },
-  cancel: { tone: "bad", text: "Checkout was cancelled — your plan hasn't changed." },
-  error: { tone: "bad", text: "Something went wrong with checkout. Your plan hasn't changed — please try again." },
+  cancel_scheduled: { tone: "good", text: "Your subscription will end when the current billing period finishes. You keep full access until then." },
+  cancel: { tone: "bad", text: "Checkout was cancelled, so your plan hasn't changed." },
+  error: { tone: "bad", text: "Something went wrong with checkout. Your plan hasn't changed, please try again." },
+  // Distinct codes so a misconfigured deploy doesn't look like a user error.
+  error_config: { tone: "bad", text: "Payments aren't fully configured yet, so checkout couldn't start. Nothing was charged. Please contact support." },
+  error_stripe: { tone: "bad", text: "Stripe couldn't start the checkout session. Nothing was charged, please try again shortly." },
 };
+
+// Annual is billed as 10 months, i.e. 2 months free. Mirrors the PLANS matrix
+// in routes/billing.js, which is the authority for what actually gets charged.
+const ANNUAL_PRICE: Record<string, string> = { free: "$0", pro: "$200", max: "$2,000" };
 
 function BillingPage() {
   const search = useSearch({ from: "/_authenticated/app/billing" });
   const [usage, setUsage] = useState<Usage | null>(null);
   const [loading, setLoading] = useState(true);
+  const [interval, setInterval] = useState<Interval>("month");
 
   useEffect(() => {
     getUsage()
@@ -138,7 +153,25 @@ function BillingPage() {
 
       {/* Plans */}
       <section>
-        <h2 className="text-[15px] font-bold tracking-display mb-3">Plans</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <h2 className="text-[15px] font-bold tracking-display">Plans</h2>
+          <div className="inline-flex items-center rounded-full border border-border p-0.5 text-[11px] font-semibold">
+            <button
+              type="button"
+              onClick={() => setInterval("month")}
+              className={`px-3 py-1 rounded-full transition-colors ${interval === "month" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Monthly
+            </button>
+            <button
+              type="button"
+              onClick={() => setInterval("year")}
+              className={`px-3 py-1 rounded-full transition-colors ${interval === "year" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Annual <span className="text-[10px] font-bold uppercase tracking-wide">2 months free</span>
+            </button>
+          </div>
+        </div>
         <div className="grid md:grid-cols-3 gap-4">
           {PLANS.map((p) => {
             const current = p.key === plan;
@@ -159,8 +192,10 @@ function BillingPage() {
                   )}
                 </div>
                 <p className="mt-1 text-[22px] font-bold tracking-display">
-                  {p.price}
-                  <span className="text-[12px] font-medium text-muted-foreground"> AUD/mo</span>
+                  {interval === "year" ? ANNUAL_PRICE[p.key] : p.price}
+                  <span className="text-[12px] font-medium text-muted-foreground">
+                    {p.key === "free" ? " AUD" : interval === "year" ? " AUD/yr" : " AUD/mo"}
+                  </span>
                 </p>
                 <p className="text-[12px] text-muted-foreground">{p.blurb}</p>
                 <ul className="mt-3 space-y-1.5 flex-1">
@@ -175,7 +210,7 @@ function BillingPage() {
                     p.key !== "free" ? (
                       <form method="post" action="/billing/downgrade">
                         <button type="submit" className="w-full px-4 py-2 rounded-[10px] border border-border text-[13px] font-semibold hover:border-foreground transition-colors">
-                          Downgrade to Free
+                          Cancel at period end
                         </button>
                       </form>
                     ) : (
@@ -190,6 +225,7 @@ function BillingPage() {
                   ) : isUpgrade ? (
                     <form method="post" action="/billing/checkout">
                       <input type="hidden" name="plan" value={p.key} />
+                      <input type="hidden" name="interval" value={interval} />
                       <button type="submit" className="w-full px-4 py-2 rounded-[10px] bg-foreground text-background text-[13px] font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5">
                         <Sparkles className="size-3.5" /> Upgrade to {p.name}
                       </button>
@@ -199,7 +235,7 @@ function BillingPage() {
                     // endpoint exists, so don't send the user through checkout
                     // (which would bill a second subscription).
                     <a
-                      href={`mailto:support@maal.app?subject=${encodeURIComponent(`Plan change request: ${plan} to ${p.key}`)}`}
+                      href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Plan change request: ${plan} to ${p.key}`)}`}
                       className="w-full px-4 py-2 rounded-[10px] border border-border text-[13px] font-semibold hover:border-foreground transition-colors inline-flex items-center justify-center"
                     >
                       Request switch to {p.name}

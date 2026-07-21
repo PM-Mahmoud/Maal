@@ -16,10 +16,32 @@ const router = express.Router();
 const { setUserPlan } = require('../db/users');
 const pool = require('../db/pool');
 
+// Plan × billing interval. Amounts are in CENTS (AUD).
+// Annual = 10 months' price, i.e. the advertised "2 months free".
 const PLANS = {
-  pro: { name: 'Maal Pro', amount: 2000, blurb: 'The full advisor experience' },   // $20.00 AUD
-  max: { name: 'Maal Max', amount: 20000, blurb: 'For complex finances' },         // $200.00 AUD
+  pro: {
+    name: 'Maal Pro',
+    blurb: 'The full advisor experience',
+    month: 2000,    // $20.00/mo
+    year: 20000,    // $200.00/yr  (12 × $20 = $240, so 2 months free)
+  },
+  max: {
+    name: 'Maal Max',
+    blurb: 'For complex finances',
+    month: 20000,   // $200.00/mo
+    year: 200000,   // $2,000.00/yr (12 × $200 = $2,400, so 2 months free)
+  },
 };
+
+const INTERVALS = new Set(['month', 'year']);
+
+// Resolve a (plan, interval) pair to the Stripe line item, or null if invalid.
+function resolvePrice(planKey, interval) {
+  const plan = PLANS[planKey];
+  if (!plan) return null;
+  const iv = INTERVALS.has(interval) ? interval : 'month';
+  return { plan, interval: iv, amount: plan[iv] };
+}
 
 function requireAuth(req, res, next) {
   if (!req.session.userId) return res.redirect('/login');
@@ -131,16 +153,17 @@ function demoModeAllowed() {
 
 router.post('/checkout', requireAuth, async (req, res) => {
   const planKey = (req.body.plan || '').toLowerCase();
-  const plan = PLANS[planKey];
-  if (!plan) return res.redirect('/app/billing');
+  const priced = resolvePrice(planKey, (req.body.interval || 'month').toLowerCase());
+  if (!priced) return res.redirect('/app/billing');
+  const { plan, interval, amount } = priced;
 
   const stripe = getStripe();
 
   // No Stripe configured → only the explicitly-enabled dev/test demo may grant a plan.
   if (!stripe) {
     if (!demoModeAllowed()) {
-      console.warn('[billing] checkout with no Stripe configured and demo mode off — refusing');
-      return res.redirect('/app/billing?billing=error');
+      console.warn('[billing] checkout with no Stripe configured and demo mode off — refusing. Set STRIPE_SECRET_KEY in the host env.');
+      return res.redirect('/app/billing?billing=error_config');
     }
     await setUserPlan(req.session.userId, planKey);
     return res.redirect(`/app/billing?billing=demo&plan=${planKey}`);
@@ -150,8 +173,8 @@ router.post('/checkout', requireAuth, async (req, res) => {
   // client/proxy-controlled and could redirect Stripe to an attacker origin.
   const baseUrl = (process.env.BASE_URL || '').replace(/\/+$/, '');
   if (!baseUrl) {
-    console.error('[billing] BASE_URL not configured — cannot build Stripe redirect URLs');
-    return res.redirect('/app/billing?billing=error');
+    console.error('[billing] BASE_URL not configured — cannot build Stripe redirect URLs. Set BASE_URL (e.g. https://www.hellomaal.com) in the host env.');
+    return res.redirect('/app/billing?billing=error_config');
   }
 
   try {
@@ -163,17 +186,17 @@ router.post('/checkout', requireAuth, async (req, res) => {
         quantity: 1,
         price_data: {
           currency: 'aud',
-          unit_amount: plan.amount,
-          recurring: { interval: 'month' },
+          unit_amount: amount,
+          recurring: { interval },
           product_data: {
-            name: plan.name,
+            name: interval === 'year' ? `${plan.name} (annual)` : plan.name,
             description: plan.blurb,
           },
         },
       }],
       success_url: `${baseUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}&plan=${planKey}`,
       cancel_url: `${baseUrl}/app/billing?billing=cancel`,
-      metadata: { userId: String(req.session.userId), plan: planKey },
+      metadata: { userId: String(req.session.userId), plan: planKey, interval },
     });
     // Save Stripe customer ID for webhook lookups
     if (session.customer) {
@@ -183,7 +206,7 @@ router.post('/checkout', requireAuth, async (req, res) => {
     return res.redirect(303, session.url);
   } catch (err) {
     console.error('Stripe checkout error:', err.message);
-    return res.redirect('/app/billing?billing=error');
+    return res.redirect('/app/billing?billing=error_stripe');
   }
 });
 
@@ -217,16 +240,57 @@ router.get('/success', requireAuth, async (req, res) => {
 
 // ─── POST /billing/downgrade — back to free (demo-friendly) ──────────────────
 
+// Cancels at PERIOD END, not immediately: the user has already paid for the
+// current period, so they keep their paid access until it lapses. Stripe then
+// fires customer.subscription.deleted, and the webhook above flips them to free.
+//
+// Previously this only flipped users.plan and never told Stripe anything, so a
+// customer who "downgraded" lost access instantly and kept being charged.
 router.post('/downgrade', requireAuth, async (req, res) => {
+  const stripe = getStripe();
   try {
-    await setUserPlan(req.session.userId, 'free');
-    res.redirect('/app/billing?billing=downgraded');
+    // No Stripe configured (dev/demo): fall back to the old local-only flip.
+    if (!stripe) {
+      await setUserPlan(req.session.userId, 'free');
+      return res.redirect('/app/billing?billing=downgraded');
+    }
+
+    const { rows } = await pool.query(
+      'SELECT stripe_customer_id FROM users WHERE id = $1',
+      [req.session.userId]
+    );
+    const customerId = rows[0] && rows[0].stripe_customer_id;
+
+    // No Stripe customer on record — nothing to cancel, so just free them.
+    if (!customerId) {
+      await setUserPlan(req.session.userId, 'free');
+      return res.redirect('/app/billing?billing=downgraded');
+    }
+
+    const subs = await stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 10 });
+    if (!subs.data.length) {
+      await setUserPlan(req.session.userId, 'free');
+      return res.redirect('/app/billing?billing=downgraded');
+    }
+
+    await Promise.all(subs.data.map(sub =>
+      stripe.subscriptions.update(sub.id, { cancel_at_period_end: true })
+    ));
+
+    // Deliberately NOT calling setUserPlan here: they keep the plan they paid
+    // for until the period ends. The webhook downgrades them when Stripe says so.
+    console.log(`[billing] Scheduled cancellation at period end for user ${req.session.userId}`);
+    res.redirect('/app/billing?billing=cancel_scheduled');
   } catch (err) {
-    // Never report success on a DB failure — the user would still be on (and
-    // billed for) the paid plan while the UI claims they downgraded.
+    // Never report success on failure — the user would believe they had
+    // cancelled while the subscription kept billing.
     console.error('Downgrade error:', err.message);
     res.redirect('/app/billing?billing=error');
   }
 });
 
 module.exports = router;
+// Named exports for the deterministic price tests. The router stays the default
+// export so `app.use('/billing', require('./routes/billing'))` is unchanged.
+module.exports.PLANS = PLANS;
+module.exports.resolvePrice = resolvePrice;

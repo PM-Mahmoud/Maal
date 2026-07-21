@@ -72,14 +72,37 @@ function OnboardingWizard() {
     monthly_expenses: "",
   });
 
+  const [hydrating, setHydrating] = useState(true);
+
+  // Hydrate EVERY field, not just name and age band. This page previously
+  // prefilled two of ten fields, so a returning user saw their income, super,
+  // investments, cash, HECS and expenses blank on every visit and concluded
+  // Maal had forgotten them. The values were in Postgres the whole time.
   useEffect(() => {
-    fetchProfile().then((data) => {
-      if (data) setS((x) => ({
-        ...x,
-        display_name: data.display_name ?? "",
-        age_band: (data.age_band as State["age_band"]) ?? "30-39",
-      }));
-    });
+    fetchProfile()
+      .then((data) => {
+        if (!data) return;
+        // Money columns arrive as BIGINT strings; blank them rather than
+        // showing "0" so an untouched field still reads as unanswered.
+        const money = (v: unknown) => {
+          const n = Number(v);
+          return Number.isFinite(n) && n > 0 ? String(n) : "";
+        };
+        setS((x) => ({
+          ...x,
+          display_name: data.display_name ?? x.display_name,
+          age_band: (data.age_band as State["age_band"]) ?? x.age_band,
+          risk: (data.risk as State["risk"]) ?? x.risk,
+          annual_income: money(data.annual_income),
+          super_balance: money(data.super_balance),
+          investments_value: money(data.investment_portfolio),
+          cash_balance: money(data.cash_savings),
+          hecs_balance: money(data.hecs_balance),
+          monthly_expenses: money(data.monthly_expenses),
+          retirement_age: data.retirement_age ? String(data.retirement_age) : x.retirement_age,
+        }));
+      })
+      .finally(() => setHydrating(false));
   }, []);
 
   const u = (k: keyof State, v: string) => setS((x) => ({ ...x, [k]: v }));
@@ -121,12 +144,22 @@ function OnboardingWizard() {
       // `onboarded` is deliberately NOT set here — it flips only after every
       // write below succeeds, so a mid-flow failure can't strand the user in
       // an "onboarded" state with missing records.
+      // Save the money figures to the profile columns AS WELL AS the asset
+      // tables below. The asset rows drive the score once populated, but the
+      // profile row is what GET /api/v1/profile returns, so without this the
+      // form comes back blank on the next visit and users think their data was
+      // lost. patchProfile already accepts every one of these columns.
       const prof = await saveProfile({
         display_name: s.display_name,
         age_band: s.age_band,
         risk: s.risk,
         retirement_age: vals.retirement_age,
         monthly_expenses: vals.monthly_expenses,
+        annual_income: vals.annual_income,
+        super_balance: vals.super_balance,
+        investment_portfolio: vals.investments_value,
+        cash_savings: vals.cash_balance,
+        hecs_balance: vals.hecs_balance,
       });
       if (!prof) throw new Error("Couldn't save your profile. Check your connection and try again.");
 
@@ -178,6 +211,16 @@ function OnboardingWizard() {
     } finally {
       setSaving(false);
     }
+  }
+
+  // Wait for hydration before rendering the fields, so a returning user never
+  // sees empty boxes that then fill in (which reads as "my data was lost").
+  if (hydrating) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 md:px-10 py-12">
+        <p className="text-[13px] text-muted-foreground">Loading your details…</p>
+      </div>
+    );
   }
 
   return (
