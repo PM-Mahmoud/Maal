@@ -14,6 +14,7 @@ function safeEqual(a, b) {
 }
 const router = express.Router();
 const { getAllUsers } = require('../db/users');
+const { getRecentFeedback } = require('../db/feedback');
 
 // HTML-escape helper — prevents stored XSS in admin dashboard
 function esc(str) {
@@ -64,22 +65,37 @@ router.post('/admin/login', authLimiter, (req, res) => {
 
 router.get('/admin', requireAdmin, async (req, res) => {
   const users = await getAllUsers();
+  const feedback = await getRecentFeedback(100).catch(() => []);
 
   const total = users.length;
   const verified = users.filter(u => u.email_verified).length;
   const onboarded = users.filter(u => u.completed_onboarding).length;
   const locked = users.filter(u => u.locked_until && new Date(u.locked_until) > new Date()).length;
 
+  const ago = d => {
+    if (!d) return '—';
+    const s = Math.floor((Date.now() - new Date(d)) / 1000);
+    if (s < 60) return `${s}s ago`;
+    if (s < 3600) return `${Math.floor(s/60)}m ago`;
+    if (s < 86400) return `${Math.floor(s/3600)}h ago`;
+    return new Date(d).toLocaleDateString('en-AU', { day:'numeric', month:'short', year:'numeric' });
+  };
+
+  // Feedback + support submissions. `support:` page prefix marks the urgent ones.
+  const feedbackRows = feedback.length ? feedback.map(f => {
+    const isSupport = String(f.page || '').startsWith('support:');
+    const where = String(f.page || '').replace(/^support:/, '') || '—';
+    return `<tr>
+      <td>${isSupport ? '<span class="badge danger">Support</span>' : '<span class="badge creds">Feedback</span>'}</td>
+      <td><span style="color:var(--fg-muted);font-size:0.8rem">${esc(f.email) || 'anonymous'}</span></td>
+      <td>${esc(f.message)}</td>
+      <td style="font-size:0.8rem;color:var(--fg-muted)">${esc(where)}</td>
+      <td style="font-size:0.8rem;color:var(--fg-muted);white-space:nowrap">${ago(f.created_at)}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="5" style="color:var(--fg-muted)">No feedback yet.</td></tr>';
+
   const rows = users.map(u => {
     const isLocked = u.locked_until && new Date(u.locked_until) > new Date();
-    const ago = d => {
-      if (!d) return '—';
-      const s = Math.floor((Date.now() - new Date(d)) / 1000);
-      if (s < 60) return `${s}s ago`;
-      if (s < 3600) return `${Math.floor(s/60)}m ago`;
-      if (s < 86400) return `${Math.floor(s/3600)}h ago`;
-      return new Date(d).toLocaleDateString('en-AU', { day:'numeric', month:'short', year:'numeric' });
-    };
     return `<tr>
       <td>${esc(u.id)}</td>
       <td><strong>${esc(u.name) || '—'}</strong><br><span style="color:var(--fg-muted);font-size:0.8rem">${esc(u.email)}</span></td>
@@ -139,6 +155,12 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   <table>
     <thead><tr><th>#</th><th>User</th><th>Auth</th><th>Email</th><th>Onboarding</th><th>Signed up</th><th>Last login</th><th>Security</th></tr></thead>
     <tbody>${rows}</tbody>
+  </table>
+
+  <div class="section-title" style="margin-top:2.5rem">Feedback &amp; support</div>
+  <table>
+    <thead><tr><th>Type</th><th>From</th><th>Message</th><th>Page</th><th>When</th></tr></thead>
+    <tbody>${feedbackRows}</tbody>
   </table>
 </div></body></html>`);
 });

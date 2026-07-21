@@ -123,6 +123,10 @@ app.get('/health', async (_req, res) => {
       stripeWebhook: !!(process.env.STRIPE_WEBHOOK_SECRET || '').trim(),
       baseUrl: !!(process.env.BASE_URL || '').trim(),
       email: !!(process.env.RESEND_API_KEY || '').trim(),
+      // Sending needs a verified-domain EMAIL_FROM too. Without it Resend falls
+      // back to its sandbox sender, which only delivers to the Resend account
+      // owner — so verification/feedback/report emails silently never arrive.
+      emailFrom: !!(process.env.EMAIL_FROM || '').trim(),
       isaacus: !!(process.env.ISAACUS_API_KEY || '').trim(),
       verifier: require('./services/gateway').hasRole('verifier'),
       exa: !!(process.env.EXA_API_KEY || '').trim(),
