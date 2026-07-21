@@ -224,5 +224,25 @@ test('historical prompt renders the historical figures', () => {
   assert.ok(p.includes('$67,000'));
 });
 
+// ─── CGT reform (royal assent 26 June 2026, applies 1 July 2027) ──────────────
+console.log('\nCGT reform');
+
+test('FY2026-27 keeps the 50% discount but carries the legislated reform block', () => {
+  const set = CONSTANT_SETS['2026-27'];
+  assert.strictEqual(set.cgt.discountRate, 0.5, 'discount still applies through 30 June 2027');
+  const r = set.cgt.reform;
+  assert.ok(r && r.legislated === true, 'reform block present and legislated');
+  assert.strictEqual(r.appliesFrom, '2027-07-01', 'applies from 1 July 2027');
+  assert.strictEqual(r.royalAssent, '2026-06-26', 'royal assent date');
+  assert.ok(Array.isArray(r.sources) && r.sources.length >= 1, 'reform cites sources');
+  assert.ok(/indexation/i.test(r.summary) && /30%/.test(r.summary), 'summary names indexation + 30% minimum rate');
+});
+
+test('current prompt surfaces the legislated CGT change so the advisor cannot miss it', () => {
+  const p = buildConstantsPrompt(D);
+  assert.ok(p.includes('LEGISLATED CHANGE'), 'prompt flags the change');
+  assert.ok(p.includes('2027-07-01'), 'prompt names the start date');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

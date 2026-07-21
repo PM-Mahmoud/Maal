@@ -3,12 +3,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/_authenticated/app/tools")({ component: ToolsPage });
 
 const CALCULATORS = [
-  { to: "/app/super-optimizer", name: "Super Optimizer", cat: "Super", desc: "See how salary sacrificing compounds over your career." },
-  { to: "/app/tax-optimizer", name: "Tax Optimizer", cat: "Tax", desc: "Estimate FY25-26 tax, Medicare, MLS and HECS, then find deductions." },
+  { to: "/app/super-optimizer", name: "Super Optimiser", cat: "Super", desc: "See how salary sacrificing compounds over your career." },
+  { to: "/app/tax-optimizer", name: "Tax Optimiser", cat: "Tax", desc: "Estimate current-FY tax, Medicare, MLS and HECS, then find deductions." },
   { to: "/app/tax-bracket-visualizer", name: "Tax Brackets", cat: "Tax", desc: "Visualise marginal vs effective rates across the stage-3 brackets." },
   { to: "/app/debt-payoff", name: "Debt Payoff", cat: "Debt", desc: "Compare snowball vs avalanche and see your debt-free date." },
   { to: "/app/scenarios-simulator", name: "Scenarios", cat: "Retirement", desc: "Monte Carlo range for your retirement balance to age 60." },
-  { to: "/app/net-worth-flow", name: "Net Worth Flow", cat: "Cashflow", desc: "Monthly cashflow and net-worth composition." },
 ] as const;
 
 const TOOLS = [

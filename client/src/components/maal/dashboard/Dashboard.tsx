@@ -83,11 +83,12 @@ export function Dashboard() {
   const [name, setName] = useState("");
   const [period, setPeriod] = useState<Period>("YTD");
   const [layout, setLayout] = useState<Layout>(defaultLayout);
-  const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [customiseOpen, setCustomiseOpen] = useState(false);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [score, setScore] = useState<MaalScore | null>(null);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [createdAt, setCreatedAt] = useState<string | null>(null);
+  const [monthlyExpenses, setMonthlyExpenses] = useState<number | null>(null);
   const [periodOpen, setPeriodOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const dragId = useRef<string | null>(null);
@@ -108,6 +109,8 @@ export function Dashboard() {
       const prof = profRes.status === "fulfilled" ? profRes.value : null;
       setName(prof?.display_name || u?.user?.email?.split("@")[0] || "");
       setCreatedAt(prof?.created_at ?? null);
+      // BIGINT columns arrive as strings — coerce before arithmetic.
+      setMonthlyExpenses(prof?.monthly_expenses ? Number(prof.monthly_expenses) : null);
       if (portRes.status === "fulfilled") setPortfolio(portRes.value);
     })();
   }, []);
@@ -193,9 +196,9 @@ export function Dashboard() {
             className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-full text-[12px] font-medium bg-[var(--surface)] hover:border-mint/40">
             <FileText className="size-3.5" /> Report
           </Link>
-          <button onClick={() => setCustomizeOpen(true)}
+          <button onClick={() => setCustomiseOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-full text-[12px] font-medium bg-[var(--surface)] hover:border-mint/40">
-            <Settings2 className="size-3.5" /> Customize
+            <Settings2 className="size-3.5" /> Customise
           </button>
           <div className="relative">
             <button
@@ -284,20 +287,20 @@ export function Dashboard() {
                   </button>
                 </div>
               </div>
-              <TileBody kind={t.kind} period={period} portfolio={portfolio} score={score} snapshots={snapshots} createdAt={createdAt} />
+              <TileBody kind={t.kind} period={period} portfolio={portfolio} score={score} snapshots={snapshots} createdAt={createdAt} monthlyExpenses={monthlyExpenses} />
             </div>
           );
         })}
       </div>
 
-      {customizeOpen && (
-        <div role="dialog" aria-label="Customize dashboard"
-          className="fixed inset-0 z-50 bg-black/50 flex justify-end" onClick={() => setCustomizeOpen(false)}>
+      {customiseOpen && (
+        <div role="dialog" aria-label="Customise dashboard"
+          className="fixed inset-0 z-50 bg-black/50 flex justify-end" onClick={() => setCustomiseOpen(false)}>
           <div onClick={(e) => e.stopPropagation()}
             className="w-full max-w-sm h-full bg-background border-l border-border p-6 overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-[16px] font-semibold">Customize tiles</h2>
-              <button onClick={() => setCustomizeOpen(false)} aria-label="Close" className="text-muted-foreground hover:text-foreground">×</button>
+              <h2 className="text-[16px] font-semibold">Customise tiles</h2>
+              <button onClick={() => setCustomiseOpen(false)} aria-label="Close" className="text-muted-foreground hover:text-foreground">×</button>
             </div>
             <p className="text-[12px] text-muted-foreground mb-4">Show or hide tiles. Drag tiles on the dashboard to reorder. Click the maximize icon on a tile to resize.</p>
             <ul className="space-y-1">
@@ -341,7 +344,7 @@ function rangeStartTs(period: Period, createdAt: string | null): number {
   }
 }
 
-function TileBody({ kind, period, portfolio, score, snapshots, createdAt }: { kind: string; period: Period; portfolio: Portfolio | null; score: MaalScore | null; snapshots: Snapshot[]; createdAt: string | null }) {
+function TileBody({ kind, period, portfolio, score, snapshots, createdAt, monthlyExpenses }: { kind: string; period: Period; portfolio: Portfolio | null; score: MaalScore | null; snapshots: Snapshot[]; createdAt: string | null; monthlyExpenses: number | null }) {
   if (kind.startsWith("kpi_")) return <KpiTile kind={kind} portfolio={portfolio} snapshots={snapshots} period={period} createdAt={createdAt} />;
   switch (kind) {
     case "maal_score": return <MaalScoreTile score={score} />;
@@ -355,7 +358,7 @@ function TileBody({ kind, period, portfolio, score, snapshots, createdAt }: { ki
     case "news": return <NewsTile />;
     case "transactions": return <TransactionsTile />;
     case "earnings": return <EarningsTile />;
-    case "runway": return <RunwayTile portfolio={portfolio} />;
+    case "runway": return <RunwayTile portfolio={portfolio} monthlyExpenses={monthlyExpenses} />;
     case "outgoing": return <Placeholder title="No spending data" hint="Connect transactions to see outgoing flow." cta="View transactions" to="/app/transactions" />;
     default: return null;
   }
@@ -816,10 +819,19 @@ function TaxTile({ portfolio }: { portfolio: Portfolio | null }) {
 function MarketTile() {
   const loadIndices = getMarketIndices;
   const [items, setItems] = useState<any[]>([]);
+  const [loaded, setLoaded] = useState(false);
   // Server returns a bare array of { name, symbol, price, changePercent }. Keep
   // only rows that actually resolved a price (Finnhub free tier can't quote some).
-  useEffect(() => { loadIndices().then((r: any) => setItems((Array.isArray(r) ? r : r?.items ?? []).filter((x: any) => x && x.price != null))).catch(() => {}); }, [loadIndices]);
-  const focus = items.find((i) => i.name === "S&P 500") ?? items[0];
+  useEffect(() => {
+    loadIndices()
+      .then((r: any) => setItems((Array.isArray(r) ? r : r?.items ?? []).filter((x: any) => x && x.price != null)))
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+  }, [loadIndices]);
+  const focus = items.find((i) => String(i.name).startsWith("S&P 500")) ?? items[0];
+  if (loaded && !focus) {
+    return <p className="text-[11px] text-muted-foreground">Market data unavailable right now — check back shortly.</p>;
+  }
   return (
     <div>
       {!focus ? <SkeletonRows /> : (
@@ -863,18 +875,23 @@ function NewsTile() {
   );
 }
 
-function RunwayTile({ portfolio }: { portfolio: Portfolio | null }) {
-  // Monthly burn needs spending data we don't derive here yet — show an explicit
-  // unavailable state for burn/months rather than fabricated zeros. Cash on hand
-  // is real portfolio data.
+function RunwayTile({ portfolio, monthlyExpenses }: { portfolio: Portfolio | null; monthlyExpenses: number | null }) {
+  // Runway = cash on hand ÷ monthly burn (the user's monthly expenses from
+  // their profile). Without a burn figure we can't compute months — point the
+  // user at their profile instead of fabricating a number.
+  const cash = portfolio?.cash ?? null;
+  const burn = monthlyExpenses && monthlyExpenses > 0 ? monthlyExpenses : null;
+  const months = cash != null && burn ? cash / burn : null;
   return (
     <div className="text-center py-3">
-      <p className="text-[40px] font-bold tabular-nums">—</p>
+      <p className="text-[40px] font-bold tabular-nums">{months == null ? "—" : months >= 99 ? "99+" : months.toFixed(1)}</p>
       <p className="text-[11px] text-muted-foreground">Months</p>
       <div className="grid grid-cols-2 gap-3 mt-4 text-left">
         <div>
-          <p className="text-[16px] font-semibold tabular-nums">—</p>
-          <p className="text-[10px] text-muted-foreground">Monthly Burn · not available yet</p>
+          <p className="text-[16px] font-semibold tabular-nums">{burn ? formatAUD(burn) : "—"}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {burn ? "Monthly Burn" : <>Monthly Burn · <Link to="/app/onboarding" className="underline">set monthly expenses</Link></>}
+          </p>
         </div>
         <div>
           <p className="text-[16px] font-semibold tabular-nums">{portfolio ? formatAUD(portfolio.cash) : "—"}</p>

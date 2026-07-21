@@ -16,11 +16,26 @@
       "upTo: null represents Infinity (no upper bound) — wrappers convert on load."
     ],
     "incomeTaxBrackets": [
-      { "upTo": 18200, "rate": 0 },
-      { "upTo": 45000, "rate": 0.16 },
-      { "upTo": 135000, "rate": 0.3 },
-      { "upTo": 190000, "rate": 0.37 },
-      { "upTo": null, "rate": 0.45 }
+      {
+        "upTo": 18200,
+        "rate": 0
+      },
+      {
+        "upTo": 45000,
+        "rate": 0.16
+      },
+      {
+        "upTo": 135000,
+        "rate": 0.3
+      },
+      {
+        "upTo": 190000,
+        "rate": 0.37
+      },
+      {
+        "upTo": null,
+        "rate": 0.45
+      }
     ],
     "medicare": {
       "levyRate": 0.02,
@@ -29,10 +44,22 @@
       "phaseInRate": 0.1
     },
     "mlsSinglesTiers": [
-      { "upTo": 101000, "rate": 0 },
-      { "upTo": 118000, "rate": 0.01 },
-      { "upTo": 158000, "rate": 0.0125 },
-      { "upTo": null, "rate": 0.015 }
+      {
+        "upTo": 101000,
+        "rate": 0
+      },
+      {
+        "upTo": 118000,
+        "rate": 0.01
+      },
+      {
+        "upTo": 158000,
+        "rate": 0.0125
+      },
+      {
+        "upTo": null,
+        "rate": 0.015
+      }
     ],
     "hecs": {
       "system": "marginal",
@@ -56,7 +83,10 @@
       "earningsRateInAccumulation": 0.15,
       "earningsRateInPension": 0
     },
-    "cgt": { "discountMinHoldMonths": 12, "discountRate": 0.5 },
+    "cgt": {
+      "discountMinHoldMonths": 12,
+      "discountRate": 0.5
+    },
     "lito": {
       "maxOffset": 700,
       "fullOffsetUpTo": 37500,
@@ -65,7 +95,10 @@
       "phaseOut2Rate": 0.015,
       "phaseOut2End": 66667
     },
-    "asfa": { "comfortableSingle": 595000, "comfortableCouple": 690000 },
+    "asfa": {
+      "comfortableSingle": 595000,
+      "comfortableCouple": 690000
+    },
     "keyDates": {
       "eofy": "June 30",
       "newFY": "July 1",
@@ -78,7 +111,6 @@
       "sgQ4Due": "July 28"
     }
   },
-
   "2026-27": {
     "fy": "2026-27",
     "effectiveFrom": "2026-07-01",
@@ -94,14 +126,30 @@
       "2026-27 Medicare low-income thresholds are indexed retrospectively in the following budget and not yet legislated; the 2025-26 figures are carried forward until the ATO confirms them (the drift-check will flag any gap).",
       "HECS thresholds indexed 2.8% for 2026-27. Sanity: 15c on ($129,717 - $69,528) = $9,028, which is exactly the base of the 17c band; the marginal curve meets 10%-of-total at $186,050. Continuous - verified.",
       "Super concessional cap $32,500 is AWOTE-indexed from 1 July 2026.",
+      "CGT reform (royal assent 26 June 2026): the 50% discount ends for gains accruing on or after 1 July 2027, replaced by CPI cost-base indexation with a 30% minimum rate on real gains for individuals, trusts and partnerships. The 50% discount still applies for all of FY2026-27 and to gains accrued before 1 July 2027 (transitional). Encoded under cgt.reform; the 2027-28 CONSTANT_SET must apply it when that FY entry is human-reviewed.",
       "upTo: null represents Infinity (no upper bound) — wrappers convert on load."
     ],
     "incomeTaxBrackets": [
-      { "upTo": 18200, "rate": 0 },
-      { "upTo": 45000, "rate": 0.15 },
-      { "upTo": 135000, "rate": 0.3 },
-      { "upTo": 190000, "rate": 0.37 },
-      { "upTo": null, "rate": 0.45 }
+      {
+        "upTo": 18200,
+        "rate": 0
+      },
+      {
+        "upTo": 45000,
+        "rate": 0.15
+      },
+      {
+        "upTo": 135000,
+        "rate": 0.3
+      },
+      {
+        "upTo": 190000,
+        "rate": 0.37
+      },
+      {
+        "upTo": null,
+        "rate": 0.45
+      }
     ],
     "medicare": {
       "levyRate": 0.02,
@@ -110,10 +158,22 @@
       "phaseInRate": 0.1
     },
     "mlsSinglesTiers": [
-      { "upTo": 105000, "rate": 0 },
-      { "upTo": 123000, "rate": 0.01 },
-      { "upTo": 164000, "rate": 0.0125 },
-      { "upTo": null, "rate": 0.015 }
+      {
+        "upTo": 105000,
+        "rate": 0
+      },
+      {
+        "upTo": 123000,
+        "rate": 0.01
+      },
+      {
+        "upTo": 164000,
+        "rate": 0.0125
+      },
+      {
+        "upTo": null,
+        "rate": 0.015
+      }
     ],
     "hecs": {
       "system": "marginal",
@@ -138,7 +198,20 @@
       "earningsRateInAccumulation": 0.15,
       "earningsRateInPension": 0
     },
-    "cgt": { "discountMinHoldMonths": 12, "discountRate": 0.5 },
+    "cgt": {
+      "discountMinHoldMonths": 12,
+      "discountRate": 0.5,
+      "reform": {
+        "legislated": true,
+        "royalAssent": "2026-06-26",
+        "appliesFrom": "2027-07-01",
+        "summary": "From 1 July 2027 the 50% CGT discount is replaced by CPI cost-base indexation plus a 30% minimum rate on real gains (individuals, trusts, partnerships). Gains accrued before 1 July 2027 keep the 50% discount under transitional rules; new-build residential investors may choose either method.",
+        "sources": [
+          "https://budget.gov.au/content/04-tax-reform.htm",
+          "https://www.ato.gov.au/individuals-and-families/investments-and-assets/capital-gains-tax/cgt-discount"
+        ]
+      }
+    },
     "lito": {
       "maxOffset": 700,
       "fullOffsetUpTo": 37500,
@@ -147,7 +220,10 @@
       "phaseOut2Rate": 0.015,
       "phaseOut2End": 66667
     },
-    "asfa": { "comfortableSingle": 595000, "comfortableCouple": 690000 },
+    "asfa": {
+      "comfortableSingle": 595000,
+      "comfortableCouple": 690000
+    },
     "keyDates": {
       "eofy": "June 30",
       "newFY": "July 1",

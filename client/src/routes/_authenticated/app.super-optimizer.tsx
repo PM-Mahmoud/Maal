@@ -27,7 +27,7 @@ import { formatAUD } from "@/lib/score";
 import { getConstants, combinedMarginalRate } from "@/lib/au-constants";
 
 export const Route = createFileRoute("/_authenticated/app/super-optimizer")({
-  component: SuperOptimizer,
+  component: SuperOptimiser,
 });
 
 /* -------------------------------------------------------------------------- */
@@ -110,7 +110,7 @@ function calculateProjections(
 /*  Component                                                                  */
 /* -------------------------------------------------------------------------- */
 
-function SuperOptimizer() {
+function SuperOptimiser() {
   const [age, setAge] = useState(35);
   const [balance, setBalance] = useState(120_000);
   const [salary, setSalary] = useState(180_000);
@@ -145,7 +145,7 @@ function SuperOptimizer() {
           <div className="flex items-center gap-3">
             <span className="section-number">🧮</span>
             <span className="text-xs font-medium uppercase tracking-widest text-mint">
-              Super Optimizer
+              Super Optimiser
             </span>
           </div>
           <h2 className="mt-3 tracking-display text-3xl sm:text-4xl">

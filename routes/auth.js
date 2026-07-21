@@ -69,7 +69,7 @@ async function sendOtpEmail(email, name, otp) {
 // ─── Page: /login ─────────────────────────────────────────────────────────────
 
 router.get('/login', (req, res) => {
-  if (req.session.userId) return res.redirect('/dashboard');
+  if (req.session.userId) return res.redirect('/app');
   res.render('auth-login', { layout: false, error: null, email: '' });
 });
 
@@ -174,7 +174,7 @@ router.post('/login', authLimiter,
 // ─── Page: /signup ────────────────────────────────────────────────────────────
 
 router.get('/signup', (req, res) => {
-  if (req.session.userId) return res.redirect('/dashboard');
+  if (req.session.userId) return res.redirect('/app');
   res.render('auth-signup', { layout: false, error: null, email: '', name: '' });
 });
 
@@ -337,7 +337,9 @@ router.post('/verify-email', otpLimiter, async (req, res) => {
     req.session.emailVerified = true;
     req.session.save((err) => {
       if (err) console.error('[verify-otp] Session save error:', err.message);
-      res.redirect(isPasswordlessLogin ? '/dashboard' : '/onboarding');
+      // React app owns both destinations now: the EJS /dashboard is retired and
+      // the EJS /onboarding wizard is legacy — new users get the React flow.
+      res.redirect(isPasswordlessLogin ? '/app' : '/app/onboarding');
     });
   });
 });

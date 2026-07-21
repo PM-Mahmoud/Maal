@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/api";
+import { supabase, handleUnauthenticated } from "@/integrations/api";
 import { toast } from "sonner";
 import { formatAUD } from "@/lib/score";
 import { INSTITUTIONS } from "@/lib/institutions";
@@ -396,7 +396,7 @@ function AddPanel({ onPick }: { onPick: (c: Cat) => void }) {
           <button
             onClick={() => setSide("asset")}
             className={`px-2.5 py-1 rounded-full transition-colors ${
-              side === "asset" ? "bg-[color:var(--accent)] text-background" : "text-muted-foreground hover:text-foreground"
+              side === "asset" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Assets
@@ -404,7 +404,7 @@ function AddPanel({ onPick }: { onPick: (c: Cat) => void }) {
           <button
             onClick={() => setSide("liability")}
             className={`px-2.5 py-1 rounded-full transition-colors ${
-              side === "liability" ? "bg-[color:var(--accent)] text-background" : "text-muted-foreground hover:text-foreground"
+              side === "liability" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Liabilities
@@ -455,14 +455,18 @@ const CONNECT_BANKS: string[] = [
 
 function ConnectPanel() {
   const [status, setStatus] = useState<{ connected: boolean; live: boolean } | null>(null);
+  const [statusFailed, setStatusFailed] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/v1/basiq/status", { credentials: "include" })
-      .then(r => r.ok ? r.json() : null)
-      .then(j => j && setStatus(j))
-      .catch(() => {});
+      .then(r => {
+        if (r.status === 401) handleUnauthenticated();
+        return r.ok ? r.json() : null;
+      })
+      .then(j => (j ? setStatus(j) : setStatusFailed(true)))
+      .catch(() => setStatusFailed(true));
   }, []);
 
   async function handleSync() {
@@ -546,7 +550,11 @@ function ConnectPanel() {
               );
             })}
           </div>
-          <p className="text-[11px] text-muted-foreground">Open Banking not configured — set BASIQ_API_KEY in Render to enable.</p>
+          <p className="text-[11px] text-muted-foreground">
+            {status === null
+              ? (statusFailed ? "Couldn't check Open Banking status — refresh to try again." : "Checking Open Banking status…")
+              : "Open Banking connections are coming soon."}
+          </p>
         </>
       )}
 

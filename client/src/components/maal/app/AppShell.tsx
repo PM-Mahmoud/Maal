@@ -33,12 +33,11 @@ const PORTFOLIO: Item[] = [
 ];
 
 const TOOLS: Item[] = [
-  { to: "/app/super-optimizer", label: "Super Optimizer", icon: PiggyBank },
-  { to: "/app/tax-optimizer", label: "Tax Optimizer", icon: Receipt },
+  { to: "/app/super-optimizer", label: "Super Optimiser", icon: PiggyBank },
+  { to: "/app/tax-optimizer", label: "Tax Optimiser", icon: Receipt },
   { to: "/app/tax-bracket-visualizer", label: "Tax Brackets", icon: Calculator },
   { to: "/app/debt-payoff", label: "Debt Payoff", icon: TrendingDown },
   { to: "/app/scenarios-simulator", label: "Scenarios", icon: Dices },
-  { to: "/app/net-worth-flow", label: "Net Worth Flow", icon: BarChart3 },
 ];
 
 const BOTTOM: { label: string; href: string; icon: any }[] = [

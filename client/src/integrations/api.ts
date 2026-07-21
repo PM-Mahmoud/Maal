@@ -28,6 +28,20 @@ function notifyListeners(event: string) {
   _authListeners.forEach((fn) => fn(event, _session));
 }
 
+// When the server session dies (expiry, restart, logout elsewhere) the cached
+// _session goes stale: pages half-render and every API call surfaces a raw
+// "Not authenticated" error. Centralise 401 handling — drop the cache and send
+// the user to /auth for a clean re-login instead.
+let _redirecting = false;
+export function handleUnauthenticated() {
+  _session = null;
+  notifyListeners("SIGNED_OUT");
+  if (!_redirecting && window.location.pathname.startsWith("/app")) {
+    _redirecting = true;
+    window.location.assign("/auth");
+  }
+}
+
 // ── Auth ───────────────────────────────────────────────────────────────────
 
 export const supabaseAuth = {
@@ -183,6 +197,7 @@ class QueryBuilder<T = Record<string, unknown>> {
       });
       const json = await r.json();
       if (!r.ok) {
+        if (r.status === 401) handleUnauthenticated();
         return { data: this._single ? null : [], error: { message: json.error || "Request failed" } } as QueryResult<T> | ManyResult<T>;
       }
       return { data: json, error: null };

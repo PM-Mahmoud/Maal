@@ -60,6 +60,14 @@ export interface SuperConstants {
 export interface CgtConstants {
   discountMinHoldMonths: number;
   discountRate: number;
+  /** Legislated future change (e.g. the 2026 reform ending the 50% discount from 1 July 2027). */
+  reform?: {
+    legislated: boolean;
+    royalAssent: string;
+    appliesFrom: string;
+    summary: string;
+    sources: string[];
+  };
 }
 
 export interface LitoConstants {

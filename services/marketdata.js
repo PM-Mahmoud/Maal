@@ -117,21 +117,17 @@ function normalizeNews(n) {
 }
 
 // ─── Global indices ───────────────────────────────────────────────────────────
-// Major world indices with Finnhub symbols, display names, and regions.
-// Cached for 5 minutes — indices update continuously during market hours.
+// Market snapshot rows. Finnhub's free tier cannot quote raw index symbols
+// (^GSPC, ^AXJO, … return no data), so we quote liquid US-listed ETF proxies
+// instead and label each row with the market it tracks. Cached for 5 minutes.
 const GLOBAL_INDICES = [
-  { symbol: '^AXJO',    name: 'ASX 200',         region: 'AU',  exchange: 'ASX' },
-  { symbol: '^GSPC',    name: 'S&P 500',          region: 'US',  exchange: 'NYSE' },
-  { symbol: '^IXIC',    name: 'NASDAQ Composite', region: 'US',  exchange: 'NASDAQ' },
-  { symbol: '^DJI',     name: 'Dow Jones',        region: 'US',  exchange: 'NYSE' },
-  { symbol: '^FTSE',    name: 'FTSE 100',         region: 'UK',  exchange: 'LSE' },
-  { symbol: '^GDAXI',   name: 'DAX',              region: 'DE',  exchange: 'XETRA' },
-  { symbol: '^FCHI',    name: 'CAC 40',           region: 'FR',  exchange: 'Euronext' },
-  { symbol: '^N225',    name: 'Nikkei 225',       region: 'JP',  exchange: 'TSE' },
-  { symbol: '^HSI',     name: 'Hang Seng',        region: 'HK',  exchange: 'HKEX' },
-  { symbol: '^STOXX50E',name: 'Euro Stoxx 50',    region: 'EU',  exchange: 'Euronext' },
-  { symbol: '^KS11',    name: 'KOSPI',            region: 'KR',  exchange: 'KRX' },
-  { symbol: '^BSESN',   name: 'Sensex',           region: 'IN',  exchange: 'BSE' },
+  { symbol: 'EWA',  name: 'Australia (EWA)',      region: 'AU', exchange: 'NYSE Arca' },
+  { symbol: 'SPY',  name: 'S&P 500 (SPY)',        region: 'US', exchange: 'NYSE Arca' },
+  { symbol: 'QQQ',  name: 'Nasdaq 100 (QQQ)',     region: 'US', exchange: 'NASDAQ' },
+  { symbol: 'DIA',  name: 'Dow Jones (DIA)',      region: 'US', exchange: 'NYSE Arca' },
+  { symbol: 'VGK',  name: 'Europe (VGK)',         region: 'EU', exchange: 'NYSE Arca' },
+  { symbol: 'EWJ',  name: 'Japan (EWJ)',          region: 'JP', exchange: 'NYSE Arca' },
+  { symbol: 'VT',   name: 'World (VT)',           region: 'Global', exchange: 'NYSE Arca' },
 ];
 
 // Fetch live quotes for all major global indices.

@@ -320,7 +320,7 @@ function TransactionsPage() {
             <p className="text-[11px] text-muted-foreground">Add a single transaction by hand</p>
           </button>
 
-          <p className="text-center text-[11px] text-muted-foreground mt-4">Having issues? <a href="mailto:support@maal.app" className="text-[var(--mint)] underline">Contact support</a>.</p>
+          <p className="text-center text-[11px] text-muted-foreground mt-4">Having issues? <a href="/contact" className="text-[var(--mint)] underline">Contact support</a>.</p>
 
           <div className="mt-5 pt-4 border-t border-dashed border-border flex items-start gap-2">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-0.5 shrink-0 text-muted-foreground"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
