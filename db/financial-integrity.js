@@ -67,7 +67,21 @@ async function recordCalculation(userId, {
   }
 }
 
-async function syncFindings(userId, findings, evaluatedCheckCodes) {
+function countsFor(findings) {
+  const counts = { error: 0, warning: 0, info: 0 };
+  for (const item of findings) {
+    if (Object.prototype.hasOwnProperty.call(counts, item.severity)) counts[item.severity]++;
+  }
+  return counts;
+}
+
+function statusForCounts(counts) {
+  if (counts.error > 0) return 'critical';
+  if (counts.warning > 0) return 'attention';
+  return 'healthy';
+}
+
+async function syncFindings(userId, findings, evaluatedCheckCodes, options = {}) {
   const checkCodes = [...new Set(evaluatedCheckCodes || findings.map((item) => item.check_code))];
   if (!checkCodes.length) throw new Error('syncFindings requires the evaluated check codes');
 
@@ -118,8 +132,37 @@ async function syncFindings(userId, findings, evaluatedCheckCodes) {
           )`,
       [userId, checkCodes, currentCodes, currentTypes, currentKeys]
     );
+    // Derive the run status from active persisted findings, not merely detected
+    // findings. This keeps a deliberately ignored issue from producing a
+    // "critical" health result with an empty active-findings list.
+    const activeResult = await client.query(
+      `SELECT severity, COUNT(*)::int AS count
+         FROM data_quality_findings
+        WHERE user_id = $1 AND status = 'open'
+        GROUP BY severity`,
+      [userId]
+    );
+    const counts = { error: 0, warning: 0, info: 0 };
+    for (const row of activeResult.rows) {
+      if (Object.prototype.hasOwnProperty.call(counts, row.severity)) {
+        counts[row.severity] = Number(row.count) || 0;
+      }
+    }
+    const coverage = options.coverage || {};
+    const isComplete = Object.values(coverage).every((value) => value === 'complete');
+    const status = isComplete ? statusForCounts(counts) : 'incomplete';
+    await client.query(
+      `INSERT INTO data_quality_runs
+         (user_id, trigger, status, error_count, warning_count, info_count, coverage, message)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)`,
+      [
+        userId, options.trigger || 'manual', status,
+        counts.error, counts.warning, counts.info,
+        JSON.stringify(coverage), options.message || null,
+      ]
+    );
     await client.query('COMMIT');
-    return findings.length;
+    return { findings: findings.length, counts, status };
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -128,4 +171,54 @@ async function syncFindings(userId, findings, evaluatedCheckCodes) {
   }
 }
 
-module.exports = { appendRawRecord, recordCalculation, syncFindings };
+async function getDataHealth(userId) {
+  const [runResult, findingResult] = await Promise.all([
+    pool.query(
+      `SELECT status, error_count, warning_count, info_count, trigger,
+              coverage, message, checked_at
+         FROM data_quality_runs
+        WHERE user_id = $1
+        ORDER BY checked_at DESC, id DESC
+        LIMIT 1`,
+      [userId]
+    ),
+    pool.query(
+      `SELECT id, check_code, entity_type, entity_key, severity, status,
+              summary, details, first_seen_at, last_seen_at
+         FROM data_quality_findings
+        WHERE user_id = $1 AND status = 'open'
+        ORDER BY
+          CASE severity WHEN 'error' THEN 1 WHEN 'warning' THEN 2 ELSE 3 END,
+          last_seen_at DESC`,
+      [userId]
+    ),
+  ]);
+  const run = runResult.rows[0] || null;
+  return {
+    status: run?.status || 'not_checked',
+    counts: run ? {
+      error: Number(run.error_count) || 0,
+      warning: Number(run.warning_count) || 0,
+      info: Number(run.info_count) || 0,
+    } : { error: 0, warning: 0, info: 0 },
+    trigger: run?.trigger || null,
+    coverage: run?.coverage || {},
+    message: run?.message || null,
+    checked_at: run?.checked_at || null,
+    findings: findingResult.rows,
+  };
+}
+
+async function recordDataQualityFailure(userId, { trigger = 'unknown', message, coverage = {} } = {}) {
+  await pool.query(
+    `INSERT INTO data_quality_runs
+       (user_id, trigger, status, coverage, message)
+     VALUES ($1, $2, 'failed', $3::jsonb, $4)`,
+    [userId, trigger, JSON.stringify(coverage), String(message || 'Quality check failed').slice(0, 500)]
+  );
+}
+
+module.exports = {
+  appendRawRecord, recordCalculation, syncFindings, getDataHealth, recordDataQualityFailure,
+  countsFor, statusForCounts,
+};

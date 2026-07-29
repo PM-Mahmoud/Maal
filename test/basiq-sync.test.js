@@ -8,6 +8,10 @@
 const assert = require('assert');
 const { mapBasiqAccount, mapBasiqTransaction, shapeBasiqAssetRow } = require('../lib/basiq-mapping');
 const { classifyAccountType } = require('../lib/connected');
+const {
+  providerRecordKey, rawAccountProjection, rawTransactionProjection,
+  invalidEntityKeys, createBasiqSyncService,
+} = require('../services/basiq-sync');
 
 let passed = 0;
 let failed = 0;
@@ -198,7 +202,117 @@ test('a negative-balance unclassified account still routes to debt (classifyAcco
   assert.strictEqual(bucket, 'debt');
 });
 
+console.log('\nraw import quality boundary');
+
+test('raw projections preserve invalid provider values for validation', () => {
+  const account = rawAccountProjection({ id: 'a1', balance: 'garbage' }, '2026-07-30T00:00:00Z');
+  const transaction = rawTransactionProjection({ id: 't1', amount: null, postDate: '2026-02-30' });
+  assert.strictEqual(account.balance, 'garbage');
+  assert.strictEqual(transaction.amount, null);
+  assert.strictEqual(transaction.post_date, '2026-02-30');
+});
+
+test('only error-level entities are quarantined', () => {
+  const invalid = invalidEntityKeys([
+    { entity_type: 'transaction', entity_key: 'bad', severity: 'error' },
+    { entity_type: 'transaction', entity_key: 'future', severity: 'warning' },
+    { entity_type: 'account', entity_key: 'other', severity: 'error' },
+  ], 'transaction');
+  assert.deepStrictEqual([...invalid], ['bad']);
+});
+
+test('missing provider IDs receive distinct deterministic evidence keys', () => {
+  const row = { balance: 'bad' };
+  assert.strictEqual(providerRecordKey(row, 'account', 0), providerRecordKey(row, 'account', 0));
+  assert.notStrictEqual(providerRecordKey(row, 'account', 0), providerRecordKey(row, 'account', 1));
+});
+
 (async () => {
+  await testAsync('shared importer preserves raw rows, quarantines invalid data, and runs quality once', async () => {
+    const rawSaved = [];
+    const normalisedAccounts = [];
+    let quarantinedReferences;
+    let normalisedTransactions;
+    let qualityOptions;
+    const service = createBasiqSyncService({
+      provider: {
+        getAccounts: async () => [
+          { id: 'a-good', name: 'Everyday', class: { type: 'transaction' }, balance: '100' },
+          { id: 'a-bad', name: 'Broken', class: { type: 'transaction' }, balance: 'not-money' },
+        ],
+        getTransactions: async () => [
+          { id: 't-good', amount: '-10', postDate: '2026-07-01', description: 'Coffee' },
+          { id: 't-bad', amount: null, postDate: '2026-07-02', description: 'Broken' },
+        ],
+      },
+      findUser: async () => ({ basiq_user_id: 'provider-user' }),
+      replaceAccounts: async (_userId, rows, quarantined) => {
+        normalisedAccounts.push(...rows);
+        quarantinedReferences = quarantined;
+      },
+      transactions: {
+        upsertBasiqTransactions: async (_userId, rows) => {
+          normalisedTransactions = rows;
+          return rows.length;
+        },
+      },
+      integrity: {
+        appendRawRecord: async (_userId, row) => rawSaved.push(row),
+      },
+      quality: {
+        runDataQualityChecks: async (_userId, options) => {
+          qualityOptions = options;
+          return { status: 'critical' };
+        },
+        recordDataQualityFailure: async () => null,
+      },
+      classify: () => 'cash',
+    });
+
+    const result = await service.sync(77);
+    assert.strictEqual(rawSaved.length, 4, 'all raw evidence is retained, including quarantined rows');
+    assert.strictEqual(normalisedAccounts.length, 1);
+    assert.deepStrictEqual(quarantinedReferences, ['basiq:a-bad']);
+    assert.deepStrictEqual(normalisedTransactions.map((row) => row.id), ['t-good']);
+    assert.strictEqual(result.accounts, 1);
+    assert.strictEqual(result.transactions, 1);
+    assert.deepStrictEqual(result.coverage, { accounts: 'complete', transactions: 'complete' });
+    assert.deepStrictEqual(
+      qualityOptions.additionalFindings.map((item) => item.check_code).sort(),
+      ['source.basiq.account.invalid_balance', 'source.basiq.transaction.invalid_amount']
+    );
+  });
+
+  await testAsync('transaction persistence failure is reported as precise incomplete coverage', async () => {
+    let qualityOptions;
+    const service = createBasiqSyncService({
+      provider: {
+        getAccounts: async () => [],
+        getTransactions: async () => [
+          { id: 't1', amount: 10, postDate: '2026-07-01' },
+        ],
+      },
+      findUser: async () => ({ basiq_user_id: 'provider-user' }),
+      replaceAccounts: async () => null,
+      transactions: {
+        upsertBasiqTransactions: async () => { throw new Error('write failed'); },
+      },
+      integrity: { appendRawRecord: async () => null },
+      quality: {
+        runDataQualityChecks: async (_userId, options) => {
+          qualityOptions = options;
+          return { status: 'incomplete' };
+        },
+        recordDataQualityFailure: async () => null,
+      },
+      classify: () => 'cash',
+    });
+    const result = await service.sync(78);
+    assert.strictEqual(result.transactions, 0);
+    assert.deepStrictEqual(result.coverage, { accounts: 'complete', transactions: 'failed' });
+    assert.match(qualityOptions.message, /Transaction persistence failed/);
+  });
+
   // ─── basiqFetch error handling (mocked fetch, no network) ───
   console.log('\nbasiqFetch error handling');
 

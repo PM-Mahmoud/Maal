@@ -372,6 +372,27 @@ async function deleteAssetsBySource(table, userId, source) {
   await pool.query(`DELETE FROM ${table} WHERE user_id = $1 AND source = $2`, [userId, source]);
 }
 
+// Projects every Basiq-owned financial account into the common shape consumed
+// by the integrity checker. Values remain in their stored financial meaning;
+// debt balances are positive liabilities, which is valid for this check.
+async function listBasiqAccountsForQuality(userId) {
+  const { rows } = await pool.query(
+    `SELECT 'cash:' || id AS id, account_reference, balance, source, updated_at
+       FROM cash_accounts WHERE user_id = $1 AND source = 'basiq'
+     UNION ALL
+     SELECT 'investment:' || id, account_reference, value AS balance, source, updated_at
+       FROM investments WHERE user_id = $1 AND source = 'basiq'
+     UNION ALL
+     SELECT 'debt:' || id, account_reference, balance, source, updated_at
+       FROM debts WHERE user_id = $1 AND source = 'basiq'
+     UNION ALL
+     SELECT 'super:' || id, account_reference, balance, source, updated_at
+       FROM super_accounts WHERE user_id = $1 AND source = 'basiq'`,
+    [userId]
+  );
+  return rows;
+}
+
 // ─── Aggregate summary ──────────────────────────────────────────────────────
 
 // Pure function: sums raw rows from all 7 tables into total figures. No I/O —
@@ -446,5 +467,6 @@ module.exports = {
   listIncomes, getIncome, createIncome, updateIncome, deleteIncome,
   listOtherAssets, getOtherAsset, createOtherAsset, updateOtherAsset, deleteOtherAsset,
   deleteAssetsBySource,
+  listBasiqAccountsForQuality,
   summarizeAssets, getAssetSummary, mergeAssetSummaryIntoProfile,
 };

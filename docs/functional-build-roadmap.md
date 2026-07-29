@@ -9,7 +9,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 
 - [x] Build 1.1 — Add append-only raw source records, calculation audit records,
   persisted data-quality findings, and deterministic quality checks.
-- [ ] Build 1.2 — Run quality checks after imports and expose a user-scoped
+- [x] Build 1.2 — Run quality checks after imports and expose a user-scoped
   health summary API.
 - [ ] Build 1.3 — Add reconciliation between provider balances and calculated
   transaction balances.
@@ -78,4 +78,5 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 
 | Build | Status | Verification | Commit |
 |---|---|---|---|
-| 1.1 | Built 2026-07-30 | `node test/data-quality.test.js`; `npm run test:integrity-db`; `npm test` | This commit |
+| 1.1 | Built 2026-07-30 | `node test/data-quality.test.js`; `npm run test:integrity-db`; `npm test` | `c62667b` |
+| 1.2 | Built 2026-07-30 | focused data-quality/import tests; `npm run test:integrity-db`; `npm test` | This commit |

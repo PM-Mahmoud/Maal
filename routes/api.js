@@ -394,48 +394,37 @@ router.get('/v1/basiq/status', async (req, res) => {
   } catch { res.json({ connected: false, live: false }); }
 });
 
+// Latest persisted integrity result. This route is deliberately registered
+// before the generic /v1/:table handler and is always scoped to the session.
+router.get('/v1/data-health', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const quality = require('../services/data-quality');
+    res.json(await quality.getDataHealth(req.session.userId));
+  } catch (error) {
+    console.error('/api/v1/data-health error:', error.message);
+    res.status(500).json({ error: 'Could not load financial data health.' });
+  }
+});
+
 // POST /api/v1/basiq/sync — trigger account + transaction sync, return JSON
 router.post('/v1/basiq/sync', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
-    const basiq = require('../services/basiq');
-    const { findUserById } = require('../db/users');
-    const { addAccount, deleteAccount, getAccountsByUserId } = require('../db/linked_accounts');
-    const { upsertBasiqTransactions } = require('../db/transactions');
-    const user = await findUserById(req.session.userId);
-    if (!user.basiq_user_id) return res.status(400).json({ error: 'No Basiq account linked. Visit /basiq/connect first.' });
-    const accounts = await basiq.getAccounts(user.basiq_user_id);
-    const existing = await getAccountsByUserId(req.session.userId);
-    for (const acc of existing) {
-      if (acc.account_reference && String(acc.account_reference).startsWith('basiq:')) {
-        await deleteAccount(acc.id, req.session.userId);
-      }
-    }
-    for (const acc of accounts) {
-      await addAccount(req.session.userId, {
-        institution_name: (acc.institution || acc.name || 'Bank account').replace('AU', ''),
-        institution_type: acc.class?.type || 'bank',
-        account_reference: 'basiq:' + acc.id,
-        balance: Math.round(Number(acc.balance) || 0),
-      });
-    }
-    // Mirror to cash_accounts so dashboard numbers pick them up
-    await pool.query(`DELETE FROM cash_accounts WHERE user_id = $1 AND source = 'basiq'`, [req.session.userId]);
-    for (const acc of accounts) {
-      await pool.query(
-        `INSERT INTO cash_accounts (user_id, label, institution, balance, source, account_reference)
-         VALUES ($1, $2, $3, $4, 'basiq', $5)
-         ON CONFLICT (account_reference) DO UPDATE SET balance = EXCLUDED.balance, updated_at = NOW()`,
-        [req.session.userId, acc.name || 'Bank account', (acc.institution || '').replace('AU', ''), Math.round(Number(acc.balance) || 0), 'basiq:' + acc.id]
-      );
-    }
-    try {
-      const txns = await basiq.getTransactions(user.basiq_user_id, 100);
-      await upsertBasiqTransactions(req.session.userId, txns);
-    } catch (e) { console.error('Basiq txn sync failed:', e.message); }
-    res.json({ ok: true, accounts: accounts.length });
+    const { syncBasiqData } = require('../services/basiq-sync');
+    res.json({ ok: true, ...(await syncBasiqData(req.session.userId)) });
   } catch (err) {
     console.error('basiq sync error:', err.message);
+    try {
+      const quality = require('../services/data-quality');
+      await quality.recordDataQualityFailure(req.session.userId, {
+        trigger: 'basiq_sync',
+        coverage: { accounts: 'failed', transactions: 'not_run' },
+        message: err.message,
+      });
+    } catch (qualityError) {
+      console.error('Could not record Basiq data-quality failure:', qualityError.message);
+    }
     res.status(500).json({ error: 'Sync failed. Please try again.' });
   }
 });
@@ -1069,6 +1058,67 @@ router.get('/v1/transaction-categories', (req, res) => {
 // GET /v1/transactions — transactions with their category. Rows without a stored
 // category get a best-effort auto-category for DISPLAY only (not persisted).
 // Registered before the generic GET /v1/:table so it wins for this table.
+router.post('/v1/transactions', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  let row;
+  try {
+    const { normalizeImportedTransaction } = require('../lib/transaction-import');
+    row = normalizeImportedTransaction(
+      req.body?.data && typeof req.body.data === 'object' ? req.body.data : req.body
+    );
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+
+  let client;
+  try {
+    client = await pool.connect();
+    const { payloadHash } = require('../lib/data-quality');
+    const hash = payloadHash(row);
+    await client.query('BEGIN');
+    const inserted = await client.query(
+      `INSERT INTO transactions (user_id, description, amount, status, post_date)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [req.session.userId, row.description, row.amount, row.status, row.post_date]
+    );
+    await client.query(
+      `INSERT INTO raw_financial_records
+         (user_id, source, entity_type, source_record_id, payload, payload_hash)
+       VALUES ($1, 'manual_import', 'transaction', $2, $3::jsonb, $4)
+       ON CONFLICT (user_id, source, entity_type, source_record_id, payload_hash)
+       DO NOTHING`,
+      [req.session.userId, `request:${hash}`, JSON.stringify(row), hash]
+    );
+    await client.query('COMMIT');
+
+    try {
+      const quality = require('../services/data-quality');
+      await quality.runDataQualityChecks(req.session.userId, {
+        trigger: 'transaction_import',
+        coverage: { accounts: 'complete', transactions: 'complete' },
+      });
+    } catch (qualityError) {
+      console.error('Post-transaction-import quality check failed:', qualityError.message);
+      try {
+        await require('../services/data-quality').recordDataQualityFailure(req.session.userId, {
+          trigger: 'transaction_import',
+          coverage: { accounts: 'complete', transactions: 'failed' },
+          message: qualityError.message,
+        });
+      } catch (recordError) {
+        console.error('Could not record transaction-import quality failure:', recordError.message);
+      }
+    }
+    return res.json(inserted.rows[0]);
+  } catch (error) {
+    if (client) await client.query('ROLLBACK').catch(() => {});
+    console.error('/api/v1/transactions POST error:', error.message);
+    return res.status(500).json({ error: 'Could not import transaction' });
+  } finally {
+    if (client) client.release();
+  }
+});
+
 router.get('/v1/transactions', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {

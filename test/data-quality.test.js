@@ -55,9 +55,18 @@ test('blank and null financial values are invalid, not silently treated as zero'
 
 test('production Basiq accounts receive connected-account freshness checks', () => {
   const findings = checkAccounts([
-    { id: 1, source: 'basiq', balance: 10, updated_at: null },
+    { id: 1, source: 'basiq', account_reference: 'basiq:1', balance: 10, updated_at: null },
   ], { now: '2026-07-30T00:00:00Z' });
   assert.equal(findings[0].check_code, 'account.missing_freshness');
+});
+
+test('provider rows without stable identifiers are rejected', () => {
+  assert.equal(checkAccounts([
+    { source: 'basiq', balance: 10, updated_at: '2026-07-30' },
+  ], { now: '2026-07-30T00:00:00Z' })[0].check_code, 'account.missing_reference');
+  assert.equal(checkTransactions([
+    { source: 'basiq', amount: 10, post_date: '2026-07-30' },
+  ], { now: '2026-07-30T00:00:00Z' })[0].check_code, 'transaction.missing_reference');
 });
 
 test('impossible posting dates are rejected instead of normalised by JavaScript', () => {

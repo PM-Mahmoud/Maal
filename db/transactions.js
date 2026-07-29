@@ -5,23 +5,33 @@ const { pool } = require('./auth');
 const { mapBasiqTransaction } = require('../lib/basiq-mapping');
 
 async function upsertBasiqTransactions(userId, txns) {
+  const client = await pool.connect();
   let saved = 0;
-  for (const raw of txns) {
-    const t = mapBasiqTransaction(raw);
-    if (!t) continue;
-    await pool.query(
-      `INSERT INTO transactions (user_id, basiq_id, description, amount, status, post_date)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (basiq_id) DO UPDATE
-         SET description = EXCLUDED.description,
-             amount = EXCLUDED.amount,
-             status = EXCLUDED.status,
-             post_date = EXCLUDED.post_date`,
-      [userId, t.basiq_id, t.description, t.amount, t.status, t.post_date]
-    );
-    saved++;
+  try {
+    await client.query('BEGIN');
+    for (const raw of txns) {
+      const t = mapBasiqTransaction(raw);
+      if (!t) continue;
+      await client.query(
+        `INSERT INTO transactions (user_id, basiq_id, description, amount, status, post_date)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (basiq_id) DO UPDATE
+           SET description = EXCLUDED.description,
+               amount = EXCLUDED.amount,
+               status = EXCLUDED.status,
+               post_date = EXCLUDED.post_date`,
+        [userId, t.basiq_id, t.description, t.amount, t.status, t.post_date]
+      );
+      saved++;
+    }
+    await client.query('COMMIT');
+    return saved;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-  return saved;
 }
 
 async function getRecentTransactions(userId, limit = 10) {
@@ -45,6 +55,17 @@ async function getTxnsSince(userId, days = 400, limit = 1000) {
        ORDER BY post_date ASC
        LIMIT $3`,
     [userId, days, limit]
+  );
+  return result.rows;
+}
+
+async function getTransactionsForQuality(userId) {
+  const result = await pool.query(
+    `SELECT id, basiq_id, amount, post_date
+       FROM transactions
+      WHERE user_id = $1
+      ORDER BY id DESC`,
+    [userId]
   );
   return result.rows;
 }
@@ -141,6 +162,7 @@ async function applyCategoryAssignments(userId, assignments) {
 
 module.exports = {
   upsertBasiqTransactions, getRecentTransactions, getTxnsSince,
+  getTransactionsForQuality,
   getTransactionsWithCategory, getTxnsForSubscriptions,
   listRules, createRule, deleteRule, setTransactionCategory, applyCategoryAssignments,
 };
