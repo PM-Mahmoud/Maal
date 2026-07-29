@@ -22,13 +22,13 @@ export type MaalScore = {
   history: Array<{ value: number; at: string }>; // oldest-first
 };
 
-export async function fetchMaalScore(): Promise<MaalScore | null> {
+export async function fetchMaalScore(): Promise<MaalScore> {
   try {
     const r = await fetch("/api/v1/score", { credentials: "include" });
     if (r.status === 401) handleUnauthenticated();
-    if (!r.ok) return null;
+    if (!r.ok) throw new Error("Could not load your Maal Score.");
     const j = await r.json();
-    if (!j || j.ok === false) return null;
+    if (!j || j.ok === false) throw new Error("Could not load your Maal Score.");
     return {
       score: Number(j.score) || 0,
       band: typeof j.band === "string" ? j.band : "",
@@ -36,7 +36,7 @@ export async function fetchMaalScore(): Promise<MaalScore | null> {
       hasData: !!j.hasData,
       history: Array.isArray(j.history) ? j.history : [],
     };
-  } catch {
-    return null;
+  } catch (error) {
+    throw error instanceof Error ? error : new Error("Could not load your Maal Score.");
   }
 }

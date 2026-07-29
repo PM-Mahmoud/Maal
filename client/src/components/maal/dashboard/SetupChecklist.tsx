@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Check, Circle, X, Sparkles } from "lucide-react";
+import { Check, Circle, X, Sparkles, RefreshCw } from "lucide-react";
 import { getActivation, type Activation } from "@/lib/activation.functions";
 
 const DISMISS_KEY = "maal_setup_dismissed";
@@ -10,18 +10,42 @@ const DISMISS_KEY = "maal_setup_dismissed";
 export function SetupChecklist() {
   const [act, setAct] = useState<Activation | null>(null);
   const [dismissed, setDismissed] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     try { setDismissed(localStorage.getItem(DISMISS_KEY) === "1"); } catch { /* ignore */ }
-    getActivation().then(setAct).catch(() => {});
+    void load();
   }, []);
+
+  async function load() {
+    setError(false);
+    try {
+      setAct(await getActivation());
+    } catch {
+      setError(true);
+    }
+  }
 
   function dismiss() {
     setDismissed(true);
     try { localStorage.setItem(DISMISS_KEY, "1"); } catch { /* ignore */ }
   }
 
-  if (!act || dismissed || act.completed === act.total) return null;
+  if (dismissed) return null;
+  if (error) {
+    return (
+      <div role="alert" className="flex items-center gap-3 rounded-[14px] border border-[var(--gold)]/30 bg-[var(--surface)] p-4 text-[12px]">
+        <div className="flex-1">
+          <p className="font-semibold">Setup progress couldn’t be refreshed</p>
+          <p className="text-muted-foreground">Your existing financial data has not been replaced.</p>
+        </div>
+        <button onClick={() => void load()} className="inline-flex items-center gap-1 font-semibold text-mint">
+          <RefreshCw className="size-3" /> Retry
+        </button>
+      </div>
+    );
+  }
+  if (!act || act.completed === act.total) return null;
 
   return (
     <div className="rounded-[14px] border border-border bg-[var(--surface)] p-5">

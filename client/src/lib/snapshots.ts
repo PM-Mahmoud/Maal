@@ -18,11 +18,11 @@ export async function fetchSnapshots(days = 366): Promise<Snapshot[]> {
   try {
     const r = await fetch(`/api/v1/snapshots?days=${days}`, { credentials: "include" });
     if (r.status === 401) handleUnauthenticated();
-    if (!r.ok) return [];
+    if (!r.ok) throw new Error("Could not load balance history.");
     const j = await r.json();
     return Array.isArray(j) ? j : [];
-  } catch {
-    return [];
+  } catch (error) {
+    throw error instanceof Error ? error : new Error("Could not load balance history.");
   }
 }
 

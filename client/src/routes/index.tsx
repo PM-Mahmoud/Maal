@@ -131,7 +131,7 @@ function Index() {
           <h2 className="rf-h2">Everything about your money, <span className="rf-mark">finally in one place.</span></h2>
           <p className="rf-lede">Not another budgeting app. Maal turns your accounts, super and debt into a single number, and a plan to move it.</p>
           <div className="rf-products-grid">
-            <a href="/score" className="rf-product rf-p-orange">
+            <a href="/signup" className="rf-product rf-p-orange">
               <span className="rf-product-eyebrow">Scores</span>
               <h3 className="rf-product-title">Your money in one number.</h3>
               <div className="rf-product-mock">
@@ -147,7 +147,7 @@ function Index() {
               <div className="rf-product-foot"><span>Scores</span><span>→</span></div>
             </a>
 
-            <a href="/score" className="rf-product rf-p-teal">
+            <a href="/signup" className="rf-product rf-p-teal">
               <span className="rf-product-eyebrow">Ask Maal</span>
               <h3 className="rf-product-title">Ask anything, grounded in your data.</h3>
               <div className="rf-product-mock">
@@ -159,7 +159,7 @@ function Index() {
               <div className="rf-product-foot"><span>Ask Maal</span><span>→</span></div>
             </a>
 
-            <a href="/score" className="rf-product rf-p-rust">
+            <a href="/signup" className="rf-product rf-p-rust">
               <span className="rf-product-eyebrow">Radar</span>
               <h3 className="rf-product-title">Catch what’s changing.</h3>
               <div className="rf-product-mock">
@@ -171,7 +171,7 @@ function Index() {
               <div className="rf-product-foot"><span>Radar</span><span>→</span></div>
             </a>
 
-            <a href="/score" className="rf-product rf-p-gold">
+            <a href="/signup" className="rf-product rf-p-gold">
               <span className="rf-product-eyebrow">Portfolio</span>
               <h3 className="rf-product-title">See your wealth move over time.</h3>
               <div className="rf-product-mock">
@@ -190,7 +190,7 @@ function Index() {
               <div className="rf-product-foot"><span>Portfolio</span><span>→</span></div>
             </a>
 
-            <a href="/score" className="rf-product rf-p-cocoa wide">
+            <a href="/signup" className="rf-product rf-p-cocoa wide">
               <span className="rf-product-eyebrow">Accounts</span>
               <h3 className="rf-product-title">Every account, one clear picture.</h3>
               <div className="rf-product-mock">

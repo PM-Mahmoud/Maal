@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { GripVertical, Eye, EyeOff, Maximize2, Minimize2, Plus, Settings2, ArrowUpRight, Info, ChevronDown, Layers, CreditCard, FileText } from "lucide-react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { GripVertical, Eye, EyeOff, Maximize2, Minimize2, Plus, Settings2, ArrowUpRight, Info, ChevronDown, Layers, CreditCard, FileText, RefreshCw, Cloud, CloudOff, AlertTriangle, X, Pencil, Check } from "lucide-react";
 import { AskMaalTile } from "@/components/maal/dashboard/AskMaalTile";
 import { fetchPortfolio, type Portfolio } from "@/lib/portfolio";
 import { fetchMaalScore, type MaalScore } from "@/lib/maalScore";
-import { fetchProfile } from "@/lib/profile";
+import { fetchProfile, saveProfile } from "@/lib/profile";
 import { fetchSnapshots, snapshotValue, snapshotLabel, type Snapshot } from "@/lib/snapshots";
 import { listTransactions } from "@/lib/transactions.functions";
 import { listGoals } from "@/lib/goals.functions";
@@ -47,29 +49,52 @@ type Layout = { order: string[]; sizes: Record<string, Size>; hidden: string[] }
 // band placed right below the KPI tiles. Bumped so saved v2 layouts don't pin the
 // old order/tile.
 const STORAGE_KEY = "maal.dashboard.v3";
+const DEFAULT_VISIBLE = new Set([
+  "maal_score", "net_worth", "investments", "cash", "debts",
+  "ask_composer", "transactions", "runway",
+]);
 
 function defaultLayout(): Layout {
   return {
     order: TILES.map((t) => t.id),
     sizes: Object.fromEntries(TILES.map((t) => [t.id, t.defaultSize])) as Record<string, Size>,
-    hidden: [],
+    hidden: TILES.filter((t) => !DEFAULT_VISIBLE.has(t.id)).map((t) => t.id),
   };
 }
-function loadLayout(): Layout {
-  if (typeof window === "undefined") return defaultLayout();
+function normalizeLayout(parsed?: Partial<Layout> | null): Layout {
+  const base = defaultLayout();
+  if (!parsed?.order || !Array.isArray(parsed.order)) return base;
+  const knownIds = new Set(TILES.map((t) => t.id));
+  const parsedSizes = parsed.sizes && typeof parsed.sizes === "object" ? parsed.sizes : {};
+  const allowedSizes = new Set<Size>(["sm", "md", "lg", "wide"]);
+  const uniqueOrder = [...new Set(parsed.order.filter((id) => knownIds.has(id)))];
+  const safeSizes = Object.fromEntries(
+    Object.entries(parsedSizes).filter(([id, size]) => knownIds.has(id) && allowedSizes.has(size as Size)),
+  ) as Record<string, Size>;
+  return {
+    order: [
+      ...uniqueOrder,
+      ...base.order.filter((id) => !uniqueOrder.includes(id)),
+    ],
+    sizes: { ...base.sizes, ...safeSizes },
+    hidden: Array.isArray(parsed.hidden) ? parsed.hidden.filter((id) => knownIds.has(id)) : base.hidden,
+  };
+}
+function loadLocalLayout(): { layout: Layout; updatedAt: number } {
+  if (typeof window === "undefined") return { layout: defaultLayout(), updatedAt: 0 };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultLayout();
-    const parsed = JSON.parse(raw) as Layout;
-    const base = defaultLayout();
-    const order = [
-      ...parsed.order.filter((id) => TILES.find((t) => t.id === id)),
-      ...base.order.filter((id) => !parsed.order.includes(id)),
-    ];
-    return { order, sizes: { ...base.sizes, ...parsed.sizes }, hidden: parsed.hidden ?? [] };
-  } catch { return defaultLayout(); }
+    if (!raw) return { layout: defaultLayout(), updatedAt: 0 };
+    const parsed = JSON.parse(raw) as Layout | { layout: Layout; updatedAt: string };
+    if (parsed && typeof parsed === "object" && "layout" in parsed) {
+      return { layout: normalizeLayout(parsed.layout), updatedAt: new Date(parsed.updatedAt).getTime() || 0 };
+    }
+    return { layout: normalizeLayout(parsed), updatedAt: 0 };
+  } catch { return { layout: defaultLayout(), updatedAt: 0 }; }
 }
-function saveLayout(l: Layout) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(l)); } catch {} }
+function saveLayout(l: Layout, updatedAt: number) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ layout: l, updatedAt: new Date(updatedAt).toISOString() })); } catch {}
+}
 
 const sizeClass: Record<Size, string> = {
   sm:   "col-span-12 sm:col-span-6 lg:col-span-3",
@@ -91,19 +116,34 @@ export function Dashboard() {
   const [monthlyExpenses, setMonthlyExpenses] = useState<number | null>(null);
   const [periodOpen, setPeriodOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "partial" | "error">("loading");
+  const [loadErrors, setLoadErrors] = useState<string[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [lastRefreshAttempt, setLastRefreshAttempt] = useState<Date | null>(null);
+  const [layoutReady, setLayoutReady] = useState(false);
+  const [remoteLayoutReady, setRemoteLayoutReady] = useState(false);
+  const [layoutSync, setLayoutSync] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [editMode, setEditMode] = useState(false);
   const dragId = useRef<string | null>(null);
+  const layoutReadyRef = useRef(false);
+  const remoteLayoutReadyRef = useRef(false);
+  const layoutChangedRef = useRef(false);
+  const localLayoutUpdatedAtRef = useRef(0);
 
-  useEffect(() => { setLayout(loadLayout()); }, []);
-  useEffect(() => { saveLayout(layout); }, [layout]);
+  function markLayoutChanged() {
+    layoutChangedRef.current = true;
+    localLayoutUpdatedAtRef.current = Date.now();
+  }
 
-  useEffect(() => {
-    // Load auth, profile, and portfolio independently: a failure in one must not
-    // block the financial tiles from populating.
-    (async () => {
-      const [userRes, profRes, portRes] = await Promise.allSettled([
+  const loadDashboard = useCallback(async () => {
+      setLoadState("loading");
+      setLoadErrors([]);
+      const [userRes, profRes, portRes, scoreRes, snapshotRes] = await Promise.allSettled([
         supabase.auth.getUser(),
         fetchProfile(),
         fetchPortfolio(),
+        fetchMaalScore(),
+        fetchSnapshots(2605),
       ]);
       const u = userRes.status === "fulfilled" ? userRes.value.data : null;
       const prof = profRes.status === "fulfilled" ? profRes.value : null;
@@ -112,26 +152,83 @@ export function Dashboard() {
       // BIGINT columns arrive as strings — coerce before arithmetic.
       setMonthlyExpenses(prof?.monthly_expenses ? Number(prof.monthly_expenses) : null);
       if (portRes.status === "fulfilled") setPortfolio(portRes.value);
-    })();
+      if (scoreRes.status === "fulfilled") setScore(scoreRes.value);
+      if (snapshotRes.status === "fulfilled") setSnapshots(snapshotRes.value);
+      if (!layoutReadyRef.current) {
+        const local = loadLocalLayout();
+        const remoteUpdatedAt = new Date(prof?.dashboard_layout_updated_at || 0).getTime() || 0;
+        const useLocal = local.updatedAt > remoteUpdatedAt;
+        setLayout(!useLocal && prof?.dashboard_layout ? normalizeLayout(prof.dashboard_layout) : local.layout);
+        localLayoutUpdatedAtRef.current = useLocal ? local.updatedAt : remoteUpdatedAt;
+        layoutChangedRef.current = useLocal;
+        layoutReadyRef.current = true;
+        setLayoutReady(true);
+      }
+      if (prof && !remoteLayoutReadyRef.current) {
+        const remoteUpdatedAt = new Date(prof.dashboard_layout_updated_at || 0).getTime() || 0;
+        if (prof.dashboard_layout && remoteUpdatedAt > localLayoutUpdatedAtRef.current) {
+          setLayout(normalizeLayout(prof.dashboard_layout));
+          localLayoutUpdatedAtRef.current = remoteUpdatedAt;
+          layoutChangedRef.current = false;
+        }
+        remoteLayoutReadyRef.current = true;
+        setRemoteLayoutReady(true);
+      }
+
+      const errors: string[] = [];
+      if (userRes.status === "rejected") errors.push("account");
+      if (profRes.status === "rejected" || !prof) errors.push("profile");
+      if (portRes.status === "rejected") errors.push("balances");
+      else if (portRes.value.errors?.length) errors.push(...portRes.value.errors.map((e) => e.split(":")[0]));
+      if (scoreRes.status === "rejected") errors.push("Maal Score");
+      if (snapshotRes.status === "rejected") errors.push("history");
+      const uniqueErrors = [...new Set(errors)];
+      setLoadErrors(uniqueErrors);
+      const hasUsefulData = portRes.status === "fulfilled" || scoreRes.status === "fulfilled";
+      setLoadState(uniqueErrors.length ? (hasUsefulData ? "partial" : "error") : "ready");
+      setLastRefreshAttempt(new Date());
+      if (uniqueErrors.length === 0 && portRes.status === "fulfilled" && portRes.value.updatedAt) {
+        setLastUpdated(new Date(portRes.value.updatedAt));
+      }
   }, []);
 
-  useEffect(() => { fetchMaalScore().then(setScore); }, []);
-  // Fetch enough history to serve every range the trend modal advertises (its
-  // longest is "All" ≈ 84 months ≈ 2604 days; the endpoint caps at 3660).
-  useEffect(() => { fetchSnapshots(2605).then(setSnapshots); }, []);
+  useEffect(() => { void loadDashboard(); }, [loadDashboard]);
+
+  useEffect(() => {
+    if (!layoutReady) return;
+    saveLayout(layout, localLayoutUpdatedAtRef.current);
+    if (!remoteLayoutReady) {
+      setLayoutSync("error");
+      return;
+    }
+    setLayoutSync("saving");
+    const timer = window.setTimeout(async () => {
+      const persistenceTimestamp = localLayoutUpdatedAtRef.current || Date.now();
+      const saved = await saveProfile({
+        dashboard_layout: layout,
+        dashboard_layout_updated_at: new Date(persistenceTimestamp).toISOString(),
+      });
+      if (saved) localLayoutUpdatedAtRef.current = persistenceTimestamp;
+      setLayoutSync(saved ? "saved" : "error");
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [layout, layoutReady, remoteLayoutReady]);
 
   function toggleHidden(id: string) {
+    markLayoutChanged();
     setLayout((l) => l.hidden.includes(id)
       ? { ...l, hidden: l.hidden.filter((x) => x !== id) }
       : { ...l, hidden: [...l.hidden, id] });
   }
   function cycleSize(id: string) {
+    markLayoutChanged();
     setLayout((l) => ({ ...l, sizes: { ...l.sizes, [id]: nextSize[l.sizes[id] ?? "md"] } }));
   }
   function onDragStart(id: string) { dragId.current = id; }
   // Keyboard-accessible reordering: focus a tile's grip (or the Ask Maal band)
   // and use Left/Right arrows to move it. Pointer drag is unchanged.
   function moveTile(id: string, dir: -1 | 1) {
+    markLayoutChanged();
     setLayout((l) => {
       const order = [...l.order];
       const i = order.indexOf(id);
@@ -150,6 +247,7 @@ export function Dashboard() {
     e.preventDefault();
     const from = dragId.current;
     if (!from || from === overId) return;
+    markLayoutChanged();
     setLayout((l) => {
       const order = [...l.order];
       const fi = order.indexOf(from);
@@ -167,72 +265,105 @@ export function Dashboard() {
   );
 
   return (
-    <div className="max-w-[1400px] mx-auto px-6 md:px-10 py-8">
+    <div className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-10 py-6 md:py-8">
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-        <h1 className="text-[28px] md:text-[32px] tracking-display font-bold">Welcome{name ? `, ${name}` : ""}</h1>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <button
-              onClick={() => { setPeriodOpen((v) => !v); setAddOpen(false); }}
-              className="flex items-center gap-2 pl-3 pr-2 py-2 border border-border rounded-full text-[12px] font-medium bg-[var(--surface)] hover:border-mint/40"
-            >
-              {period} <ChevronDown className="size-3.5 opacity-60" />
-            </button>
-            {periodOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setPeriodOpen(false)} />
-                <div className="absolute right-0 mt-2 z-50 w-32 rounded-[10px] border border-border bg-[var(--surface)] shadow-lg overflow-hidden">
-                  {PERIODS.map((p) => (
-                    <button key={p} onClick={() => { setPeriod(p); setPeriodOpen(false); }}
-                      className={`block w-full text-left px-3 py-2 text-[12px] hover:bg-secondary ${period === p ? "text-mint font-semibold" : ""}`}>
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+        <div>
+          <h1 className="text-[26px] md:text-[32px] tracking-display font-bold">Welcome{name ? `, ${name}` : ""}</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+            <span>Manual and connected financial data</span>
+            <span aria-hidden="true">·</span>
+            <span>{lastUpdated ? `Oldest source update ${lastUpdated.toLocaleString("en-AU", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}` : lastRefreshAttempt && loadState === "ready" ? "No source timestamp yet" : lastRefreshAttempt ? "No complete refresh yet" : "Updating…"}</span>
+            {loadState === "partial" || loadState === "error" ? <span className="font-semibold text-[var(--gold)]">Stale data may be shown</span> : null}
+            {layoutSync === "saving" && <span className="inline-flex items-center gap-1"><Cloud className="size-3" /> Saving layout</span>}
+            {layoutSync === "saved" && <span className="inline-flex items-center gap-1 text-mint"><Check className="size-3" /> Layout saved</span>}
+            {layoutSync === "error" && <span className="inline-flex items-center gap-1 text-[var(--gold)]"><CloudOff className="size-3" /> Saved on this device</span>}
           </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <DropdownMenu.Root open={periodOpen} onOpenChange={(open) => { setPeriodOpen(open); if (open) setAddOpen(false); }}>
+            <DropdownMenu.Trigger asChild>
+              <button
+                aria-label={`Dashboard period: ${period}`}
+                className="flex items-center gap-2 pl-3 pr-2 py-2 border border-border rounded-full text-[12px] font-medium bg-[var(--surface)] hover:border-mint/40"
+              >
+                {period} <ChevronDown className="size-3.5 opacity-60" />
+              </button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content align="end" sideOffset={8} className="z-50 w-32 rounded-[10px] border border-border bg-[var(--surface)] shadow-lg overflow-hidden p-1">
+                <DropdownMenu.RadioGroup value={period} onValueChange={(value) => setPeriod(value as Period)}>
+                  {PERIODS.map((p) => (
+                  <DropdownMenu.RadioItem key={p} value={p} onSelect={() => setPeriod(p)}
+                    className="flex cursor-pointer items-center justify-between rounded-md px-3 py-2 text-[12px] outline-none hover:bg-secondary focus:bg-secondary">
+                    {p}{period === p && <Check className="size-3.5 text-mint" />}
+                  </DropdownMenu.RadioItem>
+                  ))}
+                </DropdownMenu.RadioGroup>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
           <Link to="/app/report"
             className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-full text-[12px] font-medium bg-[var(--surface)] hover:border-mint/40">
             <FileText className="size-3.5" /> Report
           </Link>
-          <button onClick={() => setCustomiseOpen(true)}
+          <button onClick={() => { setEditMode(true); setCustomiseOpen(true); }}
             className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-full text-[12px] font-medium bg-[var(--surface)] hover:border-mint/40">
-            <Settings2 className="size-3.5" /> Customise
+            <Settings2 className="size-3.5" /> Widgets
           </button>
-          <div className="relative">
-            <button
-              onClick={() => { setAddOpen((v) => !v); setPeriodOpen(false); }}
-              className="flex items-center gap-1.5 pl-3 pr-2.5 py-2 rounded-full text-[12px] font-semibold bg-mint text-background hover:opacity-90"
-            >
-              Add <Plus className="size-3.5" />
-            </button>
-            {addOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setAddOpen(false)} />
-                <div className="absolute right-0 mt-2 z-50 w-64 rounded-[12px] border border-border bg-[var(--surface)] shadow-lg overflow-hidden">
-                  <Link to="/app/assets" onClick={() => setAddOpen(false)}
-                    className="flex items-start gap-3 px-3 py-3 hover:bg-secondary">
+          <DropdownMenu.Root open={addOpen} onOpenChange={(open) => { setAddOpen(open); if (open) setPeriodOpen(false); }}>
+            <DropdownMenu.Trigger asChild>
+              <button className="flex items-center gap-1.5 pl-3 pr-2.5 py-2 rounded-full text-[12px] font-semibold bg-mint text-background hover:opacity-90">
+                Add <Plus className="size-3.5" />
+              </button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content align="end" sideOffset={8} className="z-50 w-64 rounded-[12px] border border-border bg-[var(--surface)] shadow-lg overflow-hidden">
+                  <DropdownMenu.Item asChild>
+                    <a href="/app/assets?add=asset" className="flex items-start gap-3 px-3 py-3 outline-none hover:bg-secondary focus:bg-secondary">
                     <span className="mt-0.5 size-8 rounded-md bg-secondary grid place-items-center"><Layers className="size-4" /></span>
                     <span>
                       <span className="block text-[13px] font-semibold">Add asset</span>
                       <span className="block text-[11px] text-muted-foreground">Account, property, vehicle, or other</span>
                     </span>
-                  </Link>
-                  <Link to="/app/assets" onClick={() => setAddOpen(false)}
-                    className="flex items-start gap-3 px-3 py-3 hover:bg-secondary border-t border-border">
+                    </a>
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item asChild>
+                    <a href="/app/assets?add=liability" className="flex items-start gap-3 px-3 py-3 outline-none hover:bg-secondary focus:bg-secondary border-t border-border">
                     <span className="mt-0.5 size-8 rounded-md bg-secondary grid place-items-center"><CreditCard className="size-4" /></span>
                     <span>
                       <span className="block text-[13px] font-semibold">Add liability</span>
                       <span className="block text-[11px] text-muted-foreground">Loan, credit card, mortgage</span>
                     </span>
-                  </Link>
-                </div>
-              </>
-            )}
-          </div>
+                    </a>
+                  </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
         </div>
       </div>
+
+      {loadState !== "ready" && (
+        <div role={loadState === "loading" ? "status" : "alert"}
+          className={`mb-4 flex items-start gap-3 rounded-[12px] border p-3 text-[12px] ${loadState === "error" ? "border-destructive/40 bg-destructive/5" : "border-border bg-[var(--surface)]"}`}>
+          {loadState === "loading" ? <RefreshCw className="size-4 shrink-0 animate-spin text-mint" /> : <AlertTriangle className="size-4 shrink-0 text-[var(--gold)]" />}
+          <div className="flex-1">
+            <p className="font-semibold">{loadState === "loading" ? "Refreshing your financial picture…" : loadState === "partial" ? "Some dashboard data could not be refreshed" : "Dashboard data is unavailable"}</p>
+            {loadErrors.length > 0 && <p className="mt-0.5 text-muted-foreground">Affected: {loadErrors.join(", ")}. Existing values are kept where available.</p>}
+          </div>
+          {loadState !== "loading" && (
+            <button onClick={() => void loadDashboard()} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 font-semibold hover:bg-secondary">
+              <RefreshCw className="size-3" /> Retry
+            </button>
+          )}
+        </div>
+      )}
+
+      {editMode && (
+        <div className="mb-4 flex items-center justify-between rounded-[12px] border border-mint/30 bg-mint/5 px-3 py-2 text-[12px]">
+          <span className="inline-flex items-center gap-2"><Pencil className="size-3.5 text-mint" /> Edit mode: drag handles reorder tiles; resize or hide controls are now available.</span>
+          <button onClick={() => setEditMode(false)} className="font-semibold text-mint hover:underline">Done</button>
+        </div>
+      )}
 
       <div className="grid grid-cols-12 gap-4 auto-rows-min">
         {visibleTiles.map((t) => {
@@ -242,41 +373,44 @@ export function Dashboard() {
           if (t.kind === "ask_composer") {
             return (
               <div key={t.id}
-                draggable
-                onDragStart={() => onDragStart(t.id)}
                 onDragOver={(e) => onDragOver(e, t.id)}
                 onDragEnd={() => (dragId.current = null)}
-                tabIndex={0}
-                onKeyDown={(e) => onTileKeyDown(e, t.id)}
-                aria-label={`${t.title} tile. Use left and right arrow keys to reorder.`}
-                className={sizeClass.wide}
+                className={`${sizeClass.wide} relative`}
               >
+                {editMode && (
+                  <button type="button" draggable onDragStart={() => onDragStart(t.id)}
+                    onKeyDown={(e) => onTileKeyDown(e, t.id)}
+                    aria-label={`Reorder ${t.title} tile. Drag, or use left and right arrow keys.`}
+                    className="absolute right-3 top-3 z-20 cursor-grab rounded-md border border-border bg-background/90 p-1.5 text-muted-foreground shadow-sm">
+                    <GripVertical className="size-4" />
+                  </button>
+                )}
                 <AskMaalTile />
               </div>
             );
           }
           return (
             <div key={t.id}
-              draggable
-              onDragStart={() => onDragStart(t.id)}
               onDragOver={(e) => onDragOver(e, t.id)}
               onDragEnd={() => (dragId.current = null)}
               className={`${sizeClass[size]} group relative rounded-[14px] border border-border bg-[var(--surface)] p-5 transition hover:border-foreground/30`}
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <button
+                  {editMode && <button
                     type="button"
+                    draggable
+                    onDragStart={() => onDragStart(t.id)}
                     onKeyDown={(e) => onTileKeyDown(e, t.id)}
                     title={`Reorder ${t.title} tile (left/right arrow keys)`}
                     aria-label={`Reorder ${t.title} tile. Use left and right arrow keys.`}
                     className="p-0.5 rounded text-muted-foreground/50 cursor-grab hover:text-muted-foreground focus-visible:text-muted-foreground focus:outline-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition"
                   >
                     <GripVertical className="size-3.5" />
-                  </button>
+                  </button>}
                   <p className="text-[13px] font-semibold truncate">{t.title}</p>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition">
+                {editMode && <div className="flex items-center gap-1">
                   <button onClick={() => cycleSize(t.id)} title={`Resize ${t.title} tile`} aria-label={`Resize ${t.title} tile (currently ${size})`}
                     className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary">
                     {size === "wide" ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
@@ -285,24 +419,37 @@ export function Dashboard() {
                     className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary">
                     <EyeOff className="size-3.5" />
                   </button>
-                </div>
+                </div>}
               </div>
-              <TileBody kind={t.kind} period={period} portfolio={portfolio} score={score} snapshots={snapshots} createdAt={createdAt} monthlyExpenses={monthlyExpenses} />
+              <TileBody
+                kind={t.kind}
+                period={period}
+                portfolio={portfolio}
+                score={score}
+                snapshots={snapshots}
+                createdAt={createdAt}
+                monthlyExpenses={monthlyExpenses}
+                scoreError={loadErrors.includes("Maal Score")}
+                historyError={loadErrors.includes("history")}
+              />
             </div>
           );
         })}
       </div>
 
-      {customiseOpen && (
-        <div role="dialog" aria-label="Customise dashboard"
-          className="fixed inset-0 z-50 bg-black/50 flex justify-end" onClick={() => setCustomiseOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm h-full bg-background border-l border-border p-6 overflow-y-auto">
+      <DialogPrimitive.Root open={customiseOpen} onOpenChange={setCustomiseOpen}>
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
+          <DialogPrimitive.Content
+            aria-describedby="customise-dashboard-description"
+            className="fixed right-0 top-0 z-50 w-full max-w-sm h-full bg-background border-l border-border p-6 overflow-y-auto shadow-xl">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-[16px] font-semibold">Customise tiles</h2>
-              <button onClick={() => setCustomiseOpen(false)} aria-label="Close" className="text-muted-foreground hover:text-foreground">×</button>
+              <DialogPrimitive.Title className="text-[16px] font-semibold">Dashboard widgets</DialogPrimitive.Title>
+              <DialogPrimitive.Close aria-label="Close" className="text-muted-foreground hover:text-foreground"><X className="size-4" /></DialogPrimitive.Close>
             </div>
-            <p className="text-[12px] text-muted-foreground mb-4">Show or hide tiles. Drag tiles on the dashboard to reorder. Click the maximize icon on a tile to resize.</p>
+            <DialogPrimitive.Description id="customise-dashboard-description" className="text-[12px] text-muted-foreground mb-4">
+              Keep the dashboard focused. Add only the widgets you use, then enter edit mode to reorder or resize them.
+            </DialogPrimitive.Description>
             <ul className="space-y-1">
               {TILES.map((t) => {
                 const hidden = layout.hidden.includes(t.id);
@@ -317,13 +464,17 @@ export function Dashboard() {
                 );
               })}
             </ul>
-            <button onClick={() => setLayout(defaultLayout())}
+            <button onClick={() => { markLayoutChanged(); setLayout(defaultLayout()); }}
               className="mt-5 w-full py-2 border border-border rounded-[8px] text-[12px] text-muted-foreground hover:text-foreground">
               Reset to default
             </button>
-          </div>
-        </div>
-      )}
+            <button onClick={() => { setEditMode(true); setCustomiseOpen(false); }}
+              className="mt-2 w-full py-2 rounded-[8px] text-[12px] font-semibold bg-foreground text-background">
+              Edit dashboard layout
+            </button>
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
     </div>
   );
 }
@@ -344,10 +495,10 @@ function rangeStartTs(period: Period, createdAt: string | null): number {
   }
 }
 
-function TileBody({ kind, period, portfolio, score, snapshots, createdAt, monthlyExpenses }: { kind: string; period: Period; portfolio: Portfolio | null; score: MaalScore | null; snapshots: Snapshot[]; createdAt: string | null; monthlyExpenses: number | null }) {
-  if (kind.startsWith("kpi_")) return <KpiTile kind={kind} portfolio={portfolio} snapshots={snapshots} period={period} createdAt={createdAt} />;
+function TileBody({ kind, period, portfolio, score, snapshots, createdAt, monthlyExpenses, scoreError, historyError }: { kind: string; period: Period; portfolio: Portfolio | null; score: MaalScore | null; snapshots: Snapshot[]; createdAt: string | null; monthlyExpenses: number | null; scoreError: boolean; historyError: boolean }) {
+  if (kind.startsWith("kpi_")) return <KpiTile kind={kind} portfolio={portfolio} snapshots={snapshots} period={period} createdAt={createdAt} historyError={historyError} />;
   switch (kind) {
-    case "maal_score": return <MaalScoreTile score={score} />;
+    case "maal_score": return scoreError ? <UnavailableState label="your Maal Score" /> : <MaalScoreTile score={score} />;
     case "radar": return <RadarTile />;
     case "assets": return <AssetsTile portfolio={portfolio} />;
     case "liabilities": return <LiabilitiesTile portfolio={portfolio} />;
@@ -366,9 +517,27 @@ function TileBody({ kind, period, portfolio, score, snapshots, createdAt, monthl
   void period;
 }
 
-function EarningsTile() {
+function useAsyncList(loader: () => Promise<unknown>) {
   const [items, setItems] = useState<any[]>([]);
-  useEffect(() => { getUpcomingEarnings().then((r: any) => setItems(Array.isArray(r) ? r : [])).catch(() => {}); }, []);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const load = useCallback(async () => {
+    setState("loading");
+    try {
+      const result: any = await loader();
+      setItems(Array.isArray(result) ? result : result?.items ?? []);
+      setState("ready");
+    } catch {
+      setState("error");
+    }
+  }, [loader]);
+  useEffect(() => { void load(); }, [load]);
+  return { items, state, retry: load };
+}
+
+function EarningsTile() {
+  const { items, state, retry } = useAsyncList(getUpcomingEarnings);
+  if (state === "loading") return <SkeletonRows />;
+  if (state === "error") return <UnavailableState label="earnings dates" onRetry={retry} />;
   if (items.length === 0) {
     return <Placeholder title="No upcoming earnings" hint="Add investments with a ticker symbol to see upcoming earnings for your holdings." cta="Add investment" to="/app/assets" />;
   }
@@ -388,8 +557,9 @@ function EarningsTile() {
 }
 
 function TransactionsTile() {
-  const [items, setItems] = useState<any[]>([]);
-  useEffect(() => { listTransactions().then((r: any) => setItems(Array.isArray(r) ? r : [])).catch(() => {}); }, []);
+  const { items, state, retry } = useAsyncList(listTransactions);
+  if (state === "loading") return <SkeletonRows />;
+  if (state === "error") return <UnavailableState label="transactions" onRetry={retry} />;
   if (items.length === 0) {
     return <Placeholder title="No transactions" hint="See your transactions after you connect an account." cta="Connect account" to="/app/transactions" />;
   }
@@ -418,7 +588,7 @@ function TransactionsTile() {
 
 function MaalScoreTile({ score }: { score: MaalScore | null }) {
   if (!score) {
-    return <div className="text-[12px] text-muted-foreground py-2">Loading your Maal Score…</div>;
+    return <SkeletonKpi />;
   }
   if (!score.hasData) {
     return (
@@ -442,6 +612,7 @@ function MaalScoreTile({ score }: { score: MaalScore | null }) {
       <div className="mt-3 h-[6px] rounded-full bg-secondary overflow-hidden">
         <div className="h-full bg-foreground rounded-full" style={{ width: `${Math.max(0, Math.min(100, score.score))}%` }} />
       </div>
+      <SourceBadge source="calculated" label="Calculated from your financial profile and balances" />
       <ScoreHistorySparkline history={score.history} />
       <div className="mt-4 space-y-2.5">
         {score.pillars.map((p) => (
@@ -626,10 +797,11 @@ function KpiSparkline({
   );
 }
 
-function KpiTile({ kind, portfolio, snapshots, period, createdAt }: { kind: string; portfolio: Portfolio | null; snapshots: Snapshot[]; period: Period; createdAt: string | null }) {
+function KpiTile({ kind, portfolio, snapshots, period, createdAt, historyError }: { kind: string; portfolio: Portfolio | null; snapshots: Snapshot[]; period: Period; createdAt: string | null; historyError: boolean }) {
   const [open, setOpen] = useState(false);
+  const partial = !!portfolio?.errors?.length;
   const value = useMemo(() => {
-    if (!portfolio) return null;
+    if (!portfolio || partial) return null;
     switch (kind) {
       case "kpi_net_worth": return portfolio.superBalance + portfolio.investments + portfolio.property + portfolio.cash - portfolio.propertyDebt - portfolio.otherDebt;
       case "kpi_investments": return portfolio.investments + portfolio.superBalance;
@@ -637,8 +809,12 @@ function KpiTile({ kind, portfolio, snapshots, period, createdAt }: { kind: stri
       case "kpi_debts": return portfolio.propertyDebt + portfolio.otherDebt;
       default: return 0;
     }
-  }, [kind, portfolio]);
+  }, [kind, portfolio, partial]);
   const meta = KPI_META[kind] ?? { title: "Value", positive: true };
+  const source = kind === "kpi_net_worth" ? "calculated"
+    : kind === "kpi_investments" ? portfolio?.provenance?.investments
+    : kind === "kpi_cash" ? portfolio?.provenance?.cash
+    : portfolio?.provenance?.debts;
   const series = useMemo(() => {
     // Real daily history for this kind, filtered to the selected range (item 7).
     const start = rangeStartTs(period, createdAt);
@@ -653,12 +829,12 @@ function KpiTile({ kind, portfolio, snapshots, period, createdAt }: { kind: stri
       return { data: real.map((p) => p.v), labels: real.map((p) => p.label), real: true };
     }
     // Fallback: flat line at today's value until history accrues.
-    if (value === null) return null;
+    if (value === null || historyError) return null;
     const months = 12;
     const data = buildKpiSeries(months, value ?? 0);
     const labels = data.map((_, i) => monthLabel(months - 1 - i));
     return { data, labels, real: false };
-  }, [kind, value, snapshots, period, createdAt]);
+  }, [kind, value, snapshots, period, createdAt, historyError]);
 
   // Unabridged history for the trend modal — it applies its own range filter, so
   // the dashboard period selector must not constrain what the dialog can show.
@@ -670,6 +846,8 @@ function KpiTile({ kind, portfolio, snapshots, period, createdAt }: { kind: stri
       ? { data: all.map((p) => p.v), labels: all.map((p) => p.label) }
       : null;
   }, [kind, snapshots]);
+
+  if (!portfolio) return <SkeletonKpi />;
 
   const first = series?.data[0] ?? 0;
   const last = series?.data[series.data.length - 1] ?? 0;
@@ -702,6 +880,9 @@ function KpiTile({ kind, portfolio, snapshots, period, createdAt }: { kind: stri
         )}
       </div>
       <p className="text-[26px] font-bold tabular-nums">{value === null ? "—" : formatAUD(value)}</p>
+      {value !== null && <SourceBadge source={source ?? "manual"} />}
+      {partial && <p className="mt-1 text-[11px] text-[var(--gold)]">Unavailable until all balance sources refresh.</p>}
+      {!partial && historyError && <p className="mt-1 text-[11px] text-[var(--gold)]">Current balance loaded; trend history is unavailable.</p>}
       <p className={`text-[11px] mt-1 tabular-nums ${goodDirection ? "text-[var(--mint)]" : "text-muted-foreground"}`}>
         {series?.real ? (
           <span className={goodDirection ? "text-[var(--mint)]" : "text-muted-foreground"}>
@@ -749,6 +930,7 @@ function RadarTile() {
 
 function AssetsTile({ portfolio }: { portfolio: Portfolio | null }) {
   if (!portfolio) return <SkeletonRows />;
+  if (portfolio.errors?.length) return <UnavailableState label="complete asset balances" />;
   const total = portfolio.superBalance + portfolio.investments + portfolio.property + portfolio.cash;
   const rows = [
     { label: "Super", v: portfolio.superBalance },
@@ -775,12 +957,14 @@ function AssetsTile({ portfolio }: { portfolio: Portfolio | null }) {
           );
         })}
       </ul>
+      <div className="mt-3"><SourceBadge source={portfolio.provenance?.assets ?? "manual"} label="Asset balance sources" /></div>
     </div>
   );
 }
 
 function LiabilitiesTile({ portfolio }: { portfolio: Portfolio | null }) {
   if (!portfolio) return <SkeletonRows />;
+  if (portfolio.errors?.length) return <UnavailableState label="complete liability balances" />;
   const total = portfolio.propertyDebt + portfolio.otherDebt;
   return (
     <div>
@@ -789,7 +973,7 @@ function LiabilitiesTile({ portfolio }: { portfolio: Portfolio | null }) {
         <span className="text-[13px] font-semibold tabular-nums">{formatAUD(total)}</span>
       </div>
       {total === 0 ? (
-        <Link to="/app/assets" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-semibold bg-[hsl(0_70%_55%)] text-white">
+        <Link to="/app/assets" search={{ add: "liability" }} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-semibold bg-[hsl(0_70%_55%)] text-white">
           <Plus className="size-3.5" /> Add Liability
         </Link>
       ) : (
@@ -798,6 +982,7 @@ function LiabilitiesTile({ portfolio }: { portfolio: Portfolio | null }) {
           <li className="flex justify-between"><span>Other debt</span><span className="tabular-nums">{formatAUD(portfolio.otherDebt)}</span></li>
         </ul>
       )}
+      {total > 0 && <div className="mt-3"><SourceBadge source={portfolio.provenance?.debts ?? "manual"} /></div>}
     </div>
   );
 }
@@ -807,10 +992,23 @@ function SetupTile({ portfolio }: { portfolio: Portfolio | null }) {
   // uses); failures leave the step incomplete rather than fabricating progress.
   const [hasGoal, setHasGoal] = useState(false);
   const [hasDoc, setHasDoc] = useState(false);
-  useEffect(() => {
-    listGoals().then((g) => setHasGoal(Array.isArray(g) && g.length > 0)).catch(() => {});
-    listVault().then((d) => setHasDoc(Array.isArray(d) && d.length > 0)).catch(() => {});
+  const [setupState, setSetupState] = useState<"loading" | "ready" | "error">("loading");
+  const loadSetup = useCallback(async () => {
+    setSetupState("loading");
+    try {
+      const [g, d] = await Promise.all([listGoals(), listVault()]);
+      setHasGoal(Array.isArray(g) && g.length > 0);
+      setHasDoc(Array.isArray(d) && d.length > 0);
+      setSetupState("ready");
+    } catch {
+      setSetupState("error");
+    }
   }, []);
+  useEffect(() => {
+    void loadSetup();
+  }, [loadSetup]);
+  if (setupState === "loading") return <SkeletonRows />;
+  if (setupState === "error") return <UnavailableState label="setup progress" onRetry={loadSetup} />;
   const steps = [
     { label: "Connect your first account", done: !!portfolio && portfolio.cash > 0 },
     { label: "Add an asset", done: !!portfolio && (portfolio.investments + portfolio.property + portfolio.superBalance) > 0 },
@@ -859,19 +1057,12 @@ function TaxTile({ portfolio }: { portfolio: Portfolio | null }) {
 }
 
 function MarketTile() {
-  const loadIndices = getMarketIndices;
-  const [items, setItems] = useState<any[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  // Server returns a bare array of { name, symbol, price, changePercent }. Keep
-  // only rows that actually resolved a price (Finnhub free tier can't quote some).
-  useEffect(() => {
-    loadIndices()
-      .then((r: any) => setItems((Array.isArray(r) ? r : r?.items ?? []).filter((x: any) => x && x.price != null)))
-      .catch(() => {})
-      .finally(() => setLoaded(true));
-  }, [loadIndices]);
+  const { items: rawItems, state, retry } = useAsyncList(getMarketIndices);
+  const items = rawItems.filter((x: any) => x && x.price != null);
   const focus = items.find((i) => String(i.name).startsWith("S&P 500")) ?? items[0];
-  if (loaded && !focus) {
+  if (state === "loading") return <SkeletonRows />;
+  if (state === "error") return <UnavailableState label="market data" onRetry={retry} />;
+  if (!focus) {
     return <p className="text-[11px] text-muted-foreground">Market data unavailable right now — check back shortly.</p>;
   }
   return (
@@ -904,11 +1095,10 @@ function MarketTile() {
 }
 
 function NewsTile() {
-  const loadNews = getMarketNews;
-  const [items, setItems] = useState<any[]>([]);
-  // Server returns a bare array of { headline, summary, source, url, datetime }.
-  useEffect(() => { loadNews().then((r: any) => setItems(Array.isArray(r) ? r : r?.items ?? [])).catch(() => {}); }, [loadNews]);
-  if (items.length === 0) return <SkeletonRows />;
+  const { items, state, retry } = useAsyncList(getMarketNews);
+  if (state === "loading") return <SkeletonRows />;
+  if (state === "error") return <UnavailableState label="market news" onRetry={retry} />;
+  if (items.length === 0) return <p className="text-[11px] text-muted-foreground">No market news is available right now.</p>;
   return (
     <ul className="space-y-2.5">
       {items.slice(0, 4).map((n, i) => (
@@ -946,6 +1136,7 @@ function RunwayTile({ portfolio, monthlyExpenses }: { portfolio: Portfolio | nul
           <p className="text-[10px] text-muted-foreground">Cash On Hand</p>
         </div>
       </div>
+      {months != null && <div className="mt-3 flex justify-center"><SourceBadge source="calculated" label="Calculated from cash and monthly expenses" /></div>}
     </div>
   );
 }
@@ -967,5 +1158,41 @@ function SkeletonRows() {
     <div className="space-y-2">
       {[0, 1, 2].map((i) => <div key={i} className="h-3 rounded bg-secondary animate-pulse" style={{ width: `${80 - i * 15}%` }} />)}
     </div>
+  );
+}
+
+function SkeletonKpi() {
+  return (
+    <div aria-label="Loading dashboard value" className="space-y-3">
+      <div className="h-14 w-full rounded-[8px] bg-secondary animate-pulse" />
+      <div className="h-7 w-28 rounded bg-secondary animate-pulse" />
+      <div className="h-3 w-20 rounded bg-secondary animate-pulse" />
+    </div>
+  );
+}
+
+function UnavailableState({ label, onRetry }: { label: string; onRetry?: () => void | Promise<void> }) {
+  return (
+    <div className="rounded-[10px] border border-[var(--gold)]/30 bg-[var(--gold)]/5 p-3">
+      <p className="text-[12px] font-semibold">Couldn’t load {label}</p>
+      <p className="mt-1 text-[11px] text-muted-foreground">No zero or placeholder value has been substituted.</p>
+      {onRetry && (
+        <button onClick={() => void onRetry()} className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-mint hover:underline">
+          <RefreshCw className="size-3" /> Retry
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SourceBadge({ source, label }: { source: "manual" | "connected" | "mixed" | "calculated"; label?: string }) {
+  const text = source === "connected" ? "Connected data"
+    : source === "mixed" ? "Manual + connected"
+    : source === "calculated" ? "Calculated"
+    : "Manual data";
+  return (
+    <span title={label ?? text} className="mt-1 inline-flex rounded-full border border-border bg-secondary/50 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+      {text}
+    </span>
   );
 }

@@ -24,11 +24,14 @@ export type Activation = {
 
 export async function getActivation(): Promise<Activation> {
   const [portfolio, profile, goals, docs] = await Promise.all([
-    fetchPortfolio().catch(() => null),
-    fetchProfile().catch(() => null),
-    listGoals().catch(() => [] as unknown[]),
-    listVault().catch(() => [] as unknown[]),
+    fetchPortfolio(),
+    fetchProfile(),
+    listGoals(),
+    listVault(),
   ]);
+  if (!profile || portfolio.errors?.length) {
+    throw new Error("Setup progress is temporarily unavailable");
+  }
 
   const hasAsset = !!portfolio && (portfolio.investments + portfolio.superBalance + portfolio.cash + portfolio.property) > 0;
   const hasLiability = !!portfolio && (portfolio.propertyDebt + portfolio.otherDebt) > 0;

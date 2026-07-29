@@ -35,7 +35,7 @@ export function SavedWidgets() {
   if (!loaded || widgets.length === 0) return null;
 
   return (
-    <section className="max-w-6xl mx-auto px-6 md:px-10 pb-10">
+    <section className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-10 pb-10">
       <div className="flex items-center gap-2 mb-3">
         <MessageCircle className="size-4 text-muted-foreground" />
         <h2 className="text-[15px] font-bold tracking-display">Saved from Ask Maal</h2>

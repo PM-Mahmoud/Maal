@@ -47,6 +47,9 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/assets")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    add: search.add === "asset" || search.add === "liability" ? search.add : undefined,
+  }),
   component: PortfolioPage,
 });
 
@@ -115,12 +118,18 @@ const LIABILITY_CATS = CATS.filter((c) => c.side === "liability");
 /* ------------------------------------------------------------------ */
 
 function PortfolioPage() {
+  const { add } = Route.useSearch();
   const [view, setView] = useState<"cards" | "list">("cards");
   const [activeCat, setActiveCat] = useState<Cat | null>(null);
   const [bumps, setBumps] = useState(0);
 
+  useEffect(() => {
+    if (add === "asset") setActiveCat(CATS.find((cat) => cat.key === "bank") ?? null);
+    if (add === "liability") setActiveCat(CATS.find((cat) => cat.key === "credit_card") ?? null);
+  }, [add]);
+
   return (
-    <div className="px-6 md:px-10 py-8">
+    <div className="px-4 sm:px-6 md:px-10 py-6 md:py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-[28px] tracking-display font-bold leading-tight">My Portfolio</h1>

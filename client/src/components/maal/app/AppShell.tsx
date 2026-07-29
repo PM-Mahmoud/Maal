@@ -10,7 +10,7 @@ import {
   LayoutDashboard, MessageCircle, FileSearch, Radar as RadarIcon,
   Wallet, FolderLock, ArrowLeftRight, Target, UserCircle2,
   MessageSquarePlus, Map, LifeBuoy, ChevronDown, LogOut,
-  X, Lightbulb, CreditCard,
+  X, Lightbulb, CreditCard, Menu,
   PiggyBank, Receipt, Calculator, TrendingDown, Dices,
   BarChart3,
 } from "lucide-react";
@@ -45,9 +45,9 @@ const TOOLS: Item[] = [
   { to: "/app/scenarios-simulator", label: "Scenarios", icon: Dices },
 ];
 
-const BOTTOM: { label: string; href: string; icon: any }[] = [
-  { label: "Plan & Usage", href: "/app/billing", icon: CreditCard },
-  { label: "Roadmap", href: "/app/roadmap", icon: Map },
+const BOTTOM: Item[] = [
+  { label: "Plan & Usage", to: "/app/billing", icon: CreditCard },
+  { label: "Roadmap", to: "/app/roadmap", icon: Map },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -58,6 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [toolsOpen, setToolsOpen] = useState(true);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
@@ -129,16 +130,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <LifeBuoy className="size-4 shrink-0" />
               <span className="truncate">Support</span>
             </button>
-            {BOTTOM.map((b) => {
-              const Icon = b.icon;
-              return (
-                <a key={b.label} href={b.href} target={b.href.startsWith("http") ? "_blank" : undefined}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-[13px] font-medium text-muted-foreground hover:bg-[var(--secondary)] hover:text-foreground">
-                  <Icon className="size-4 shrink-0" />
-                  <span className="truncate">{b.label}</span>
-                </a>
-              );
-            })}
+            {BOTTOM.map((b) => <NavLink key={b.to} item={b} />)}
           </div>
         </nav>
 
@@ -157,22 +149,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="hidden md:flex sticky top-[3px] z-30 h-12 bg-background/90 backdrop-blur border-b border-border items-center justify-end px-6 gap-2">
+        <header className="hidden md:flex sticky top-0 z-30 h-12 bg-background/90 backdrop-blur border-b border-border items-center justify-end px-6 gap-2">
           <NotificationBell />
         </header>
-        <header className="md:hidden sticky top-[3px] z-30 h-14 bg-background/90 backdrop-blur border-b border-border flex items-center justify-between px-4">
+        <header className="md:hidden sticky top-0 z-30 h-14 bg-background/90 backdrop-blur border-b border-border flex items-center justify-between px-4">
           <Link to="/app" className="text-[15px] font-bold tracking-display">
             <span className="flex items-center gap-2"><MaalMark size={16} />Maal</span>
           </Link>
           <div className="flex items-center gap-2">
             <NotificationBell />
-            <select
-              value={location.pathname}
-              onChange={(e) => navigate({ to: e.target.value as "/app" })}
-              className="text-[12px] bg-transparent border border-border rounded-[6px] px-2 py-1"
-            >
-              {[...TOP, ...PORTFOLIO, ...TOOLS].map((n) => <option key={n.to} value={n.to}>{n.label}</option>)}
-            </select>
+            <button onClick={() => setMobileNavOpen(true)} aria-label="Open navigation"
+              className="grid size-9 place-items-center rounded-[8px] border border-border bg-[var(--surface)]">
+              <Menu className="size-4" />
+            </button>
           </div>
         </header>
         <main className="flex-1">{children}</main>
@@ -182,6 +171,64 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
       {supportOpen && <SupportModal onClose={() => setSupportOpen(false)} />}
+      <DialogPrimitive.Root open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 md:hidden" />
+          <DialogPrimitive.Content className="fixed inset-y-0 right-0 z-50 w-[min(88vw,360px)] overflow-y-auto border-l border-border bg-[var(--surface)] p-4 shadow-xl md:hidden">
+            <div className="mb-4 flex items-center justify-between">
+              <DialogPrimitive.Title className="flex items-center gap-2 text-[16px] font-bold">
+                <MaalMark size={17} /> Menu
+              </DialogPrimitive.Title>
+              <DialogPrimitive.Close aria-label="Close navigation" className="grid size-8 place-items-center text-muted-foreground">
+                <X className="size-4" />
+              </DialogPrimitive.Close>
+            </div>
+            <DialogPrimitive.Description className="sr-only">Navigate to any Maal dashboard feature or account action.</DialogPrimitive.Description>
+            <nav aria-label="Mobile dashboard navigation" className="space-y-5">
+              {[
+                { label: "Main", items: TOP },
+                { label: "My Portfolio", items: PORTFOLIO },
+                { label: "Calculators", items: TOOLS },
+                { label: "Account", items: BOTTOM },
+              ].map((group) => (
+                <section key={group.label}>
+                  <h2 className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{group.label}</h2>
+                  <div className="space-y-0.5">
+                    {group.items.map((item) => {
+                      const Icon = item.icon;
+                      const active = isActive(item.to);
+                      return (
+                        <Link key={item.to} to={item.to} onClick={() => setMobileNavOpen(false)}
+                          className={`flex items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13px] font-medium ${active ? "bg-mint/15 text-mint" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
+                          <Icon className="size-4" /> {item.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+              <section className="border-t border-border pt-3">
+                <button onClick={() => { setMobileNavOpen(false); setFeedbackOpen(true); }}
+                  className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13px] text-muted-foreground hover:bg-secondary">
+                  <MessageSquarePlus className="size-4" /> Share Feedback
+                </button>
+                <button onClick={() => { setMobileNavOpen(false); setSupportOpen(true); }}
+                  className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13px] text-muted-foreground hover:bg-secondary">
+                  <LifeBuoy className="size-4" /> Support
+                </button>
+                <div className="mt-2 flex items-center justify-between rounded-[8px] px-3 py-2">
+                  <span className="truncate text-[11px] text-muted-foreground">{email}</span>
+                  <ThemeToggle />
+                </div>
+                <button onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}
+                  className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13px] text-muted-foreground hover:bg-secondary">
+                  <LogOut className="size-4" /> Sign out
+                </button>
+              </section>
+            </nav>
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
     </div>
   );
 }

@@ -116,6 +116,8 @@ function normalizeProfile(row, user) {
     completed_onboarding: !!r.completed_onboarding,
     onboarded: !!r.completed_onboarding, // React alias
     created_at: (user && user.created_at) || null, // account-creation date (dashboard "All" range floor)
+    dashboard_layout: od.dashboard_layout || null,
+    dashboard_layout_updated_at: od.dashboard_layout_updated_at || null,
   };
 }
 
@@ -126,7 +128,7 @@ function profilePatchToColumns(patch) {
   const p = patch || {};
   const cols = {};
   const onboarding_data = {};
-  for (const k of ['display_name', 'age_band', 'risk']) {
+  for (const k of ['display_name', 'age_band', 'risk', 'dashboard_layout', 'dashboard_layout_updated_at']) {
     if (k in p) onboarding_data[k] = p[k];
   }
   const numCols = ['annual_income', 'super_balance', 'investment_portfolio', 'property_value',

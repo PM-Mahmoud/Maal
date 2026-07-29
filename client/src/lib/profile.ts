@@ -21,6 +21,12 @@ export type Profile = {
   completed_onboarding: boolean;
   onboarded: boolean;
   created_at: string | null;
+  dashboard_layout: {
+    order: string[];
+    sizes: Record<string, "sm" | "md" | "lg" | "wide">;
+    hidden: string[];
+  } | null;
+  dashboard_layout_updated_at: string | null;
 };
 
 import { handleUnauthenticated } from "@/integrations/api";

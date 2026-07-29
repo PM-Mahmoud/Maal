@@ -59,6 +59,22 @@ test('reads display_name/age_band/risk out of onboarding_data JSONB', () => {
   assert.strictEqual(out.onboarded, true);
 });
 
+test('reads dashboard layout preferences from onboarding_data JSONB', () => {
+  const dashboardLayout = {
+    order: ['maal_score', 'net_worth'],
+    sizes: { maal_score: 'md', net_worth: 'sm' },
+    hidden: ['market'],
+  };
+  const out = normalizeProfile({
+    onboarding_data: {
+      dashboard_layout: dashboardLayout,
+      dashboard_layout_updated_at: '2026-07-29T01:00:00.000Z',
+    },
+  }, { email: 'alex@example.com' });
+  assert.deepStrictEqual(out.dashboard_layout, dashboardLayout);
+  assert.strictEqual(out.dashboard_layout_updated_at, '2026-07-29T01:00:00.000Z');
+});
+
 console.log('\nprofilePatchToColumns');
 
 test('routes display_name/age_band/risk into onboarding_data, not columns', () => {
@@ -81,6 +97,19 @@ test('coerces numeric columns; skips empty string / null / undefined', () => {
 test('maps onboarded/completed_onboarding alias to the real column', () => {
   assert.strictEqual(profilePatchToColumns({ onboarded: true }).cols.completed_onboarding, true);
   assert.strictEqual(profilePatchToColumns({ completed_onboarding: false }).cols.completed_onboarding, false);
+});
+
+test('routes dashboard layout preferences into onboarding_data', () => {
+  const dashboard_layout = { order: ['cash'], sizes: { cash: 'sm' }, hidden: [] };
+  const { cols, onboarding_data } = profilePatchToColumns({
+    dashboard_layout,
+    dashboard_layout_updated_at: '2026-07-29T02:00:00.000Z',
+  });
+  assert.deepStrictEqual(cols, {});
+  assert.deepStrictEqual(onboarding_data, {
+    dashboard_layout,
+    dashboard_layout_updated_at: '2026-07-29T02:00:00.000Z',
+  });
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

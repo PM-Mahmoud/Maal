@@ -1,6 +1,7 @@
 export async function listGoals(): Promise<unknown[]> {
   const r = await fetch('/api/v1/goals', { credentials: 'include' });
-  const j = r.ok ? await r.json() : null;
+  if (!r.ok) throw new Error("Couldn't load your goals");
+  const j = await r.json();
   return Array.isArray(j) ? j : [];
 }
 export async function upsertGoal(data?: unknown): Promise<unknown> {
