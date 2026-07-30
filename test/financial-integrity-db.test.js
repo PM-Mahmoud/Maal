@@ -6,6 +6,7 @@ const migration = require('../migrations/1753900000000_financial_integrity');
 const runsMigration = require('../migrations/1754000000000_data_quality_runs');
 const reconciliationMigration = require('../migrations/1754100000000_account_reconciliation');
 const lineageMigration = require('../migrations/1754200000000_calculation_lineage');
+const jobsMigration = require('../migrations/1754300000000_background_jobs');
 
 async function expectPgError(fn, expectedCode) {
   let error;
@@ -65,9 +66,106 @@ async function main() {
     await runsMigration.up(pool);
     await reconciliationMigration.up(pool);
     await lineageMigration.up(pool);
+    await jobsMigration.up(pool);
 
     const firstUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
     const secondUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
+    global.__maalPool = pool;
+    delete require.cache[require.resolve('../db/background-jobs')];
+    const jobsDb = require('../db/background-jobs');
+    const firstJob = await jobsDb.enqueueJob({
+      userId: firstUser,
+      queue: 'financial',
+      jobType: 'sync',
+      payload: { account: 'a1' },
+      idempotencyKey: 'same-key',
+      maxAttempts: 2,
+    });
+    const duplicateJob = await jobsDb.enqueueJob({
+      userId: firstUser,
+      queue: 'financial',
+      jobType: 'sync',
+      payload: { account: 'changed-payload-is-not-applied' },
+      idempotencyKey: 'same-key',
+      maxAttempts: 2,
+    });
+    assert.equal(duplicateJob.id, firstJob.id, 'idempotent enqueue must return the existing job');
+    const concurrentEnqueues = await Promise.all(
+      Array.from({ length: 4 }, () => jobsDb.enqueueJob({
+        userId: firstUser,
+        queue: 'financial',
+        jobType: 'concurrent',
+        idempotencyKey: 'concurrent-key',
+      }))
+    );
+    assert.equal(
+      new Set(concurrentEnqueues.map((job) => job.id)).size,
+      1,
+      'concurrent idempotent enqueues must converge on one durable job'
+    );
+    const otherUserJob = await jobsDb.enqueueJob({
+      userId: secondUser,
+      queue: 'financial',
+      jobType: 'sync',
+      idempotencyKey: 'same-key',
+    });
+    assert.notEqual(otherUserJob.id, firstJob.id, 'idempotency keys are tenant-scoped');
+    const secondJob = await jobsDb.enqueueJob({
+      userId: firstUser,
+      queue: 'financial',
+      jobType: 'snapshot',
+      priority: 10,
+    });
+    const [claimA, claimB] = await Promise.all([
+      jobsDb.claimNextJob({ workerId: 'worker-a', queues: ['financial'], leaseSeconds: 30 }),
+      jobsDb.claimNextJob({ workerId: 'worker-b', queues: ['financial'], leaseSeconds: 30 }),
+    ]);
+    assert.notEqual(claimA.id, claimB.id, 'concurrent workers must not claim the same job');
+    assert.equal(
+      new Set([claimA.id, claimB.id]).has(secondJob.id),
+      true,
+      'priority jobs must be claimable before lower-priority work'
+    );
+    await assert.rejects(
+      () => jobsDb.completeJob(claimA.id, 'not-the-owner', {}),
+      /lease is no longer owned/
+    );
+    await jobsDb.heartbeatJob(claimA.id, claimA.locked_by, 30);
+    await jobsDb.completeJob(claimA.id, claimA.locked_by, { ok: true });
+    const retry = await jobsDb.failJob(claimB.id, claimB.locked_by, new Error('temporary'));
+    assert.equal(retry.status, retry.attempts >= retry.max_attempts ? 'dead' : 'queued');
+    const ownJobs = await jobsDb.listJobsForUser(firstUser);
+    assert.equal(ownJobs.some((job) => job.id === otherUserJob.id), false);
+    assert.equal(ownJobs.length >= 2, true);
+    const leasedJob = await jobsDb.enqueueJob({
+      userId: firstUser,
+      queue: 'lease-test',
+      jobType: 'recoverable',
+      maxAttempts: 2,
+    });
+    const firstLease = await jobsDb.claimNextJob({
+      workerId: 'worker-expired',
+      queues: ['lease-test'],
+      leaseSeconds: 30,
+    });
+    await pool.query(
+      `UPDATE background_jobs SET lease_expires_at = NOW() - INTERVAL '1 second'
+        WHERE id = $1`,
+      [leasedJob.id]
+    );
+    const recoveredLease = await jobsDb.claimNextJob({
+      workerId: 'worker-recovery',
+      queues: ['lease-test'],
+      leaseSeconds: 30,
+    });
+    assert.equal(recoveredLease.id, firstLease.id);
+    assert.equal(recoveredLease.attempts, 2);
+    const deadJob = await jobsDb.failJob(
+      recoveredLease.id,
+      'worker-recovery',
+      new Error('final failure')
+    );
+    assert.equal(deadJob.status, 'dead');
     const ownedTransaction = (await pool.query(
       `INSERT INTO transactions (user_id, basiq_id, amount, post_date)
        VALUES ($1, 'owned', 1, '2026-07-01') RETURNING id`,
@@ -347,8 +445,12 @@ async function main() {
 
     console.log('✓ financial-integrity PostgreSQL contract passed');
   } finally {
+    const authPool = global.__authPool;
+    const maalPool = global.__maalPool;
     delete global.__authPool;
     delete global.__maalPool;
+    if (authPool && authPool !== pool) await authPool.end();
+    if (maalPool && maalPool !== pool && maalPool !== authPool) await maalPool.end();
     await pool.end();
   }
 }

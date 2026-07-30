@@ -413,6 +413,11 @@ router.get(
 );
 
 router.get(
+  '/v1/background-jobs',
+  require('../services/background-jobs').listJobsHandler
+);
+
+router.get(
   '/v1/reconciliations',
   require('../services/reconciliation').listReconciliationsHandler
 );
