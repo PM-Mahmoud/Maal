@@ -480,6 +480,37 @@ test('missing provider IDs receive distinct deterministic evidence keys', () => 
     assert.equal(reconciliationAttempts, 2);
   });
 
+  await testAsync('wrapped transaction failures preserve provider consent metadata', async () => {
+    const providerError = Object.assign(new Error('consent expired'), {
+      provider: 'basiq',
+      status: 403,
+      path: '/users/u1/transactions',
+      providerCode: 'consent-expired',
+    });
+    const service = createBasiqSyncService({
+      provider: {
+        getAccounts: async () => [],
+        getTransactions: async () => { throw providerError; },
+      },
+      findUser: async () => ({ basiq_user_id: 'provider-user' }),
+      replaceAccounts: async () => null,
+      transactions: { upsertBasiqTransactions: async () => 0 },
+      integrity: { appendRawRecord: async () => null },
+      quality: {
+        runDataQualityChecks: async () => ({ status: 'incomplete' }),
+        recordDataQualityFailure: async () => null,
+      },
+      classify: () => 'cash',
+      reconciliation: { reconcileAccounts: async () => [] },
+    });
+    await assert.rejects(
+      () => service.sync(84),
+      (error) => error.provider === 'basiq'
+        && error.status === 403
+        && error.providerCode === 'consent-expired'
+    );
+  });
+
   await testAsync('lost job ownership prevents stale financial writes', async () => {
     let accountWrites = 0;
     let ownershipChecks = 0;

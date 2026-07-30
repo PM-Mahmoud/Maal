@@ -28,24 +28,36 @@ let cachedServerToken = null;
 let cachedServerTokenExp = 0;
 
 async function basiqFetch(path, options = {}, token) {
-  const res = await fetch(BASIQ_BASE + path, {
-    ...options,
-    headers: {
-      'Authorization': token,
-      'Accept': 'application/json',
-      'Content-Type': options.body && typeof options.body === 'string' && options.body[0] === '{'
-        ? 'application/json'
-        : 'application/x-www-form-urlencoded',
-      'basiq-version': '3.0',
-      ...(options.headers || {}),
-    },
-  });
+  let res;
+  try {
+    res = await fetch(BASIQ_BASE + path, {
+      ...options,
+      headers: {
+        'Authorization': token,
+        'Accept': 'application/json',
+        'Content-Type': options.body && typeof options.body === 'string' && options.body[0] === '{'
+          ? 'application/json'
+          : 'application/x-www-form-urlencoded',
+        'basiq-version': '3.0',
+        ...(options.headers || {}),
+      },
+    });
+  } catch (error) {
+    error.provider = 'basiq';
+    error.path = path;
+    throw error;
+  }
   const text = await res.text();
   let json = {};
   try { json = JSON.parse(text); } catch (e) { /* empty body */ }
   if (!res.ok) {
     const detail = json && json.data && json.data[0] && json.data[0].detail;
-    throw new Error(`Basiq ${res.status} on ${path}: ${detail || text.slice(0, 200)}`);
+    const error = new Error(`Basiq ${res.status} on ${path}: ${detail || text.slice(0, 200)}`);
+    error.status = res.status;
+    error.provider = 'basiq';
+    error.path = path;
+    error.providerCode = json && json.data && json.data[0] && json.data[0].code;
+    throw error;
   }
   return json;
 }
@@ -81,9 +93,9 @@ async function createBasiqUser(email) {
 }
 
 // Hosted consent UI URL — user picks their bank and approves read-only access.
-async function getConsentUrl(basiqUserId) {
+async function getConsentUrl(basiqUserId, action = 'connect') {
   const clientToken = await getClientToken(basiqUserId);
-  return `https://consent.basiq.io/home?token=${clientToken}&action=connect`;
+  return `https://consent.basiq.io/home?token=${clientToken}&action=${encodeURIComponent(action)}`;
 }
 
 async function getAccounts(basiqUserId) {
@@ -98,4 +110,15 @@ async function getTransactions(basiqUserId, limit = 25) {
   return json.data || [];
 }
 
-module.exports = { hasBasiq, createBasiqUser, getConsentUrl, getAccounts, getTransactions };
+async function getConnections(basiqUserId) {
+  const token = await getServerToken();
+  const json = await basiqFetch(
+    `/users/${basiqUserId}/connections`, { method: 'GET' }, token
+  );
+  return json.data || [];
+}
+
+module.exports = {
+  hasBasiq, createBasiqUser, getConsentUrl,
+  getAccounts, getTransactions, getConnections,
+};

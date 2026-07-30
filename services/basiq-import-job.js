@@ -1,7 +1,8 @@
 const importsDb = require('../db/import-runs');
 const { syncBasiqData } = require('./basiq-sync');
+const connectionHealth = require('./connection-health');
 
-function createBasiqImportHandler({ imports, sync }) {
+function createBasiqImportHandler({ imports, sync, health = null }) {
   return async function handleBasiqImport(job, context) {
     const runId = job.payload.import_run_id;
     const userId = job.payload.user_id;
@@ -37,9 +38,22 @@ function createBasiqImportHandler({ imports, sync }) {
         },
       });
       await imports.completeImportRun(runId, userId, attempt, summary);
+      try {
+        await health?.checkBasiqConnection(userId);
+        await health?.scheduleNextCheck(userId);
+      } catch (healthError) {
+        console.error('Could not record Basiq connection success:', healthError.message);
+      }
       return { import_run_id: runId, ...summary };
     } catch (error) {
       if (context.signal?.aborted || error.code === 'JOB_LEASE_LOST') throw error;
+      if (health?.shouldRecordProviderFailure(error)) {
+        try {
+          await health.recordImportFailure(userId, error);
+        } catch (healthError) {
+          console.error('Could not record Basiq connection failure:', healthError.message);
+        }
+      }
       await imports.failImportRun(
         runId, userId, attempt, error, job.attempts < job.max_attempts
       );
@@ -53,5 +67,6 @@ module.exports = {
   basiqImportHandler: createBasiqImportHandler({
     imports: importsDb,
     sync: syncBasiqData,
+    health: connectionHealth,
   }),
 };

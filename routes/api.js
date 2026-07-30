@@ -429,6 +429,11 @@ router.post('/v1/basiq/sync', async (req, res) => {
 
 router.get('/v1/import-runs/:id', require('../services/imports').getImportRunHandler);
 
+router.get(
+  '/v1/connection-health',
+  require('../services/connection-health').connectionHealthHandler
+);
+
 // ─── Markets ─────────────────────────────────────────────────────────────
 
 router.get('/v1/markets/indices', async (req, res) => {

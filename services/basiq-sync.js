@@ -129,6 +129,7 @@ async function syncBasiqDataWith(userId, dependencies, options = {}) {
   let transactionCount;
   let transactionCoverage;
   let transactionMessage;
+  let transactionError;
   let sourceTransactionFindings;
   let invalidTransactionCount;
   let hasUnlinkedTransactions;
@@ -150,6 +151,7 @@ async function syncBasiqDataWith(userId, dependencies, options = {}) {
       await assertOwnership();
     } catch (error) {
       transactionCoverage = 'failed';
+      transactionError = error;
       transactionMessage = `Transaction import failed: ${error.message}`;
     }
     const keyedTransactions = rawTransactions.map((record, index) => ({
@@ -180,6 +182,7 @@ async function syncBasiqDataWith(userId, dependencies, options = {}) {
         );
       } catch (error) {
         transactionCoverage = 'failed';
+        transactionError = error;
         transactionMessage = `Transaction persistence failed: ${error.message}`;
       }
     }
@@ -279,6 +282,12 @@ async function syncBasiqDataWith(userId, dependencies, options = {}) {
   if (transactionCoverage === 'failed' || reconciliationCoverage === 'failed') {
     const error = new Error(transactionMessage || 'Basiq import was incomplete');
     error.code = 'BASIQ_IMPORT_INCOMPLETE';
+    if (transactionError) {
+      error.cause = transactionError;
+      for (const key of ['provider', 'status', 'path', 'providerCode']) {
+        if (transactionError[key] !== undefined) error[key] = transactionError[key];
+      }
+    }
     throw error;
   }
 

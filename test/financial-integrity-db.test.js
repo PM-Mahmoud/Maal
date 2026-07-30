@@ -8,6 +8,7 @@ const reconciliationMigration = require('../migrations/1754100000000_account_rec
 const lineageMigration = require('../migrations/1754200000000_calculation_lineage');
 const jobsMigration = require('../migrations/1754300000000_background_jobs');
 const importRunsMigration = require('../migrations/1754400000000_import_runs');
+const connectionHealthMigration = require('../migrations/1754500000000_connection_health');
 
 async function expectPgError(fn, expectedCode) {
   let error;
@@ -30,7 +31,7 @@ async function main() {
   const pool = new Pool({ connectionString: url.toString() });
   try {
     await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public');
-    await pool.query('CREATE TABLE users (id BIGSERIAL PRIMARY KEY)');
+    await pool.query('CREATE TABLE users (id BIGSERIAL PRIMARY KEY, basiq_user_id TEXT)');
     await pool.query(`
       CREATE TABLE linked_accounts (
         id BIGSERIAL PRIMARY KEY, user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
@@ -69,6 +70,7 @@ async function main() {
     await lineageMigration.up(pool);
     await jobsMigration.up(pool);
     await importRunsMigration.up(pool);
+    await connectionHealthMigration.up(pool);
 
     const firstUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
     const secondUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
@@ -170,6 +172,79 @@ async function main() {
     assert.equal(deadJob.status, 'dead');
     delete require.cache[require.resolve('../db/import-runs')];
     const importRunsDb = require('../db/import-runs');
+    const connectionHealthDb = require('../db/connection-health');
+    await connectionHealthDb.upsertHealth(firstUser, 'basiq', {
+      status: 'expiring',
+      providerStatus: 'active',
+      consentExpiresAt: '2026-08-03T00:00:00Z',
+      consecutiveFailures: 0,
+    });
+    assert.equal(
+      (await connectionHealthDb.getHealth(firstUser)).status,
+      'expiring'
+    );
+    assert.equal(
+      await connectionHealthDb.getHealth(secondUser),
+      null,
+      'connection health must remain tenant-scoped'
+    );
+    await connectionHealthDb.upsertHealth(firstUser, 'basiq', {
+      status: 'healthy',
+      consentExpiresAt: null,
+      replaceConsent: true,
+      consecutiveFailures: 0,
+    });
+    assert.equal(
+      (await connectionHealthDb.getHealth(firstUser)).consent_expires_at,
+      null,
+      'an authoritative provider check must clear stale consent expiry'
+    );
+    await pool.query(
+      'UPDATE users SET basiq_user_id = $2 WHERE id = $1',
+      [firstUser, 'provider-existing-user']
+    );
+    const connectionHealthService = require('../services/connection-health');
+    await connectionHealthService.seedConnectionHealthJobs();
+    await connectionHealthService.seedConnectionHealthJobs();
+    assert.equal(
+      Number((await pool.query(
+        `SELECT COUNT(*) AS count FROM background_jobs
+          WHERE user_id = $1 AND job_type = 'basiq_connection_health'`,
+        [firstUser]
+      )).rows[0].count),
+      1,
+      'monitoring bootstrap must be idempotent for existing linked users'
+    );
+    await connectionHealthDb.scheduleBasiqHealthCheck(
+      firstUser, new Date('2026-08-02T05:00:00Z')
+    );
+    assert.equal(
+      Number((await pool.query(
+        `SELECT COUNT(*) AS count FROM background_jobs
+          WHERE user_id = $1 AND job_type = 'basiq_connection_health'
+            AND status IN ('queued','running')`,
+        [firstUser]
+      )).rows[0].count),
+      1,
+      'a restart in a different hour must not create another active monitor'
+    );
+    const healthJob = await jobsDb.claimNextJob({
+      workerId: 'health-worker', queues: ['monitoring'], leaseSeconds: 30,
+    });
+    await connectionHealthDb.scheduleBasiqHealthCheck(
+      firstUser, new Date('2026-08-03T05:00:00Z'), healthJob.id
+    );
+    await jobsDb.completeJob(healthJob.id, 'health-worker', { status: 'healthy' });
+    assert.equal(
+      Number((await pool.query(
+        `SELECT COUNT(*) AS count FROM background_jobs
+          WHERE user_id = $1 AND job_type = 'basiq_connection_health'
+            AND status IN ('queued','running')`,
+        [firstUser]
+      )).rows[0].count),
+      1,
+      'a completed health check must leave exactly one durable successor'
+    );
     const queuedImport = await importRunsDb.enqueueImportRun(firstUser, {
       requestKey: 'manual-sync-1',
     });

@@ -41,6 +41,19 @@ router.get('/connect', async (req, res) => {
   }
 });
 
+router.get('/reauthorise', async (req, res) => {
+  if (!basiq.hasBasiq()) {
+    return res.redirect('/dashboard/transactions?basiq=nokey');
+  }
+  try {
+    const basiqUserId = await ensureBasiqUser(req);
+    res.redirect(await basiq.getConsentUrl(basiqUserId, 'reauthorise'));
+  } catch (err) {
+    console.error('Basiq reauthorise error:', err.message);
+    res.redirect('/dashboard/transactions?basiq=error');
+  }
+});
+
 async function syncAccountsToDb(req) {
   const minuteBucket = Math.floor(Date.now() / 60000);
   return importRuns.enqueueImportRun(req.session.userId, {
