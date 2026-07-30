@@ -424,25 +424,10 @@ router.get(
 
 // POST /api/v1/basiq/sync — trigger account + transaction sync, return JSON
 router.post('/v1/basiq/sync', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
-  try {
-    const { syncBasiqData } = require('../services/basiq-sync');
-    res.json({ ok: true, ...(await syncBasiqData(req.session.userId)) });
-  } catch (err) {
-    console.error('basiq sync error:', err.message);
-    try {
-      const quality = require('../services/data-quality');
-      await quality.recordDataQualityFailure(req.session.userId, {
-        trigger: 'basiq_sync',
-        coverage: { accounts: 'failed', transactions: 'not_run' },
-        message: err.message,
-      });
-    } catch (qualityError) {
-      console.error('Could not record Basiq data-quality failure:', qualityError.message);
-    }
-    res.status(500).json({ error: 'Sync failed. Please try again.' });
-  }
+  return require('../services/imports').enqueueBasiqImportHandler(req, res);
 });
+
+router.get('/v1/import-runs/:id', require('../services/imports').getImportRunHandler);
 
 // ─── Markets ─────────────────────────────────────────────────────────────
 

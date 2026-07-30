@@ -19,7 +19,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 ## 2. Durable automation
 
 - [x] Build 2.1 — Introduce a durable background-job table and worker contract.
-- [ ] Build 2.2 — Make imports idempotent, resumable, and observable.
+- [x] Build 2.2 — Make imports idempotent, resumable, and observable.
 - [ ] Build 2.3 — Add connection-health monitoring and consent-expiry handling.
 - [ ] Build 2.4 — Add operational alerts and backup/restore verification.
 
@@ -82,4 +82,5 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 | 1.2 | Built 2026-07-30 | focused data-quality/import tests; `npm run test:integrity-db`; `npm test` | `c45c455` |
 | 1.3 | Built 2026-07-30 | reconciliation unit/service tests; `npm run test:integrity-db`; `npm test` | `02bcc98` |
 | 1.4 | Built 2026-07-30 | lineage unit/service tests; `npm run test:integrity-db`; `npm test` | `559d350` |
-| 2.1 | Built 2026-07-30 | worker unit tests; concurrent PostgreSQL contract; `npm test` | This commit |
+| 2.1 | Built 2026-07-30 | worker unit tests; concurrent PostgreSQL contract; `npm test` | `1ba41fa` |
+| 2.2 | Built 2026-07-30 | resumable import unit tests; PostgreSQL attempt-fencing contract; `npm test` | This commit |

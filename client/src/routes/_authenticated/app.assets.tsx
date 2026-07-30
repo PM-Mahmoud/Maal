@@ -482,10 +482,44 @@ function ConnectPanel() {
     setSyncing(true);
     setSyncMsg(null);
     try {
-      const r = await fetch("/api/v1/basiq/sync", { method: "POST", credentials: "include" });
+      const r = await fetch("/api/v1/basiq/sync", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+      });
       const j = await r.json();
-      setSyncMsg(r.ok ? `Synced ${j.accounts ?? 0} account${j.accounts === 1 ? "" : "s"} — balances updated.` : j.error || "Sync failed.");
-      if (r.ok) window.location.reload();
+      if (!r.ok || !j.import_run_id) {
+        setSyncMsg(j.error || "Sync failed.");
+        return;
+      }
+      setSyncMsg("Sync queued — securely importing your latest data…");
+      for (let attempt = 0; attempt < 120; attempt++) {
+        await new Promise(resolve => window.setTimeout(resolve, 1000));
+        const statusResponse = await fetch(
+          `/api/v1/import-runs/${encodeURIComponent(j.import_run_id)}`,
+          { credentials: "include" }
+        );
+        if (statusResponse.status === 401) {
+          handleUnauthenticated();
+          return;
+        }
+        if (!statusResponse.ok) throw new Error("Could not check sync progress");
+        const { import_run: run } = await statusResponse.json();
+        if (run.status === "succeeded") {
+          const accounts = Number(run.summary?.accounts ?? 0);
+          setSyncMsg(`Synced ${accounts} account${accounts === 1 ? "" : "s"} — balances updated.`);
+          window.location.reload();
+          return;
+        }
+        if (run.status === "dead") {
+          setSyncMsg(run.last_error || "Sync failed after several attempts.");
+          return;
+        }
+        setSyncMsg(run.status === "retrying"
+          ? "Your bank is temporarily unavailable — retrying automatically…"
+          : `Syncing ${run.current_stage || "your accounts"}…`);
+      }
+      setSyncMsg("Sync is taking longer than expected. You can leave this page and try again later.");
     } catch {
       setSyncMsg("Sync failed — check your connection.");
     } finally {

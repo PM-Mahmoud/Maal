@@ -8,3 +8,15 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+  - type: worker
+    runtime: node
+    name: maal-import-worker
+    buildCommand: npm install && npm run migrate
+    startCommand: npm run worker
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: BASIQ_API_KEY
+        sync: false

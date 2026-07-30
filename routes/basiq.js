@@ -10,7 +10,7 @@ const router = express.Router();
 
 const basiq = require('../services/basiq');
 const { findUserById, setBasiqUserId } = require('../db/users');
-const { syncBasiqData } = require('../services/basiq-sync');
+const importRuns = require('../db/import-runs');
 
 function requireAuth(req, res, next) {
   if (!req.session.userId) return res.redirect('/login');
@@ -42,14 +42,17 @@ router.get('/connect', async (req, res) => {
 });
 
 async function syncAccountsToDb(req) {
-  const result = await syncBasiqData(req.session.userId);
-  return result.accounts;
+  const minuteBucket = Math.floor(Date.now() / 60000);
+  return importRuns.enqueueImportRun(req.session.userId, {
+    provider: 'basiq',
+    requestKey: `legacy:${req.path}:${req.session.userId}:${minuteBucket}`,
+  });
 }
 
 router.get('/callback', async (req, res) => {
   try {
-    const count = await syncAccountsToDb(req);
-    res.redirect('/dashboard/transactions?basiq=connected&accounts=' + count);
+    const { run } = await syncAccountsToDb(req);
+    res.redirect('/dashboard/transactions?basiq=queued&import_run=' + run.id);
   } catch (err) {
     console.error('Basiq callback error:', err.message);
     try {
@@ -67,8 +70,8 @@ router.get('/callback', async (req, res) => {
 
 router.get('/sync', async (req, res) => {
   try {
-    const count = await syncAccountsToDb(req);
-    res.redirect('/dashboard/transactions?basiq=synced&accounts=' + count);
+    const { run } = await syncAccountsToDb(req);
+    res.redirect('/dashboard/transactions?basiq=queued&import_run=' + run.id);
   } catch (err) {
     console.error('Basiq sync error:', err.message);
     try {

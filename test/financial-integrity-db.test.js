@@ -7,6 +7,7 @@ const runsMigration = require('../migrations/1754000000000_data_quality_runs');
 const reconciliationMigration = require('../migrations/1754100000000_account_reconciliation');
 const lineageMigration = require('../migrations/1754200000000_calculation_lineage');
 const jobsMigration = require('../migrations/1754300000000_background_jobs');
+const importRunsMigration = require('../migrations/1754400000000_import_runs');
 
 async function expectPgError(fn, expectedCode) {
   let error;
@@ -67,6 +68,7 @@ async function main() {
     await reconciliationMigration.up(pool);
     await lineageMigration.up(pool);
     await jobsMigration.up(pool);
+    await importRunsMigration.up(pool);
 
     const firstUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
     const secondUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
@@ -166,6 +168,167 @@ async function main() {
       new Error('final failure')
     );
     assert.equal(deadJob.status, 'dead');
+    delete require.cache[require.resolve('../db/import-runs')];
+    const importRunsDb = require('../db/import-runs');
+    const queuedImport = await importRunsDb.enqueueImportRun(firstUser, {
+      requestKey: 'manual-sync-1',
+    });
+    const duplicateImport = await importRunsDb.enqueueImportRun(firstUser, {
+      requestKey: 'manual-sync-1',
+    });
+    assert.equal(duplicateImport.run.id, queuedImport.run.id);
+    assert.equal(duplicateImport.job.id, queuedImport.job.id);
+    const otherImport = await importRunsDb.enqueueImportRun(secondUser, {
+      requestKey: 'manual-sync-1',
+    });
+    assert.notEqual(otherImport.run.id, queuedImport.run.id);
+    await pool.query(
+      'UPDATE background_jobs SET priority = 10 WHERE id = $1',
+      [queuedImport.job.id]
+    );
+    const importJobAttempt1 = await jobsDb.claimNextJob({
+      workerId: 'import-worker-1', queues: ['imports'], leaseSeconds: 30,
+    });
+    const importAttempt1 = {
+      token: 'attempt-1', jobId: importJobAttempt1.id,
+      workerId: 'import-worker-1', attempts: importJobAttempt1.attempts,
+    };
+    await importRunsDb.startImportRun(queuedImport.run.id, firstUser, importAttempt1);
+    await importRunsDb.updateImportProgress(
+      queuedImport.run.id, firstUser, importAttempt1, 'accounts',
+      { imported: 2 }, { account_count: 2 }
+    );
+    await importRunsDb.failImportRun(
+      queuedImport.run.id, firstUser, importAttempt1,
+      new Error('temporary provider error'), true
+    );
+    await jobsDb.failJob(
+      importJobAttempt1.id, 'import-worker-1', new Error('temporary provider error')
+    );
+    await pool.query(
+      'UPDATE background_jobs SET run_at = NOW() WHERE id = $1',
+      [importJobAttempt1.id]
+    );
+    const importJobAttempt2 = await jobsDb.claimNextJob({
+      workerId: 'import-worker-2', queues: ['imports'], leaseSeconds: 30,
+    });
+    const importAttempt2 = {
+      token: 'attempt-2', jobId: importJobAttempt2.id,
+      workerId: 'import-worker-2', attempts: importJobAttempt2.attempts,
+    };
+    const resumedImport = await importRunsDb.startImportRun(
+      queuedImport.run.id, firstUser, importAttempt2
+    );
+    assert.equal(resumedImport.attempt_count, 2);
+    assert.deepStrictEqual(resumedImport.progress.accounts, { imported: 2 });
+    assert.deepStrictEqual(resumedImport.checkpoints.accounts, { account_count: 2 });
+    await assert.rejects(
+      () => importRunsDb.updateImportProgress(
+        queuedImport.run.id, firstUser, importAttempt1, 'transactions', {}, {}
+      ),
+      (error) => error.code === 'JOB_LEASE_LOST'
+    );
+    await importRunsDb.completeImportRun(
+      queuedImport.run.id, firstUser, importAttempt2,
+      { accounts: 2, transactions: 4 }
+    );
+    const crashImport = await importRunsDb.enqueueImportRun(firstUser, {
+      requestKey: 'crash-recovery',
+    });
+    await pool.query(
+      'UPDATE background_jobs SET priority = 20 WHERE id = $1',
+      [crashImport.job.id]
+    );
+    const crashedJob = await jobsDb.claimNextJob({
+      workerId: 'crashed-worker', queues: ['imports'], leaseSeconds: 30,
+    });
+    const crashedAttempt = {
+      token: 'crashed-attempt', jobId: crashedJob.id,
+      workerId: 'crashed-worker', attempts: crashedJob.attempts,
+    };
+    await importRunsDb.startImportRun(crashImport.run.id, firstUser, crashedAttempt);
+    await pool.query(
+      `UPDATE background_jobs SET lease_expires_at = NOW() - INTERVAL '1 second'
+        WHERE id = $1`,
+      [crashedJob.id]
+    );
+    const recoveryJob = await jobsDb.claimNextJob({
+      workerId: 'recovery-worker', queues: ['imports'], leaseSeconds: 30,
+    });
+    const recoveryAttempt = {
+      token: 'recovery-attempt', jobId: recoveryJob.id,
+      workerId: 'recovery-worker', attempts: recoveryJob.attempts,
+    };
+    await importRunsDb.startImportRun(crashImport.run.id, firstUser, recoveryAttempt);
+    await assert.rejects(
+      () => importRunsDb.updateImportProgress(
+        crashImport.run.id, firstUser, crashedAttempt, 'accounts', {}, {}
+      ),
+      (error) => error.code === 'JOB_LEASE_LOST'
+    );
+    let releaseFencedMutation;
+    let fenceAcquired;
+    const fenceReady = new Promise((resolve) => { fenceAcquired = resolve; });
+    const mutationGate = new Promise((resolve) => { releaseFencedMutation = resolve; });
+    const fencedMutation = importRunsDb.withImportFence(
+      crashImport.run.id, firstUser, recoveryAttempt,
+      async () => {
+        fenceAcquired();
+        await mutationGate;
+        await pool.query(
+          `INSERT INTO raw_financial_records
+             (user_id, source, entity_type, source_record_id, payload, payload_hash)
+           VALUES ($1, 'basiq', 'account', 'fenced-write', '{}', 'fenced-hash')`,
+          [firstUser]
+        );
+      }
+    );
+    await fenceReady;
+    const takeover = pool.query(
+      `UPDATE background_jobs SET lease_expires_at = NOW() - INTERVAL '1 second'
+        WHERE id = $1`,
+      [recoveryJob.id]
+    );
+    assert.equal(
+      await Promise.race([
+        takeover.then(() => 'took-over'),
+        new Promise((resolve) => setTimeout(() => resolve('blocked'), 50)),
+      ]),
+      'blocked',
+      'takeover must wait while a fenced financial mutation holds the job row'
+    );
+    releaseFencedMutation();
+    await fencedMutation;
+    await takeover;
+    assert.equal(
+      Number((await pool.query(
+        `SELECT COUNT(*) AS count FROM raw_financial_records
+          WHERE user_id = $1 AND source_record_id = 'fenced-write'`,
+        [firstUser]
+      )).rows[0].count),
+      1
+    );
+    await assert.rejects(
+      () => importRunsDb.withImportFence(
+        crashImport.run.id, firstUser, recoveryAttempt, async () => {
+          throw new Error('stale mutation should never execute');
+        }
+      ),
+      (error) => error.code === 'JOB_LEASE_LOST'
+    );
+    await pool.query(
+      `UPDATE background_jobs SET lease_expires_at = NOW() + INTERVAL '30 seconds'
+        WHERE id = $1`,
+      [recoveryJob.id]
+    );
+    await importRunsDb.completeImportRun(
+      crashImport.run.id, firstUser, recoveryAttempt, { accounts: 0, transactions: 0 }
+    );
+    assert.equal(
+      await importRunsDb.getImportRunForUser(queuedImport.run.id, secondUser),
+      null,
+      'import-run visibility must remain tenant-scoped'
+    );
     const ownedTransaction = (await pool.query(
       `INSERT INTO transactions (user_id, basiq_id, amount, post_date)
        VALUES ($1, 'owned', 1, '2026-07-01') RETURNING id`,

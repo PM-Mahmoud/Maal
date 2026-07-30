@@ -661,6 +661,9 @@ router.get('/transactions', async (req, res) => {
       basiqEnabled: basiqService.hasBasiq(),
       basiqStatus: req.query.basiq || null,
       basiqReason: req.query.reason || null,
+      basiqImportRun: /^\d+$/.test(String(req.query.import_run || ''))
+        ? String(req.query.import_run)
+        : null,
       liveTransactions,
       liveAccounts,
       statementFiles,

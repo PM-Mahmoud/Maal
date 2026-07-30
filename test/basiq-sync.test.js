@@ -330,9 +330,8 @@ test('missing provider IDs receive distinct deterministic evidence keys', () => 
       classify: () => 'cash',
       reconciliation: { reconcileAccounts: async () => [] },
     });
-    const result = await service.sync(78);
-    assert.strictEqual(result.transactions, 0);
-    assert.deepStrictEqual(result.coverage, {
+    await assert.rejects(() => service.sync(78), /Transaction persistence failed/);
+    assert.deepStrictEqual(qualityOptions.coverage, {
       accounts: 'complete', transactions: 'failed', reconciliation: 'not_run',
     });
     assert.match(qualityOptions.message, /Transaction persistence failed/);
@@ -361,8 +360,8 @@ test('missing provider IDs receive distinct deterministic evidence keys', () => 
         reconcileAccounts: async () => { throw new Error('reconciliation unavailable'); },
       },
     });
-    const result = await service.sync(79);
-    assert.deepStrictEqual(result.coverage, {
+    await assert.rejects(() => service.sync(79), /Account reconciliation failed/);
+    assert.deepStrictEqual(qualityOptions.coverage, {
       accounts: 'complete', transactions: 'complete', reconciliation: 'failed',
     });
     assert.match(qualityOptions.message, /Account reconciliation failed/);
@@ -393,6 +392,124 @@ test('missing provider IDs receive distinct deterministic evidence keys', () => 
     const result = await service.sync(80);
     assert.equal(reconciliationOptions.evidenceComplete, false);
     assert.equal(result.coverage.reconciliation, 'incomplete');
+  });
+
+  await testAsync('retry resumes after the last durable stage checkpoint', async () => {
+    let accountFetches = 0;
+    let transactionFetches = 0;
+    const checkpoints = {};
+    const service = createBasiqSyncService({
+      provider: {
+        getAccounts: async () => {
+          accountFetches++;
+          return [{ id: 'a1', balance: 100, class: { type: 'transaction' } }];
+        },
+        getTransactions: async () => { transactionFetches++; return []; },
+      },
+      findUser: async () => ({ basiq_user_id: 'provider-user' }),
+      replaceAccounts: async () => null,
+      transactions: { upsertBasiqTransactions: async () => 0 },
+      integrity: { appendRawRecord: async () => null },
+      quality: {
+        runDataQualityChecks: async () => ({ status: 'healthy' }),
+        recordDataQualityFailure: async () => null,
+      },
+      classify: () => 'cash',
+      reconciliation: { reconcileAccounts: async () => [] },
+    });
+    await assert.rejects(
+      () => service.sync(81, {
+        onProgress: async (stage, _details, checkpoint) => {
+          checkpoints[stage] = checkpoint;
+          if (stage === 'accounts') throw new Error('worker crashed');
+        },
+      }),
+      /worker crashed/
+    );
+    await service.sync(81, { checkpoints, onProgress: async () => null });
+    assert.equal(accountFetches, 1, 'completed account stage must not rerun');
+    assert.equal(transactionFetches, 1);
+  });
+
+  await testAsync('failed transaction and reconciliation stages are retried, not checkpointed', async () => {
+    const checkpoints = {};
+    let accountFetches = 0;
+    let transactionFetches = 0;
+    let reconciliationAttempts = 0;
+    const service = createBasiqSyncService({
+      provider: {
+        getAccounts: async () => { accountFetches++; return []; },
+        getTransactions: async () => {
+          transactionFetches++;
+          if (transactionFetches === 1) throw new Error('temporary transaction outage');
+          return [];
+        },
+      },
+      findUser: async () => ({ basiq_user_id: 'provider-user' }),
+      replaceAccounts: async () => null,
+      transactions: { upsertBasiqTransactions: async () => 0 },
+      integrity: { appendRawRecord: async () => null },
+      quality: {
+        runDataQualityChecks: async () => ({ status: 'healthy' }),
+        recordDataQualityFailure: async () => null,
+      },
+      classify: () => 'cash',
+      reconciliation: {
+        reconcileAccounts: async () => {
+          reconciliationAttempts++;
+          if (reconciliationAttempts === 1) throw new Error('temporary reconciliation outage');
+        },
+      },
+    });
+    const progress = async (stage, _details, checkpoint) => {
+      if (checkpoint !== null) checkpoints[stage] = checkpoint;
+    };
+    await assert.rejects(
+      () => service.sync(82, { checkpoints, onProgress: progress }),
+      /Transaction import failed/
+    );
+    assert.equal(checkpoints.transactions, undefined);
+    await assert.rejects(
+      () => service.sync(82, { checkpoints, onProgress: progress }),
+      /Account reconciliation failed/
+    );
+    assert.equal(checkpoints.reconciliation, undefined);
+    await service.sync(82, { checkpoints, onProgress: progress });
+    assert.equal(accountFetches, 1);
+    assert.equal(transactionFetches, 2);
+    assert.equal(reconciliationAttempts, 2);
+  });
+
+  await testAsync('lost job ownership prevents stale financial writes', async () => {
+    let accountWrites = 0;
+    let ownershipChecks = 0;
+    const service = createBasiqSyncService({
+      provider: {
+        getAccounts: async () => [{ id: 'a1', balance: 100 }],
+        getTransactions: async () => [],
+      },
+      findUser: async () => ({ basiq_user_id: 'provider-user' }),
+      replaceAccounts: async () => { accountWrites++; },
+      transactions: { upsertBasiqTransactions: async () => 0 },
+      integrity: { appendRawRecord: async () => { accountWrites++; } },
+      quality: {
+        runDataQualityChecks: async () => ({ status: 'healthy' }),
+        recordDataQualityFailure: async () => null,
+      },
+      classify: () => 'cash',
+      reconciliation: { reconcileAccounts: async () => [] },
+    });
+    await assert.rejects(
+      () => service.sync(83, {
+        assertOwnership: async () => {
+          ownershipChecks++;
+          throw new Error('lease lost during provider request');
+        },
+      }),
+      /lease lost/
+    );
+    assert.equal(ownershipChecks, 1);
+    assert.equal(accountWrites, 0);
   });
 
   // ─── basiqFetch error handling (mocked fetch, no network) ───

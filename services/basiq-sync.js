@@ -54,8 +54,11 @@ function invalidEntityKeys(findings, entityType) {
   );
 }
 
-async function appendRawBatch(userId, entityType, keyedRecords, observedAt, integrity) {
+async function appendRawBatch(
+  userId, entityType, keyedRecords, observedAt, integrity, assertOwnership
+) {
   for (const { record, key } of keyedRecords) {
+    await assertOwnership();
     await integrity.appendRawRecord(userId, {
       source: 'basiq',
       entityType,
@@ -74,82 +77,159 @@ function shapeAccounts(accounts, classify) {
   });
 }
 
-async function syncBasiqDataWith(userId, dependencies) {
+async function syncBasiqDataWith(userId, dependencies, options = {}) {
   const {
     provider, findUser, transactions, integrity, quality, classify, replaceAccounts, reconciliation,
   } = dependencies;
+  const assertOwnership = options.assertOwnership || (async () => null);
+  const withFence = options.withFence || (async (mutation) => {
+    await assertOwnership();
+    return mutation();
+  });
   const user = await findUser(userId);
   if (!user?.basiq_user_id) throw new Error('No Basiq account linked');
 
   const observedAt = new Date().toISOString();
-  const rawAccounts = await provider.getAccounts(user.basiq_user_id);
-  const keyedAccounts = rawAccounts.map((record, index) => ({
-    record, key: providerRecordKey(record, 'account', index),
-  }));
-  await appendRawBatch(userId, 'account', keyedAccounts, observedAt, integrity);
-  const sourceAccountFindings = namespaceSourceFindings(checkAccounts(
-    keyedAccounts.map(({ record, key }) => rawAccountProjection(record, observedAt, key)),
-    { now: observedAt }
-  ));
-  const invalidAccounts = invalidEntityKeys(sourceAccountFindings, 'source_account');
-  const validAccounts = keyedAccounts
-    .filter(({ record, key }) => record.id && !invalidAccounts.has(key))
-    .map(({ record }) => record);
-  const quarantinedReferences = keyedAccounts
-    .filter(({ record, key }) => record.id && invalidAccounts.has(key))
-    .map(({ record }) => `basiq:${record.id}`);
-  await replaceAccounts(userId, shapeAccounts(validAccounts, classify), quarantinedReferences);
-
-  let rawTransactions = [];
-  let transactionCoverage = 'complete';
-  let transactionMessage = null;
-  try {
-    rawTransactions = await provider.getTransactions(user.basiq_user_id, 100);
-  } catch (error) {
-    transactionCoverage = 'failed';
-    transactionMessage = `Transaction import failed: ${error.message}`;
+  const checkpoints = options.checkpoints || {};
+  let accountCount;
+  let sourceAccountFindings;
+  if (checkpoints.accounts) {
+    ({ account_count: accountCount, source_findings: sourceAccountFindings } = checkpoints.accounts);
+  } else {
+    const rawAccounts = await provider.getAccounts(user.basiq_user_id);
+    await assertOwnership();
+    const keyedAccounts = rawAccounts.map((record, index) => ({
+      record, key: providerRecordKey(record, 'account', index),
+    }));
+    await withFence(() => appendRawBatch(
+      userId, 'account', keyedAccounts, observedAt, integrity, async () => null
+    ));
+    sourceAccountFindings = namespaceSourceFindings(checkAccounts(
+      keyedAccounts.map(({ record, key }) => rawAccountProjection(record, observedAt, key)),
+      { now: observedAt }
+    ));
+    const invalidAccounts = invalidEntityKeys(sourceAccountFindings, 'source_account');
+    const validAccounts = keyedAccounts
+      .filter(({ record, key }) => record.id && !invalidAccounts.has(key))
+      .map(({ record }) => record);
+    const quarantinedReferences = keyedAccounts
+      .filter(({ record, key }) => record.id && invalidAccounts.has(key))
+      .map(({ record }) => `basiq:${record.id}`);
+    await withFence(() => replaceAccounts(
+      userId, shapeAccounts(validAccounts, classify), quarantinedReferences
+    ));
+    accountCount = validAccounts.length;
+    await options.onProgress?.(
+      'accounts',
+      { imported: accountCount, quarantined: quarantinedReferences.length },
+      { account_count: accountCount, source_findings: sourceAccountFindings }
+    );
   }
 
-  const keyedTransactions = rawTransactions.map((record, index) => ({
-    record, key: providerRecordKey(record, 'transaction', index),
-  }));
-  await appendRawBatch(userId, 'transaction', keyedTransactions, observedAt, integrity);
-  const sourceTransactionFindings = namespaceSourceFindings(checkTransactions(
-    keyedTransactions.map(({ record, key }) => rawTransactionProjection(record, key)),
-    { now: observedAt }
-  ));
-  const invalidTransactions = invalidEntityKeys(sourceTransactionFindings, 'source_transaction');
-  const validTransactions = keyedTransactions
-    .filter(({ record, key }) => record.id && !invalidTransactions.has(key))
-    .map(({ record }) => record);
-  const hasUnlinkedTransactions = validTransactions.some(
-    (transaction) => !basiqAccountReference(
-      transaction.account || (transaction.links && transaction.links.account)
-    )
-  );
-  let transactionCount = 0;
-  if (transactionCoverage === 'complete') {
+  let transactionCount;
+  let transactionCoverage;
+  let transactionMessage;
+  let sourceTransactionFindings;
+  let invalidTransactionCount;
+  let hasUnlinkedTransactions;
+  if (checkpoints.transactions) {
+    ({
+      transaction_count: transactionCount,
+      coverage: transactionCoverage,
+      message: transactionMessage,
+      source_findings: sourceTransactionFindings,
+      invalid_count: invalidTransactionCount,
+      has_unlinked: hasUnlinkedTransactions,
+    } = checkpoints.transactions);
+  } else {
+    let rawTransactions = [];
+    transactionCoverage = 'complete';
+    transactionMessage = null;
     try {
-      transactionCount = await transactions.upsertBasiqTransactions(userId, validTransactions);
+      rawTransactions = await provider.getTransactions(user.basiq_user_id, 100);
+      await assertOwnership();
     } catch (error) {
       transactionCoverage = 'failed';
-      transactionMessage = `Transaction persistence failed: ${error.message}`;
+      transactionMessage = `Transaction import failed: ${error.message}`;
     }
+    const keyedTransactions = rawTransactions.map((record, index) => ({
+      record, key: providerRecordKey(record, 'transaction', index),
+    }));
+    await withFence(() => appendRawBatch(
+      userId, 'transaction', keyedTransactions, observedAt, integrity, async () => null
+    ));
+    sourceTransactionFindings = namespaceSourceFindings(checkTransactions(
+      keyedTransactions.map(({ record, key }) => rawTransactionProjection(record, key)),
+      { now: observedAt }
+    ));
+    const invalidTransactions = invalidEntityKeys(sourceTransactionFindings, 'source_transaction');
+    invalidTransactionCount = invalidTransactions.size;
+    const validTransactions = keyedTransactions
+      .filter(({ record, key }) => record.id && !invalidTransactions.has(key))
+      .map(({ record }) => record);
+    hasUnlinkedTransactions = validTransactions.some(
+      (transaction) => !basiqAccountReference(
+        transaction.account || (transaction.links && transaction.links.account)
+      )
+    );
+    transactionCount = 0;
+    if (transactionCoverage === 'complete') {
+      try {
+        transactionCount = await withFence(
+          () => transactions.upsertBasiqTransactions(userId, validTransactions)
+        );
+      } catch (error) {
+        transactionCoverage = 'failed';
+        transactionMessage = `Transaction persistence failed: ${error.message}`;
+      }
+    }
+    await options.onProgress?.(
+      'transactions',
+      {
+        imported: transactionCount,
+        coverage: transactionCoverage,
+        quarantined: invalidTransactionCount,
+      },
+      transactionCoverage === 'complete' ? {
+        transaction_count: transactionCount,
+        coverage: transactionCoverage,
+        message: transactionMessage,
+        source_findings: sourceTransactionFindings,
+        invalid_count: invalidTransactionCount,
+        has_unlinked: hasUnlinkedTransactions,
+      } : null
+    );
   }
 
-  let reconciliationCoverage = transactionCoverage === 'complete' ? 'complete' : 'not_run';
-  if (transactionCoverage === 'complete') {
-    try {
-      await reconciliation.reconcileAccounts(userId, {
-        evidenceComplete: invalidTransactions.size === 0 && !hasUnlinkedTransactions,
-      });
-      if (invalidTransactions.size > 0 || hasUnlinkedTransactions) {
-        reconciliationCoverage = 'incomplete';
+  let reconciliationCoverage;
+  if (checkpoints.reconciliation) {
+    reconciliationCoverage = checkpoints.reconciliation.coverage;
+    transactionMessage = checkpoints.reconciliation.message || transactionMessage;
+  } else {
+    reconciliationCoverage = transactionCoverage === 'complete' ? 'complete' : 'not_run';
+    if (transactionCoverage === 'complete') {
+      try {
+        await withFence(() => reconciliation.reconcileAccounts(userId, {
+          evidenceComplete: invalidTransactionCount === 0 && !hasUnlinkedTransactions,
+        }));
+        if (invalidTransactionCount > 0 || hasUnlinkedTransactions) {
+          reconciliationCoverage = 'incomplete';
+        }
+      } catch (error) {
+        reconciliationCoverage = 'failed';
+        transactionMessage = `Account reconciliation failed: ${error.message}`;
       }
-    } catch (error) {
-      reconciliationCoverage = 'failed';
-      transactionMessage = `Account reconciliation failed: ${error.message}`;
     }
+    const reconciliationCheckpoint = {
+      coverage: reconciliationCoverage, message: transactionMessage,
+    };
+    await options.onProgress?.(
+      'reconciliation',
+      { coverage: reconciliationCoverage },
+      ['complete', 'incomplete'].includes(reconciliationCoverage)
+        ? reconciliationCheckpoint
+        : null
+    );
   }
 
   const coverage = {
@@ -157,9 +237,9 @@ async function syncBasiqDataWith(userId, dependencies) {
     transactions: transactionCoverage,
     reconciliation: reconciliationCoverage,
   };
-  let dataHealth = null;
-  try {
-    dataHealth = await quality.runDataQualityChecks(userId, {
+  let dataHealth = checkpoints.quality?.data_health || null;
+  if (!checkpoints.quality) try {
+    dataHealth = await withFence(() => quality.runDataQualityChecks(userId, {
       trigger: 'basiq_sync',
       coverage,
       message: transactionMessage,
@@ -174,21 +254,36 @@ async function syncBasiqDataWith(userId, dependencies) {
             .map((code) => `source.basiq.${code}`)
           : []),
       ],
-    });
+    }));
   } catch (error) {
     try {
-      await quality.recordDataQualityFailure(userId, {
+      await withFence(() => quality.recordDataQualityFailure(userId, {
         trigger: 'basiq_sync',
         coverage,
         message: error.message,
-      });
+      }));
     } catch (recordError) {
       console.error('Could not record post-Basiq quality failure:', recordError.message);
     }
   }
+  if (!checkpoints.quality) {
+    await options.onProgress?.(
+      'quality',
+      { status: dataHealth?.status || 'failed' },
+      transactionCoverage === 'failed' || reconciliationCoverage === 'failed'
+        ? null
+        : { data_health: dataHealth }
+    );
+  }
+
+  if (transactionCoverage === 'failed' || reconciliationCoverage === 'failed') {
+    const error = new Error(transactionMessage || 'Basiq import was incomplete');
+    error.code = 'BASIQ_IMPORT_INCOMPLETE';
+    throw error;
+  }
 
   return {
-    accounts: validAccounts.length,
+    accounts: accountCount,
     transactions: transactionCount,
     coverage,
     data_health: dataHealth,
@@ -208,14 +303,14 @@ const defaultDependencies = {
 
 function createBasiqSyncService(dependencies) {
   return {
-    sync(userId) {
-      return syncBasiqDataWith(userId, dependencies);
+    sync(userId, options) {
+      return syncBasiqDataWith(userId, dependencies, options);
     },
   };
 }
 
-async function syncBasiqData(userId) {
-  return syncBasiqDataWith(userId, defaultDependencies);
+async function syncBasiqData(userId, options) {
+  return syncBasiqDataWith(userId, defaultDependencies, options);
 }
 
 module.exports = {

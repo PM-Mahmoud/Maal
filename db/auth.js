@@ -3,11 +3,12 @@
 // 30-day sessions across server restarts.
 
 const { Pool } = require('pg');
+const { databaseSsl } = require('./ssl');
 
 if (!global.__authPool) {
   global.__authPool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: databaseSsl(process.env.DATABASE_URL),
   });
 }
 

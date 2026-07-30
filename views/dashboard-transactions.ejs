@@ -3,6 +3,7 @@
   var bqStatus = typeof basiqStatus !== 'undefined' ? basiqStatus : null;
   var liveTx = typeof liveTransactions !== 'undefined' ? liveTransactions : [];
   var liveAcc = typeof liveAccounts !== 'undefined' ? liveAccounts : [];
+  var bqImportRun = typeof basiqImportRun !== 'undefined' ? basiqImportRun : null;
 %>
 <div class="page-head">
   <div>
@@ -16,12 +17,52 @@
 
 <% if (bqStatus === 'connected' || bqStatus === 'synced') { %>
 <div class="alert alert-success">✓ Bank <%= bqStatus %> via Basiq — accounts saved. Transactions appear below as they sync.</div>
+<% } else if (bqStatus === 'queued' && bqImportRun) { %>
+<div id="basiq-import-status" class="alert alert-success">Sync queued — securely importing your latest data…</div>
 <% } else if (bqStatus === 'error') { %>
 <div class="alert alert-error">Basiq connection hit a snag<% if (typeof basiqReason !== 'undefined' && basiqReason) { %>: <code style="font-size:0.78rem;"><%= basiqReason %></code><% } %>. Check the BASIQ_API_KEY on the server and try again.</div>
 <% } else if (bqStatus === 'nokey') { %>
 <div class="alert alert-error">Basiq isn't configured yet — add BASIQ_API_KEY on Render (free sandbox at dashboard.basiq.io). Until then, bank tiles run in demo mode.</div>
 <% } else if (bqEnabled && user.basiq_user_id && !liveAcc.length) { %>
 <div class="alert alert-success">Finished approving at your bank? Press <a href="/basiq/sync">↻ Sync now</a> to pull your accounts in.</div>
+<% } %>
+
+<% if (bqStatus === 'queued' && bqImportRun) { %>
+<script>
+(function pollBasiqImport() {
+  var runId = <%- JSON.stringify(String(bqImportRun)) %>;
+  var status = document.getElementById('basiq-import-status');
+  var attempts = 0;
+  async function poll() {
+    try {
+      var response = await fetch('/api/v1/import-runs/' + encodeURIComponent(runId), {
+        credentials: 'same-origin'
+      });
+      if (!response.ok) throw new Error('Could not check sync progress');
+      var run = (await response.json()).import_run;
+      if (run.status === 'succeeded') {
+        status.textContent = '✓ Bank sync complete — balances and transactions are up to date.';
+        window.setTimeout(function () { window.location.reload(); }, 500);
+        return;
+      }
+      if (run.status === 'dead') {
+        status.className = 'alert alert-error';
+        status.textContent = run.last_error || 'Bank sync failed after several attempts.';
+        return;
+      }
+      status.textContent = run.status === 'retrying'
+        ? 'Your bank is temporarily unavailable — retrying automatically…'
+        : 'Syncing ' + (run.current_stage || 'your accounts') + '…';
+      if (++attempts < 120) window.setTimeout(poll, 1000);
+      else status.textContent = 'Sync is taking longer than expected. You can safely leave this page.';
+    } catch (error) {
+      status.className = 'alert alert-error';
+      status.textContent = error.message;
+    }
+  }
+  window.setTimeout(poll, 500);
+})();
+</script>
 <% } %>
 
 <% if (liveAcc.length) { %>
