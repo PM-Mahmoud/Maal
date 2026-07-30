@@ -12,16 +12,34 @@ async function upsertBasiqTransactions(userId, txns) {
     for (const raw of txns) {
       const t = mapBasiqTransaction(raw);
       if (!t) continue;
-      await client.query(
+      const inserted = await client.query(
         `INSERT INTO transactions (user_id, basiq_id, description, amount, status, post_date)
          VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (basiq_id) DO UPDATE
            SET description = EXCLUDED.description,
                amount = EXCLUDED.amount,
                status = EXCLUDED.status,
-               post_date = EXCLUDED.post_date`,
+               post_date = EXCLUDED.post_date
+         RETURNING id`,
         [userId, t.basiq_id, t.description, t.amount, t.status, t.post_date]
       );
+      if (t.account_reference) {
+        await client.query(
+          `INSERT INTO transaction_provider_details
+             (transaction_id, user_id, account_reference, balance_after, provider_posted_at, observed_at)
+           VALUES ($1, $2, $3, $4, $5, NOW())
+           ON CONFLICT (transaction_id)
+           DO UPDATE SET account_reference = EXCLUDED.account_reference,
+             balance_after = EXCLUDED.balance_after,
+             provider_posted_at = EXCLUDED.provider_posted_at, observed_at = NOW()`,
+          [inserted.rows[0].id, userId, t.account_reference, t.balance_after, t.provider_posted_at]
+        );
+      } else {
+        await client.query(
+          'DELETE FROM transaction_provider_details WHERE transaction_id = $1 AND user_id = $2',
+          [inserted.rows[0].id, userId]
+        );
+      }
       saved++;
     }
     await client.query('COMMIT');

@@ -6,7 +6,9 @@
 // here mocks global.fetch or calls pure functions directly.
 
 const assert = require('assert');
-const { mapBasiqAccount, mapBasiqTransaction, shapeBasiqAssetRow } = require('../lib/basiq-mapping');
+const {
+  mapBasiqAccount, mapBasiqTransaction, shapeBasiqAssetRow, basiqAccountReference,
+} = require('../lib/basiq-mapping');
 const { classifyAccountType } = require('../lib/connected');
 const {
   providerRecordKey, rawAccountProjection, rawTransactionProjection,
@@ -73,9 +75,9 @@ test('institution_type defaults to "bank" when class absent', () => {
   assert.strictEqual(r.institution_type, 'bank');
 });
 
-test('balance is rounded to an integer', () => {
+test('balance preserves provider cents', () => {
   const r = mapBasiqAccount({ id: '1', balance: 1234.789 });
-  assert.strictEqual(r.balance, 1235);
+  assert.strictEqual(r.balance, 1234.789);
 });
 
 test('balance coerces non-numeric string to 0', () => {
@@ -156,6 +158,23 @@ test('status defaults to null when absent', () => {
 test('status passes through when present', () => {
   const r = mapBasiqTransaction({ id: 't1', status: 'posted' });
   assert.strictEqual(r.status, 'posted');
+});
+
+test('account linkage accepts provider ids and account URLs', () => {
+  assert.strictEqual(basiqAccountReference('abc'), 'basiq:abc');
+  assert.strictEqual(
+    basiqAccountReference('https://au-api.basiq.io/users/u1/accounts/abc'),
+    'basiq:abc'
+  );
+  const mapped = mapBasiqTransaction({ id: 't1', account: 'abc', balance: '123.45' });
+  assert.strictEqual(mapped.account_reference, 'basiq:abc');
+  assert.strictEqual(mapped.balance_after, 123.45);
+});
+
+test('missing and blank provider transaction balances remain unavailable', () => {
+  assert.strictEqual(mapBasiqTransaction({ id: 't1', balance: null }).balance_after, null);
+  assert.strictEqual(mapBasiqTransaction({ id: 't2', balance: '' }).balance_after, null);
+  assert.strictEqual(mapBasiqTransaction({ id: 't3' }).balance_after, null);
 });
 
 // ─── shapeBasiqAssetRow ───
@@ -267,6 +286,7 @@ test('missing provider IDs receive distinct deterministic evidence keys', () => 
         recordDataQualityFailure: async () => null,
       },
       classify: () => 'cash',
+      reconciliation: { reconcileAccounts: async () => [] },
     });
 
     const result = await service.sync(77);
@@ -276,7 +296,9 @@ test('missing provider IDs receive distinct deterministic evidence keys', () => 
     assert.deepStrictEqual(normalisedTransactions.map((row) => row.id), ['t-good']);
     assert.strictEqual(result.accounts, 1);
     assert.strictEqual(result.transactions, 1);
-    assert.deepStrictEqual(result.coverage, { accounts: 'complete', transactions: 'complete' });
+    assert.deepStrictEqual(result.coverage, {
+      accounts: 'complete', transactions: 'complete', reconciliation: 'incomplete',
+    });
     assert.deepStrictEqual(
       qualityOptions.additionalFindings.map((item) => item.check_code).sort(),
       ['source.basiq.account.invalid_balance', 'source.basiq.transaction.invalid_amount']
@@ -306,11 +328,71 @@ test('missing provider IDs receive distinct deterministic evidence keys', () => 
         recordDataQualityFailure: async () => null,
       },
       classify: () => 'cash',
+      reconciliation: { reconcileAccounts: async () => [] },
     });
     const result = await service.sync(78);
     assert.strictEqual(result.transactions, 0);
-    assert.deepStrictEqual(result.coverage, { accounts: 'complete', transactions: 'failed' });
+    assert.deepStrictEqual(result.coverage, {
+      accounts: 'complete', transactions: 'failed', reconciliation: 'not_run',
+    });
     assert.match(qualityOptions.message, /Transaction persistence failed/);
+  });
+
+  await testAsync('reconciliation failure is reported without downgrading transaction persistence', async () => {
+    let qualityOptions;
+    const service = createBasiqSyncService({
+      provider: {
+        getAccounts: async () => [],
+        getTransactions: async () => [],
+      },
+      findUser: async () => ({ basiq_user_id: 'provider-user' }),
+      replaceAccounts: async () => null,
+      transactions: { upsertBasiqTransactions: async () => 0 },
+      integrity: { appendRawRecord: async () => null },
+      quality: {
+        runDataQualityChecks: async (_userId, options) => {
+          qualityOptions = options;
+          return { status: 'incomplete' };
+        },
+        recordDataQualityFailure: async () => null,
+      },
+      classify: () => 'cash',
+      reconciliation: {
+        reconcileAccounts: async () => { throw new Error('reconciliation unavailable'); },
+      },
+    });
+    const result = await service.sync(79);
+    assert.deepStrictEqual(result.coverage, {
+      accounts: 'complete', transactions: 'complete', reconciliation: 'failed',
+    });
+    assert.match(qualityOptions.message, /Account reconciliation failed/);
+  });
+
+  await testAsync('transactions without account linkage make reconciliation evidence incomplete', async () => {
+    let reconciliationOptions;
+    const service = createBasiqSyncService({
+      provider: {
+        getAccounts: async () => [],
+        getTransactions: async () => [
+          { id: 'unlinked', amount: 10, postDate: '2026-07-01' },
+        ],
+      },
+      findUser: async () => ({ basiq_user_id: 'provider-user' }),
+      replaceAccounts: async () => null,
+      transactions: { upsertBasiqTransactions: async () => 1 },
+      integrity: { appendRawRecord: async () => null },
+      quality: {
+        runDataQualityChecks: async () => ({ status: 'incomplete' }),
+        recordDataQualityFailure: async () => null,
+      },
+      classify: () => 'cash',
+      reconciliation: {
+        reconcileAccounts: async (_userId, options) => { reconciliationOptions = options; },
+      },
+    });
+    const result = await service.sync(80);
+    assert.equal(reconciliationOptions.evidenceComplete, false);
+    assert.equal(result.coverage.reconciliation, 'incomplete');
   });
 
   // ─── basiqFetch error handling (mocked fetch, no network) ───

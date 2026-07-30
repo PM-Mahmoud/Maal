@@ -407,6 +407,11 @@ router.get('/v1/data-health', async (req, res) => {
   }
 });
 
+router.get(
+  '/v1/reconciliations',
+  require('../services/reconciliation').listReconciliationsHandler
+);
+
 // POST /api/v1/basiq/sync — trigger account + transaction sync, return JSON
 router.post('/v1/basiq/sync', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });

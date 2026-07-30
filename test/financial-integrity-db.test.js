@@ -4,6 +4,7 @@ const assert = require('assert');
 const { Pool } = require('pg');
 const migration = require('../migrations/1753900000000_financial_integrity');
 const runsMigration = require('../migrations/1754000000000_data_quality_runs');
+const reconciliationMigration = require('../migrations/1754100000000_account_reconciliation');
 
 async function expectPgError(fn, expectedCode) {
   let error;
@@ -61,9 +62,42 @@ async function main() {
     `);
     await migration.up(pool);
     await runsMigration.up(pool);
+    await reconciliationMigration.up(pool);
 
     const firstUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
     const secondUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
+    const ownedTransaction = (await pool.query(
+      `INSERT INTO transactions (user_id, basiq_id, amount, post_date)
+       VALUES ($1, 'owned', 1, '2026-07-01') RETURNING id`,
+      [firstUser]
+    )).rows[0].id;
+    await expectPgError(
+      () => pool.query(
+        `INSERT INTO transaction_provider_details
+           (transaction_id, user_id, account_reference, balance_after)
+         VALUES ($1, $2, 'basiq:a1', 10)`,
+        [ownedTransaction, secondUser]
+      ),
+      'P0001'
+    );
+    await pool.query('DELETE FROM transactions WHERE id = $1', [ownedTransaction]);
+
+    delete require.cache[require.resolve('../db/transactions')];
+    const transactionDb = require('../db/transactions');
+    await transactionDb.upsertBasiqTransactions(firstUser, [{
+      id: 'stale-link', amount: 1, postDate: '2026-07-01T01:00:00Z',
+      account: 'a1', balance: 10,
+    }]);
+    await transactionDb.upsertBasiqTransactions(firstUser, [{
+      id: 'stale-link', amount: 1, postDate: '2026-07-01T01:00:00Z',
+    }]);
+    const staleDetails = await pool.query(
+      `SELECT 1 FROM transaction_provider_details d
+        JOIN transactions t ON t.id = d.transaction_id
+       WHERE t.basiq_id = 'stale-link'`
+    );
+    assert.equal(staleDetails.rowCount, 0, 'removed provider account links must not remain as evidence');
+    await pool.query(`DELETE FROM transactions WHERE basiq_id = 'stale-link'`);
 
     await pool.query(
       `INSERT INTO linked_accounts
@@ -116,6 +150,45 @@ async function main() {
       [firstUser]
     )).rows.map((row) => row.account_reference);
     assert.deepStrictEqual(refsAfterRollback, accountRefs, 'failed replacement must roll back atomically');
+
+    const reconciliationTxns = (await pool.query(
+      `INSERT INTO transactions (user_id, basiq_id, amount, status, post_date)
+       VALUES ($1, 'recon-1', 10, 'posted', '2026-07-01'),
+              ($1, 'recon-2', 20, 'posted', '2026-07-02')
+       RETURNING id, basiq_id`,
+      [firstUser]
+    )).rows;
+    await pool.query(
+      `INSERT INTO transaction_provider_details
+         (transaction_id, user_id, account_reference, balance_after)
+       VALUES ($1, $3, 'basiq:good', 80),
+              ($2, $3, 'basiq:good', 100)`,
+      [reconciliationTxns[0].id, reconciliationTxns[1].id, firstUser]
+    );
+    delete require.cache[require.resolve('../db/reconciliation')];
+    delete require.cache[require.resolve('../services/reconciliation')];
+    const reconciliationService = require('../services/reconciliation');
+    const reconciliationRows = await reconciliationService.reconcileAccounts(firstUser);
+    assert.equal(
+      reconciliationRows.find((row) => row.account_reference === 'basiq:good').status,
+      'matched'
+    );
+    await expectPgError(
+      () => pool.query(
+        `INSERT INTO account_reconciliations
+           (user_id, account_reference, status, anchor_transaction_id)
+         VALUES ($2, 'basiq:foreign-anchor', 'matched', $1)`,
+        [reconciliationTxns[0].id, secondUser]
+      ),
+      'P0001'
+    );
+    await pool.query('DELETE FROM transactions WHERE basiq_id IN ($1, $2)', ['recon-1', 'recon-2']);
+    const clearedAnchor = await pool.query(
+      `SELECT anchor_transaction_id FROM account_reconciliations
+        WHERE user_id = $1 AND account_reference = 'basiq:good'`,
+      [firstUser]
+    );
+    assert.equal(clearedAnchor.rows[0].anchor_transaction_id, null);
     await pool.query(
       `INSERT INTO data_quality_runs
          (user_id, trigger, status, warning_count)

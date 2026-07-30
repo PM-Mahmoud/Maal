@@ -1,5 +1,9 @@
 const basiq = require('./basiq');
-const { mapBasiqAccount, shapeBasiqAssetRow } = require('../lib/basiq-mapping');
+const {
+  basiqAccountReference,
+  mapBasiqAccount,
+  shapeBasiqAssetRow,
+} = require('../lib/basiq-mapping');
 const { classifyAccountType } = require('../lib/connected');
 const { checkAccounts, checkTransactions, payloadHash } = require('../lib/data-quality');
 const { findUserById } = require('../db/users');
@@ -72,7 +76,7 @@ function shapeAccounts(accounts, classify) {
 
 async function syncBasiqDataWith(userId, dependencies) {
   const {
-    provider, findUser, transactions, integrity, quality, classify, replaceAccounts,
+    provider, findUser, transactions, integrity, quality, classify, replaceAccounts, reconciliation,
   } = dependencies;
   const user = await findUser(userId);
   if (!user?.basiq_user_id) throw new Error('No Basiq account linked');
@@ -118,6 +122,11 @@ async function syncBasiqDataWith(userId, dependencies) {
   const validTransactions = keyedTransactions
     .filter(({ record, key }) => record.id && !invalidTransactions.has(key))
     .map(({ record }) => record);
+  const hasUnlinkedTransactions = validTransactions.some(
+    (transaction) => !basiqAccountReference(
+      transaction.account || (transaction.links && transaction.links.account)
+    )
+  );
   let transactionCount = 0;
   if (transactionCoverage === 'complete') {
     try {
@@ -128,7 +137,26 @@ async function syncBasiqDataWith(userId, dependencies) {
     }
   }
 
-  const coverage = { accounts: 'complete', transactions: transactionCoverage };
+  let reconciliationCoverage = transactionCoverage === 'complete' ? 'complete' : 'not_run';
+  if (transactionCoverage === 'complete') {
+    try {
+      await reconciliation.reconcileAccounts(userId, {
+        evidenceComplete: invalidTransactions.size === 0 && !hasUnlinkedTransactions,
+      });
+      if (invalidTransactions.size > 0 || hasUnlinkedTransactions) {
+        reconciliationCoverage = 'incomplete';
+      }
+    } catch (error) {
+      reconciliationCoverage = 'failed';
+      transactionMessage = `Account reconciliation failed: ${error.message}`;
+    }
+  }
+
+  const coverage = {
+    accounts: 'complete',
+    transactions: transactionCoverage,
+    reconciliation: reconciliationCoverage,
+  };
   let dataHealth = null;
   try {
     dataHealth = await quality.runDataQualityChecks(userId, {
@@ -175,6 +203,7 @@ const defaultDependencies = {
   quality: qualityService,
   classify: classifyAccountType,
   replaceAccounts: replaceBasiqAccounts,
+  reconciliation: require('./reconciliation'),
 };
 
 function createBasiqSyncService(dependencies) {

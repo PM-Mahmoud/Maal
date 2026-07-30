@@ -11,7 +11,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
   persisted data-quality findings, and deterministic quality checks.
 - [x] Build 1.2 — Run quality checks after imports and expose a user-scoped
   health summary API.
-- [ ] Build 1.3 — Add reconciliation between provider balances and calculated
+- [x] Build 1.3 — Add reconciliation between provider balances and calculated
   transaction balances.
 - [ ] Build 1.4 — Add calculation lineage to net worth, score, cash flow, and
   investment metrics.
@@ -79,4 +79,5 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 | Build | Status | Verification | Commit |
 |---|---|---|---|
 | 1.1 | Built 2026-07-30 | `node test/data-quality.test.js`; `npm run test:integrity-db`; `npm test` | `c62667b` |
-| 1.2 | Built 2026-07-30 | focused data-quality/import tests; `npm run test:integrity-db`; `npm test` | This commit |
+| 1.2 | Built 2026-07-30 | focused data-quality/import tests; `npm run test:integrity-db`; `npm test` | `c45c455` |
+| 1.3 | Built 2026-07-30 | reconciliation unit/service tests; `npm run test:integrity-db`; `npm test` | This commit |
