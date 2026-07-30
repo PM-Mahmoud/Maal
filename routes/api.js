@@ -408,6 +408,11 @@ router.get('/v1/data-health', async (req, res) => {
 });
 
 router.get(
+  '/v1/calculation-lineage',
+  require('../services/calculation-lineage').listLineageHandler
+);
+
+router.get(
   '/v1/reconciliations',
   require('../services/reconciliation').listReconciliationsHandler
 );
@@ -525,6 +530,13 @@ router.get('/v1/score', async (req, res) => {
     const assetSummary = await assetsDb.getAssetSummary(req.session.userId);
     const effectiveProfile = assetsDb.mergeAssetSummaryIntoProfile(profile, assetSummary);
     const score = computeMaalScore(effectiveProfile);
+    try {
+      await require('../services/calculation-lineage').recordScoreMetric(
+        req.session.userId, score, effectiveProfile
+      );
+    } catch (e) {
+      console.error('/api/v1/score lineage error:', e.message);
+    }
 
     // Record today's score (upsert, at most one row/user/day) so the React
     // dashboard accrues a real daily history. Best-effort: recording or reading
@@ -605,12 +617,27 @@ router.get('/v1/snapshots', async (req, res) => {
     const profile = (await getProfileByUserId(req.session.userId)) || {};
     const assetSummary = await assetsDb.getAssetSummary(req.session.userId);
     const effectiveProfile = assetsDb.mergeAssetSummaryIntoProfile(profile, assetSummary);
+    const snapshotValues = snapshotValuesFromProfile(effectiveProfile);
 
     try {
-      await recordSnapshot(req.session.userId, snapshotValuesFromProfile(effectiveProfile));
+      await recordSnapshot(req.session.userId, snapshotValues);
     } catch (e) {
       // Recording is best-effort (e.g. pre-migration) — still return any history.
       console.error('/api/v1/snapshots record error:', e.message);
+    }
+
+    try {
+      const { getCashFlowTransactions } = require('../db/transactions');
+      const [transactions, investments] = await Promise.all([
+        getCashFlowTransactions(req.session.userId, 30),
+        assetsDb.listInvestments(req.session.userId),
+      ]);
+      await require('../services/calculation-lineage').recordSnapshotMetrics(
+        req.session.userId,
+        { snapshot: snapshotValues, transactions, investments }
+      );
+    } catch (e) {
+      console.error('/api/v1/snapshots lineage error:', e.message);
     }
 
     const rows = await getSnapshots(req.session.userId, days);

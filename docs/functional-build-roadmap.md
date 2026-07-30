@@ -13,7 +13,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
   health summary API.
 - [x] Build 1.3 — Add reconciliation between provider balances and calculated
   transaction balances.
-- [ ] Build 1.4 — Add calculation lineage to net worth, score, cash flow, and
+- [x] Build 1.4 — Add calculation lineage to net worth, score, cash flow, and
   investment metrics.
 
 ## 2. Durable automation
@@ -80,4 +80,5 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 |---|---|---|---|
 | 1.1 | Built 2026-07-30 | `node test/data-quality.test.js`; `npm run test:integrity-db`; `npm test` | `c62667b` |
 | 1.2 | Built 2026-07-30 | focused data-quality/import tests; `npm run test:integrity-db`; `npm test` | `c45c455` |
-| 1.3 | Built 2026-07-30 | reconciliation unit/service tests; `npm run test:integrity-db`; `npm test` | This commit |
+| 1.3 | Built 2026-07-30 | reconciliation unit/service tests; `npm run test:integrity-db`; `npm test` | `02bcc98` |
+| 1.4 | Built 2026-07-30 | lineage unit/service tests; `npm run test:integrity-db`; `npm test` | This commit |

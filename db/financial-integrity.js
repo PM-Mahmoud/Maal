@@ -28,21 +28,37 @@ async function appendRawRecord(userId, {
 async function recordCalculation(userId, {
   type, version, effectiveAt, inputs, assumptions = {}, result, sourceRecordIds = [],
 }) {
+  const effectiveDate = new Date(effectiveAt).toISOString().slice(0, 10);
+  const calculationKey = payloadHash({
+    effectiveDate, type, version, inputs, assumptions, result,
+  });
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const inserted = await client.query(
-      `INSERT INTO calculation_audits
+       `INSERT INTO calculation_audits
          (user_id, calculation_type, calculation_version, effective_at,
-          inputs, assumptions, result)
-       VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb)
+          inputs, assumptions, result, calculation_key)
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8)
+       ON CONFLICT (user_id, calculation_type, calculation_version, calculation_key)
+       DO NOTHING
        RETURNING id`,
       [
         userId, type, version, effectiveAt,
         JSON.stringify(inputs), JSON.stringify(assumptions), JSON.stringify(result),
+        calculationKey,
       ]
     );
-    const calculationId = inserted.rows[0].id;
+    let calculationId = inserted.rows[0]?.id;
+    if (!calculationId) {
+      const existing = await client.query(
+        `SELECT id FROM calculation_audits
+          WHERE user_id = $1 AND calculation_type = $2
+            AND calculation_version = $3 AND calculation_key = $4`,
+        [userId, type, version, calculationKey]
+      );
+      calculationId = existing.rows[0].id;
+    }
     const uniqueSourceIds = [...new Set(sourceRecordIds.map(String))];
     if (uniqueSourceIds.length) {
       const linked = await client.query(
@@ -65,6 +81,21 @@ async function recordCalculation(userId, {
   } finally {
     client.release();
   }
+}
+
+async function listCalculationLineage(userId, { type = null, limit = 50 } = {}) {
+  const safeLimit = Math.min(Math.max(Number(limit) || 50, 1), 200);
+  const { rows } = await pool.query(
+    `SELECT id, calculation_type, calculation_version, effective_at,
+            inputs, assumptions, result, created_at
+       FROM calculation_audits
+      WHERE user_id = $1
+        AND ($2::text IS NULL OR calculation_type = $2)
+      ORDER BY effective_at DESC, id DESC
+      LIMIT $3`,
+    [userId, type, safeLimit]
+  );
+  return rows;
 }
 
 function countsFor(findings) {
@@ -219,6 +250,7 @@ async function recordDataQualityFailure(userId, { trigger = 'unknown', message, 
 }
 
 module.exports = {
-  appendRawRecord, recordCalculation, syncFindings, getDataHealth, recordDataQualityFailure,
+  appendRawRecord, recordCalculation, listCalculationLineage,
+  syncFindings, getDataHealth, recordDataQualityFailure,
   countsFor, statusForCounts,
 };

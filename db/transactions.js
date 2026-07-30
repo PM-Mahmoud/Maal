@@ -67,12 +67,23 @@ async function getRecentTransactions(userId, limit = 10) {
 // Signed amounts + dates for charting cash flow (in/out) over a window.
 async function getTxnsSince(userId, days = 400, limit = 1000) {
   const result = await pool.query(
-    `SELECT post_date, amount
+    `SELECT id, post_date, amount, status
        FROM transactions
        WHERE user_id = $1 AND post_date >= CURRENT_DATE - $2::int
        ORDER BY post_date ASC
        LIMIT $3`,
     [userId, days, limit]
+  );
+  return result.rows;
+}
+
+async function getCashFlowTransactions(userId, days = 30) {
+  const result = await pool.query(
+    `SELECT id, post_date, amount, status
+       FROM transactions
+      WHERE user_id = $1 AND post_date >= CURRENT_DATE - $2::int
+      ORDER BY post_date ASC, id ASC`,
+    [userId, days]
   );
   return result.rows;
 }
@@ -180,6 +191,7 @@ async function applyCategoryAssignments(userId, assignments) {
 
 module.exports = {
   upsertBasiqTransactions, getRecentTransactions, getTxnsSince,
+  getCashFlowTransactions,
   getTransactionsForQuality,
   getTransactionsWithCategory, getTxnsForSubscriptions,
   listRules, createRule, deleteRule, setTransactionCategory, applyCategoryAssignments,

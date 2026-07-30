@@ -5,6 +5,7 @@ const { Pool } = require('pg');
 const migration = require('../migrations/1753900000000_financial_integrity');
 const runsMigration = require('../migrations/1754000000000_data_quality_runs');
 const reconciliationMigration = require('../migrations/1754100000000_account_reconciliation');
+const lineageMigration = require('../migrations/1754200000000_calculation_lineage');
 
 async function expectPgError(fn, expectedCode) {
   let error;
@@ -63,6 +64,7 @@ async function main() {
     await migration.up(pool);
     await runsMigration.up(pool);
     await reconciliationMigration.up(pool);
+    await lineageMigration.up(pool);
 
     const firstUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
     const secondUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
@@ -255,6 +257,73 @@ async function main() {
        VALUES ($1, 'net_worth', '1', NOW(), '{}', '{}') RETURNING id`,
       [secondUser]
     )).rows[0].id;
+    await pool.query(
+      `INSERT INTO calculation_audits
+         (user_id, calculation_type, calculation_version, effective_at, inputs, assumptions, result)
+       VALUES ($1, 'net_worth', '1', NOW(), '{"assets_total":100}', '{}', '{"net_worth":90}'),
+              ($1, 'maal_score', '1', NOW(), '{"annual_income":100}', '{}', '{"score":70}'),
+              ($1, 'cash_flow', '1', NOW(), '{"transaction_count":2}', '{}', '{"net_cash_flow":10}'),
+              ($1, 'investment_metrics', '1', NOW(), '{"holding_count":1}', '{}', '{"current_value":20}')`,
+      [firstUser]
+    );
+    const integrityDb = require('../db/financial-integrity');
+    const firstCalculationId = await integrityDb.recordCalculation(firstUser, {
+      type: 'net_worth',
+      version: 'dedupe-test',
+      effectiveAt: '2026-07-30T01:00:00Z',
+      inputs: { assets_total: 100 },
+      result: { net_worth: 90 },
+    });
+    const repeatedCalculationId = await integrityDb.recordCalculation(firstUser, {
+      type: 'net_worth',
+      version: 'dedupe-test',
+      effectiveAt: '2026-07-30T20:00:00Z',
+      inputs: { assets_total: 100 },
+      result: { net_worth: 90 },
+    });
+    assert.equal(
+      repeatedCalculationId,
+      firstCalculationId,
+      'identical calculations on the same effective date must be idempotent'
+    );
+    const changedCalculationId = await integrityDb.recordCalculation(firstUser, {
+      type: 'net_worth',
+      version: 'dedupe-test',
+      effectiveAt: '2026-07-30T21:00:00Z',
+      inputs: { assets_total: 101 },
+      result: { net_worth: 91 },
+    });
+    assert.notEqual(
+      changedCalculationId,
+      firstCalculationId,
+      'changed same-day inputs must create distinct lineage'
+    );
+    const ownLineage = await integrityDb.listCalculationLineage(firstUser, { limit: 10 });
+    assert.deepStrictEqual(
+      new Set(ownLineage.map((row) => row.calculation_type)),
+      new Set(['net_worth', 'maal_score', 'cash_flow', 'investment_metrics'])
+    );
+    assert.equal(
+      ownLineage.some((row) => row.id === audit),
+      false,
+      'calculation lineage must never include another user'
+    );
+    const scoreOnly = await integrityDb.listCalculationLineage(firstUser, {
+      type: 'maal_score',
+      limit: 10,
+    });
+    assert.deepStrictEqual(scoreOnly.map((row) => row.calculation_type), ['maal_score']);
+    await expectPgError(
+      () => pool.query(
+        `UPDATE calculation_audits SET result = '{}' WHERE id = $1`,
+        [ownLineage[0].id]
+      ),
+      'P0001'
+    );
+    await expectPgError(
+      () => pool.query('DELETE FROM calculation_audits WHERE id = $1', [ownLineage[0].id]),
+      'P0001'
+    );
     await expectPgError(
       () => pool.query(
         `INSERT INTO calculation_audit_sources
