@@ -10,6 +10,7 @@ const jobsMigration = require('../migrations/1754300000000_background_jobs');
 const importRunsMigration = require('../migrations/1754400000000_import_runs');
 const connectionHealthMigration = require('../migrations/1754500000000_connection_health');
 const resilienceMigration = require('../migrations/1754600000000_operational_resilience');
+const incrementalTransactionsMigration = require('../migrations/1754700000000_incremental_transactions');
 
 async function expectPgError(fn, expectedCode) {
   let error;
@@ -77,9 +78,56 @@ async function main() {
     await importRunsMigration.up(pool);
     await connectionHealthMigration.up(pool);
     await resilienceMigration.up(pool);
+    await incrementalTransactionsMigration.up(pool);
 
     const firstUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
     const secondUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
+    delete require.cache[require.resolve('../db/transactions')];
+    const incrementalTransactionsDb = require('../db/transactions');
+    await pool.query(
+      `INSERT INTO transactions (user_id, description, amount, status, post_date)
+       VALUES ($1, 'Manual pending item', 5, 'pending', '2026-07-01')`,
+      [firstUser]
+    );
+    await incrementalTransactionsDb.upsertBasiqTransactions(firstUser, [{
+      id: 'pending-old', status: 'pending', amount: '-12.50',
+      transactionDate: '2026-07-01T10:00:00Z', account: 'account-1',
+    }]);
+    const incrementalResult = await incrementalTransactionsDb.upsertBasiqTransactions(firstUser, [
+      {
+        id: 'posted-new', status: 'posted', amount: '-12.50',
+        postDate: '2026-07-02T10:00:00Z', account: 'account-1',
+      },
+      {
+        id: 'pending-current', status: 'pending', amount: '-4.00',
+        transactionDate: '2026-07-03T10:00:00Z', account: 'account-1',
+      },
+    ]);
+    assert.equal(incrementalResult.pending_removed, 1);
+    assert.equal(incrementalResult.pending_saved, 1);
+    assert.equal(
+      Number((await pool.query(
+        `SELECT COUNT(*) FROM transactions WHERE user_id = $1 AND status = 'pending'`,
+        [firstUser]
+      )).rows[0].count),
+      2,
+      'provider pending transactions must be replaced without deleting manual rows'
+    );
+    await incrementalTransactionsDb.upsertBasiqTransactions(secondUser, [{
+      id: 'posted-new', status: 'posted', amount: '2.00',
+      postDate: '2026-07-04T10:00:00Z', account: 'account-2',
+    }]);
+    assert.equal(
+      Number((await pool.query(
+        `SELECT COUNT(*) FROM transactions WHERE basiq_id = 'posted-new'`
+      )).rows[0].count),
+      2,
+      'provider transaction IDs must be tenant-scoped'
+    );
+    assert.equal(
+      await incrementalTransactionsDb.getTransactionIncrementalSince(firstUser),
+      '2026-06-25'
+    );
     global.__maalPool = pool;
     delete require.cache[require.resolve('../db/background-jobs')];
     const jobsDb = require('../db/background-jobs');
@@ -620,6 +668,9 @@ async function main() {
 
     delete require.cache[require.resolve('../db/transactions')];
     const transactionsDb = require('../db/transactions');
+    const beforeFailedBatchCount = Number((await pool.query(
+      'SELECT COUNT(*) AS count FROM transactions WHERE user_id = $1', [firstUser]
+    )).rows[0].count);
     await assert.rejects(
       () => transactionsDb.upsertBasiqTransactions(firstUser, [
         { id: 'valid-first', amount: 1, postDate: '2026-07-01' },
@@ -628,7 +679,7 @@ async function main() {
     );
     assert.equal(
       Number((await pool.query('SELECT COUNT(*) AS count FROM transactions WHERE user_id = $1', [firstUser])).rows[0].count),
-      0,
+      beforeFailedBatchCount,
       'a failed Basiq transaction batch must roll back every row'
     );
     const raw = (await pool.query(

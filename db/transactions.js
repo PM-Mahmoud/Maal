@@ -4,18 +4,32 @@
 const { pool } = require('./auth');
 const { mapBasiqTransaction } = require('../lib/basiq-mapping');
 
+async function getTransactionIncrementalSince(userId, overlapDays = 7) {
+  const { rows } = await pool.query(
+    `SELECT (last_post_date - $2::int)::text AS since
+       FROM transaction_sync_cursors
+      WHERE user_id = $1 AND provider = 'basiq' AND last_post_date IS NOT NULL`,
+    [userId, Math.max(0, Number(overlapDays) || 0)]
+  );
+  return rows[0]?.since || null;
+}
+
 async function upsertBasiqTransactions(userId, txns) {
   const client = await pool.connect();
   let saved = 0;
   try {
     await client.query('BEGIN');
-    for (const raw of txns) {
-      const t = mapBasiqTransaction(raw);
-      if (!t) continue;
+    const mapped = txns.map(mapBasiqTransaction).filter(Boolean);
+    const removed = await client.query(
+      `DELETE FROM transactions
+        WHERE user_id = $1 AND status = 'pending' AND basiq_id IS NOT NULL`,
+      [userId]
+    );
+    for (const t of mapped) {
       const inserted = await client.query(
         `INSERT INTO transactions (user_id, basiq_id, description, amount, status, post_date)
          VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (basiq_id) DO UPDATE
+         ON CONFLICT (user_id, basiq_id) WHERE basiq_id IS NOT NULL DO UPDATE
            SET description = EXCLUDED.description,
                amount = EXCLUDED.amount,
                status = EXCLUDED.status,
@@ -42,8 +56,33 @@ async function upsertBasiqTransactions(userId, txns) {
       }
       saved++;
     }
+    const lastPostDate = mapped
+      .filter((row) => row.status === 'posted' && row.post_date)
+      .map((row) => row.post_date)
+      .sort()
+      .at(-1) || null;
+    const pendingSaved = mapped.filter((row) => row.status === 'pending').length;
+    await client.query(
+      `INSERT INTO transaction_sync_cursors
+         (user_id, provider, last_post_date, last_synced_at, last_saved_count,
+          last_pending_removed, last_pending_saved)
+       VALUES ($1, 'basiq', $2, NOW(), $3, $4, $5)
+       ON CONFLICT (user_id) DO UPDATE
+         SET last_post_date = GREATEST(
+               transaction_sync_cursors.last_post_date, EXCLUDED.last_post_date
+             ),
+             last_synced_at = NOW(), last_saved_count = EXCLUDED.last_saved_count,
+             last_pending_removed = EXCLUDED.last_pending_removed,
+             last_pending_saved = EXCLUDED.last_pending_saved`,
+      [userId, lastPostDate, saved, removed.rowCount, pendingSaved]
+    );
     await client.query('COMMIT');
-    return saved;
+    return {
+      saved,
+      pending_removed: removed.rowCount,
+      pending_saved: pendingSaved,
+      last_post_date: lastPostDate,
+    };
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -190,7 +229,8 @@ async function applyCategoryAssignments(userId, assignments) {
 }
 
 module.exports = {
-  upsertBasiqTransactions, getRecentTransactions, getTxnsSince,
+  upsertBasiqTransactions, getTransactionIncrementalSince,
+  getRecentTransactions, getTxnsSince,
   getCashFlowTransactions,
   getTransactionsForQuality,
   getTransactionsWithCategory, getTxnsForSubscriptions,

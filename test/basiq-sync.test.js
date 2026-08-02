@@ -639,6 +639,62 @@ test('missing provider IDs receive distinct deterministic evidence keys', () => 
     );
   });
 
+  await testAsync('incremental transaction reads exhaust posted pages and refresh pending snapshot', async () => {
+    const requested = [];
+    await withMockedFetch(
+      async (url) => {
+        requested.push(url);
+        const parsed = new URL(url);
+        const filter = parsed.searchParams.get('filter') || '';
+        const next = parsed.searchParams.get('next');
+        let body;
+        if (filter.includes("transaction.status.eq('pending')")) {
+          body = { data: [{ id: 'pending-1', status: 'pending' }], links: {} };
+        } else if (next === 'page-2') {
+          body = { data: [{ id: 'posted-2', status: 'posted' }], links: {} };
+        } else {
+          body = {
+            data: [{ id: 'posted-1', status: 'posted' }],
+            links: { next: 'https://au-api.basiq.io/users/user-1/transactions?next=page-2' },
+          };
+        }
+        return { ok: true, status: 200, text: async () => JSON.stringify(body) };
+      },
+      async (basiq) => {
+        const rows = await basiq.getTransactions('user-1', { since: '2026-07-01' });
+        assert.deepStrictEqual(rows.map((row) => row.id), ['posted-1', 'posted-2', 'pending-1']);
+        const transactionRequests = requested.filter((url) => url.includes('/transactions'));
+        assert.equal(transactionRequests.length, 3);
+        assert(transactionRequests[0].includes(encodeURIComponent("transaction.postDate.gteq('2026-07-01')")));
+      }
+    );
+  });
+
+  await testAsync('legacy transaction reads retain their total row limit', async () => {
+    let transactionRequests = 0;
+    await withMockedFetch(
+      async (url) => {
+        if (!url.includes('/transactions')) {
+          return { ok: true, status: 200, text: async () => JSON.stringify({ access_token: 'token' }) };
+        }
+        transactionRequests++;
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify({
+            data: Array.from({ length: 25 }, (_, index) => ({ id: `row-${index}` })),
+            links: { next: 'https://au-api.basiq.io/users/user-1/transactions?next=more' },
+          }),
+        };
+      },
+      async (basiq) => {
+        const rows = await basiq.getTransactions('user-1', 25);
+        assert.equal(rows.length, 25);
+        assert.equal(transactionRequests, 1);
+      }
+    );
+  });
+
   console.log(`\n${passed} passed, ${failed} failed\n`);
   if (failed > 0) process.exit(1);
 })();

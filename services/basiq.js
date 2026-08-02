@@ -104,10 +104,50 @@ async function getAccounts(basiqUserId) {
   return json.data || [];
 }
 
-async function getTransactions(basiqUserId, limit = 25) {
+async function getTransactionCollection(path, token, maxRows = Infinity) {
+  const rows = [];
+  let nextPath = path;
+  const visited = new Set();
+  while (nextPath) {
+    if (visited.has(nextPath)) throw new Error('Basiq returned a pagination loop');
+    visited.add(nextPath);
+    const json = await basiqFetch(nextPath, { method: 'GET' }, token);
+    rows.push(...(json.data || []));
+    if (rows.length >= maxRows) break;
+    const next = json.links && json.links.next;
+    if (!next) break;
+    const parsed = new URL(next, BASIQ_BASE);
+    if (parsed.origin !== BASIQ_BASE) throw new Error('Basiq returned an unsafe pagination URL');
+    nextPath = `${parsed.pathname}${parsed.search}`;
+  }
+  return rows.slice(0, maxRows);
+}
+
+async function getTransactions(basiqUserId, options = {}) {
   const token = await getServerToken();
-  const json = await basiqFetch(`/users/${basiqUserId}/transactions?limit=${limit}`, { method: 'GET' }, token);
-  return json.data || [];
+  const legacyLimit = typeof options === 'number' ? options : null;
+  if (legacyLimit) {
+    return getTransactionCollection(
+      `/users/${basiqUserId}/transactions?limit=${Math.min(500, legacyLimit)}`,
+      token,
+      legacyLimit
+    );
+  }
+  const since = options.since
+    ? `,transaction.postDate.gteq('${String(options.since).slice(0, 10)}')`
+    : '';
+  const base = `/users/${basiqUserId}/transactions?limit=500&filter=`;
+  const [posted, pending] = await Promise.all([
+    getTransactionCollection(
+      `${base}${encodeURIComponent(`transaction.status.eq('posted')${since}`)}`, token
+    ),
+    getTransactionCollection(
+      `${base}${encodeURIComponent("transaction.status.eq('pending')")}`, token
+    ),
+  ]);
+  const unique = new Map();
+  for (const row of [...posted, ...pending]) unique.set(row.id, row);
+  return [...unique.values()];
 }
 
 async function getConnections(basiqUserId) {

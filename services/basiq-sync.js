@@ -147,7 +147,8 @@ async function syncBasiqDataWith(userId, dependencies, options = {}) {
     transactionCoverage = 'complete';
     transactionMessage = null;
     try {
-      rawTransactions = await provider.getTransactions(user.basiq_user_id, 100);
+      const since = await transactions.getTransactionIncrementalSince?.(userId);
+      rawTransactions = await provider.getTransactions(user.basiq_user_id, { since });
       await assertOwnership();
     } catch (error) {
       transactionCoverage = 'failed';
@@ -177,9 +178,10 @@ async function syncBasiqDataWith(userId, dependencies, options = {}) {
     transactionCount = 0;
     if (transactionCoverage === 'complete') {
       try {
-        transactionCount = await withFence(
+        const persistence = await withFence(
           () => transactions.upsertBasiqTransactions(userId, validTransactions)
         );
+        transactionCount = typeof persistence === 'number' ? persistence : persistence.saved;
       } catch (error) {
         transactionCoverage = 'failed';
         transactionError = error;
