@@ -20,3 +20,29 @@ services:
         sync: false
       - key: BASIQ_API_KEY
         sync: false
+  - type: cron
+    runtime: node
+    name: maal-backup-verification
+    schedule: "0 18 * * *"
+    buildCommand: npm install && npm run migrate
+    startCommand: npm run verify:backup
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: BACKUP_RESTORE_DATABASE_URL
+        sync: false
+      - key: OPERATIONAL_ALERT_WEBHOOK_URL
+        sync: false
+  - type: cron
+    runtime: node
+    name: maal-backup-marker
+    schedule: "0 12 * * *"
+    buildCommand: npm install && npm run migrate
+    startCommand: npm run mark:backup-source
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false

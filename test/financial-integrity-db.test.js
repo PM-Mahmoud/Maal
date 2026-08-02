@@ -9,6 +9,7 @@ const lineageMigration = require('../migrations/1754200000000_calculation_lineag
 const jobsMigration = require('../migrations/1754300000000_background_jobs');
 const importRunsMigration = require('../migrations/1754400000000_import_runs');
 const connectionHealthMigration = require('../migrations/1754500000000_connection_health');
+const resilienceMigration = require('../migrations/1754600000000_operational_resilience');
 
 async function expectPgError(fn, expectedCode) {
   let error;
@@ -53,6 +54,10 @@ async function main() {
         label TEXT, kind TEXT, balance BIGINT, source TEXT, account_reference TEXT,
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
+      CREATE TABLE properties (
+        id BIGSERIAL PRIMARY KEY, user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+        label TEXT, value BIGINT DEFAULT 0, created_at TIMESTAMPTZ DEFAULT NOW()
+      );
       CREATE TABLE super_accounts (
         id BIGSERIAL PRIMARY KEY, user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
         label TEXT, fund_name TEXT, balance BIGINT, source TEXT, account_reference TEXT,
@@ -71,6 +76,7 @@ async function main() {
     await jobsMigration.up(pool);
     await importRunsMigration.up(pool);
     await connectionHealthMigration.up(pool);
+    await resilienceMigration.up(pool);
 
     const firstUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
     const secondUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
@@ -173,6 +179,61 @@ async function main() {
     delete require.cache[require.resolve('../db/import-runs')];
     const importRunsDb = require('../db/import-runs');
     const connectionHealthDb = require('../db/connection-health');
+    const resilienceDb = require('../db/operational-resilience');
+    const deduplicatedAlert = await resilienceDb.openAlert({
+      fingerprint: 'contract:dead-jobs',
+      severity: 'critical',
+      category: 'background_jobs',
+      summary: 'One dead job',
+      details: { count: 1 },
+    });
+    await resilienceDb.openAlert({
+      fingerprint: 'contract:dead-jobs',
+      severity: 'critical',
+      category: 'background_jobs',
+      summary: 'Two dead jobs',
+      details: { count: 2 },
+    });
+    assert.equal(
+      (await resilienceDb.listOpenAlerts()).filter(
+        (alert) => alert.fingerprint === 'contract:dead-jobs'
+      ).length,
+      1,
+      'operational alerts must deduplicate while open'
+    );
+    const deliveryClaims = await Promise.all([
+      resilienceDb.claimAlertDelivery(deduplicatedAlert.id, 'contract-delivery-a'),
+      resilienceDb.claimAlertDelivery(deduplicatedAlert.id, 'contract-delivery-b'),
+    ]);
+    assert.equal(
+      deliveryClaims.filter(Boolean).length, 1,
+      'concurrent alert delivery attempts must produce one durable claim'
+    );
+    const deliveryToken = deliveryClaims[0]
+      ? 'contract-delivery-a'
+      : 'contract-delivery-b';
+    await resilienceDb.recordAlertDelivery(
+      deduplicatedAlert.id, deliveryToken
+    );
+    assert.equal(
+      (await resilienceDb.listOpenAlerts()).find(
+        (alert) => alert.fingerprint === 'contract:dead-jobs'
+      ).delivery_attempts,
+      1,
+      'alert delivery attempts must be retained'
+    );
+    await resilienceDb.resolveAlert('contract:dead-jobs');
+    const backupRun = await resilienceDb.startBackupVerification('restore-contract');
+    await resilienceDb.finishBackupVerification(
+      backupRun.id, 'succeeded', { required_tables: { ok: true } }
+    );
+    const baselineBefore = await resilienceDb.primaryBackupBaseline();
+    const advancedMarker = await resilienceDb.touchBackupSourceMarker();
+    assert.equal(
+      Number(advancedMarker.generation),
+      Number(baselineBefore.generation) + 1,
+      'backup source markers must advance monotonically'
+    );
     await connectionHealthDb.upsertHealth(firstUser, 'basiq', {
       status: 'expiring',
       providerStatus: 'active',

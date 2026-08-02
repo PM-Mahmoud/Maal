@@ -169,4 +169,13 @@ router.get('/admin/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/admin'));
 });
 
+router.get('/admin/operations', requireAdmin, async (_req, res) => {
+  try {
+    const alerts = await require('../db/operational-resilience').listOpenAlerts();
+    res.json({ alerts });
+  } catch (error) {
+    res.status(500).json({ error: 'Could not load operational alerts.' });
+  }
+});
+
 module.exports = router;
