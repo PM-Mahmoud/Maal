@@ -102,6 +102,26 @@ async function main() {
     )).rows[0];
     assert.equal(preciseSnapshot.net_worth, '1.23');
     assert.equal(preciseSnapshot.cash_balance, '1.01');
+    await pool.query(
+      `INSERT INTO investments (user_id, name, kind, value, source, account_reference)
+       VALUES ($1, 'Broker', 'brokerage', 1000, 'basiq', 'basiq:broker')`, [firstUser]
+    );
+    const performanceTransactions = (await pool.query(
+      `INSERT INTO transactions (user_id, basiq_id, description, amount, status, post_date)
+       VALUES ($1, 'perf-in', 'Broker funding', 1000, 'posted', CURRENT_DATE),
+              ($1, 'perf-out', 'Transfer to broker', -1000, 'posted', CURRENT_DATE)
+       RETURNING id, basiq_id`, [firstUser]
+    )).rows;
+    await pool.query(
+      `INSERT INTO transaction_provider_details
+         (transaction_id, user_id, account_reference)
+       VALUES ($1, $3, 'basiq:broker'), ($2, $3, 'basiq:cash')`,
+      [performanceTransactions[0].id, performanceTransactions[1].id, firstUser]
+    );
+    const performanceInputs = await require('../db/investment-performance')
+      .loadPerformanceInputs(firstUser, 30);
+    assert.equal(performanceInputs.cashFlows.length, 1);
+    assert.equal(Number(performanceInputs.cashFlows[0].amount), 1000);
     delete require.cache[require.resolve('../db/transactions')];
     const incrementalTransactionsDb = require('../db/transactions');
     await pool.query(

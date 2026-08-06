@@ -11,24 +11,7 @@ function snapshotDate(now = new Date(), timeZone = 'Australia/Perth') {
 }
 
 function validatedSnapshotValues(profile) {
-  const value = (key) => {
-    const raw = profile?.[key];
-    if (raw === null || raw === undefined || raw === '') return 0;
-    const number = Number(raw);
-    if (!Number.isFinite(number)) throw new Error(`Invalid financial value: ${key}`);
-    return Math.round(number * 100) / 100;
-  };
-  const superBalance = value('super_balance');
-  const investBalance = value('investment_portfolio');
-  const propertyValue = value('property_value');
-  const cashBalance = value('cash_savings');
-  const debtsTotal = value('hecs_balance') + value('total_debt');
-  const assetsTotal = superBalance + investBalance + propertyValue + cashBalance;
-  return {
-    netWorth: Math.round((assetsTotal - debtsTotal) * 100) / 100,
-    assetsTotal: Math.round(assetsTotal * 100) / 100,
-    superBalance, investBalance, debtsTotal: Math.round(debtsTotal * 100) / 100, cashBalance,
-  };
+  return snapshots.snapshotValuesFromProfile(profile, { strict: true });
 }
 
 function createDailySnapshotService(database) {
@@ -41,15 +24,31 @@ function createDailySnapshotService(database) {
   };
 }
 
+function createDailySnapshotSweep(database, createSnapshot) {
+  return async function captureDailySnapshots() {
+    const userIds = await database.listSnapshotUserIds();
+    const result = { captured: 0, failed: 0 };
+    for (const userId of userIds) {
+      try { await createSnapshot(userId); result.captured++; }
+      catch (error) { result.failed++; console.error(`[snapshots] user ${userId}:`, error.message); }
+    }
+    return result;
+  };
+}
+
 const database = {
   async loadSnapshotProfile(userId) {
     const profile = (await profiles.getProfileByUserId(userId)) || {};
     return assets.mergeAssetSummaryIntoProfile(profile, await assets.getAssetSummary(userId));
   },
   recordSnapshot: snapshots.recordSnapshot,
+  listSnapshotUserIds: snapshots.listSnapshotUserIds,
 };
 
+const createDailySnapshot = createDailySnapshotService(database);
+
 module.exports = {
-  snapshotDate, validatedSnapshotValues, createDailySnapshotService,
-  createDailySnapshot: createDailySnapshotService(database),
+  snapshotDate, validatedSnapshotValues, createDailySnapshotService, createDailySnapshotSweep,
+  createDailySnapshot,
+  captureDailySnapshots: createDailySnapshotSweep(database, createDailySnapshot),
 };

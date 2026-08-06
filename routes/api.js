@@ -605,40 +605,14 @@ router.patch('/v1/profile', async (req, res) => {
 });
 
 // ─── Net-worth snapshots (real history for the dashboard tiles/charts) ─────
-// GET /api/v1/snapshots?days=N → oldest-first daily series. Upserts today's
-// snapshot first (from the merged effective profile) so React-only users accrue
-// history just like the EJS dashboard does. Registered before /v1/:table.
+// GET /api/v1/snapshots?days=N → oldest-first immutable daily series.
+// Capture is performed by the authenticated daily cron sweep, never by reads.
 router.get('/v1/snapshots', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
-    const { getProfileByUserId } = require('../db/profiles');
-    const assetsDb = require('../db/assets');
     const { getSnapshots } = require('../db/snapshots');
 
     const days = Math.min(Math.max(parseInt(req.query.days, 10) || 366, 1), 3660);
-
-    const snapshotRow = await require('../services/daily-snapshots').createDailySnapshot(
-      req.session.userId
-    );
-    const snapshotValues = {
-      netWorth: Number(snapshotRow.net_worth), assetsTotal: Number(snapshotRow.assets_total),
-      superBalance: Number(snapshotRow.super_balance), investBalance: Number(snapshotRow.invest_balance),
-      debtsTotal: Number(snapshotRow.debts_total), cashBalance: Number(snapshotRow.cash_balance),
-    };
-
-    try {
-      const { getCashFlowTransactions } = require('../db/transactions');
-      const [transactions, investments] = await Promise.all([
-        getCashFlowTransactions(req.session.userId, 30),
-        assetsDb.listInvestments(req.session.userId),
-      ]);
-      await require('../services/calculation-lineage').recordSnapshotMetrics(
-        req.session.userId,
-        { snapshot: snapshotValues, transactions, investments }, snapshotRow.snap_date
-      );
-    } catch (e) {
-      console.error('/api/v1/snapshots lineage error:', e.message);
-    }
 
     const rows = require('../lib/snapshot-changes').explainSnapshotSeries(
       await getSnapshots(req.session.userId, days)

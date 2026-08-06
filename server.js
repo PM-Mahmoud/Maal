@@ -216,6 +216,7 @@ app.get('/internal/digest/run', async (req, res) => {
   if (!checkCronSecret(req, 'RADAR_CRON_SECRET')) return res.status(403).json({ error: 'forbidden' });
   try {
     const { runDailyDigest } = require('./services/digest');
+    await require('./services/daily-snapshots').captureDailySnapshots();
     const result = await runDailyDigest();
     res.json({ ok: true, ...result });
   } catch (e) {

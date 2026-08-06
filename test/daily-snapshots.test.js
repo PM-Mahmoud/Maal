@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { createDailySnapshotService, snapshotDate } = require('../services/daily-snapshots');
+const { createDailySnapshotService, createDailySnapshotSweep, snapshotDate } = require('../services/daily-snapshots');
 
 assert.equal(snapshotDate(new Date('2026-08-06T16:30:00Z'), 'Australia/Perth'), '2026-08-07');
 
@@ -19,6 +19,13 @@ assert.equal(snapshotDate(new Date('2026-08-06T16:30:00Z'), 'Australia/Perth'), 
     investBalance: 50.1, debtsTotal: 25.05, cashBalance: 100.25,
   });
   assert.equal(result.netWorth, 325.5);
+  const captured = [];
+  const sweep = createDailySnapshotSweep(
+    { listSnapshotUserIds: async () => [7, 8] },
+    async (userId) => { captured.push(userId); }
+  );
+  assert.deepStrictEqual(await sweep(), { captured: 2, failed: 0 });
+  assert.deepStrictEqual(captured, [7, 8]);
   await assert.rejects(
     () => createDailySnapshotService({ loadSnapshotProfile: async () => ({ cash_savings: 'NaN' }) })(7),
     /Invalid financial value/

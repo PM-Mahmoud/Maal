@@ -14,7 +14,7 @@ const { getRecommendationsByUserId, updateRecommendationStatus, saveRecommendati
 const { getAccountsByUserId, addAccount, deleteAccount, syncAccount } = require('../db/linked_accounts');
 const { computeScore } = require('../lib/score-engine');
 const { computeMaalScore } = require('../lib/maal-score');
-const { recordSnapshot, getSnapshots, snapshotValuesFromProfile } = require('../db/snapshots');
+const { getSnapshots } = require('../db/snapshots');
 const { estimateTax } = require('../lib/tax');
 const { aggregateConnected } = require('../lib/connected');
 const assetsDb = require('../db/assets');
@@ -183,12 +183,10 @@ router.get('/', async (req, res) => {
       } catch (e) { console.error('movers error:', e.message); }
     }
 
-    // Record today's net-worth snapshot, then load history for the real chart.
-    // Values via the shared pure helper so the EJS dashboard and the React
-    // GET /api/v1/snapshots record/read identical numbers.
+    // Daily snapshot writes happen in the cron sweep; dashboard reads are immutable.
     let snapshots = [];
     try {
-      await recordSnapshot(req.session.userId, snapshotValuesFromProfile(profile));
+      // Daily history is captured by the cron sweep, not mutated by dashboard reads.
       snapshots = await getSnapshots(req.session.userId, 366);
     } catch (snapErr) {
       console.error('Snapshot error (run migrations?):', snapErr.message);
