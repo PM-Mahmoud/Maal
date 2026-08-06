@@ -118,7 +118,7 @@ Implementation plan: [HelloMaal wealth platform implementation plan](./wealth-pl
 | 5.2 | Built 2026-08-07 | `node test/cash-risks.test.js`; client `npm run typecheck`; `npm test` | `c76a6e7`, `7c90d81` |
 | 5.3 | Built 2026-08-07 | `node test/monthly-close.test.js`; `npm run test:integrity-db`; client `npm run typecheck`; `npm test` | `2464f6d`, `7c90d81` |
 | 5.4 | Built 2026-08-07 | `node test/financial-export.test.js`; client `npm run typecheck`; `npm test` | `37aa534`, `7c90d81` |
-| 6.1 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | Build 6 commit |
-| 6.2 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | Build 6 commit |
-| 6.3 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | Build 6 commit |
-| 6.4 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | Build 6 commit |
+| 6.1 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | `96020ec` |
+| 6.2 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | `96020ec` |
+| 6.3 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | `96020ec` |
+| 6.4 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | `96020ec` |
