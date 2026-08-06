@@ -13,6 +13,12 @@ const forecast = forecastAccountBalances({
 assert.equal(forecast.accounts[0].points.find((point) => point.date === '2026-08-10').balance, 3000);
 assert.equal(forecast.accounts[0].points.find((point) => point.date === '2026-08-15').balance, 2400);
 assert.equal(forecast.accounts[0].closing_balance, 3800);
+const calendarForecast = forecastAccountBalances({
+  accounts: [{ id: 1, balance: 1000 }],
+  recurring: [{ kind: 'bill', averageAmount: 100, nextEstimate: '2027-01-31', cadence: 'monthly' }],
+  startDate: '2027-01-01', days: 90,
+});
+assert.deepStrictEqual(calendarForecast.accounts[0].points.filter((point, index, points) => index && point.balance !== points[index - 1].balance).map((point) => point.date), ['2027-01-31','2027-02-28','2027-03-31']);
 
 (async () => {
   let scoped;

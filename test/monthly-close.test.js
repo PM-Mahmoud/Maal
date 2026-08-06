@@ -14,12 +14,13 @@ assert.equal(report.reconciliation_exceptions, 1);
   let stored;
   const close = createMonthlyCloseService({
     findMonthlyClose: async () => null,
-    loadMonthlyCloseInputs: async () => ({ snapshots: [], transactions: [], reconciliations: [], investmentPerformance: null }),
+    loadMonthlyCloseInputs: async () => ({ snapshots: [{snap_date:'2026-07-01',net_worth:1,invest_balance:100},{snap_date:'2026-07-31',net_worth:2,invest_balance:110}], transactions: [], reconciliations: [], investmentCashFlows: [] }),
     storeMonthlyClose: async (userId, month, payload, hash) => { stored = { userId, month, payload, hash }; return { id: 1, month, payload, payload_hash: hash }; },
-  }, null);
+  });
   const result = await close(7, '2026-07');
   assert.equal(stored.userId, 7); assert.equal(result.payload_hash.length, 64);
-  const existing = createMonthlyCloseService({ findMonthlyClose: async () => ({ id: 2, month: '2026-07' }) }, null);
+  const existing = createMonthlyCloseService({ findMonthlyClose: async () => ({ id: 2, month: '2026-07' }) });
   assert.equal((await existing(7, '2026-07')).id, 2);
+  await assert.rejects(() => close(7, '2026-08', { now: new Date('2026-08-07T00:00:00Z') }), /Only completed months/);
   console.log('✓ monthly closes are deterministic and never overwrite an existing close');
 })().catch((error) => { console.error(error); process.exit(1); });

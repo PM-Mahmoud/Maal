@@ -10,7 +10,7 @@ const DIRECT_TABLES = [
 async function loadFinancialExport(userId) {
   const data = {};
   for (const table of DIRECT_TABLES) {
-    data[table] = (await pool.query(`SELECT * FROM ${table} WHERE user_id = $1 ORDER BY id`, [userId])).rows;
+    data[table] = (await pool.query(`SELECT * FROM ${table} WHERE user_id = $1`, [userId])).rows;
   }
   data.users = (await pool.query(`SELECT id,email,name,plan,created_at FROM users WHERE id=$1`, [userId])).rows;
   data.radar_events = (await pool.query(`SELECT e.* FROM radar_events e JOIN radars r ON r.id=e.radar_id WHERE r.user_id=$1 ORDER BY e.id`, [userId])).rows;

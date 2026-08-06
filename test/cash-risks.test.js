@@ -1,6 +1,7 @@
 const assert = require('assert');
 const { detectCashRisks } = require('../lib/cash-risks');
 const risks = detectCashRisks({
+  start_date: '2026-08-07', days: 30,
   accounts: [{ account_reference: 'a', label: 'Everyday', points: [
     { date: '2026-08-07', balance: 100 }, { date: '2026-08-10', balance: -50 }, { date: '2026-08-11', balance: 20 },
   ] }],

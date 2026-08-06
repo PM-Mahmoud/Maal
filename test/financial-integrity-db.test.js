@@ -106,6 +106,9 @@ async function main() {
     )).rows[0];
     assert.equal(preciseSnapshot.net_worth, '1.23');
     assert.equal(preciseSnapshot.cash_balance, '1.01');
+    await pool.query(`INSERT INTO net_worth_snapshots(user_id,snap_date,net_worth,assets_total,invest_balance) VALUES($1,'2026-07-01',100,100,50),($1,'2026-07-31',110,110,55)`, [firstUser]);
+    const closeInputs = await require('../db/monthly-close').loadMonthlyCloseInputs(firstUser, '2026-07');
+    assert.equal(closeInputs.snapshots.length, 2);
     await pool.query(
       `INSERT INTO investments (user_id, name, kind, value, source, account_reference)
        VALUES ($1, 'Broker', 'brokerage', 1000, 'basiq', 'basiq:broker')`, [firstUser]
