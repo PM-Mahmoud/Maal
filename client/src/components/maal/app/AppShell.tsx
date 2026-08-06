@@ -14,6 +14,7 @@ import {
   PiggyBank, Receipt, Calculator, TrendingDown, Dices,
   BarChart3,
 } from "lucide-react";
+import { ClipboardList } from "lucide-react";
 
 // Single source for the two contact details users see in-app. The old
 // support@maal.app address had no MX record, so every mail sent to it bounced.
@@ -34,6 +35,7 @@ const PORTFOLIO: Item[] = [
   { to: "/app/vault", label: "Vault", icon: FolderLock },
   { to: "/app/transactions", label: "Transactions", icon: ArrowLeftRight },
   { to: "/app/goals", label: "Goals", icon: Target },
+  { to: "/app/planning", label: "Financial Plan", icon: ClipboardList },
   { to: "/app/onboarding", label: "Profile", icon: UserCircle2 },
 ];
 
