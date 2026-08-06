@@ -128,6 +128,10 @@ app.get('/health', async (_req, res) => {
       // owner — so verification/feedback/report emails silently never arrive.
       emailFrom: !!(process.env.EMAIL_FROM || '').trim(),
       isaacus: !!(process.env.ISAACUS_API_KEY || '').trim(),
+      // When false, Vault stores file bytes in Postgres (bytea), which counts
+      // against Neon's transfer allowance. Set the STORAGE_* vars (Cloudflare R2)
+      // to move bytes to object storage.
+      objectStorage: require('./services/storage').isConfigured(),
       verifier: require('./services/gateway').hasRole('verifier'),
       exa: !!(process.env.EXA_API_KEY || '').trim(),
       financialdatasets: !!(process.env.FINANCIAL_DATASETS_API_KEY || '').trim(),
