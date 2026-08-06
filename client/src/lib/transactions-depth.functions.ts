@@ -3,6 +3,15 @@
 export type CategoryGroup = { group: string; categories: string[] };
 export type TxnRule = { id: number; name: string | null; match_type: string; match_text: string; category_group: string; category: string | null; priority: number; amount_direction: "any" | "debit" | "credit" };
 export type Subscription = { merchant: string; amount: number; cadence: string; occurrences: number; lastDate: string | null; nextEstimate: string | null };
+export type RecurringTransaction = { kind: "income" | "bill" | "subscription"; merchant: string; averageAmount: number; minAmount: number; maxAmount: number; cadence: string; confidence: number; occurrences: number; lastDate: string | null; nextEstimate: string | null };
+
+export async function getRecurringTransactions(): Promise<RecurringTransaction[]> {
+  try {
+    const r = await fetch("/api/v1/transactions/recurring", { credentials: "include" });
+    if (!r.ok) return [];
+    return (await r.json()).recurring ?? [];
+  } catch { return []; }
+}
 
 export async function getCategoryGroups(): Promise<CategoryGroup[]> {
   try {

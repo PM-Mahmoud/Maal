@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SlidersHorizontal, Repeat } from "lucide-react";
 import { listTransactions, seedMockTransactions, clearTransactions, addTransaction } from "@/lib/transactions.functions";
-import { getCategoryGroups, getSubscriptions, setTransactionCategory, type CategoryGroup, type Subscription } from "@/lib/transactions-depth.functions";
+import { getCategoryGroups, getRecurringTransactions, setTransactionCategory, type CategoryGroup, type RecurringTransaction } from "@/lib/transactions-depth.functions";
 import { RulesModal } from "@/components/maal/transactions/RulesModal";
 import { InstitutionLogo } from "@/components/maal/InstitutionLogo";
 import { formatAUD } from "@/lib/score";
@@ -111,7 +111,7 @@ function TransactionsPage() {
   const [pageErr, setPageErr] = useState<string | null>(null);
   const [manualErr, setManualErr] = useState<string | null>(null);
   const [view, setView] = useState<"all" | "subs">("all");
-  const [subs, setSubs] = useState<Subscription[]>([]);
+  const [subs, setSubs] = useState<RecurringTransaction[]>([]);
   const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
   const [showRules, setShowRules] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -130,11 +130,11 @@ function TransactionsPage() {
     }
   }
   useEffect(() => { refresh(); }, []);
-  useEffect(() => { if (view === "subs" && subs.length === 0) getSubscriptions().then(setSubs); }, [view, subs.length]);
+  useEffect(() => { if (view === "subs" && subs.length === 0) getRecurringTransactions().then(setSubs); }, [view, subs.length]);
 
   const monthlySubTotal = useMemo(() => {
     const per = { weekly: 52 / 12, fortnightly: 26 / 12, monthly: 1, yearly: 1 / 12 } as Record<string, number>;
-    return subs.reduce((a, s) => a + s.amount * (per[s.cadence] ?? 1), 0);
+    return subs.filter((s) => s.kind !== "income").reduce((a, s) => a + s.averageAmount * (per[s.cadence] ?? 1), 0);
   }, [subs]);
 
   const filteredBanks = useMemo(
@@ -368,7 +368,7 @@ function TransactionsPage() {
           <div className="flex items-center justify-between mb-3">
             <div className="inline-flex items-center gap-1 p-1 bg-[var(--secondary)] rounded-[10px]">
               <button onClick={() => setView("all")} className={`px-3 py-1.5 rounded-[8px] text-[12px] font-medium ${view === "all" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>All transactions</button>
-              <button onClick={() => setView("subs")} className={`px-3 py-1.5 rounded-[8px] text-[12px] font-medium inline-flex items-center gap-1.5 ${view === "subs" ? "bg-background shadow-sm" : "text-muted-foreground"}`}><Repeat className="size-3.5" /> Subscriptions</button>
+              <button onClick={() => setView("subs")} className={`px-3 py-1.5 rounded-[8px] text-[12px] font-medium inline-flex items-center gap-1.5 ${view === "subs" ? "bg-background shadow-sm" : "text-muted-foreground"}`}><Repeat className="size-3.5" /> Recurring</button>
             </div>
             <button onClick={() => setShowRules(true)} className="inline-flex items-center gap-1.5 border border-border px-3 py-1.5 rounded-[8px] text-[12px] font-medium text-muted-foreground hover:text-foreground hover:border-foreground/40">
               <SlidersHorizontal className="size-3.5" /> Rules
@@ -421,19 +421,20 @@ function TransactionsPage() {
               <div className="border border-border rounded-[12px] bg-[var(--surface)] overflow-hidden">
                 <table className="w-full text-[13px]">
                   <thead className="bg-[var(--secondary)] text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                    <tr><th className="text-left px-4 py-2">Merchant</th><th className="text-left px-4 py-2">Cadence</th><th className="text-left px-4 py-2">Next</th><th className="text-right px-4 py-2">Amount</th></tr>
+                    <tr><th className="text-left px-4 py-2">Merchant</th><th className="text-left px-4 py-2">Type</th><th className="text-left px-4 py-2">Cadence</th><th className="text-left px-4 py-2">Next</th><th className="text-right px-4 py-2">Average</th></tr>
                   </thead>
                   <tbody>
                     {subs.map((s, i) => (
                       <tr key={i} className="border-t border-border">
                         <td className="px-4 py-2">{s.merchant}</td>
+                        <td className="px-4 py-2 capitalize text-muted-foreground">{s.kind}<span className="block text-[10px]">{Math.round(s.confidence * 100)}% · {s.occurrences} occurrences</span></td>
                         <td className="px-4 py-2 capitalize text-muted-foreground">{s.cadence}</td>
                         <td className="px-4 py-2 tabular-nums text-muted-foreground">{s.nextEstimate ?? "—"}</td>
-                        <td className="px-4 py-2 text-right tabular-nums">{formatAUD(s.amount)}</td>
+                        <td className="px-4 py-2 text-right tabular-nums">{formatAUD(s.averageAmount)}<span className="block text-[10px] text-muted-foreground">{formatAUD(s.minAmount)}–{formatAUD(s.maxAmount)}</span></td>
                       </tr>
                     ))}
                     {subs.length === 0 && (
-                      <tr><td colSpan={4} className="px-4 py-8 text-center text-[12px] text-muted-foreground">No recurring payments detected yet. Connect an account or import transactions to spot subscriptions.</td></tr>
+                      <tr><td colSpan={5} className="px-4 py-8 text-center text-[12px] text-muted-foreground">No recurring activity detected yet. Connect an account or import transactions to identify income, bills, and subscriptions.</td></tr>
                     )}
                   </tbody>
                 </table>

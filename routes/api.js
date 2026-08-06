@@ -421,6 +421,10 @@ router.get(
   '/v1/reconciliations',
   require('../services/reconciliation').listReconciliationsHandler
 );
+router.post(
+  '/v1/reconciliations/:accountReference/adjustments',
+  require('../services/reconciliation').adjustmentHandler
+);
 
 // POST /api/v1/basiq/sync — trigger account + transaction sync, return JSON
 router.post('/v1/basiq/sync', async (req, res) => {
@@ -1194,6 +1198,24 @@ router.get('/v1/transactions/subscriptions', async (req, res) => {
   } catch (e) {
     console.error('/api/v1/transactions/subscriptions error:', e.message);
     res.status(500).json({ error: 'Could not detect subscriptions' });
+  }
+});
+
+router.get('/v1/transactions/recurring', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const txnDb = require('../db/transactions');
+    const { detectRecurringTransactions } = require('../services/transaction-rules');
+    const { detectTransactionRelationships, indexRelationships } = require('../services/transaction-relationships');
+    const rows = await txnDb.getTransactionsWithCategory(req.session.userId, 2000);
+    const relationships = indexRelationships(detectTransactionRelationships(rows));
+    const ordinaryRows = rows.map((row) => relationships.has(String(row.id))
+      ? { ...row, relationship_type: relationships.get(String(row.id)).type }
+      : row);
+    res.json({ recurring: detectRecurringTransactions(ordinaryRows) });
+  } catch (error) {
+    console.error('/api/v1/transactions/recurring error:', error.message);
+    res.status(500).json({ error: 'Could not detect recurring transactions' });
   }
 });
 

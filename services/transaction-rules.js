@@ -78,6 +78,57 @@ function detectSubscriptions(txns, opts) {
   return subs;
 }
 
+function detectRecurringTransactions(txns, options = {}) {
+  const minOccurrences = options.minOccurrences || 3;
+  const now = options.now ? new Date(options.now) : new Date();
+  const groups = new Map();
+  for (const transaction of txns || []) {
+    if (!transaction.post_date || transaction.status === 'pending'
+      || transaction.relationship_type || !amountDirection(transaction.amount)) continue;
+    const merchantKey = normaliseMerchantIdentity(transaction.description);
+    if (!merchantKey) continue;
+    const key = `${amountDirection(transaction.amount)}|${merchantKey}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(transaction);
+  }
+  const recurring = [];
+  for (const items of groups.values()) {
+    if (items.length < minOccurrences) continue;
+    const ordered = [...items].sort((a, b) => new Date(a.post_date) - new Date(b.post_date));
+    const cadence = inferCadence(ordered.map((item) => new Date(item.post_date)));
+    if (!cadence) continue;
+    const cadenceTolerance = { weekly: 2, fortnightly: 3, monthly: 6, yearly: 20 }[cadence];
+    const cadenceDays = CADENCE_DAYS[cadence];
+    const gaps = ordered.slice(1).map((item, index) =>
+      (new Date(item.post_date) - new Date(ordered[index].post_date)) / 86400000
+    );
+    if (gaps.filter((gap) => Math.abs(gap - cadenceDays) <= cadenceTolerance).length
+      < Math.ceil(gaps.length * 0.67)) continue;
+    const amounts = ordered.map((item) => Math.abs(Number(item.amount)));
+    const average = amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length;
+    const spread = average ? (Math.max(...amounts) - Math.min(...amounts)) / average : Infinity;
+    if (spread > 0.35) continue;
+    const latest = ordered.at(-1);
+    const ageDays = (now - new Date(latest.post_date)) / 86400000;
+    if (ageDays < 0 || ageDays > cadenceDays * 2) continue;
+    const text = ordered.map((item) => item.description || '').join(' ').toLowerCase();
+    const income = Number(latest.amount) > 0;
+    const subscription = !income && (latest.category_group === 'Recurring & Subscriptions'
+      || /\b(netflix|spotify|subscription|membership|software|streaming|icloud|adobe)\b/.test(text));
+    const kind = income ? 'income' : subscription ? 'subscription' : 'bill';
+    const confidence = Math.max(0.5, Math.min(0.99,
+      0.65 + Math.min(ordered.length - minOccurrences, 3) * 0.05 + (spread <= 0.1 ? 0.15 : 0)
+    ));
+    recurring.push({
+      kind, merchant: cleanMerchantLabel(latest.description), merchant_key: normaliseMerchantIdentity(latest.description),
+      averageAmount: Number(average.toFixed(2)), minAmount: Math.min(...amounts), maxAmount: Math.max(...amounts),
+      cadence, confidence: Number(confidence.toFixed(2)), occurrences: ordered.length,
+      lastDate: toISO(latest.post_date), nextEstimate: toISO(addDays(new Date(latest.post_date), CADENCE_DAYS[cadence])),
+    });
+  }
+  return recurring.sort((a, b) => b.confidence - a.confidence || b.averageAmount - a.averageAmount);
+}
+
 const CADENCE_DAYS = { weekly: 7, fortnightly: 14, monthly: 30, yearly: 365 };
 
 function annualised(sub) {
@@ -187,6 +238,6 @@ function toISO(d) { const x = new Date(d); return isNaN(x) ? null : x.toISOStrin
 
 module.exports = {
   matchRule, computeAssignments, computeLearnedSuggestions,
-  detectSubscriptions, inferCadence, normaliseMerchant,
+  detectSubscriptions, detectRecurringTransactions, inferCadence, normaliseMerchant,
   normaliseMerchantIdentity, amountDirection,
 };

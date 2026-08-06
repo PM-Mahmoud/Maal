@@ -30,7 +30,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 - [x] Build 3.2 — Improve categorisation rules and learned suggestions.
 - [x] Build 3.3 — Detect internal transfers, card repayments, refunds, and
   reversals.
-- [ ] Build 3.4 — Detect recurring income, bills, and subscriptions.
+- [x] Build 3.4 — Detect recurring income, bills, and subscriptions.
 
 ## 4. Historical truth
 
@@ -88,5 +88,6 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 | 2.4 | Built 2026-07-30 | resilience unit tests; PostgreSQL alert/run contract; `npm test` | `364e9b7` |
 | 3.1 | Built 2026-08-02 | incremental-ingestion unit tests; PostgreSQL reconciliation contract; `npm test` | `adad782` |
 | 3.2 | Built 2026-08-06 | categorisation and learned-suggestion unit tests; PostgreSQL feedback contract; client typecheck; `npm test` | `2a2b7ea` |
-| 3.3 | Built 2026-08-06 | relationship detection tests; client typecheck; `npm test` | This commit |
+| 3.3 | Built 2026-08-06 | relationship detection tests; client typecheck; `npm test` | `176bc39` |
+| 3.4 | Built 2026-08-06 | recurring transaction tests; client typecheck; `npm test` | This commit |
 | 4.1 | In progress | reconciliation workflow unit tests; PostgreSQL ownership contract; `npm test` | — |
