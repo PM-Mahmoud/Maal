@@ -90,4 +90,4 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 | 3.2 | Built 2026-08-06 | categorisation and learned-suggestion unit tests; PostgreSQL feedback contract; client typecheck; `npm test` | `2a2b7ea` |
 | 3.3 | Built 2026-08-06 | relationship detection tests; client typecheck; `npm test` | `176bc39` |
 | 3.4 | Built 2026-08-06 | recurring transaction tests; client typecheck; `npm test` | `ec14d2f` |
-| 4.1 | Built 2026-08-06 | reconciliation workflow unit tests; PostgreSQL ownership contract; `npm test` | This commit |
+| 4.1 | Built 2026-08-06 | `node test/reconciliation-adjustments.test.js`; `npm run test:integrity-db`; client `npm run typecheck`; `npm test` | `1370a2e`, `5d38951` |
