@@ -2,6 +2,8 @@
 // non-test databases because it recreates the public schema.
 const assert = require('assert');
 const { Pool } = require('pg');
+const baseSnapshotsMigration = require('../migrations/1749600000000_snapshots_plan_basiq');
+const snapshotCashMigration = require('../migrations/1749770000000_snapshot_cash');
 const transactionRulesMigration = require('../migrations/1752600000000_transaction_rules');
 const migration = require('../migrations/1753900000000_financial_integrity');
 const runsMigration = require('../migrations/1754000000000_data_quality_runs');
@@ -14,6 +16,7 @@ const resilienceMigration = require('../migrations/1754600000000_operational_res
 const incrementalTransactionsMigration = require('../migrations/1754700000000_incremental_transactions');
 const categoryLearningMigration = require('../migrations/1754800000000_category_learning');
 const reconciliationAdjustmentsMigration = require('../migrations/1754900000000_reconciliation_adjustments');
+const reliableSnapshotsMigration = require('../migrations/1755000000000_reliable_daily_snapshots');
 
 async function expectPgError(fn, expectedCode) {
   let error;
@@ -73,6 +76,8 @@ async function main() {
         post_date DATE, created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+    await baseSnapshotsMigration.up(pool);
+    await snapshotCashMigration.up(pool);
     await transactionRulesMigration.up(pool);
     await migration.up(pool);
     await runsMigration.up(pool);
@@ -85,9 +90,18 @@ async function main() {
     await incrementalTransactionsMigration.up(pool);
     await categoryLearningMigration.up(pool);
     await reconciliationAdjustmentsMigration.up(pool);
+    await reliableSnapshotsMigration.up(pool);
 
     const firstUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
     const secondUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
+    const preciseSnapshot = (await pool.query(
+      `INSERT INTO net_worth_snapshots
+         (user_id, snap_date, net_worth, assets_total, super_balance, invest_balance, debts_total, cash_balance)
+       VALUES ($1, '2026-08-07', 1.23, 2.34, 0.11, 1.22, 1.11, 1.01)
+       RETURNING net_worth, cash_balance`, [firstUser]
+    )).rows[0];
+    assert.equal(preciseSnapshot.net_worth, '1.23');
+    assert.equal(preciseSnapshot.cash_balance, '1.01');
     delete require.cache[require.resolve('../db/transactions')];
     const incrementalTransactionsDb = require('../db/transactions');
     await pool.query(

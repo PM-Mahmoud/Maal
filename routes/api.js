@@ -613,21 +613,18 @@ router.get('/v1/snapshots', async (req, res) => {
   try {
     const { getProfileByUserId } = require('../db/profiles');
     const assetsDb = require('../db/assets');
-    const { recordSnapshot, getSnapshots, snapshotValuesFromProfile } = require('../db/snapshots');
+    const { getSnapshots } = require('../db/snapshots');
 
     const days = Math.min(Math.max(parseInt(req.query.days, 10) || 366, 1), 3660);
 
-    const profile = (await getProfileByUserId(req.session.userId)) || {};
-    const assetSummary = await assetsDb.getAssetSummary(req.session.userId);
-    const effectiveProfile = assetsDb.mergeAssetSummaryIntoProfile(profile, assetSummary);
-    const snapshotValues = snapshotValuesFromProfile(effectiveProfile);
-
-    try {
-      await recordSnapshot(req.session.userId, snapshotValues);
-    } catch (e) {
-      // Recording is best-effort (e.g. pre-migration) — still return any history.
-      console.error('/api/v1/snapshots record error:', e.message);
-    }
+    const snapshotRow = await require('../services/daily-snapshots').createDailySnapshot(
+      req.session.userId
+    );
+    const snapshotValues = {
+      netWorth: Number(snapshotRow.net_worth), assetsTotal: Number(snapshotRow.assets_total),
+      superBalance: Number(snapshotRow.super_balance), investBalance: Number(snapshotRow.invest_balance),
+      debtsTotal: Number(snapshotRow.debts_total), cashBalance: Number(snapshotRow.cash_balance),
+    };
 
     try {
       const { getCashFlowTransactions } = require('../db/transactions');
@@ -637,7 +634,7 @@ router.get('/v1/snapshots', async (req, res) => {
       ]);
       await require('../services/calculation-lineage').recordSnapshotMetrics(
         req.session.userId,
-        { snapshot: snapshotValues, transactions, investments }
+        { snapshot: snapshotValues, transactions, investments }, snapshotRow.snap_date
       );
     } catch (e) {
       console.error('/api/v1/snapshots lineage error:', e.message);

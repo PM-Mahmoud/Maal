@@ -3,16 +3,25 @@
 
 const { pool } = require('./auth');
 
-async function recordSnapshot(userId, { netWorth, assetsTotal, superBalance, investBalance, debtsTotal, cashBalance }) {
-  await pool.query(
+async function recordSnapshot(userId, dateOrValues, maybeValues) {
+  const values = maybeValues || dateOrValues;
+  const snapDate = maybeValues ? dateOrValues : new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Australia/Perth', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
+  const { netWorth, assetsTotal, superBalance, investBalance, debtsTotal, cashBalance } = values;
+  const { rows } = await pool.query(
     `INSERT INTO net_worth_snapshots
        (user_id, snap_date, net_worth, assets_total, super_balance, invest_balance, debts_total, cash_balance)
-     VALUES ($1, CURRENT_DATE, $2, $3, $4, $5, $6, $7)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (user_id, snap_date)
-     DO UPDATE SET net_worth = $2, assets_total = $3, super_balance = $4,
-                   invest_balance = $5, debts_total = $6, cash_balance = $7`,
-    [userId, netWorth, assetsTotal, superBalance, investBalance, debtsTotal, cashBalance || 0]
+     DO UPDATE SET net_worth = EXCLUDED.net_worth, assets_total = EXCLUDED.assets_total,
+                   super_balance = EXCLUDED.super_balance, invest_balance = EXCLUDED.invest_balance,
+                   debts_total = EXCLUDED.debts_total, cash_balance = EXCLUDED.cash_balance,
+                   captured_at = NOW()
+     RETURNING *`,
+    [userId, snapDate, netWorth, assetsTotal, superBalance, investBalance, debtsTotal, cashBalance]
   );
+  return rows[0];
 }
 
 async function getSnapshots(userId, days) {
