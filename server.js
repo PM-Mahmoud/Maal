@@ -78,6 +78,15 @@ const sessionMiddleware = require('express-session')({
     secure: process.env.NODE_ENV === 'production',
   },
 });
+// ─── Static assets (BEFORE session) ────────────────────────────────────────
+// Served ahead of the session middleware on purpose: a logged-in browser sends
+// the session cookie with every same-origin request, so serving the React
+// bundle's JS chunks, favicons and images after the session middleware fired a
+// Postgres session SELECT for each one — dozens of needless Neon round-trips per
+// page load. Static files never need a session, so short-circuit them here.
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
+app.use('/assets', express.static(path.join(__dirname, 'public', 'app', 'assets')));
+
 app.use(sessionMiddleware);
 
 // Make session available in all templates
@@ -259,11 +268,7 @@ app.post('/webhooks/twilio/sms', async (req, res) => {
   }
 });
 
-// ─── Static assets ────────────────────────────────────────────────────────
-
-app.use(express.static(path.join(__dirname, 'public'), { index: false }));
-// Serve React SPA assets from /assets (Vite build output)
-app.use('/assets', express.static(path.join(__dirname, 'public', 'app', 'assets')));
+// (Static assets are served earlier, before the session middleware — see above.)
 
 // ─── Route mounts ──────────────────────────────────────────────────────────
 
