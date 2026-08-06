@@ -636,6 +636,7 @@ router.get(
   '/v1/investment-performance',
   require('../services/investment-performance').investmentPerformanceHandler
 );
+router.get('/v1/cashflow-forecast', require('../services/cashflow-forecast').forecastHandler);
 
 // ─── Vault (real document storage — Postgres bytea via db/vault.js) ────────
 // The React vault page used a Supabase Storage bucket that doesn't exist (the

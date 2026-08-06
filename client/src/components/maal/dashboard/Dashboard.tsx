@@ -900,6 +900,11 @@ function KpiTile({ kind, portfolio, snapshots, period, createdAt, historyError }
           {snapshots.at(-1)?.investmentPerformance?.return_pct}% investment return, excluding {formatAUD(snapshots.at(-1)?.investmentPerformance?.net_contributions ?? 0)} net deposits.
         </p>
       )}
+      {kind === "kpi_cash" && snapshots.at(-1)?.cashForecast?.accounts?.length ? (
+        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+          Forecast in 30 days: {formatAUD(snapshots.at(-1)!.cashForecast!.accounts.reduce((sum, account) => sum + Number(account.closing_balance), 0))}.
+        </p>
+      ) : null}
       {value !== null && (
         <ChartModal
           open={open}

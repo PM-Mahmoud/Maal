@@ -14,6 +14,7 @@ export type Snapshot = {
   cash: number;
   change?: { material: boolean; net_change: number; summary: string | null; contributors: Array<{ category: string; impact: number }> } | null;
   investmentPerformance?: { return_pct: number | null; investment_gain: number | null; net_contributions: number };
+  cashForecast?: { accounts: Array<{ opening_balance: number; closing_balance: number }> };
 };
 
 export async function fetchSnapshots(days = 366): Promise<Snapshot[]> {
@@ -26,6 +27,8 @@ export async function fetchSnapshots(days = 366): Promise<Snapshot[]> {
     if (snapshots.length) {
       const performance = await fetch(`/api/v1/investment-performance?days=${days}`, { credentials: "include" });
       if (performance.ok) snapshots[snapshots.length - 1].investmentPerformance = await performance.json();
+      const forecast = await fetch("/api/v1/cashflow-forecast?days=30", { credentials: "include" });
+      if (forecast.ok) snapshots[snapshots.length - 1].cashForecast = await forecast.json();
     }
     return snapshots;
   } catch (error) {

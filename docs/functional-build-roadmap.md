@@ -41,7 +41,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 
 ## 5. Forecasting and reporting
 
-- [ ] Build 5.1 — Forecast account balances from recurring cash flows.
+- [x] Build 5.1 — Forecast account balances from recurring cash flows.
 - [ ] Build 5.2 — Detect likely cash shortfalls and upcoming obligations.
 - [ ] Build 5.3 — Generate immutable monthly financial-close reports.
 - [ ] Build 5.4 — Add complete CSV/JSON financial exports.
@@ -94,3 +94,4 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 | 4.2 | Built 2026-08-07 | `node test/daily-snapshots.test.js`; `npm run test:integrity-db`; client `npm run typecheck`; `npm test` | `dcc27b7`, `e6b0191` |
 | 4.3 | Built 2026-08-07 | `node test/snapshot-changes.test.js`; client `npm run typecheck`; `npm test` | `46bfc2b`, `e6b0191` |
 | 4.4 | Built 2026-08-07 | `node test/investment-performance.test.js`; `npm run test:integrity-db`; client `npm run typecheck`; `npm test` | `3b1b79e`, `e6b0191` |
+| 5.1 | Built 2026-08-07 | `node test/cashflow-forecast.test.js`; client `npm run typecheck`; `npm test` | This commit |
