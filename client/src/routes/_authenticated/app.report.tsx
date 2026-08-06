@@ -24,6 +24,17 @@ function ReportPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastFile, setLastFile] = useState<string | null>(null);
+  const [closeMonth, setCloseMonth] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7); });
+  const [closeMsg, setCloseMsg] = useState<string | null>(null);
+  async function createClose() {
+    setBusy(true); setError(null); setCloseMsg(null);
+    try {
+      const response = await fetch(`/api/v1/monthly-closes/${closeMonth}`, { method: "POST", credentials: "include" });
+      const body = await response.json(); if (!response.ok) throw new Error(body.error || "Could not close the month.");
+      setCloseMsg(`${body.month} closed · ${String(body.payload_hash).slice(0, 12)}…`);
+    } catch (e: any) { setError(e?.message ?? "Could not close the month."); }
+    finally { setBusy(false); }
+  }
 
   async function build() {
     setBusy(true); setError(null); setLastFile(null);
@@ -91,6 +102,16 @@ function ReportPage() {
           <p className="mt-4 text-[12px] text-[var(--mint)]">Downloaded {lastFile}</p>
         )}
         {error && <p className="mt-4 text-[12px] text-[var(--gold)]">{error}</p>}
+      </div>
+
+      <div className="mt-6 p-6 border border-border rounded-[12px] bg-[var(--surface)]">
+        <h2 className="text-[16px] font-bold tracking-display mb-1">Monthly financial close</h2>
+        <p className="text-[13px] text-muted-foreground mb-4">Create an immutable record of balances, cash flow, reconciliation exceptions, and investment performance.</p>
+        <div className="flex items-end gap-3">
+          <label><span className="block text-[11px] uppercase tracking-[0.12em] text-muted-foreground mb-1">Month</span><input type="month" value={closeMonth} onChange={(e) => setCloseMonth(e.target.value)} className="px-3 py-2 border border-border rounded-[8px] bg-background text-[13px]" /></label>
+          <button onClick={createClose} disabled={busy} className="px-5 py-2.5 rounded-[8px] border border-border bg-background text-[13px] font-semibold disabled:opacity-40">Close month</button>
+        </div>
+        {closeMsg && <p className="mt-3 text-[12px] text-[var(--mint)]">{closeMsg}</p>}
       </div>
 
       {/* Email a data file (Pro/Max) */}

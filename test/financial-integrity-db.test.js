@@ -17,6 +17,7 @@ const incrementalTransactionsMigration = require('../migrations/1754700000000_in
 const categoryLearningMigration = require('../migrations/1754800000000_category_learning');
 const reconciliationAdjustmentsMigration = require('../migrations/1754900000000_reconciliation_adjustments');
 const reliableSnapshotsMigration = require('../migrations/1755000000000_reliable_daily_snapshots');
+const monthlyCloseMigration = require('../migrations/1755100000000_monthly_financial_closes');
 
 async function expectPgError(fn, expectedCode) {
   let error;
@@ -91,9 +92,12 @@ async function main() {
     await categoryLearningMigration.up(pool);
     await reconciliationAdjustmentsMigration.up(pool);
     await reliableSnapshotsMigration.up(pool);
+    await monthlyCloseMigration.up(pool);
 
     const firstUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
     const secondUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
+    const closeId = (await pool.query(`INSERT INTO monthly_financial_closes(user_id,close_month,payload,payload_hash) VALUES($1,'2026-07-01','{}',$2) RETURNING id`, [firstUser, 'a'.repeat(64)])).rows[0].id;
+    await expectPgError(() => pool.query(`UPDATE monthly_financial_closes SET payload='{"changed":true}' WHERE id=$1`, [closeId]), 'P0001');
     const preciseSnapshot = (await pool.query(
       `INSERT INTO net_worth_snapshots
          (user_id, snap_date, net_worth, assets_total, super_balance, invest_balance, debts_total, cash_balance)
