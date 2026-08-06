@@ -26,6 +26,18 @@ function ReportPage() {
   const [lastFile, setLastFile] = useState<string | null>(null);
   const [closeMonth, setCloseMonth] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7); });
   const [closeMsg, setCloseMsg] = useState<string | null>(null);
+  const [exportBusy, setExportBusy] = useState<string | null>(null);
+  async function downloadCompleteExport(format: "json" | "csv") {
+    setExportBusy(format); setError(null);
+    try {
+      const response = await fetch("/api/v1/financial-export", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ format }) });
+      const body = await response.json(); if (!response.ok) throw new Error(body.error || "Could not export data.");
+      const bytes = Uint8Array.from(atob(body.base64), (char) => char.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: body.mime }));
+      const anchor = document.createElement("a"); anchor.href = url; anchor.download = body.filename; anchor.click(); URL.revokeObjectURL(url);
+    } catch (e: any) { setError(e?.message ?? "Could not export data."); }
+    finally { setExportBusy(null); }
+  }
   async function createClose() {
     setBusy(true); setError(null); setCloseMsg(null);
     try {
@@ -112,6 +124,15 @@ function ReportPage() {
           <button onClick={createClose} disabled={busy} className="px-5 py-2.5 rounded-[8px] border border-border bg-background text-[13px] font-semibold disabled:opacity-40">Close month</button>
         </div>
         {closeMsg && <p className="mt-3 text-[12px] text-[var(--mint)]">{closeMsg}</p>}
+      </div>
+
+      <div className="mt-6 p-6 border border-border rounded-[12px] bg-[var(--surface)]">
+        <h2 className="text-[16px] font-bold tracking-display mb-1">Complete financial export</h2>
+        <p className="text-[13px] text-muted-foreground mb-4">Download all financial records and audit history in a portable, lossless format.</p>
+        <div className="flex gap-2">
+          <button onClick={() => downloadCompleteExport("json")} disabled={!!exportBusy} className="px-4 py-2 border border-border rounded-[8px] text-[13px] font-semibold disabled:opacity-40">{exportBusy === "json" ? "Preparing…" : "Download JSON"}</button>
+          <button onClick={() => downloadCompleteExport("csv")} disabled={!!exportBusy} className="px-4 py-2 border border-border rounded-[8px] text-[13px] font-semibold disabled:opacity-40">{exportBusy === "csv" ? "Preparing…" : "Download CSV"}</button>
+        </div>
       </div>
 
       {/* Email a data file (Pro/Max) */}

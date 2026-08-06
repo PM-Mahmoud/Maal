@@ -640,6 +640,7 @@ router.get('/v1/cashflow-forecast', require('../services/cashflow-forecast').for
 router.get('/v1/cash-risks', require('../services/cash-risks').cashRiskHandler);
 router.post('/v1/monthly-closes/:month', require('../services/monthly-close').monthlyCloseHandler);
 router.get('/v1/monthly-closes', require('../services/monthly-close').listMonthlyClosesHandler);
+router.post('/v1/financial-export', require('../services/financial-export').financialExportHandler);
 
 // ─── Vault (real document storage — Postgres bytea via db/vault.js) ────────
 // The React vault page used a Supabase Storage bucket that doesn't exist (the

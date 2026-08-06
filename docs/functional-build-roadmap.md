@@ -63,7 +63,7 @@ Implementation plan: [HelloMaal wealth platform implementation plan](./wealth-pl
 - [x] Build 5.1 — Forecast account balances from recurring cash flows.
 - [x] Build 5.2 — Detect likely cash shortfalls and upcoming obligations.
 - [x] Build 5.3 — Generate immutable monthly financial-close reports.
-- [ ] Build 5.4 — Add complete CSV/JSON financial exports.
+- [x] Build 5.4 — Add complete CSV/JSON financial exports.
 
 ## 6. Planning
 
@@ -115,4 +115,5 @@ Implementation plan: [HelloMaal wealth platform implementation plan](./wealth-pl
 | 4.4 | Built 2026-08-07 | `node test/investment-performance.test.js`; `npm run test:integrity-db`; client `npm run typecheck`; `npm test` | `3b1b79e`, `e6b0191` |
 | 5.1 | Built 2026-08-07 | `node test/cashflow-forecast.test.js`; client `npm run typecheck`; `npm test` | `48c6839` |
 | 5.2 | Built 2026-08-07 | `node test/cash-risks.test.js`; client `npm run typecheck`; `npm test` | `c76a6e7` |
-| 5.3 | Built 2026-08-07 | `node test/monthly-close.test.js`; `npm run test:integrity-db`; client `npm run typecheck`; `npm test` | This commit |
+| 5.3 | Built 2026-08-07 | `node test/monthly-close.test.js`; `npm run test:integrity-db`; client `npm run typecheck`; `npm test` | `2464f6d` |
+| 5.4 | Built 2026-08-07 | `node test/financial-export.test.js`; client `npm run typecheck`; `npm test` | This commit |
