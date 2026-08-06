@@ -43,7 +43,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 
 Implementation plan: [HelloMaal wealth platform implementation plan](./wealth-platform-implementation-plan.md)
 
-- [x] Build W1.1 — Replace the single asset destination with a My Wealth information
+- [~] Build W1.1 — Replace the single asset destination with a My Wealth information
   architecture: Overview, Cash, Investments, Property, Super, Liabilities and Other
   Assets, with matching desktop/mobile navigation and reconciled totals.
 - [ ] Build W1.2 — Add canonical financial accounts, instruments, holdings, valuations,
@@ -97,7 +97,7 @@ Implementation plan: [HelloMaal wealth platform implementation plan](./wealth-pl
 
 | Build | Status | Verification | Commit |
 |---|---|---|---|
-| W1.1 | Built 2026-08-07 | `node test/assets-summary.test.js`; client `npm run typecheck`; client `npm run build`; `npm test` | This commit |
+| W1.1 | In progress — navigation, Super CRUD and reconciled overview delivered | `node test/assets-summary.test.js`; client `npm run typecheck`; client `npm run build`; `npm test` | This commit |
 | 1.1 | Built 2026-07-30 | `node test/data-quality.test.js`; `npm run test:integrity-db`; `npm test` | `c62667b` |
 | 1.2 | Built 2026-07-30 | focused data-quality/import tests; `npm run test:integrity-db`; `npm test` | `c45c455` |
 | 1.3 | Built 2026-07-30 | reconciliation unit/service tests; `npm run test:integrity-db`; `npm test` | `02bcc98` |
@@ -118,7 +118,7 @@ Implementation plan: [HelloMaal wealth platform implementation plan](./wealth-pl
 | 5.2 | Built 2026-08-07 | `node test/cash-risks.test.js`; client `npm run typecheck`; `npm test` | `c76a6e7`, `7c90d81` |
 | 5.3 | Built 2026-08-07 | `node test/monthly-close.test.js`; `npm run test:integrity-db`; client `npm run typecheck`; `npm test` | `2464f6d`, `7c90d81` |
 | 5.4 | Built 2026-08-07 | `node test/financial-export.test.js`; client `npm run typecheck`; `npm test` | `37aa534`, `7c90d81` |
-| 6.1 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | `79b41bb` |
-| 6.2 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | `79b41bb` |
-| 6.3 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | `79b41bb` |
-| 6.4 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | `79b41bb` |
+| 6.1 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | `96020ec` |
+| 6.2 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | `96020ec` |
+| 6.3 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | `96020ec` |
+| 6.4 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | `96020ec` |
