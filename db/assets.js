@@ -414,6 +414,16 @@ function summarizeAssets({ cashAccounts = [], investments = [], properties = [],
   };
 }
 
+// Canonical wealth equation used by the wealth overview API. Property mortgages
+// live on property rows rather than in debts, so both liability components are
+// subtracted exactly once.
+function wealthTotalsFromSummary(summary = {}) {
+  const assetTotal = ['cashTotal', 'investmentsTotal', 'propertyTotal', 'superTotal', 'otherAssetsTotal']
+    .reduce((total, field) => total + (Number(summary[field]) || 0), 0);
+  const liabilityTotal = (Number(summary.propertyMortgageTotal) || 0) + (Number(summary.debtsTotal) || 0);
+  return { assetTotal, liabilityTotal, netWorth: assetTotal - liabilityTotal };
+}
+
 // Merges a flat user_profiles row with an asset summary into the shape
 // computeMaalScore() (and other flat-column consumers) expect — WITHOUT
 // dropping any existing user's data on the floor. Per-field fallback: a
@@ -468,5 +478,5 @@ module.exports = {
   listOtherAssets, getOtherAsset, createOtherAsset, updateOtherAsset, deleteOtherAsset,
   deleteAssetsBySource,
   listBasiqAccountsForQuality,
-  summarizeAssets, getAssetSummary, mergeAssetSummaryIntoProfile,
+  summarizeAssets, wealthTotalsFromSummary, getAssetSummary, mergeAssetSummaryIntoProfile,
 };

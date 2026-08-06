@@ -6,7 +6,7 @@
 // CLAUDE.md's hard rule, financial calculations need a test before merge.
 
 const assert = require('assert');
-const { summarizeAssets, mergeAssetSummaryIntoProfile } = require('../db/assets');
+const { summarizeAssets, wealthTotalsFromSummary, mergeAssetSummaryIntoProfile } = require('../db/assets');
 
 let passed = 0;
 let failed = 0;
@@ -84,6 +84,29 @@ test('each table sums into its own independent total field', () => {
   assert.deepStrictEqual(r, {
     cashTotal: 100, investmentsTotal: 200, propertyTotal: 300, propertyMortgageTotal: 30,
     debtsTotal: 400, superTotal: 500, incomeTotal: 600, otherAssetsTotal: 700,
+  });
+});
+
+console.log('\nwealthTotalsFromSummary');
+
+test('net worth reconciles assets against debts and property mortgages exactly once', () => {
+  const totals = wealthTotalsFromSummary({
+    cashTotal: 10000,
+    investmentsTotal: 20000,
+    propertyTotal: 700000,
+    superTotal: 100000,
+    otherAssetsTotal: 5000,
+    propertyMortgageTotal: 450000,
+    debtsTotal: 15000,
+  });
+  assert.deepStrictEqual(totals, { assetTotal: 835000, liabilityTotal: 465000, netWorth: 370000 });
+});
+
+test('missing and Postgres string summary values remain deterministic', () => {
+  assert.deepStrictEqual(wealthTotalsFromSummary({ cashTotal: '1000', debtsTotal: '250' }), {
+    assetTotal: 1000,
+    liabilityTotal: 250,
+    netWorth: 750,
   });
 });
 

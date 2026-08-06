@@ -590,6 +590,21 @@ router.get('/v1/profile', async (req, res) => {
   }
 });
 
+// Current canonical totals for the My Wealth overview. This deliberately uses
+// db/assets.js rather than recomputing in React so every consumer shares the
+// same user-scoped wealth equation.
+router.get('/v1/wealth-summary', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const assetsDb = require('../db/assets');
+    const components = await assetsDb.getAssetSummary(req.session.userId);
+    res.json({ ...assetsDb.wealthTotalsFromSummary(components), components });
+  } catch (e) {
+    console.error('/api/v1/wealth-summary error:', e.message);
+    res.status(500).json({ error: 'Could not load wealth summary' });
+  }
+});
+
 router.patch('/v1/profile', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
