@@ -905,6 +905,11 @@ function KpiTile({ kind, portfolio, snapshots, period, createdAt, historyError }
           Forecast in 30 days: {formatAUD(snapshots.at(-1)!.cashForecast!.accounts.reduce((sum, account) => sum + Number(account.closing_balance), 0))}.
         </p>
       ) : null}
+      {kind === "kpi_cash" && snapshots.at(-1)?.cashRisks?.shortfalls?.length ? (
+        <p className="mt-1 text-[11px] leading-relaxed text-[var(--gold)]">
+          Possible shortfall by {snapshots.at(-1)!.cashRisks!.shortfalls[0].date}: add {formatAUD(snapshots.at(-1)!.cashRisks!.shortfalls[0].amount_needed)} buffer.
+        </p>
+      ) : null}
       {value !== null && (
         <ChartModal
           open={open}

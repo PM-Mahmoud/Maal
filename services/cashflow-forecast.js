@@ -9,10 +9,11 @@ function createCashflowForecastService(database) {
     for (const row of inputs.transactions || []) {
       if (row.account_reference) accountByMerchant.set(normaliseMerchantIdentity(row.description), row.account_reference);
     }
-    return forecastAccountBalances({
+    const forecast = forecastAccountBalances({
       accounts: inputs.accounts, recurring: recurring.map((item) => ({ ...item, account_reference: item.account_reference || accountByMerchant.get(item.merchant_key) })),
       days: options.days || 90, startDate: options.startDate || new Date().toISOString().slice(0, 10),
     });
+    return { ...forecast, recurring };
   };
 }
 function createForecastHandler(forecast) {

@@ -39,10 +39,29 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 - [x] Build 4.3 — Explain material changes between snapshots.
 - [x] Build 4.4 — Calculate investment performance independently of deposits.
 
+## Priority programme — Complete wealth and services platform (NEXT)
+
+Implementation plan: [HelloMaal wealth platform implementation plan](./wealth-platform-implementation-plan.md)
+
+- [ ] Build W1.1 — Replace the single asset destination with a My Wealth information
+  architecture: Overview, Cash, Investments, Property, Super, Liabilities and Other
+  Assets, with matching desktop/mobile navigation and reconciled totals.
+- [ ] Build W1.2 — Add canonical financial accounts, instruments, holdings, valuations,
+  ownership, and source/as-of/confidence metadata with a compatibility migration from
+  the existing seven asset tables.
+- [ ] Build W1.3 — Add reliable broker/super statement imports and a provider-adapter
+  contract with explicit scopes, durable syncs, lineage, health and revocation.
+- [ ] Build W2.1 — Deliver a versioned, explainable zakat calculator against an immutable
+  wealth snapshot, with user-confirmed classifications and downloadable evidence.
+- [ ] Build W2.2 — Deliver a versioned listed-investment purification workflow with
+  security/distribution-level calculations, licensed data provenance and obligation history.
+- [ ] Build W3.1 — Add a curated partner registry, consent and audit controls; launch a
+  product marketplace only after the regulatory and commercial operating model is approved.
+
 ## 5. Forecasting and reporting
 
 - [x] Build 5.1 — Forecast account balances from recurring cash flows.
-- [ ] Build 5.2 — Detect likely cash shortfalls and upcoming obligations.
+- [x] Build 5.2 — Detect likely cash shortfalls and upcoming obligations.
 - [ ] Build 5.3 — Generate immutable monthly financial-close reports.
 - [ ] Build 5.4 — Add complete CSV/JSON financial exports.
 
@@ -94,4 +113,5 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 | 4.2 | Built 2026-08-07 | `node test/daily-snapshots.test.js`; `npm run test:integrity-db`; client `npm run typecheck`; `npm test` | `dcc27b7`, `e6b0191` |
 | 4.3 | Built 2026-08-07 | `node test/snapshot-changes.test.js`; client `npm run typecheck`; `npm test` | `46bfc2b`, `e6b0191` |
 | 4.4 | Built 2026-08-07 | `node test/investment-performance.test.js`; `npm run test:integrity-db`; client `npm run typecheck`; `npm test` | `3b1b79e`, `e6b0191` |
-| 5.1 | Built 2026-08-07 | `node test/cashflow-forecast.test.js`; client `npm run typecheck`; `npm test` | This commit |
+| 5.1 | Built 2026-08-07 | `node test/cashflow-forecast.test.js`; client `npm run typecheck`; `npm test` | `48c6839` |
+| 5.2 | Built 2026-08-07 | `node test/cash-risks.test.js`; client `npm run typecheck`; `npm test` | This commit |
