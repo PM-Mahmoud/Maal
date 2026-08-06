@@ -5,7 +5,10 @@
 
 const assert = require('assert');
 const cats = require('../lib/transaction-categories');
-const { matchRule, computeAssignments, detectSubscriptions, inferCadence } = require('../services/transaction-rules');
+const {
+  matchRule, computeAssignments, computeLearnedSuggestions,
+  detectSubscriptions, inferCadence, normaliseMerchant, normaliseMerchantIdentity,
+} = require('../services/transaction-rules');
 
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -68,6 +71,12 @@ test('contains / equals / starts_with, case-insensitive', () => {
   assert.ok(!matchRule({ match_type: 'contains', match_text: '' }, { description: 'anything' }));
 });
 
+test('rules can target debit or credit direction', () => {
+  const debitRule = { match_type: 'contains', match_text: 'acme', amount_direction: 'debit' };
+  assert.ok(matchRule(debitRule, { description: 'ACME', amount: -20 }));
+  assert.ok(!matchRule(debitRule, { description: 'ACME', amount: 20 }));
+});
+
 console.log('\ncomputeAssignments (first matching rule wins)');
 
 test('assigns categories; earlier rules take precedence', () => {
@@ -82,6 +91,51 @@ test('assigns categories; earlier rules take precedence', () => {
   const a = computeAssignments(rules, txns);
   assert.strictEqual(a.length, 1);
   assert.deepStrictEqual(a[0], { transaction_id: 1, category_group: 'Recurring & Subscriptions', category: 'Streaming' });
+});
+
+console.log('\nlearned suggestions');
+
+test('suggests a dominant manually learned merchant category without persisting it', () => {
+  const preferences = [
+    { merchant_key: 'corner market', amount_direction: 'debit', category_group: 'Food & Dining', category: 'Groceries', confirmations: 3, total: 4 },
+    { merchant_key: 'corner market', amount_direction: 'debit', category_group: 'Other', category: 'Uncategorised', confirmations: 1, total: 4 },
+  ];
+  const suggestions = computeLearnedSuggestions(preferences, [
+    { id: 9, description: 'EFTPOS CORNER MARKET 4412', amount: -32 },
+  ]);
+  assert.deepStrictEqual(suggestions[0], {
+    transaction_id: 9,
+    category_group: 'Food & Dining',
+    category: 'Groceries',
+    confidence: 0.75,
+    merchant_key: 'corner market',
+  });
+});
+
+test('does not learn from one example or conflicting feedback', () => {
+  assert.deepStrictEqual(computeLearnedSuggestions([
+    { merchant_key: 'rare shop', amount_direction: 'debit', category_group: 'Shopping', category: 'General retail', confirmations: 1, total: 1 },
+  ], [{ id: 1, description: 'RARE SHOP', amount: -2 }]), []);
+  assert.equal(normaliseMerchantIdentity('VISA 1234 Corner Market Sydney'), 'corner market');
+});
+
+test('learned merchant identity avoids common-prefix collisions', () => {
+  assert.equal(normaliseMerchantIdentity('THE COFFEE CLUB'), 'coffee club');
+  assert.equal(normaliseMerchantIdentity('THE COFFEE EMPORIUM'), 'coffee emporium');
+  assert.equal(normaliseMerchant('SPOTIFY ALPHA AU'), normaliseMerchant('SPOTIFY BRAVO AU'));
+});
+
+test('zero-value transactions neither match directional rules nor receive suggestions', () => {
+  assert.ok(!matchRule({ match_type: 'contains', match_text: 'zero', amount_direction: 'credit' }, { description: 'ZERO', amount: 0 }));
+  assert.deepStrictEqual(computeLearnedSuggestions([
+    { merchant_key: 'zero merchant', amount_direction: 'credit', category_group: 'Income', category: 'Other income', confirmations: 2, total: 2 },
+  ], [{ id: 3, description: 'ZERO MERCHANT', amount: 0 }]), []);
+});
+
+test('learned debit categories are not suggested for credits from the same merchant', () => {
+  assert.deepStrictEqual(computeLearnedSuggestions([
+    { merchant_key: 'corner market', amount_direction: 'debit', category_group: 'Food & Dining', category: 'Groceries', confirmations: 2, total: 2 },
+  ], [{ id: 2, description: 'CORNER MARKET REFUND', amount: 20 }]), []);
 });
 
 console.log('\ninferCadence + detectSubscriptions');

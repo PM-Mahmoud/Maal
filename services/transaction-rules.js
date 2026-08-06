@@ -10,6 +10,9 @@ function matchRule(rule, txn) {
   const text = String((txn && txn.description) || '').toLowerCase();
   const needle = String((rule && rule.match_text) || '').toLowerCase();
   if (!needle) return false;
+  const direction = rule.amount_direction || 'any';
+  const transactionDirection = amountDirection(txn && txn.amount);
+  if (direction !== 'any' && transactionDirection !== direction) return false;
   switch (rule.match_type) {
     case 'equals': return text === needle;
     case 'starts_with': return text.startsWith(needle);
@@ -124,6 +127,56 @@ function normaliseMerchant(desc) {
   return (words[0] || cleaned).slice(0, 24);
 }
 
+function normaliseMerchantIdentity(desc) {
+  const cleaned = String(desc || '')
+    .toLowerCase()
+    .replace(/[^a-z ]+/g, ' ')
+    .replace(MERCHANT_STOPWORDS, ' ')
+    .replace(/\bthe\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned.split(' ').filter((word) => word.length >= 3).slice(0, 2).join(' ').slice(0, 48);
+}
+
+function amountDirection(amount) {
+  const value = Number(amount);
+  if (value < 0) return 'debit';
+  if (value > 0) return 'credit';
+  return null;
+}
+
+function computeLearnedSuggestions(preferences, txns, options = {}) {
+  const minConfirmations = options.minConfirmations || 2;
+  const minConfidence = options.minConfidence || (2 / 3);
+  const learned = new Map();
+  for (const preference of preferences || []) {
+    const confidence = Number(preference.confirmations) / Number(preference.total);
+    if (Number(preference.confirmations) < minConfirmations || confidence < minConfidence) continue;
+    const preferenceKey = `${preference.merchant_key}|${preference.amount_direction || 'any'}`;
+    const existing = learned.get(preferenceKey);
+    if (!existing || confidence > existing.confidence) {
+      learned.set(preferenceKey, { ...preference, confidence });
+    }
+  }
+  const suggestions = [];
+  for (const transaction of txns || []) {
+    const merchantKey = normaliseMerchantIdentity(transaction.description);
+    const direction = amountDirection(transaction.amount);
+    if (!merchantKey || !direction) continue;
+    const match = learned.get(`${merchantKey}|${direction}`)
+      || learned.get(`${merchantKey}|any`);
+    if (!match) continue;
+    suggestions.push({
+      transaction_id: transaction.id,
+      category_group: match.category_group,
+      category: match.category || null,
+      confidence: Number(match.confidence.toFixed(4)),
+      merchant_key: merchantKey,
+    });
+  }
+  return suggestions;
+}
+
 function cleanMerchantLabel(desc) {
   const s = String(desc || '').replace(/\s+/g, ' ').trim();
   return s.length > 40 ? s.slice(0, 40) + '…' : s;
@@ -132,4 +185,8 @@ function cleanMerchantLabel(desc) {
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
 function toISO(d) { const x = new Date(d); return isNaN(x) ? null : x.toISOString().slice(0, 10); }
 
-module.exports = { matchRule, computeAssignments, detectSubscriptions, inferCadence, normaliseMerchant };
+module.exports = {
+  matchRule, computeAssignments, computeLearnedSuggestions,
+  detectSubscriptions, inferCadence, normaliseMerchant,
+  normaliseMerchantIdentity, amountDirection,
+};

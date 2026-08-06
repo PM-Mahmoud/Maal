@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SlidersHorizontal, Repeat } from "lucide-react";
 import { listTransactions, seedMockTransactions, clearTransactions, addTransaction } from "@/lib/transactions.functions";
-import { getSubscriptions, type Subscription } from "@/lib/transactions-depth.functions";
+import { getCategoryGroups, getSubscriptions, setTransactionCategory, type CategoryGroup, type Subscription } from "@/lib/transactions-depth.functions";
 import { RulesModal } from "@/components/maal/transactions/RulesModal";
 import { InstitutionLogo } from "@/components/maal/InstitutionLogo";
 import { formatAUD } from "@/lib/score";
@@ -112,8 +112,10 @@ function TransactionsPage() {
   const [manualErr, setManualErr] = useState<string | null>(null);
   const [view, setView] = useState<"all" | "subs">("all");
   const [subs, setSubs] = useState<Subscription[]>([]);
+  const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
   const [showRules, setShowRules] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { getCategoryGroups().then(setCategoryGroups); }, []);
 
   // Reset subs on any transactions refresh so the Subscriptions tab re-detects
   // after a manual add / CSV import instead of showing stale merchants.
@@ -385,8 +387,22 @@ function TransactionsPage() {
                       <td className="px-4 py-2 tabular-nums">{r.post_date ?? r.occurred_on}</td>
                       <td className="px-4 py-2">{r.description}</td>
                       <td className="px-4 py-2 text-muted-foreground">
-                        {r.category_group ?? r.category ?? "—"}
+                        <select value={r.category_source === "manual" && r.category
+                          ? JSON.stringify([r.category_group, r.category]) : ""}
+                          aria-label={`Category for ${r.description}`}
+                          onChange={async (e) => {
+                            if (!e.target.value) return;
+                            const [group, category] = JSON.parse(e.target.value);
+                            if (await setTransactionCategory(r.id, group, category)) refresh();
+                          }}
+                          className="max-w-36 bg-transparent text-[12px]">
+                          <option value="">{r.category_group ?? "Choose category…"}</option>
+                          {categoryGroups.flatMap((group) => group.categories.map((category) =>
+                            <option key={`${group.group}:${category}`} value={JSON.stringify([group.group, category])}>{group.group} · {category}</option>
+                          ))}
+                        </select>
                         {r.category_source === "auto" && <span className="ml-1.5 text-[10px] text-muted-foreground/60">auto</span>}
+                        {r.category_source === "learned" && <span className="ml-1.5 text-[10px] text-muted-foreground/60">suggested {Math.round(Number(r.category_confidence) * 100)}%</span>}
                       </td>
                       <td className={`px-4 py-2 text-right tabular-nums ${Number(r.amount) >= 0 ? "text-[var(--mint)]" : ""}`}>{formatAUD(Number(r.amount))}</td>
                     </tr>

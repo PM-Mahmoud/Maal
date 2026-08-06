@@ -1,7 +1,7 @@
 // lib/transactions-depth.functions.ts — categories, rules, subscriptions (PR 6).
 
 export type CategoryGroup = { group: string; categories: string[] };
-export type TxnRule = { id: number; name: string | null; match_type: string; match_text: string; category_group: string; category: string | null };
+export type TxnRule = { id: number; name: string | null; match_type: string; match_text: string; category_group: string; category: string | null; priority: number; amount_direction: "any" | "debit" | "credit" };
 export type Subscription = { merchant: string; amount: number; cadence: string; occurrences: number; lastDate: string | null; nextEstimate: string | null };
 
 export async function getCategoryGroups(): Promise<CategoryGroup[]> {
@@ -28,7 +28,7 @@ export async function listRules(): Promise<TxnRule[]> {
   } catch { return []; }
 }
 
-export async function createRule(rule: { name?: string; match_type: string; match_text: string; category_group: string; category?: string }): Promise<boolean> {
+export async function createRule(rule: { name?: string; match_type: string; match_text: string; category_group: string; category?: string; priority?: number; amount_direction?: "any" | "debit" | "credit" }): Promise<boolean> {
   try {
     const r = await fetch("/api/v1/transaction-rules", {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rule),

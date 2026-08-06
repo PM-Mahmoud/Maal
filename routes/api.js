@@ -1151,9 +1151,24 @@ router.get('/v1/transactions', async (req, res) => {
   try {
     const txnDb = require('../db/transactions');
     const { autoCategorize } = require('../lib/transaction-categories');
-    const rows = await txnDb.getTransactionsWithCategory(req.session.userId, 500);
+    const { computeLearnedSuggestions } = require('../services/transaction-rules');
+    const [rows, preferences] = await Promise.all([
+      txnDb.getTransactionsWithCategory(req.session.userId, 500),
+      txnDb.getLearnedCategoryPreferences(req.session.userId),
+    ]);
+    const learned = new Map(computeLearnedSuggestions(
+      preferences, rows.filter((row) => !row.category_group)
+    ).map((suggestion) => [String(suggestion.transaction_id), suggestion]));
     const out = rows.map((r) => {
       if (r.category_group) return r;
+      const suggestion = learned.get(String(r.id));
+      if (suggestion) return {
+        ...r,
+        category_group: suggestion.category_group,
+        category: suggestion.category,
+        category_source: 'learned',
+        category_confidence: suggestion.confidence,
+      };
       const auto = autoCategorize(r.description, r.amount);
       return auto ? { ...r, category_group: auto.group, category: auto.category, category_source: 'auto' } : r;
     });
@@ -1182,10 +1197,11 @@ router.get('/v1/transactions/subscriptions', async (req, res) => {
 router.patch('/v1/transactions/:id/category', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
-    const { isKnownGroup } = require('../lib/transaction-categories');
+    const { isKnownGroup, isValidCategory } = require('../lib/transaction-categories');
     const txnDb = require('../db/transactions');
     const d = (req.body && req.body.data && typeof req.body.data === 'object') ? req.body.data : (req.body || {});
     if (!isKnownGroup(d.category_group)) return res.status(400).json({ error: 'Unknown category group.' });
+    if (!isValidCategory(d.category_group, d.category)) return res.status(400).json({ error: 'Unknown category.' });
     const ok = await txnDb.setTransactionCategory(req.session.userId, req.params.id, d.category_group, d.category, 'manual');
     if (!ok) return res.status(404).json({ error: 'Transaction not found.' });
     res.json({ ok: true });
@@ -1210,12 +1226,14 @@ router.get('/v1/transaction-rules', async (req, res) => {
 router.post('/v1/transaction-rules', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
-    const { isKnownGroup } = require('../lib/transaction-categories');
+    const { isKnownGroup, isValidCategory } = require('../lib/transaction-categories');
     const txnDb = require('../db/transactions');
     const d = (req.body && req.body.data && typeof req.body.data === 'object') ? req.body.data : (req.body || {});
     if (!String(d.match_text || '').trim()) return res.status(400).json({ error: 'Enter text to match.' });
     if (!isKnownGroup(d.category_group)) return res.status(400).json({ error: 'Pick a category group.' });
+    if (!isValidCategory(d.category_group, d.category)) return res.status(400).json({ error: 'Pick a valid category.' });
     if (!['contains', 'equals', 'starts_with'].includes(d.match_type || 'contains')) d.match_type = 'contains';
+    if (!['any', 'debit', 'credit'].includes(d.amount_direction || 'any')) d.amount_direction = 'any';
     const id = await txnDb.createRule(req.session.userId, d);
     res.json({ ok: true, id });
   } catch (e) {

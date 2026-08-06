@@ -2,6 +2,7 @@
 // non-test databases because it recreates the public schema.
 const assert = require('assert');
 const { Pool } = require('pg');
+const transactionRulesMigration = require('../migrations/1752600000000_transaction_rules');
 const migration = require('../migrations/1753900000000_financial_integrity');
 const runsMigration = require('../migrations/1754000000000_data_quality_runs');
 const reconciliationMigration = require('../migrations/1754100000000_account_reconciliation');
@@ -11,6 +12,7 @@ const importRunsMigration = require('../migrations/1754400000000_import_runs');
 const connectionHealthMigration = require('../migrations/1754500000000_connection_health');
 const resilienceMigration = require('../migrations/1754600000000_operational_resilience');
 const incrementalTransactionsMigration = require('../migrations/1754700000000_incremental_transactions');
+const categoryLearningMigration = require('../migrations/1754800000000_category_learning');
 
 async function expectPgError(fn, expectedCode) {
   let error;
@@ -70,6 +72,7 @@ async function main() {
         post_date DATE, created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+    await transactionRulesMigration.up(pool);
     await migration.up(pool);
     await runsMigration.up(pool);
     await reconciliationMigration.up(pool);
@@ -79,6 +82,7 @@ async function main() {
     await connectionHealthMigration.up(pool);
     await resilienceMigration.up(pool);
     await incrementalTransactionsMigration.up(pool);
+    await categoryLearningMigration.up(pool);
 
     const firstUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
     const secondUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
@@ -127,6 +131,50 @@ async function main() {
     assert.equal(
       await incrementalTransactionsDb.getTransactionIncrementalSince(firstUser),
       '2026-06-25'
+    );
+    const feedbackTransactions = (await pool.query(
+      `INSERT INTO transactions (user_id, description, amount, status, post_date)
+       VALUES ($1, 'EFTPOS CORNER MARKET 1001', -10, 'posted', '2026-07-05'),
+              ($1, 'VISA CORNER MARKET 1002', -20, 'posted', '2026-07-06'),
+              ($1, 'CORNER MARKET 1003', -30, 'posted', '2026-07-07'),
+              ($2, 'CORNER MARKET 2001', -40, 'posted', '2026-07-07')
+       RETURNING id, user_id`,
+      [firstUser, secondUser]
+    )).rows;
+    for (const row of feedbackTransactions.slice(0, 3)) {
+      assert.equal(await incrementalTransactionsDb.setTransactionCategory(
+        firstUser, row.id, 'Food & Dining', 'Groceries', 'manual'
+      ), true);
+    }
+    await incrementalTransactionsDb.setTransactionCategory(
+      secondUser, feedbackTransactions[3].id, 'Other', 'Uncategorised', 'manual'
+    );
+    await incrementalTransactionsDb.setTransactionCategory(
+      firstUser, feedbackTransactions[2].id, 'Shopping', 'General retail', 'manual'
+    );
+    assert.deepStrictEqual(
+      (await incrementalTransactionsDb.getLearnedCategoryPreferences(firstUser))
+        .map((row) => [row.category_group, row.confirmations, row.total]),
+      [['Food & Dining', 2, 3], ['Shopping', 1, 3]],
+      'manual corrections must replace prior feedback and remain tenant-scoped'
+    );
+    await incrementalTransactionsDb.createRule(firstUser, {
+      name: 'Credits first', match_type: 'contains', match_text: 'refund',
+      category_group: 'Income', category: 'Refunds', priority: 10,
+      amount_direction: 'credit',
+    });
+    const learnedRules = await incrementalTransactionsDb.listRules(firstUser);
+    assert.equal(learnedRules[0].priority, 10);
+    assert.equal(learnedRules[0].amount_direction, 'credit');
+    const roundedRuleId = await incrementalTransactionsDb.createRule(firstUser, {
+      match_type: 'contains', match_text: 'fractional', category_group: 'Other',
+      category: 'Uncategorised', priority: 1.5, amount_direction: 'any',
+    });
+    assert.equal(
+      (await incrementalTransactionsDb.listRules(firstUser))
+        .find((rule) => rule.id === roundedRuleId).priority,
+      2,
+      'fractional rule priorities must be normalised before PostgreSQL insertion'
     );
     global.__maalPool = pool;
     delete require.cache[require.resolve('../db/background-jobs')];
@@ -336,6 +384,12 @@ async function main() {
       )).rows[0].count),
       1,
       'a restart in a different hour must not create another active monitor'
+    );
+    await pool.query(
+      `UPDATE background_jobs SET run_at = NOW()
+        WHERE user_id = $1 AND queue = 'monitoring'
+          AND job_type = 'basiq_connection_health' AND status = 'queued'`,
+      [firstUser]
     );
     const healthJob = await jobsDb.claimNextJob({
       workerId: 'health-worker', queues: ['monitoring'], leaseSeconds: 30,

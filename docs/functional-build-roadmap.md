@@ -27,7 +27,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 
 - [x] Build 3.1 — Harden incremental transaction ingestion and pending-to-settled
   reconciliation.
-- [ ] Build 3.2 — Improve categorisation rules and learned suggestions.
+- [x] Build 3.2 — Improve categorisation rules and learned suggestions.
 - [ ] Build 3.3 — Detect internal transfers, card repayments, refunds, and
   reversals.
 - [ ] Build 3.4 — Detect recurring income, bills, and subscriptions.
@@ -86,4 +86,5 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 | 2.2 | Built 2026-07-30 | resumable import unit tests; PostgreSQL attempt-fencing contract; `npm test` | `f334cd3` |
 | 2.3 | Built 2026-07-30 | connection-health unit tests; PostgreSQL tenant contract; `npm test` | `6f37013` |
 | 2.4 | Built 2026-07-30 | resilience unit tests; PostgreSQL alert/run contract; `npm test` | `364e9b7` |
-| 3.1 | Built 2026-08-02 | incremental-ingestion unit tests; PostgreSQL reconciliation contract; `npm test` | This commit |
+| 3.1 | Built 2026-08-02 | incremental-ingestion unit tests; PostgreSQL reconciliation contract; `npm test` | `adad782` |
+| 3.2 | Built 2026-08-06 | categorisation and learned-suggestion unit tests; PostgreSQL feedback contract; client typecheck; `npm test` | This commit |

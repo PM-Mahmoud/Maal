@@ -6,7 +6,11 @@ import { getCategoryGroups, listRules, createRule, deleteRule, applyRules, type 
 export function RulesModal({ onClose, onApplied }: { onClose: () => void; onApplied?: () => void }) {
   const [rules, setRules] = useState<TxnRule[]>([]);
   const [groups, setGroups] = useState<CategoryGroup[]>([]);
-  const [draft, setDraft] = useState({ match_type: "contains", match_text: "", category_group: "", category: "" });
+  const emptyDraft: {
+    match_type: string; match_text: string; category_group: string; category: string;
+    amount_direction: "any" | "debit" | "credit"; priority: number;
+  } = { match_type: "contains", match_text: "", category_group: "", category: "", amount_direction: "any", priority: 0 };
+  const [draft, setDraft] = useState(emptyDraft);
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -26,7 +30,7 @@ export function RulesModal({ onClose, onApplied }: { onClose: () => void; onAppl
     setBusy(true);
     try {
       const ok = await createRule(draft);
-      if (ok) { setDraft({ match_type: "contains", match_text: "", category_group: "", category: "" }); refresh(); }
+      if (ok) { setDraft(emptyDraft); refresh(); }
     } finally { setBusy(false); }
   }
 
@@ -49,7 +53,7 @@ export function RulesModal({ onClose, onApplied }: { onClose: () => void; onAppl
           <button onClick={onClose} aria-label="Close"><X className="size-4 text-muted-foreground hover:text-foreground" /></button>
         </div>
         <p className="text-[12px] text-muted-foreground mb-4">
-          Rules auto-categorise matching transactions (historical and incoming). Earlier rules win when more than one matches.
+          Rules auto-categorise matching transactions. Higher-priority rules win when more than one matches.
         </p>
 
         {/* New rule */}
@@ -66,6 +70,12 @@ export function RulesModal({ onClose, onApplied }: { onClose: () => void; onAppl
               className="flex-1 rounded-[8px] border border-border bg-background px-2.5 py-1.5 text-[12px] outline-none" />
           </div>
           <div className="flex gap-2">
+            <select value={draft.amount_direction} onChange={(e) => setDraft({ ...draft, amount_direction: e.target.value as "any" | "debit" | "credit" })}
+              className="rounded-[8px] border border-border bg-background px-2 py-1.5 text-[12px]">
+              <option value="any">Money in or out</option><option value="debit">Money out</option><option value="credit">Money in</option>
+            </select>
+            <input type="number" min={-100} max={100} step={1} value={draft.priority} onChange={(e) => setDraft({ ...draft, priority: Math.round(Number(e.target.value)) })}
+              aria-label="Rule priority" title="Higher priority runs first" className="w-20 rounded-[8px] border border-border bg-background px-2 py-1.5 text-[12px]" />
             <select value={draft.category_group} onChange={(e) => setDraft({ ...draft, category_group: e.target.value, category: "" })}
               className="flex-1 rounded-[8px] border border-border bg-background px-2 py-1.5 text-[12px]">
               <option value="">Category group…</option>
@@ -89,7 +99,7 @@ export function RulesModal({ onClose, onApplied }: { onClose: () => void; onAppl
             {rules.map((r) => (
               <li key={r.id} className="flex items-center gap-2 text-[12.5px] px-3 py-2 rounded-[8px] border border-border">
                 <span className="flex-1">
-                  <span className="text-muted-foreground">{r.match_type.replace("_", " ")}</span> "<span className="font-medium">{r.match_text}</span>" → {r.category_group}{r.category ? ` · ${r.category}` : ""}
+                  <span className="text-muted-foreground">{r.match_type.replace("_", " ")}</span> "<span className="font-medium">{r.match_text}</span>" · {r.amount_direction} · priority {r.priority} → {r.category_group}{r.category ? ` · ${r.category}` : ""}
                 </span>
                 <button onClick={() => deleteRule(r.id).then(refresh)} aria-label="Delete rule" className="text-muted-foreground hover:text-red-500"><Trash2 className="size-3.5" /></button>
               </li>

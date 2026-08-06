@@ -172,18 +172,29 @@ async function getTxnsForSubscriptions(userId, days = 400, limit = 2000) {
 
 async function listRules(userId) {
   const r = await pool.query(
-    `SELECT id, name, match_type, match_text, category_group, category, created_at
-       FROM transaction_rules WHERE user_id = $1 ORDER BY created_at ASC`,
+    `SELECT id, name, match_type, match_text, category_group, category,
+            priority, amount_direction, created_at
+       FROM transaction_rules WHERE user_id = $1
+       ORDER BY priority DESC, created_at ASC, id ASC`,
     [userId]
   );
   return r.rows;
 }
 
-async function createRule(userId, { name, match_type, match_text, category_group, category }) {
+async function createRule(userId, {
+  name, match_type, match_text, category_group, category, priority, amount_direction,
+}) {
   const r = await pool.query(
-    `INSERT INTO transaction_rules (user_id, name, match_type, match_text, category_group, category)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-    [userId, (name || '').slice(0, 80) || null, match_type || 'contains', String(match_text || '').slice(0, 120), category_group, category || null]
+    `INSERT INTO transaction_rules
+       (user_id, name, match_type, match_text, category_group, category,
+        priority, amount_direction)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+    [
+      userId, (name || '').slice(0, 80) || null, match_type || 'contains',
+      String(match_text || '').slice(0, 120), category_group, category || null,
+      Math.max(-100, Math.min(100, Math.round(Number(priority) || 0))),
+      amount_direction || 'any',
+    ]
   );
   return r.rows[0].id;
 }
@@ -194,16 +205,63 @@ async function deleteRule(id, userId) {
 
 // Upsert one transaction's category (ownership enforced via the transactions row).
 async function setTransactionCategory(userId, transactionId, group, category, source = 'manual') {
-  const owns = await pool.query(`SELECT 1 FROM transactions WHERE id = $1 AND user_id = $2`, [transactionId, userId]);
-  if (!owns.rows.length) return false;
-  await pool.query(
-    `INSERT INTO transaction_categories (transaction_id, user_id, category_group, category, source, updated_at)
-     VALUES ($1, $2, $3, $4, $5, NOW())
-     ON CONFLICT (transaction_id)
-     DO UPDATE SET category_group = EXCLUDED.category_group, category = EXCLUDED.category, source = EXCLUDED.source, updated_at = NOW()`,
-    [transactionId, userId, group, category || null, source]
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const owns = await client.query(
+      `SELECT description, amount FROM transactions WHERE id = $1 AND user_id = $2 FOR UPDATE`,
+      [transactionId, userId]
+    );
+    if (!owns.rows.length) { await client.query('ROLLBACK'); return false; }
+    await client.query(
+      `INSERT INTO transaction_categories (transaction_id, user_id, category_group, category, source, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       ON CONFLICT (transaction_id)
+       DO UPDATE SET category_group = EXCLUDED.category_group, category = EXCLUDED.category,
+         source = EXCLUDED.source, updated_at = NOW()`,
+      [transactionId, userId, group, category || null, source]
+    );
+    if (source === 'manual') {
+      const {
+        normaliseMerchantIdentity, amountDirection,
+      } = require('../services/transaction-rules');
+      const merchantKey = normaliseMerchantIdentity(owns.rows[0].description);
+      const direction = amountDirection(owns.rows[0].amount);
+      if (merchantKey && direction) await client.query(
+        `INSERT INTO transaction_category_feedback
+           (transaction_id, user_id, merchant_key, amount_direction, category_group, category)
+         VALUES ($1,$2,$3,$4,$5,$6)
+         ON CONFLICT (transaction_id) DO UPDATE
+           SET merchant_key = EXCLUDED.merchant_key,
+               amount_direction = EXCLUDED.amount_direction,
+               category_group = EXCLUDED.category_group, category = EXCLUDED.category,
+               updated_at = NOW()`,
+        [
+          transactionId, userId, merchantKey,
+          direction, group, category || null,
+        ]
+      );
+    }
+    await client.query('COMMIT');
+    return true;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally { client.release(); }
+}
+
+async function getLearnedCategoryPreferences(userId) {
+  const { rows } = await pool.query(
+    `SELECT merchant_key, amount_direction, category_group, category,
+            COUNT(*)::int AS confirmations,
+            SUM(COUNT(*)) OVER (PARTITION BY merchant_key, amount_direction)::int AS total
+       FROM transaction_category_feedback
+      WHERE user_id = $1
+      GROUP BY merchant_key, amount_direction, category_group, category
+      ORDER BY merchant_key, amount_direction, confirmations DESC, category_group, category`,
+    [userId]
   );
-  return true;
+  return rows;
 }
 
 // Bulk-apply computed assignments (from the rules engine) in a SINGLE upsert.
@@ -234,5 +292,6 @@ module.exports = {
   getCashFlowTransactions,
   getTransactionsForQuality,
   getTransactionsWithCategory, getTxnsForSubscriptions,
-  listRules, createRule, deleteRule, setTransactionCategory, applyCategoryAssignments,
+  listRules, createRule, deleteRule, setTransactionCategory,
+  getLearnedCategoryPreferences, applyCategoryAssignments,
 };
