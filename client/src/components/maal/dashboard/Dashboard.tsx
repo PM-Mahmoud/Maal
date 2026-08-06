@@ -892,6 +892,9 @@ function KpiTile({ kind, portfolio, snapshots, period, createdAt, historyError }
           <span className="text-muted-foreground">Tracking from today</span>
         )}
       </p>
+      {kind === "kpi_net_worth" && snapshots.at(-1)?.change?.material && (
+        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{snapshots.at(-1)?.change?.summary}</p>
+      )}
       {value !== null && (
         <ChartModal
           open={open}

@@ -12,6 +12,7 @@ export type Snapshot = {
   investments: number;
   debts: number;
   cash: number;
+  change?: { material: boolean; net_change: number; summary: string | null; contributors: Array<{ category: string; impact: number }> } | null;
 };
 
 export async function fetchSnapshots(days = 366): Promise<Snapshot[]> {

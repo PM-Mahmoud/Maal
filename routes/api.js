@@ -640,7 +640,9 @@ router.get('/v1/snapshots', async (req, res) => {
       console.error('/api/v1/snapshots lineage error:', e.message);
     }
 
-    const rows = await getSnapshots(req.session.userId, days);
+    const rows = require('../lib/snapshot-changes').explainSnapshotSeries(
+      await getSnapshots(req.session.userId, days)
+    );
     res.json(rows.map((r) => ({
       date: r.snap_date,
       netWorth: Number(r.net_worth) || 0,
@@ -649,6 +651,7 @@ router.get('/v1/snapshots', async (req, res) => {
       investments: Number(r.invest_balance) || 0,
       debts: Number(r.debts_total) || 0,
       cash: Number(r.cash_balance) || 0,
+      change: r.change,
     })));
   } catch (e) {
     console.error('/api/v1/snapshots error:', e.message);
