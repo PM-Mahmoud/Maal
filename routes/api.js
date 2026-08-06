@@ -1384,6 +1384,9 @@ const ASSET_TABLES = new Set([
   // NOTE: 'goals' is deliberately EXCLUDED — it has dedicated routes above that
   // derive live progress and validate source_type/target_kind. The generic
   // handler would store a stale current_amount and skip that validation.
+  // NOTE: 'account_reconciliation_adjustments' is deliberately EXCLUDED. Its
+  // dedicated routes enforce append-only audit history; generic PATCH/DELETE
+  // would violate that financial-integrity contract.
   // BUG-5 FIX: 'profiles' table does not exist; the correct table is 'user_profiles'
   // 'user_profiles' is intentionally not in the generic API (profile updates go through /dashboard/profile)
   // NOTE: 'maal_score_snapshots' is deliberately EXCLUDED. Daily score history is

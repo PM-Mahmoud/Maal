@@ -23,6 +23,19 @@ assert.deepStrictEqual(adjusted, {
   latest_adjustment_id: 11,
 });
 
+let aggregated;
+const reconcileWithBackdatedAdjustment = require('../services/reconciliation').createReconciliationService({
+  loadReconciliationInputs: async () => ({
+    accounts: [{ account_reference: 'basiq:everyday', balance: 125 }],
+    transactions: [{ account_reference: 'basiq:everyday', transaction_id: 1, amount: 1, balance_after: 120, post_date: '2026-08-01' }],
+  }),
+  listAdjustments: async () => [
+    { id: 30, account_reference: 'basiq:everyday', amount: 2, effective_at: '2026-07-01' },
+    { id: 20, account_reference: 'basiq:everyday', amount: 3, effective_at: '2026-08-01' },
+  ],
+  saveReconciliations: async (_userId, rows) => { [aggregated] = rows; },
+});
+
 const response = () => ({
   statusCode: 200,
   body: null,
@@ -31,6 +44,9 @@ const response = () => ({
 });
 
 (async () => {
+  await reconcileWithBackdatedAdjustment(7);
+  assert.equal(aggregated.adjustment_total, 5);
+  assert.equal(aggregated.latest_adjustment_id, 30);
   let created;
   const handler = createAdjustmentHandler({
     createAdjustment: async (userId, input) => {

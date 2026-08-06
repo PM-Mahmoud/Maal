@@ -20,6 +20,7 @@ const {
         ],
       };
     },
+    listAdjustments: async () => [],
     saveReconciliations: async (userId, results, tolerance) => { saved = { userId, results, tolerance }; },
   });
   const results = await reconcile(7);

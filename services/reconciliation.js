@@ -10,13 +10,15 @@ function createReconciliationService(database) {
     const evidenceComplete = options.evidenceComplete !== false;
     const [{ accounts, transactions }, adjustments] = await Promise.all([
       database.loadReconciliationInputs(userId),
-      database.listAdjustments ? database.listAdjustments(userId) : [],
+      database.listAdjustments(userId),
     ]);
     const byAdjustmentAccount = new Map();
     for (const adjustment of adjustments) {
       const current = byAdjustmentAccount.get(adjustment.account_reference) || { amount: 0 };
       byAdjustmentAccount.set(adjustment.account_reference, {
-        ...adjustment, amount: Number(current.amount) + Number(adjustment.amount),
+        ...adjustment,
+        id: Math.max(Number(current.id) || 0, Number(adjustment.id) || 0),
+        amount: Number(current.amount) + Number(adjustment.amount),
       });
     }
     const byAccount = new Map();
@@ -55,7 +57,7 @@ function applyAdjustment(reconciliation, adjustment, tolerance = AUD_RECONCILIAT
   const difference = Number(reconciliation.provider_balance) - adjustedBalance;
   return {
     ...reconciliation, difference,
-    status: Math.abs(difference) <= tolerance + 1e-9 ? 'matched' : 'mismatch',
+    status: Math.abs(difference) <= tolerance ? 'matched' : 'mismatch',
     adjustment_total: adjustmentTotal,
     adjusted_balance: adjustedBalance,
     latest_adjustment_id: adjustment.id,

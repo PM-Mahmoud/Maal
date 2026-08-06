@@ -4,6 +4,27 @@ export type CategoryGroup = { group: string; categories: string[] };
 export type TxnRule = { id: number; name: string | null; match_type: string; match_text: string; category_group: string; category: string | null; priority: number; amount_direction: "any" | "debit" | "credit" };
 export type Subscription = { merchant: string; amount: number; cadence: string; occurrences: number; lastDate: string | null; nextEstimate: string | null };
 export type RecurringTransaction = { kind: "income" | "bill" | "subscription"; merchant: string; averageAmount: number; minAmount: number; maxAmount: number; cadence: string; confidence: number; occurrences: number; lastDate: string | null; nextEstimate: string | null };
+export type Reconciliation = { account_reference: string; provider_balance: number | string | null; calculated_balance: number | string | null; adjusted_balance: number | string | null; difference: number | string | null; adjustment_total: number | string; status: "matched" | "mismatch" | "insufficient_data"; checked_at: string };
+export type ReconciliationAdjustment = { id: number; amount: number | string; reason: string; effective_at: string; created_at: string };
+
+export async function getReconciliations(): Promise<Reconciliation[]> {
+  const r = await fetch("/api/v1/reconciliations", { credentials: "include" });
+  if (!r.ok) throw new Error("Couldn't load account reconciliation status.");
+  return (await r.json()).reconciliations ?? [];
+}
+
+export async function getReconciliationAdjustments(accountReference: string): Promise<ReconciliationAdjustment[]> {
+  const r = await fetch(`/api/v1/reconciliations/${encodeURIComponent(accountReference)}/adjustments`, { credentials: "include" });
+  if (!r.ok) throw new Error("Couldn't load adjustment history.");
+  return (await r.json()).adjustments ?? [];
+}
+
+export async function createReconciliationAdjustment(accountReference: string, input: { amount: number; reason: string; effective_at: string }): Promise<void> {
+  const r = await fetch(`/api/v1/reconciliations/${encodeURIComponent(accountReference)}/adjustments`, {
+    method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+  });
+  if (!r.ok) throw new Error((await r.json().catch(() => null))?.error ?? "Couldn't save the adjustment.");
+}
 
 export async function getRecurringTransactions(): Promise<RecurringTransaction[]> {
   try {

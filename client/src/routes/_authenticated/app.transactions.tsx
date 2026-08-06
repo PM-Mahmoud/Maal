@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SlidersHorizontal, Repeat } from "lucide-react";
 import { listTransactions, seedMockTransactions, clearTransactions, addTransaction } from "@/lib/transactions.functions";
-import { getCategoryGroups, getRecurringTransactions, setTransactionCategory, type CategoryGroup, type RecurringTransaction } from "@/lib/transactions-depth.functions";
+import { createReconciliationAdjustment, getCategoryGroups, getReconciliationAdjustments, getReconciliations, getRecurringTransactions, setTransactionCategory, type CategoryGroup, type Reconciliation, type ReconciliationAdjustment, type RecurringTransaction } from "@/lib/transactions-depth.functions";
 import { RulesModal } from "@/components/maal/transactions/RulesModal";
 import { InstitutionLogo } from "@/components/maal/InstitutionLogo";
 import { formatAUD } from "@/lib/score";
@@ -110,8 +110,12 @@ function TransactionsPage() {
   const [importErr, setImportErr] = useState<string | null>(null);
   const [pageErr, setPageErr] = useState<string | null>(null);
   const [manualErr, setManualErr] = useState<string | null>(null);
-  const [view, setView] = useState<"all" | "subs">("all");
+  const [view, setView] = useState<"all" | "subs" | "reconcile">("all");
   const [subs, setSubs] = useState<RecurringTransaction[]>([]);
+  const [reconciliations, setReconciliations] = useState<Reconciliation[]>([]);
+  const [adjustmentHistory, setAdjustmentHistory] = useState<Record<string, ReconciliationAdjustment[]>>({});
+  const [adjusting, setAdjusting] = useState<Reconciliation | null>(null);
+  const [adjustmentForm, setAdjustmentForm] = useState({ amount: "", reason: "", effective_at: new Date().toISOString().slice(0, 10) });
   const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
   const [showRules, setShowRules] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -131,6 +135,28 @@ function TransactionsPage() {
   }
   useEffect(() => { refresh(); }, []);
   useEffect(() => { if (view === "subs" && subs.length === 0) getRecurringTransactions().then(setSubs); }, [view, subs.length]);
+  useEffect(() => {
+    if (view === "reconcile") getReconciliations().then(setReconciliations).catch((e) => setPageErr(e.message));
+  }, [view]);
+
+  async function submitAdjustment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!adjusting) return;
+    setBusy("adjustment"); setPageErr(null);
+    try {
+      await createReconciliationAdjustment(adjusting.account_reference, {
+        amount: Number(adjustmentForm.amount), reason: adjustmentForm.reason,
+        effective_at: adjustmentForm.effective_at,
+      });
+      const [next, history] = await Promise.all([
+        getReconciliations(), getReconciliationAdjustments(adjusting.account_reference),
+      ]);
+      setReconciliations(next);
+      setAdjustmentHistory((current) => ({ ...current, [adjusting.account_reference]: history }));
+      setAdjusting(null);
+    } catch (e: any) { setPageErr(e?.message ?? "Couldn't save the adjustment."); }
+    finally { setBusy(null); }
+  }
 
   const monthlySubTotal = useMemo(() => {
     const per = { weekly: 52 / 12, fortnightly: 26 / 12, monthly: 1, yearly: 1 / 12 } as Record<string, number>;
@@ -369,6 +395,7 @@ function TransactionsPage() {
             <div className="inline-flex items-center gap-1 p-1 bg-[var(--secondary)] rounded-[10px]">
               <button onClick={() => setView("all")} className={`px-3 py-1.5 rounded-[8px] text-[12px] font-medium ${view === "all" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>All transactions</button>
               <button onClick={() => setView("subs")} className={`px-3 py-1.5 rounded-[8px] text-[12px] font-medium inline-flex items-center gap-1.5 ${view === "subs" ? "bg-background shadow-sm" : "text-muted-foreground"}`}><Repeat className="size-3.5" /> Recurring</button>
+              <button onClick={() => setView("reconcile")} className={`px-3 py-1.5 rounded-[8px] text-[12px] font-medium ${view === "reconcile" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>Reconcile</button>
             </div>
             <button onClick={() => setShowRules(true)} className="inline-flex items-center gap-1.5 border border-border px-3 py-1.5 rounded-[8px] text-[12px] font-medium text-muted-foreground hover:text-foreground hover:border-foreground/40">
               <SlidersHorizontal className="size-3.5" /> Rules
@@ -411,7 +438,7 @@ function TransactionsPage() {
                 </tbody>
               </table>
             </div>
-          ) : (
+          ) : view === "subs" ? (
             <div>
               {subs.length > 0 && (
                 <p className="text-[12px] text-muted-foreground mb-3">
@@ -440,7 +467,55 @@ function TransactionsPage() {
                 </table>
               </div>
             </div>
+          ) : (
+            <div className="space-y-3">
+              {reconciliations.map((item) => {
+                const difference = Number(item.difference);
+                const history = adjustmentHistory[item.account_reference] ?? [];
+                return (
+                  <div key={item.account_reference} className="border border-border rounded-[12px] bg-[var(--surface)] p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[13px] font-semibold">{item.account_reference.replace(/^basiq:/, "")}</p>
+                        <p className="text-[11px] text-muted-foreground">Bank {formatAUD(Number(item.provider_balance ?? 0))} · Calculated {formatAUD(Number(item.adjusted_balance ?? item.calculated_balance ?? 0))}</p>
+                      </div>
+                      <span className={`text-[11px] font-semibold px-2 py-1 rounded-full ${item.status === "matched" ? "bg-[var(--mint)]/10 text-[var(--mint)]" : "bg-[var(--gold)]/10 text-[var(--gold)]"}`}>{item.status.replace("_", " ")}</span>
+                    </div>
+                    {item.status === "mismatch" && Number.isFinite(difference) && (
+                      <div className="mt-3 pt-3 border-t border-dashed border-border flex items-center justify-between gap-3">
+                        <p className="text-[12px]">Difference: <strong>{formatAUD(difference)}</strong></p>
+                        <button onClick={() => { setAdjusting(item); setAdjustmentForm({ amount: String(difference), reason: "", effective_at: new Date().toISOString().slice(0, 10) }); }} className="px-3 py-1.5 border border-border rounded-[8px] text-[12px] font-semibold">Add adjustment</button>
+                      </div>
+                    )}
+                    {Number(item.adjustment_total) !== 0 && (
+                      <button onClick={async () => {
+                        const items = await getReconciliationAdjustments(item.account_reference);
+                        setAdjustmentHistory((current) => ({ ...current, [item.account_reference]: current[item.account_reference] ? [] : items }));
+                      }} className="mt-3 text-[11px] text-muted-foreground underline">{history.length ? "Hide" : "View"} adjustment history</button>
+                    )}
+                    {history.map((entry) => <p key={entry.id} className="mt-2 text-[11px] text-muted-foreground">{entry.effective_at}: {formatAUD(Number(entry.amount))} · {entry.reason}</p>)}
+                  </div>
+                );
+              })}
+              {reconciliations.length === 0 && <p className="border border-border rounded-[12px] bg-[var(--surface)] p-8 text-center text-[12px] text-muted-foreground">No connected accounts are ready for reconciliation yet.</p>}
+            </div>
           )}
+        </div>
+      )}
+
+      {adjusting && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setAdjusting(null)}>
+          <form onSubmit={submitAdjustment} onClick={(e) => e.stopPropagation()} className="bg-background border border-border rounded-[12px] p-6 w-full max-w-md space-y-3">
+            <h3 className="text-[16px] font-bold">Reconcile account difference</h3>
+            <p className="text-[12px] text-muted-foreground">Adjustments create a permanent audit entry. To correct one later, add an equal reversing adjustment.</p>
+            <Field label="Adjustment amount"><input type="number" step="0.01" required value={adjustmentForm.amount} onChange={(e) => setAdjustmentForm({ ...adjustmentForm, amount: e.target.value })} className="w-full px-3 py-2 border border-border rounded-[8px] bg-[var(--surface)] text-[13px]" /></Field>
+            <Field label="Effective date"><input type="date" required max={new Date().toISOString().slice(0, 10)} value={adjustmentForm.effective_at} onChange={(e) => setAdjustmentForm({ ...adjustmentForm, effective_at: e.target.value })} className="w-full px-3 py-2 border border-border rounded-[8px] bg-[var(--surface)] text-[13px]" /></Field>
+            <Field label="Reason"><textarea required minLength={3} maxLength={500} value={adjustmentForm.reason} onChange={(e) => setAdjustmentForm({ ...adjustmentForm, reason: e.target.value })} className="w-full px-3 py-2 border border-border rounded-[8px] bg-[var(--surface)] text-[13px]" /></Field>
+            <div className="flex justify-end gap-2 pt-2">
+              <button type="button" onClick={() => setAdjusting(null)} className="px-4 py-2 border border-border rounded-[8px] text-[12px] font-semibold">Cancel</button>
+              <button type="submit" disabled={busy === "adjustment"} className="px-4 py-2 bg-foreground text-background rounded-[8px] text-[12px] font-semibold disabled:opacity-60">{busy === "adjustment" ? "Saving…" : "Save adjustment"}</button>
+            </div>
+          </form>
         </div>
       )}
 
