@@ -37,7 +37,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 - [x] Build 4.1 — Add account reconciliation workflows and adjustments.
 - [x] Build 4.2 — Produce reliable daily net-worth snapshots.
 - [x] Build 4.3 — Explain material changes between snapshots.
-- [ ] Build 4.4 — Calculate investment performance independently of deposits.
+- [x] Build 4.4 — Calculate investment performance independently of deposits.
 
 ## 5. Forecasting and reporting
 
@@ -92,4 +92,5 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 | 3.4 | Built 2026-08-06 | recurring transaction tests; client typecheck; `npm test` | `ec14d2f` |
 | 4.1 | Built 2026-08-06 | `node test/reconciliation-adjustments.test.js`; `npm run test:integrity-db`; client `npm run typecheck`; `npm test` | `1370a2e`, `5d38951` |
 | 4.2 | Built 2026-08-07 | `node test/daily-snapshots.test.js`; `npm run test:integrity-db`; client `npm run typecheck`; `npm test` | `dcc27b7` |
-| 4.3 | Built 2026-08-07 | `node test/snapshot-changes.test.js`; client `npm run typecheck`; `npm test` | This commit |
+| 4.3 | Built 2026-08-07 | `node test/snapshot-changes.test.js`; client `npm run typecheck`; `npm test` | `46bfc2b` |
+| 4.4 | Built 2026-08-07 | `node test/investment-performance.test.js`; client `npm run typecheck`; `npm test` | This commit |

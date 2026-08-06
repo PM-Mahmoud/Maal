@@ -895,6 +895,11 @@ function KpiTile({ kind, portfolio, snapshots, period, createdAt, historyError }
       {kind === "kpi_net_worth" && snapshots.at(-1)?.change?.material && (
         <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{snapshots.at(-1)?.change?.summary}</p>
       )}
+      {kind === "kpi_investments" && snapshots.at(-1)?.investmentPerformance?.return_pct != null && (
+        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+          {snapshots.at(-1)?.investmentPerformance?.return_pct}% investment return, excluding {formatAUD(snapshots.at(-1)?.investmentPerformance?.net_contributions ?? 0)} net deposits.
+        </p>
+      )}
       {value !== null && (
         <ChartModal
           open={open}

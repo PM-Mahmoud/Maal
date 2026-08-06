@@ -658,6 +658,10 @@ router.get('/v1/snapshots', async (req, res) => {
     res.status(500).json({ error: 'Could not load snapshots' });
   }
 });
+router.get(
+  '/v1/investment-performance',
+  require('../services/investment-performance').investmentPerformanceHandler
+);
 
 // ─── Vault (real document storage — Postgres bytea via db/vault.js) ────────
 // The React vault page used a Supabase Storage bucket that doesn't exist (the
