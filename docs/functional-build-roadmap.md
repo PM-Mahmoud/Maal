@@ -113,7 +113,7 @@ Implementation plan: [HelloMaal wealth platform implementation plan](./wealth-pl
 | 4.2 | Built 2026-08-07 | `node test/daily-snapshots.test.js`; `npm run test:integrity-db`; client `npm run typecheck`; `npm test` | `dcc27b7`, `e6b0191` |
 | 4.3 | Built 2026-08-07 | `node test/snapshot-changes.test.js`; client `npm run typecheck`; `npm test` | `46bfc2b`, `e6b0191` |
 | 4.4 | Built 2026-08-07 | `node test/investment-performance.test.js`; `npm run test:integrity-db`; client `npm run typecheck`; `npm test` | `3b1b79e`, `e6b0191` |
-| 5.1 | Built 2026-08-07 | `node test/cashflow-forecast.test.js`; client `npm run typecheck`; `npm test` | `48c6839` |
-| 5.2 | Built 2026-08-07 | `node test/cash-risks.test.js`; client `npm run typecheck`; `npm test` | `c76a6e7` |
-| 5.3 | Built 2026-08-07 | `node test/monthly-close.test.js`; `npm run test:integrity-db`; client `npm run typecheck`; `npm test` | `2464f6d` |
-| 5.4 | Built 2026-08-07 | `node test/financial-export.test.js`; client `npm run typecheck`; `npm test` | This commit |
+| 5.1 | Built 2026-08-07 | `node test/cashflow-forecast.test.js`; client `npm run typecheck`; `npm test` | `48c6839`, `7c90d81` |
+| 5.2 | Built 2026-08-07 | `node test/cash-risks.test.js`; client `npm run typecheck`; `npm test` | `c76a6e7`, `7c90d81` |
+| 5.3 | Built 2026-08-07 | `node test/monthly-close.test.js`; `npm run test:integrity-db`; client `npm run typecheck`; `npm test` | `2464f6d`, `7c90d81` |
+| 5.4 | Built 2026-08-07 | `node test/financial-export.test.js`; client `npm run typecheck`; `npm test` | `37aa534`, `7c90d81` |
