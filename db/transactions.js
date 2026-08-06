@@ -145,9 +145,10 @@ async function getTransactionsForQuality(userId) {
 // Transactions joined with their assigned category, newest first.
 async function getTransactionsWithCategory(userId, limit = 500) {
   const r = await pool.query(
-    `SELECT t.id, t.description, t.amount, t.status, t.post_date,
+    `SELECT t.id, t.description, t.amount, t.status, t.post_date, pd.account_reference,
             c.category_group, c.category, c.source AS category_source
        FROM transactions t
+       LEFT JOIN transaction_provider_details pd ON pd.transaction_id = t.id
        LEFT JOIN transaction_categories c ON c.transaction_id = t.id
       WHERE t.user_id = $1
       ORDER BY t.post_date DESC NULLS LAST, t.id DESC

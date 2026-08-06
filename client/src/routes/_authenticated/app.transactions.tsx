@@ -403,6 +403,7 @@ function TransactionsPage() {
                         </select>
                         {r.category_source === "auto" && <span className="ml-1.5 text-[10px] text-muted-foreground/60">auto</span>}
                         {r.category_source === "learned" && <span className="ml-1.5 text-[10px] text-muted-foreground/60">suggested {Math.round(Number(r.category_confidence) * 100)}%</span>}
+                        {r.relationship_type && <span className="ml-1.5 text-[10px] text-muted-foreground/60">{String(r.relationship_type).replaceAll("_", " ")}</span>}
                       </td>
                       <td className={`px-4 py-2 text-right tabular-nums ${Number(r.amount) >= 0 ? "text-[var(--mint)]" : ""}`}>{formatAUD(Number(r.amount))}</td>
                     </tr>

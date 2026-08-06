@@ -28,13 +28,13 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 - [x] Build 3.1 — Harden incremental transaction ingestion and pending-to-settled
   reconciliation.
 - [x] Build 3.2 — Improve categorisation rules and learned suggestions.
-- [ ] Build 3.3 — Detect internal transfers, card repayments, refunds, and
+- [x] Build 3.3 — Detect internal transfers, card repayments, refunds, and
   reversals.
 - [ ] Build 3.4 — Detect recurring income, bills, and subscriptions.
 
 ## 4. Historical truth
 
-- [ ] Build 4.1 — Add account reconciliation workflows and adjustments.
+- [~] Build 4.1 — Add account reconciliation workflows and adjustments.
 - [ ] Build 4.2 — Produce reliable daily net-worth snapshots.
 - [ ] Build 4.3 — Explain material changes between snapshots.
 - [ ] Build 4.4 — Calculate investment performance independently of deposits.
@@ -87,4 +87,6 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 | 2.3 | Built 2026-07-30 | connection-health unit tests; PostgreSQL tenant contract; `npm test` | `6f37013` |
 | 2.4 | Built 2026-07-30 | resilience unit tests; PostgreSQL alert/run contract; `npm test` | `364e9b7` |
 | 3.1 | Built 2026-08-02 | incremental-ingestion unit tests; PostgreSQL reconciliation contract; `npm test` | `adad782` |
-| 3.2 | Built 2026-08-06 | categorisation and learned-suggestion unit tests; PostgreSQL feedback contract; client typecheck; `npm test` | This commit |
+| 3.2 | Built 2026-08-06 | categorisation and learned-suggestion unit tests; PostgreSQL feedback contract; client typecheck; `npm test` | `2a2b7ea` |
+| 3.3 | Built 2026-08-06 | relationship detection tests; client typecheck; `npm test` | This commit |
+| 4.1 | In progress | reconciliation workflow unit tests; PostgreSQL ownership contract; `npm test` | — |

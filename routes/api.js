@@ -1152,6 +1152,7 @@ router.get('/v1/transactions', async (req, res) => {
     const txnDb = require('../db/transactions');
     const { autoCategorize } = require('../lib/transaction-categories');
     const { computeLearnedSuggestions } = require('../services/transaction-rules');
+    const { detectTransactionRelationships, indexRelationships } = require('../services/transaction-relationships');
     const [rows, preferences] = await Promise.all([
       txnDb.getTransactionsWithCategory(req.session.userId, 500),
       txnDb.getLearnedCategoryPreferences(req.session.userId),
@@ -1159,18 +1160,21 @@ router.get('/v1/transactions', async (req, res) => {
     const learned = new Map(computeLearnedSuggestions(
       preferences, rows.filter((row) => !row.category_group)
     ).map((suggestion) => [String(suggestion.transaction_id), suggestion]));
+    const relationships = indexRelationships(detectTransactionRelationships(rows));
     const out = rows.map((r) => {
-      if (r.category_group) return r;
+      const relationship = relationships.get(String(r.id));
+      const annotated = relationship ? { ...r, relationship_type: relationship.type, relationship_confidence: relationship.confidence } : r;
+      if (annotated.category_group) return annotated;
       const suggestion = learned.get(String(r.id));
       if (suggestion) return {
-        ...r,
+        ...annotated,
         category_group: suggestion.category_group,
         category: suggestion.category,
         category_source: 'learned',
         category_confidence: suggestion.confidence,
       };
-      const auto = autoCategorize(r.description, r.amount);
-      return auto ? { ...r, category_group: auto.group, category: auto.category, category_source: 'auto' } : r;
+      const auto = autoCategorize(annotated.description, annotated.amount);
+      return auto ? { ...annotated, category_group: auto.group, category: auto.category, category_source: 'auto' } : annotated;
     });
     res.json(out);
   } catch (e) {
