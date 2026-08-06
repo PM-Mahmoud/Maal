@@ -34,7 +34,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 
 ## 4. Historical truth
 
-- [~] Build 4.1 — Add account reconciliation workflows and adjustments.
+- [x] Build 4.1 — Add account reconciliation workflows and adjustments.
 - [ ] Build 4.2 — Produce reliable daily net-worth snapshots.
 - [ ] Build 4.3 — Explain material changes between snapshots.
 - [ ] Build 4.4 — Calculate investment performance independently of deposits.
@@ -89,5 +89,5 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` built
 | 3.1 | Built 2026-08-02 | incremental-ingestion unit tests; PostgreSQL reconciliation contract; `npm test` | `adad782` |
 | 3.2 | Built 2026-08-06 | categorisation and learned-suggestion unit tests; PostgreSQL feedback contract; client typecheck; `npm test` | `2a2b7ea` |
 | 3.3 | Built 2026-08-06 | relationship detection tests; client typecheck; `npm test` | `176bc39` |
-| 3.4 | Built 2026-08-06 | recurring transaction tests; client typecheck; `npm test` | This commit |
-| 4.1 | In progress | reconciliation workflow unit tests; PostgreSQL ownership contract; `npm test` | — |
+| 3.4 | Built 2026-08-06 | recurring transaction tests; client typecheck; `npm test` | `ec14d2f` |
+| 4.1 | Built 2026-08-06 | reconciliation workflow unit tests; PostgreSQL ownership contract; `npm test` | This commit |

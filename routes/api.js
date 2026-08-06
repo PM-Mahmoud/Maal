@@ -425,6 +425,10 @@ router.post(
   '/v1/reconciliations/:accountReference/adjustments',
   require('../services/reconciliation').adjustmentHandler
 );
+router.get(
+  '/v1/reconciliations/:accountReference/adjustments',
+  require('../services/reconciliation').listAdjustmentsHandler
+);
 
 // POST /api/v1/basiq/sync — trigger account + transaction sync, return JSON
 router.post('/v1/basiq/sync', async (req, res) => {

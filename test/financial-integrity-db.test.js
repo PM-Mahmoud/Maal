@@ -13,6 +13,7 @@ const connectionHealthMigration = require('../migrations/1754500000000_connectio
 const resilienceMigration = require('../migrations/1754600000000_operational_resilience');
 const incrementalTransactionsMigration = require('../migrations/1754700000000_incremental_transactions');
 const categoryLearningMigration = require('../migrations/1754800000000_category_learning');
+const reconciliationAdjustmentsMigration = require('../migrations/1754900000000_reconciliation_adjustments');
 
 async function expectPgError(fn, expectedCode) {
   let error;
@@ -83,6 +84,7 @@ async function main() {
     await resilienceMigration.up(pool);
     await incrementalTransactionsMigration.up(pool);
     await categoryLearningMigration.up(pool);
+    await reconciliationAdjustmentsMigration.up(pool);
 
     const firstUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
     const secondUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
@@ -673,6 +675,35 @@ async function main() {
     assert.equal(
       reconciliationRows.find((row) => row.account_reference === 'basiq:good').status,
       'matched'
+    );
+    await pool.query(
+      `UPDATE linked_accounts SET balance = 105
+        WHERE user_id = $1 AND account_reference = 'basiq:good'`, [firstUser]
+    );
+    await reconciliationService.reconcileAccounts(firstUser);
+    const adjustment = await require('../db/reconciliation').createAdjustment(firstUser, {
+      accountReference: 'basiq:good', amount: 5,
+      reason: 'Verified opening balance correction', effectiveAt: '2026-08-06',
+    });
+    const adjustedRow = (await pool.query(
+      `SELECT status, adjustment_total, adjusted_balance FROM account_reconciliations
+        WHERE user_id = $1 AND account_reference = 'basiq:good'`, [firstUser]
+    )).rows[0];
+    assert.equal(adjustedRow.status, 'matched');
+    assert.equal(Number(adjustedRow.adjustment_total), 5);
+    assert.equal(Number(adjustedRow.adjusted_balance), 105);
+    await expectPgError(
+      () => pool.query(
+        'UPDATE account_reconciliation_adjustments SET amount = 6 WHERE id = $1', [adjustment.id]
+      ), 'P0001'
+    );
+    await expectPgError(
+      () => pool.query(
+        `INSERT INTO account_reconciliations
+           (user_id, account_reference, status, latest_adjustment_id)
+         VALUES ($1, 'basiq:foreign-adjustment', 'mismatch', $2)`,
+        [secondUser, adjustment.id]
+      ), 'P0001'
     );
     await expectPgError(
       () => pool.query(
