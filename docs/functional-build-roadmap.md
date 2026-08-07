@@ -75,7 +75,7 @@ Implementation plan: [HelloMaal wealth platform implementation plan](./wealth-pl
 ## 7. Scenarios and recommendations
 
 - [ ] Build 7.1 — Add isolated, non-destructive scenario modelling.
-- [ ] Build 7.2 — Add transparent financial-health rules.
+- [x] Build 7.2 — Add transparent financial-health rules.
 - [ ] Build 7.3 — Rank actions by impact, urgency, confidence, and effort.
 - [ ] Build 7.4 — Track recommendation completion and measured outcomes.
 
@@ -122,3 +122,4 @@ Implementation plan: [HelloMaal wealth platform implementation plan](./wealth-pl
 | 6.2 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | `79b41bb` |
 | 6.3 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | `79b41bb` |
 | 6.4 | Built 2026-08-07 | `npm run test:planning`; client build/typecheck; `npm test` | `79b41bb` |
+| 7.2 | Built 2026-08-07 | Maal Score and lineage tests; client build/typecheck; `npm test` | This commit |

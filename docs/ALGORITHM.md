@@ -1,5 +1,16 @@
 # Maal Financial Health Score — Algorithm Specification v2
 
+## Machine-readable transparency contract
+
+The authenticated Maal Score uses methodology version `maal-health-rules-v1`.
+Alongside the composite and five pillar scores, `GET /api/v1/score` returns one
+rule per pillar with the source inputs, disclosed assumptions, formula, observed
+value, target threshold, outcome status, and plain-language explanation. A
+fallback used to keep scoring available is never represented as a user-provided
+fact: the rule is marked `needs_data` and reports the fallback separately under
+`assumptions`. The same rule evidence is recorded in Maal Score calculation
+lineage version 2.
+
 > Version: 2.0 (2026-05-23)
 > Owned by: Maal (Polsia)
 > Audience: Engineering team, product team

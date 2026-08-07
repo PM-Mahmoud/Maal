@@ -300,6 +300,7 @@ app.use('/dashboard', (req, res) => {
 
 app.use('/billing', require('./routes/billing'));
 app.use('/basiq', require('./routes/basiq'));
+app.use('/lunchflow', require('./routes/lunchflow'));
 app.use('/onboarding', require('./routes/onboarding'));
 app.use('/api/onboarding', require('./routes/onboarding'));
 app.use('/score', require('./routes/score'));

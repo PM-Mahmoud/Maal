@@ -605,6 +605,35 @@ router.get('/v1/wealth-summary', async (req, res) => {
   }
 });
 
+// W1.2 shadow read model. Existing asset tables remain the compatibility
+// projection until parity has been proven in production; this endpoint exposes
+// canonical accounts/holdings/valuations without allowing cross-user reads.
+router.get('/v1/wealth/canonical', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    res.json(await require('../db/canonical-wealth').getCanonicalSnapshot(req.session.userId));
+  } catch (e) {
+    console.error('/api/v1/wealth/canonical error:', e.message);
+    res.status(500).json({ error: 'Could not load canonical wealth records' });
+  }
+});
+
+router.post('/v1/wealth/valuations', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const data = req.body || {};
+    const required = ['subject_type', 'subject_key', 'classification', 'amount_minor', 'currency', 'as_of'];
+    if (required.some((key) => data[key] === undefined || data[key] === null || data[key] === '')) {
+      return res.status(400).json({ error: 'Missing required valuation fields' });
+    }
+    const valuation = await require('../db/canonical-wealth').appendValuation(req.session.userId, data);
+    res.status(201).json(valuation);
+  } catch (e) {
+    console.error('/api/v1/wealth/valuations error:', e.message);
+    res.status(e.message === 'Superseded valuation not found' ? 404 : 500).json({ error: e.message === 'Superseded valuation not found' ? e.message : 'Could not append valuation' });
+  }
+});
+
 router.patch('/v1/profile', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {

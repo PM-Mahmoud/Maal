@@ -14,10 +14,26 @@ export type MaalPillar = {
   note: string;
 };
 
+export type FinancialHealthRule = {
+  key: string;
+  title: string;
+  pillar_weight: number;
+  inputs: Record<string, string | number | boolean | null>;
+  assumptions: Record<string, string | number | null>;
+  formula: string;
+  observed: { value: number | null; unit: string };
+  target: { operator: string; value: number; unit: string };
+  status: "healthy" | "attention" | "needs_data";
+  explanation: string;
+  warnings?: string[];
+};
+
 export type MaalScore = {
   score: number; // 0–100 composite
   band: string; // Excellent | Strong | Fair | …
   pillars: MaalPillar[];
+  rules: FinancialHealthRule[];
+  methodologyVersion: string;
   hasData: boolean;
   history: Array<{ value: number; at: string }>; // oldest-first
 };
@@ -33,6 +49,8 @@ export async function fetchMaalScore(): Promise<MaalScore> {
       score: Number(j.score) || 0,
       band: typeof j.band === "string" ? j.band : "",
       pillars: Array.isArray(j.pillars) ? j.pillars : [],
+      rules: Array.isArray(j.rules) ? j.rules : [],
+      methodologyVersion: typeof j.methodology_version === "string" ? j.methodology_version : "",
       hasData: !!j.hasData,
       history: Array.isArray(j.history) ? j.history : [],
     };
