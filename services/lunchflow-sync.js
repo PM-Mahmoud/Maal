@@ -12,7 +12,7 @@ function createSyncService(dependencies = {}) {
   const transactionStore = dependencies.transactionStore || imports;
   const activeUsers = new Set();
 
-  return async function syncLunchFlow(userId) {
+  return async function syncLunchFlow(userId, options = {}) {
     if (activeUsers.has(userId)) throw new Error('Lunch Flow sync already in progress');
     activeUsers.add(userId);
     try {
@@ -58,9 +58,16 @@ function createSyncService(dependencies = {}) {
       }
       const mappedAccounts = accountGroups.map((group) => group.account).filter(Boolean);
       const mappedTransactions = accountGroups.flatMap((group) => group.transactions);
-      await accountStore.replaceAccounts(userId, mappedAccounts);
-      await transactionStore.upsertTransactions(userId, mappedTransactions);
-      return { accounts: mappedAccounts.length, transactions: mappedTransactions.length };
+      const withFence = options.withFence || (async (mutation) => mutation());
+      await withFence(() => accountStore.replaceAccounts(userId, mappedAccounts));
+      await options.onProgress?.('accounts', { imported: mappedAccounts.length });
+      await withFence(() => transactionStore.upsertTransactions(userId, mappedTransactions));
+      await options.onProgress?.('transactions', { imported: mappedTransactions.length });
+      const canonical = accountStore.promoteCanonicalAccounts
+        ? await withFence(() => accountStore.promoteCanonicalAccounts(userId, mappedAccounts))
+        : null;
+      if (canonical) await options.onProgress?.('canonical_accounts', canonical);
+      return { accounts: mappedAccounts.length, transactions: mappedTransactions.length, ...(canonical ? { canonical } : {}) };
     } finally {
       activeUsers.delete(userId);
     }

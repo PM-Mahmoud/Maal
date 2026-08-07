@@ -6,6 +6,8 @@ const {
   summarizeCanonicalSnapshot,
   compareLegacyAndCanonical,
   normalizeMinorUnitInteger,
+  valuationFreshness,
+  summarizeCanonicalAllocation,
 } = require('../lib/canonical-wealth');
 
 assert.strictEqual(normalizeMinorUnitInteger('9007199254740993'), '9007199254740993', 'large minor-unit values remain exact strings');
@@ -74,6 +76,18 @@ revised.valuations.push({
 });
 assert.strictEqual(summarizeCanonicalSnapshot(revised).cashTotal, 30000, 'latest append-only valuation wins');
 
+const explicitOverride = structuredClone(projected);
+const overriddenCash = explicitOverride.valuations.find((row) => row.classification === 'cash');
+overriddenCash.id = 7;
+explicitOverride.valuations.push({
+  ...overriddenCash,
+  id: 99, supersedesId: 7, amountMinor: 3100000, asOf: '2026-07-01T00:00:00Z', recordedAt: '2026-08-08T00:00:00Z',
+});
+assert.strictEqual(summarizeCanonicalSnapshot(explicitOverride).cashTotal, 31000, 'a later recorded override is authoritative even with an older valuation date');
+const olderStatement = structuredClone(projected);
+olderStatement.valuations.push({ ...olderStatement.valuations.find((row) => row.classification === 'cash'), amountMinor: 1, asOf: '2025-01-01', recordedAt: '2026-08-09' });
+assert.strictEqual(summarizeCanonicalSnapshot(olderStatement).cashTotal, 25000, 'an older statement imported later cannot regress current value');
+
 const jointlyOwned = structuredClone(projected);
 jointlyOwned.ownershipInterests.find((row) => row.subjectKey === 'properties:3').ownershipPercent = 50;
 assert.strictEqual(summarizeCanonicalSnapshot(jointlyOwned).propertyTotal, 350000, 'valuations are weighted by ownership');
@@ -86,6 +100,22 @@ assert.throws(
   /FX conversion required/,
   'mixed currencies must never be added at face value'
 );
+foreignCurrency.valuations[0].presentationCurrency = 'AUD';
+foreignCurrency.valuations[0].presentationAmountMinor = 1500000;
+assert.doesNotThrow(() => summarizeCanonicalSnapshot(foreignCurrency));
+
+assert.deepStrictEqual(valuationFreshness({ classification: 'investment', asOf: '2026-08-06T00:00:00Z' }, new Date('2026-08-07T12:00:00Z')), { status: 'fresh', ageDays: 1, thresholdDays: 2 });
+assert.deepStrictEqual(valuationFreshness({ classification: 'investment', asOf: '2026-08-01T00:00:00Z' }, new Date('2026-08-07T12:00:00Z')), { status: 'stale', ageDays: 6, thresholdDays: 2 });
+assert.deepStrictEqual(summarizeCanonicalAllocation({
+  holdings: [{ id: 1, instrument_type: 'etf' }, { id: 2, instrument_type: 'shares' }],
+  valuations: [
+    { subjectType: 'holding', subjectKey: 'holding:1', classification: 'investment', amountMinor: 7500, currency: 'AUD', asOf: '2026-08-07' },
+    { subjectType: 'holding', subjectKey: 'holding:2', classification: 'investment', amountMinor: 2500, currency: 'AUD', asOf: '2026-08-07' },
+  ],
+}), [
+  { category: 'etf', value: 75, percentage: 75 },
+  { category: 'shares', value: 25, percentage: 25 },
+]);
 
 const offsettingError = structuredClone(projected);
 offsettingError.valuations.find((row) => row.classification === 'cash').amountMinor += 10000;

@@ -1,7 +1,7 @@
 'use strict';
 
 const pool = require('./pool');
-const { summarizeCanonicalSnapshot, normalizeMinorUnitInteger } = require('../lib/canonical-wealth');
+const { summarizeCanonicalSnapshot, summarizeCanonicalAllocation, normalizeMinorUnitInteger, valuationFreshness } = require('../lib/canonical-wealth');
 
 async function listFinancialAccounts(userId) {
   const { rows } = await pool.query(
@@ -26,12 +26,10 @@ async function listHoldings(userId, accountId = null) {
   return rows;
 }
 
-async function listLatestValuations(userId) {
+async function listValuations(userId) {
   const { rows } = await pool.query(
-    `SELECT DISTINCT ON (subject_type, subject_key, classification) *
-       FROM valuations
-      WHERE user_id = $1
-      ORDER BY subject_type, subject_key, classification, as_of DESC, id DESC`,
+    `SELECT * FROM valuations WHERE user_id = $1
+      ORDER BY as_of, created_at, id`,
     [userId]
   );
   return rows;
@@ -96,7 +94,7 @@ async function getCanonicalSnapshot(userId) {
   const [accounts, holdings, valuations, ownershipInterests] = await Promise.all([
     listFinancialAccounts(userId),
     listHoldings(userId),
-    listLatestValuations(userId),
+    listValuations(userId),
     listOwnershipInterests(userId),
   ]);
   const normalizedValuations = valuations.map((row) => ({
@@ -105,20 +103,26 @@ async function getCanonicalSnapshot(userId) {
     subjectKey: row.subject_key,
     amountMinor: row.amount_minor,
     asOf: row.as_of,
+    presentationAmountMinor: row.presentation_amount_minor,
+    presentationCurrency: row.presentation_currency,
+    recordedAt: row.created_at,
+    freshness: valuationFreshness(row),
   }));
+  const normalizedSnapshot = { holdings, valuations: normalizedValuations, ownershipInterests };
   return {
     accounts,
     holdings,
     valuations,
     ownershipInterests,
-    summary: summarizeCanonicalSnapshot({ valuations: normalizedValuations, ownershipInterests }),
+    summary: summarizeCanonicalSnapshot(normalizedSnapshot),
+    allocation: summarizeCanonicalAllocation(normalizedSnapshot),
   };
 }
 
 module.exports = {
   listFinancialAccounts,
   listHoldings,
-  listLatestValuations,
+  listValuations,
   listOwnershipInterests,
   appendValuation,
   getCanonicalSnapshot,

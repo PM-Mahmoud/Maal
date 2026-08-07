@@ -2,6 +2,11 @@
 
 const DEFAULT_BASE_URL = 'https://lunchflow.app';
 const REQUEST_TIMEOUT_MS = 15_000;
+const manifest = Object.freeze({
+  id: 'lunchflow', name: 'Lunch Flow', region: 'AU',
+  scopes: Object.freeze(['accounts:read', 'balances:read', 'transactions:read']),
+  capabilities: Object.freeze(['accounts', 'balances', 'transactions']),
+});
 
 function config() {
   return {
@@ -116,6 +121,7 @@ async function getBalance(accountId, accessToken) {
 }
 
 module.exports = {
+  manifest,
   isConfigured,
   getAuthorizationUrl,
   exchangeAuthorizationCode,

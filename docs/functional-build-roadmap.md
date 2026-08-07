@@ -46,10 +46,10 @@ Implementation plan: [HelloMaal wealth platform implementation plan](./wealth-pl
 - [x] Build W1.1 — Replace the single asset destination with a My Wealth information
   architecture: Overview, Cash, Investments, Property, Super, Liabilities and Other
   Assets, with matching desktop/mobile navigation and reconciled totals.
-- [ ] Build W1.2 — Add canonical financial accounts, instruments, holdings, valuations,
+- [x] Build W1.2 — Add canonical financial accounts, instruments, holdings, valuations,
   ownership, and source/as-of/confidence metadata with a compatibility migration from
   the existing seven asset tables.
-- [ ] Build W1.3 — Add reliable broker/super statement imports and a provider-adapter
+- [x] Build W1.3 — Add reliable broker/super statement imports and a provider-adapter
   contract with explicit scopes, durable syncs, lineage, health and revocation.
 - [ ] Build W2.1 — Deliver a versioned, explainable zakat calculator against an immutable
   wealth snapshot, with user-confirmed classifications and downloadable evidence.
@@ -97,7 +97,8 @@ Implementation plan: [HelloMaal wealth platform implementation plan](./wealth-pl
 
 | Build | Status | Verification | Commit |
 |---|---|---|---|
-| W1.2 | Foundation in progress 2026-08-07 | Canonical schema, backfill, parity-gated summary and append-only valuations built; canonical allocation/performance/exports, imports, linking, FX and duplicate workflows remain | This commit |
+| W1.3 | Built 2026-08-07 | `npm run test:wealth-platform`; client typecheck; `npm test`; adapter, durable sync/progress, health, lineage and revocation | This commit |
+| W1.2 | Built 2026-08-07 | `npm run test:wealth-platform`; performance tests; `npm test`; canonical imports, linking, FX/ownership, freshness, allocation, performance and exports | This commit, `b43952b` |
 | W1.1 | Built 2026-08-07 | `node test/assets-summary.test.js`; client `npm run typecheck`; client `npm run build`; `npm test` | This commit |
 | 1.1 | Built 2026-07-30 | `node test/data-quality.test.js`; `npm run test:integrity-db`; `npm test` | `c62667b` |
 | 1.2 | Built 2026-07-30 | focused data-quality/import tests; `npm run test:integrity-db`; `npm test` | `c45c455` |

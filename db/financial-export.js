@@ -6,6 +6,8 @@ const DIRECT_TABLES = [
   'financial_scores','maal_score_snapshots','recommendations','raw_financial_records','calculation_audits',
   'calculation_audit_sources','data_quality_findings','data_quality_runs','import_runs',
   'provider_connection_health','transaction_sync_cursors','transaction_category_feedback','background_jobs',
+  'financial_accounts','instruments','holdings','valuations','ownership_interests','canonical_account_links',
+  'provider_connection_events',
 ];
 async function loadFinancialExport(userId) {
   const data = {};

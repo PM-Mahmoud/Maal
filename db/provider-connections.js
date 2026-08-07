@@ -48,6 +48,25 @@ async function getConnection(userId, provider) {
   };
 }
 
+async function getConnectionMetadata(userId, provider) {
+  const { rows } = await pool.query(
+    `SELECT id, provider, provider_user_id, token_expires_at, scopes, connected_at, updated_at
+       FROM provider_connections WHERE user_id = $1 AND provider = $2`,
+    [userId, provider]
+  );
+  return rows[0] || null;
+}
+
+async function recordEvent(userId, provider, eventType, options = {}) {
+  const { rows } = await pool.query(
+    `INSERT INTO provider_connection_events
+       (user_id, provider, event_type, scopes, import_run_id, details)
+     VALUES ($1,$2,$3,$4,$5,$6::jsonb) RETURNING *`,
+    [userId, provider, eventType, options.scopes || null, options.importRunId || null, JSON.stringify(options.details || {})]
+  );
+  return rows[0];
+}
+
 async function deleteConnection(userId, provider) {
   const { rows } = await pool.query(
     `DELETE FROM provider_connections WHERE user_id = $1 AND provider = $2 RETURNING id`,
@@ -56,4 +75,4 @@ async function deleteConnection(userId, provider) {
   return rows[0] || null;
 }
 
-module.exports = { upsertConnection, getConnection, deleteConnection };
+module.exports = { upsertConnection, getConnection, getConnectionMetadata, recordEvent, deleteConnection };

@@ -18,15 +18,15 @@ independent throughout this work.
 
 ## Next slices
 
-- [ ] Add a provider-link/canonical-account reconciliation model so one real
+- [x] Add a provider-link/canonical-account reconciliation model so one real
       account connected through Basiq and Lunch Flow contributes only once.
-- [ ] Classify depository, credit/loan, super, and brokerage accounts before
+- [x] Classify depository, credit/loan, super, and brokerage accounts before
       promoting balances into canonical wealth tables.
 - [ ] Import holdings into investment positions with valuation provenance.
-- [ ] Move synchronization onto the existing durable import/background-job
+- [x] Move synchronization onto the existing durable import/background-job
       framework, including cross-instance locking, retries, and progress UI.
 - [ ] Define and implement a stale-transaction retention/reconciliation policy.
-- [ ] Add an explicit disconnect/re-authorize flow and provider-specific health.
+- [x] Add an explicit disconnect/re-authorize flow and provider-specific health.
 - [ ] Add database integration tests for encrypted token and import persistence.
 - [ ] Validate the production OAuth flow and supported Australian institutions
       with non-sensitive test accounts.

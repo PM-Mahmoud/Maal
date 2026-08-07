@@ -201,29 +201,78 @@ function mockResponse() {
   await test('status reports Lunch Flow independently from Basiq', async () => {
     const { createHandlers } = require('../routes/lunchflow');
     const handlers = createHandlers({
-      provider: { isConfigured: () => true },
-      connectionStore: { getConnection: async () => ({ provider: 'lunchflow' }) },
+      provider: { isConfigured: () => true, manifest: { scopes: ['accounts:read'] } },
+      connectionStore: { getConnectionMetadata: async () => ({ provider: 'lunchflow', scopes: 'accounts:read balances:read' }) },
+      healthStore: { getHealth: async () => ({ provider: 'lunchflow', status: 'healthy' }) },
       tokenProtection: { isConfigured: () => true },
       userStore: {},
     });
     let body;
     const response = { json(value) { body = value; return this; }, status() { return this; } };
     await handlers.status({ session: { userId: 42 } }, response);
-    assert.deepStrictEqual(body, { live: true, connected: true });
+    assert.deepStrictEqual(body, {
+      live: true, connected: true,
+      scopes: ['accounts:read', 'balances:read'],
+      scopes_confirmed: true,
+      health: { provider: 'lunchflow', status: 'healthy' },
+    });
   });
 
-  await test('sync endpoint returns imported account and transaction counts', async () => {
+  await test('sync endpoint queues a durable idempotent import run', async () => {
     const { createHandlers } = require('../routes/lunchflow');
+    let enqueued;
     const handlers = createHandlers({
       provider: { isConfigured: () => true },
       connectionStore: {},
       userStore: {},
-      sync: async (userId) => ({ accounts: userId === 42 ? 2 : 0, transactions: 9 }),
+      importRuns: { enqueueImportRun: async (userId, options) => {
+        enqueued = { userId, options };
+        return { run: { id: 7, status: 'queued' }, job: { id: 8 } };
+      } },
     });
     let body;
-    const response = { json(value) { body = value; return this; }, status() { return this; } };
-    await handlers.sync({ session: { userId: 42 } }, response);
-    assert.deepStrictEqual(body, { ok: true, accounts: 2, transactions: 9 });
+    let statusCode;
+    const response = { json(value) { body = value; return this; }, status(value) { statusCode = value; return this; } };
+    await handlers.sync({ session: { userId: 42 }, get: () => 'sync-request-1' }, response);
+    assert.equal(statusCode, 202);
+    assert.deepStrictEqual(body, { ok: true, import_run_id: 7, job_id: 8, status: 'queued' });
+    assert.deepStrictEqual(enqueued, { userId: 42, options: { provider: 'lunchflow', requestKey: 'sync-request-1', jobType: 'lunchflow_import' } });
+  });
+
+  await test('disconnect deletes stored tokens and records revocation health', async () => {
+    const { createHandlers } = require('../routes/lunchflow');
+    const events = [];
+    const handlers = createHandlers({
+      provider: { isConfigured: () => true },
+      connectionStore: {
+        getConnection: async () => ({ access_token: 'token', scopes: 'accounts:read' }),
+        deleteConnection: async () => events.push('deleted'),
+        recordEvent: async (_u, _p, type) => events.push(type),
+      },
+      healthStore: { upsertHealth: async (_u, _p, patch) => events.push(patch.status) },
+    });
+    let body;
+    await handlers.disconnect({ session: { userId: 42 } }, { json(value) { body = value; return this; }, status() { return this; } });
+    assert.deepStrictEqual(body, { ok: true, connected: false, remote_revoke_failed: false });
+    assert.deepStrictEqual(events, ['deleted', 'revoked', 'reauthorization_required']);
+  });
+
+  await test('disconnect deletes local tokens even when remote revocation fails', async () => {
+    const { createHandlers } = require('../routes/lunchflow');
+    let deleted = false;
+    const handlers = createHandlers({
+      provider: { revokeAccess: async () => { throw new Error('provider unavailable'); } },
+      connectionStore: {
+        getConnection: async () => ({ access_token: 'token' }),
+        deleteConnection: async () => { deleted = true; },
+        recordEvent: async () => null,
+      },
+      healthStore: { upsertHealth: async () => null },
+    });
+    let body;
+    await handlers.disconnect({ session: { userId: 42 } }, { json(value) { body = value; return this; }, status() { return this; } });
+    assert.equal(deleted, true);
+    assert.equal(body.remote_revoke_failed, true);
   });
 
   console.log('\nLunch Flow financial data API');
@@ -317,16 +366,20 @@ function mockResponse() {
       id: 123,
       name: 'Everyday Account',
       institution_name: 'Example Bank',
+      type: 'transaction',
       currency: 'AUD',
       status: 'ACTIVE',
+      updated_at: '2026-08-07T00:00:00Z',
     }, { amount: 1234.56, currency: 'AUD' }), {
       account_reference: 'lunchflow:123',
       institution_name: 'Example Bank',
       institution_type: 'bank',
+      account_type: 'cash',
       label: 'Everyday Account',
       balance: 1234.56,
       currency: 'AUD',
       status: 'active',
+      observed_at: '2026-08-07T00:00:00Z',
     });
   });
 

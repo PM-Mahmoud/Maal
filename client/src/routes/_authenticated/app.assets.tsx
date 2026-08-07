@@ -595,16 +595,41 @@ function ConnectPanel() {
       const response = await fetch("/lunchflow/sync", {
         method: "POST",
         credentials: "include",
+        headers: { "Idempotency-Key": crypto.randomUUID() },
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Lunch Flow sync failed");
-      setLunchFlowMsg(`Synced ${result.accounts} account${result.accounts === 1 ? "" : "s"} and ${result.transactions} transactions.`);
-      window.setTimeout(() => window.location.reload(), 700);
+      setLunchFlowMsg("Lunch Flow sync queued…");
+      for (let attempt = 0; attempt < 120; attempt++) {
+        await new Promise(resolve => window.setTimeout(resolve, 1000));
+        const statusResponse = await fetch(`/api/v1/import-runs/${encodeURIComponent(result.import_run_id)}`, { credentials: "include" });
+        if (!statusResponse.ok) throw new Error("Could not check Lunch Flow sync progress");
+        const { import_run: run } = await statusResponse.json();
+        if (run.status === "succeeded") {
+          const accounts = Number(run.summary?.accounts ?? 0);
+          const transactions = Number(run.summary?.transactions ?? 0);
+          setLunchFlowMsg(`Synced ${accounts} account${accounts === 1 ? "" : "s"} and ${transactions} transactions.`);
+          window.setTimeout(() => window.location.reload(), 700);
+          return;
+        }
+        if (run.status === "dead") throw new Error(run.last_error || "Lunch Flow sync failed after several attempts");
+        setLunchFlowMsg(run.status === "retrying" ? "Lunch Flow is temporarily unavailable — retrying…" : `Syncing ${run.current_stage || "accounts"}…`);
+      }
+      setLunchFlowMsg("Sync is taking longer than expected. You can safely leave this page.");
     } catch (error) {
       setLunchFlowMsg(error instanceof Error ? error.message : "Lunch Flow sync failed.");
     } finally {
       setLunchFlowSyncing(false);
     }
+  }
+
+  async function handleLunchFlowDisconnect() {
+    if (!window.confirm("Disconnect Lunch Flow and remove its stored access tokens?")) return;
+    const response = await fetch("/lunchflow/disconnect", { method: "POST", credentials: "include" });
+    const result = await response.json();
+    if (!response.ok) { setLunchFlowMsg(result.error || "Could not disconnect Lunch Flow."); return; }
+    setLunchFlowStatus(current => current ? { ...current, connected: false } : current);
+    setLunchFlowMsg(result.remote_revoke_failed ? "Disconnected locally. Lunch Flow could not confirm remote revocation; review access in Lunch Flow." : "Lunch Flow disconnected.");
   }
 
   async function handleSync() {
@@ -742,13 +767,22 @@ function ConnectPanel() {
             {lunchFlowStatus.connected && <span className="size-2 rounded-full bg-[var(--mint)] shrink-0" />}
           </div>
           {lunchFlowStatus.connected ? (
-            <button
-              onClick={handleLunchFlowSync}
-              disabled={lunchFlowSyncing}
-              className="w-full py-2 rounded-[10px] border border-border text-[12px] font-semibold disabled:opacity-50 transition hover:bg-[var(--secondary)]"
-            >
-              {lunchFlowSyncing ? "Syncing Lunch Flow…" : "Sync Lunch Flow"}
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={handleLunchFlowSync}
+                disabled={lunchFlowSyncing}
+                className="w-full py-2 rounded-[10px] border border-border text-[12px] font-semibold disabled:opacity-50 transition hover:bg-[var(--secondary)]"
+              >
+                {lunchFlowSyncing ? "Syncing…" : "Sync now"}
+              </button>
+              <button
+                onClick={handleLunchFlowDisconnect}
+                disabled={lunchFlowSyncing}
+                className="w-full py-2 rounded-[10px] border border-border text-[12px] font-semibold text-muted-foreground disabled:opacity-50 transition hover:bg-[var(--secondary)]"
+              >
+                Disconnect
+              </button>
+            </div>
           ) : (
             <a
               href="/lunchflow/connect"

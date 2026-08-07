@@ -5,8 +5,9 @@ const express = require('express');
 const lunchflow = require('../services/lunchflow');
 const connections = require('../db/provider-connections');
 const users = require('../db/users');
-const { syncLunchFlow } = require('../services/lunchflow-sync');
 const providerTokenCrypto = require('../services/provider-token-crypto');
+const importRuns = require('../db/import-runs');
+const connectionHealth = require('../db/connection-health');
 
 function callbackUri() {
   if ((process.env.LUNCHFLOW_REDIRECT_URI || '').trim()) {
@@ -28,7 +29,8 @@ function createHandlers(dependencies = {}) {
   const provider = dependencies.provider || lunchflow;
   const connectionStore = dependencies.connectionStore || connections;
   const userStore = dependencies.userStore || users;
-  const sync = dependencies.sync || syncLunchFlow;
+  const imports = dependencies.importRuns || importRuns;
+  const healthStore = dependencies.healthStore || connectionHealth;
   const tokenProtection = dependencies.tokenProtection || providerTokenCrypto;
   return {
     connect: async (req, res) => {
@@ -64,6 +66,7 @@ function createHandlers(dependencies = {}) {
         redirectUri: callbackUri(),
       });
       await connectionStore.upsertConnection(req.session.userId, 'lunchflow', tokens);
+      await connectionStore.recordEvent?.(req.session.userId, 'lunchflow', 'connected', { scopes: tokens.scope || null });
       return res.redirect('/app/assets?lunchflow=connected');
     } catch (error) {
       console.error('Lunch Flow callback error:', error.message);
@@ -72,10 +75,16 @@ function createHandlers(dependencies = {}) {
     },
     status: async (req, res) => {
       try {
-        const connection = await connectionStore.getConnection(req.session.userId, 'lunchflow');
+        const connection = connectionStore.getConnectionMetadata
+          ? await connectionStore.getConnectionMetadata(req.session.userId, 'lunchflow')
+          : await connectionStore.getConnection(req.session.userId, 'lunchflow');
+        const health = await healthStore.getHealth?.(req.session.userId, 'lunchflow');
         return res.json({
           live: provider.isConfigured() && tokenProtection.isConfigured(),
           connected: !!connection,
+          scopes: connection?.scopes ? String(connection.scopes).split(/[ ,]+/).filter(Boolean) : [],
+          scopes_confirmed: !!connection?.scopes,
+          health: health || { provider: 'lunchflow', status: connection ? 'unknown' : 'reauthorization_required' },
         });
       } catch (error) {
         console.error('Lunch Flow status error:', error.message);
@@ -84,8 +93,16 @@ function createHandlers(dependencies = {}) {
     },
     sync: async (req, res) => {
       try {
-        const result = await sync(req.session.userId);
-        return res.json({ ok: true, ...result });
+        const lookupConnection = connectionStore.getConnectionMetadata || connectionStore.getConnection;
+        if (lookupConnection && !await lookupConnection(req.session.userId, 'lunchflow')) {
+          return res.status(409).json({ error: 'Connect Lunch Flow before syncing.' });
+        }
+        const requestKey = String(req.get?.('Idempotency-Key') || crypto.randomUUID()).slice(0, 200);
+        const { run, job } = await imports.enqueueImportRun(req.session.userId, {
+          provider: 'lunchflow', requestKey, jobType: 'lunchflow_import',
+        });
+        await connectionStore.recordEvent?.(req.session.userId, 'lunchflow', 'sync_started', { importRunId: run.id });
+        return res.status(202).json({ ok: true, import_run_id: run.id, job_id: job.id, status: run.status });
       } catch (error) {
         console.error('Lunch Flow sync error:', error.message);
         const status = /No Lunch Flow provider connection/.test(error.message) ? 409 : 502;
@@ -94,6 +111,26 @@ function createHandlers(dependencies = {}) {
             ? 'Connect Lunch Flow before syncing.'
             : 'Lunch Flow sync failed. Please try again.',
         });
+      }
+    },
+    disconnect: async (req, res) => {
+      try {
+        const connection = await connectionStore.getConnection(req.session.userId, 'lunchflow');
+        let remoteRevokeFailed = false;
+        try { await provider.revokeAccess?.(connection?.access_token); }
+        catch (error) { remoteRevokeFailed = true; console.error('Lunch Flow remote revoke failed:', error.message); }
+        await connectionStore.deleteConnection(req.session.userId, 'lunchflow');
+        await connectionStore.recordEvent?.(req.session.userId, 'lunchflow', 'revoked', {
+          scopes: connection?.scopes, details: { remote_revoke_failed: remoteRevokeFailed },
+        });
+        await healthStore.upsertHealth?.(req.session.userId, 'lunchflow', {
+          status: 'reauthorization_required', consecutiveFailures: 0, lastError: null,
+          details: { revoked_by_user: true },
+        });
+        return res.json({ ok: true, connected: false, remote_revoke_failed: remoteRevokeFailed });
+      } catch (error) {
+        console.error('Lunch Flow disconnect error:', error.message);
+        return res.status(500).json({ error: 'Could not disconnect Lunch Flow.' });
       }
     },
   };
@@ -110,6 +147,7 @@ function createRouter(dependencies = {}) {
   router.get('/callback', handlers.callback);
   router.get('/status', handlers.status);
   router.post('/sync', handlers.sync);
+  router.post('/disconnect', handlers.disconnect);
 
   return router;
 }

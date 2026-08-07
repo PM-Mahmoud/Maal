@@ -635,6 +635,8 @@ router.post('/v1/wealth/valuations', async (req, res) => {
   }
 });
 
+router.post('/v1/wealth/import-statement', require('../services/wealth-statement-import').statementImportHandler);
+
 router.patch('/v1/profile', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
