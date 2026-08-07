@@ -13,16 +13,19 @@ module.exports = {
       ADD COLUMN IF NOT EXISTS target JSONB,
       ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
     CREATE UNIQUE INDEX IF NOT EXISTS recommendations_user_source_idx ON recommendations(user_id,source_key) WHERE source_key IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS recommendations_id_user_idx ON recommendations(id,user_id);
     CREATE TABLE IF NOT EXISTS recommendation_events (
       id BIGSERIAL PRIMARY KEY, recommendation_id INTEGER NOT NULL REFERENCES recommendations(id) ON DELETE CASCADE,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, from_status TEXT NOT NULL, to_status TEXT NOT NULL,
-      occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (recommendation_id,user_id) REFERENCES recommendations(id,user_id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS recommendation_events_user_idx ON recommendation_events(user_id,occurred_at DESC);
     CREATE TABLE IF NOT EXISTS recommendation_outcomes (
       id BIGSERIAL PRIMARY KEY, recommendation_id INTEGER NOT NULL REFERENCES recommendations(id) ON DELETE CASCADE,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, metric TEXT NOT NULL, value NUMERIC,
-      unit TEXT, baseline_value NUMERIC, delta NUMERIC, measured_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), note TEXT
+      unit TEXT, baseline_value NUMERIC, delta NUMERIC, target JSONB, target_met BOOLEAN, outcome_status TEXT NOT NULL DEFAULT 'measured', measured_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), note TEXT,
+      FOREIGN KEY (recommendation_id,user_id) REFERENCES recommendations(id,user_id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS recommendation_outcomes_user_idx ON recommendation_outcomes(user_id,measured_at DESC);
   `),

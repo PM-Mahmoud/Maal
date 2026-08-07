@@ -16,12 +16,14 @@ function createRecommendationActionService(database = defaultDatabase, healthPro
     const rule = (health.rules || []).find((item) => item.key === key);
     if (!rule || rule.observed?.value == null) return null;
     const value = Number(rule.observed.value), baseline = Number(recommendation.baseline?.value);
+    const target = recommendation.target || rule.target || null;
     const rawChange = Number.isFinite(baseline) ? value - baseline : null;
-    const improvement = rawChange == null ? null : recommendation.target?.operator === '<=' ? -rawChange : rawChange;
-    return { metric: key, value, unit: rule.observed.unit || recommendation.baseline?.unit || null, baseline_value: Number.isFinite(baseline) ? baseline : null, delta: improvement == null ? null : Math.round(improvement * 100) / 100, measured_at: now(), note: 'Delta records improvement from baseline; positive is progress toward the target.' };
+    const improvement = rawChange == null ? null : target?.operator === '<=' ? -rawChange : rawChange;
+    const targetMet = target ? (target.operator === '<=' ? value <= Number(target.value) : value >= Number(target.value)) : null;
+    return { metric: key, value, unit: rule.observed.unit || recommendation.baseline?.unit || null, baseline_value: Number.isFinite(baseline) ? baseline : null, delta: improvement == null ? null : Math.round(improvement * 100) / 100, target, target_met: targetMet, outcome_status: targetMet === null ? 'measured' : targetMet ? 'target_met' : 'progressing', measured_at: now(), note: 'Delta records improvement from baseline; positive is progress toward the target.' };
   }
   return {
-    async refresh(userId) { const health = await healthProvider(userId); await database.upsertRecommendations(userId, actionsFromHealthRules(health.rules)); return database.listRecommendations(userId); },
+    async refresh(userId) { const health = await healthProvider(userId); await database.syncRecommendations(userId, actionsFromHealthRules(health.rules), health.rules || [], now()); return database.listRecommendations(userId); },
     list: (userId) => database.listRecommendations(userId),
     async transition(userId, id, toStatus) {
       const recommendation = await database.getRecommendation(userId, id);
@@ -29,6 +31,7 @@ function createRecommendationActionService(database = defaultDatabase, healthPro
       if (!TRANSITIONS[recommendation.status]?.has(toStatus)) throw Object.assign(new Error(`Cannot move recommendation from ${recommendation.status} to ${toStatus}.`), { status: 400 });
       const occurredAt = now();
       const outcome = toStatus === 'completed' ? await currentOutcome(recommendation, await healthProvider(userId)) : null;
+      if (toStatus === 'completed' && !outcome) throw Object.assign(new Error('This action cannot be completed until its outcome can be measured.'), { status: 400 });
       return database.recordTransition(userId, id, { from_status: recommendation.status, to_status: toStatus, occurred_at: occurredAt }, outcome);
     },
     async checkIn(userId, id, note) {

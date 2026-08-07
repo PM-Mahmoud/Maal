@@ -13,7 +13,7 @@ export type RecommendationAction = {
   baseline: { value: number | null; unit: string | null };
   target: { operator: string; value: number; unit: string } | null;
   events: Array<{ id: string; from_status: string; to_status: string; occurred_at: string }>;
-  outcomes: Array<{ id: string; metric: string; value: number; unit: string; baseline_value: number | null; delta: number | null; measured_at: string; note: string | null }>;
+  outcomes: Array<{ id: string; metric: string; value: number; unit: string; baseline_value: number | null; delta: number | null; target_met: boolean | null; outcome_status: string; measured_at: string; note: string | null }>;
 };
 
 async function request(path: string, init?: RequestInit) {
