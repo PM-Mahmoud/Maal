@@ -644,6 +644,10 @@ router.post('/v1/financial-export', require('../services/financial-export').fina
 router.get('/v1/planning', require('../services/planning').previewHandler);
 router.post('/v1/planning', require('../services/planning').saveHandler);
 router.get('/v1/planning/history', require('../services/planning').historyHandler);
+router.post('/v1/scenarios/preview', require('../services/scenarios').previewHandler);
+router.post('/v1/scenarios', require('../services/scenarios').createHandler);
+router.get('/v1/scenarios', require('../services/scenarios').listHandler);
+router.get('/v1/scenarios/:id', require('../services/scenarios').getHandler);
 
 // ─── Vault (real document storage — Postgres bytea via db/vault.js) ────────
 // The React vault page used a Supabase Storage bucket that doesn't exist (the

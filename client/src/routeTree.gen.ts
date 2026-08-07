@@ -27,6 +27,7 @@ import { Route as AuthenticatedAppResearchRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppReportRouteImport } from './routes/_authenticated/app.report'
 import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
 import { Route as AuthenticatedAppPortfolioPlanRouteImport } from './routes/_authenticated/app.portfolio-plan'
+import { Route as AuthenticatedAppPlanningRouteImport } from './routes/_authenticated/app.planning'
 import { Route as AuthenticatedAppOnboardingRouteImport } from './routes/_authenticated/app.onboarding'
 import { Route as AuthenticatedAppNetWorthFlowRouteImport } from './routes/_authenticated/app.net-worth-flow'
 import { Route as AuthenticatedAppGoalsRouteImport } from './routes/_authenticated/app.goals'
@@ -133,6 +134,12 @@ const AuthenticatedAppPortfolioPlanRoute =
     path: '/portfolio-plan',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppPlanningRoute =
+  AuthenticatedAppPlanningRouteImport.update({
+    id: '/planning',
+    path: '/planning',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppOnboardingRoute =
   AuthenticatedAppOnboardingRouteImport.update({
     id: '/onboarding',
@@ -189,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/app/goals': typeof AuthenticatedAppGoalsRoute
   '/app/net-worth-flow': typeof AuthenticatedAppNetWorthFlowRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
+  '/app/planning': typeof AuthenticatedAppPlanningRoute
   '/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/report': typeof AuthenticatedAppReportRoute
@@ -215,6 +223,7 @@ export interface FileRoutesByTo {
   '/app/goals': typeof AuthenticatedAppGoalsRoute
   '/app/net-worth-flow': typeof AuthenticatedAppNetWorthFlowRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
+  '/app/planning': typeof AuthenticatedAppPlanningRoute
   '/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/report': typeof AuthenticatedAppReportRoute
@@ -244,6 +253,7 @@ export interface FileRoutesById {
   '/_authenticated/app/goals': typeof AuthenticatedAppGoalsRoute
   '/_authenticated/app/net-worth-flow': typeof AuthenticatedAppNetWorthFlowRoute
   '/_authenticated/app/onboarding': typeof AuthenticatedAppOnboardingRoute
+  '/_authenticated/app/planning': typeof AuthenticatedAppPlanningRoute
   '/_authenticated/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
   '/_authenticated/app/radar': typeof AuthenticatedAppRadarRoute
   '/_authenticated/app/report': typeof AuthenticatedAppReportRoute
@@ -273,6 +283,7 @@ export interface FileRouteTypes {
     | '/app/goals'
     | '/app/net-worth-flow'
     | '/app/onboarding'
+    | '/app/planning'
     | '/app/portfolio-plan'
     | '/app/radar'
     | '/app/report'
@@ -299,6 +310,7 @@ export interface FileRouteTypes {
     | '/app/goals'
     | '/app/net-worth-flow'
     | '/app/onboarding'
+    | '/app/planning'
     | '/app/portfolio-plan'
     | '/app/radar'
     | '/app/report'
@@ -327,6 +339,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/goals'
     | '/_authenticated/app/net-worth-flow'
     | '/_authenticated/app/onboarding'
+    | '/_authenticated/app/planning'
     | '/_authenticated/app/portfolio-plan'
     | '/_authenticated/app/radar'
     | '/_authenticated/app/report'
@@ -479,6 +492,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppPortfolioPlanRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/planning': {
+      id: '/_authenticated/app/planning'
+      path: '/planning'
+      fullPath: '/app/planning'
+      preLoaderRoute: typeof AuthenticatedAppPlanningRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/onboarding': {
       id: '/_authenticated/app/onboarding'
       path: '/onboarding'
@@ -545,6 +565,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppGoalsRoute: typeof AuthenticatedAppGoalsRoute
   AuthenticatedAppNetWorthFlowRoute: typeof AuthenticatedAppNetWorthFlowRoute
   AuthenticatedAppOnboardingRoute: typeof AuthenticatedAppOnboardingRoute
+  AuthenticatedAppPlanningRoute: typeof AuthenticatedAppPlanningRoute
   AuthenticatedAppPortfolioPlanRoute: typeof AuthenticatedAppPortfolioPlanRoute
   AuthenticatedAppRadarRoute: typeof AuthenticatedAppRadarRoute
   AuthenticatedAppReportRoute: typeof AuthenticatedAppReportRoute
@@ -570,6 +591,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppGoalsRoute: AuthenticatedAppGoalsRoute,
   AuthenticatedAppNetWorthFlowRoute: AuthenticatedAppNetWorthFlowRoute,
   AuthenticatedAppOnboardingRoute: AuthenticatedAppOnboardingRoute,
+  AuthenticatedAppPlanningRoute: AuthenticatedAppPlanningRoute,
   AuthenticatedAppPortfolioPlanRoute: AuthenticatedAppPortfolioPlanRoute,
   AuthenticatedAppRadarRoute: AuthenticatedAppRadarRoute,
   AuthenticatedAppReportRoute: AuthenticatedAppReportRoute,

@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node server.js",
     "test:planning": "node --test test/planning.test.js",
+    "test:scenarios": "node --test test/scenarios.test.js",
     "dev": "node server.js",
     "build": "npm run migrate && npm run build:client",
     "migrate": "node migrate.js",

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Reveal } from "@/components/maal/Reveal";
 import { Disclaimer } from "@/components/maal/Disclaimer";
 import { SliderWithInput } from "@/components/maal/SliderWithInput";
@@ -24,6 +24,9 @@ import {
 } from "recharts";
 import { Dices, TrendingUp, Target, RefreshCw, CheckCircle2 } from "lucide-react";
 import { formatAUD } from "@/lib/score";
+import { listScenarios, saveScenario, type SavedScenario } from "@/lib/scenarios.functions";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app/scenarios-simulator")({
   component: ScenariosSimulator,
@@ -116,6 +119,13 @@ function ScenariosSimulator() {
   const [target, setTarget] = useState(1_500_000);
   const [risk, setRisk] = useState<"conservative" | "balanced" | "growth">("balanced");
   const [seed, setSeed] = useState(42);
+  const [scenarioName, setScenarioName] = useState("");
+  const [savedScenarios, setSavedScenarios] = useState<SavedScenario[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    listScenarios().then(setSavedScenarios).catch(() => undefined);
+  }, []);
 
   const riskProfile = useMemo(() => {
     const profiles = {
@@ -142,6 +152,27 @@ function ScenariosSimulator() {
   }, [finalBalances, target]);
 
   const chartData = results.filter((_, i) => i % 3 === 0 || i === results.length - 1);
+
+  async function persistScenario() {
+    setSaving(true);
+    try {
+      const saved = await saveScenario({
+        name: scenarioName.trim() || `${risk[0].toUpperCase()}${risk.slice(1)} projection`,
+        assumptions: {
+          years: Math.max(1, yearsToRetire),
+          annual_return_rate: riskProfile.mean,
+          extra_annual_contribution: contrib,
+        },
+      });
+      setSavedScenarios((current) => [saved, ...current]);
+      setScenarioName("");
+      toast.success("Scenario saved against today's wealth baseline");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save scenario");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <section id="scenarios" className="scroll-mt-20 border-t border-hairline">
@@ -231,6 +262,15 @@ function ScenariosSimulator() {
                 <RefreshCw className="mr-1.5 h-3.5 w-3.5 transition-transform group-hover:rotate-180" />
                 Re-run simulations (seed: {seed})
               </Button>
+
+              <div className="space-y-2 border-t border-hairline pt-4">
+                <Label htmlFor="scenario-name" className="text-xs text-muted-foreground">Scenario name</Label>
+                <Input id="scenario-name" value={scenarioName} onChange={(event) => setScenarioName(event.target.value)} placeholder="e.g. Increase super contributions" maxLength={120} />
+                <Button size="sm" onClick={persistScenario} disabled={saving || yearsToRetire < 1} className="w-full rounded-md">
+                  {saving ? "Saving…" : "Save live-wealth projection"}
+                </Button>
+                <p className="text-[11px] text-muted-foreground">Uses the years, assumed return and annual contribution above against today&apos;s live Maal wealth baseline. Starting balance, target and seed remain part of the Monte Carlo chart only. Saving never changes your accounts or plan.</p>
+              </div>
 
               <div className="rounded-lg border border-hairline bg-surface-2/60 p-3 text-xs text-muted-foreground">
                 <p className="flex items-center gap-1.5">
@@ -367,6 +407,23 @@ function ScenariosSimulator() {
               </div>
 
               <Disclaimer variant="inline" />
+
+              {savedScenarios.length > 0 && (
+                <Card className="border-hairline p-4">
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Saved scenarios</p>
+                  <div className="mt-3 divide-y divide-hairline">
+                    {savedScenarios.slice(0, 5).map((saved) => (
+                      <div key={saved.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                        <div>
+                          <p className="text-sm font-medium">{saved.name}</p>
+                          <p className="text-xs text-muted-foreground">{saved.result.assumptions.years} years · {(saved.result.assumptions.annual_return_rate * 100).toFixed(1)}% assumed return</p>
+                        </div>
+                        <p className="text-sm tabular-nums text-mint">{saved.result.comparison.net_worth_difference >= 0 ? "+" : ""}{formatAUD(saved.result.comparison.net_worth_difference)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
             </div>
           </Reveal>
         </div>
