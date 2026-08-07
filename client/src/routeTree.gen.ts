@@ -34,6 +34,7 @@ import { Route as AuthenticatedAppGoalsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppDebtPayoffRouteImport } from './routes/_authenticated/app.debt-payoff'
 import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated/app.billing'
 import { Route as AuthenticatedAppAssetsRouteImport } from './routes/_authenticated/app.assets'
+import { Route as AuthenticatedAppActionPlanRouteImport } from './routes/_authenticated/app.action-plan'
 import { Route as AuthenticatedAppAdvisorIndexRouteImport } from './routes/_authenticated/app.advisor.index'
 import { Route as AuthenticatedAppWealthSuperRouteImport } from './routes/_authenticated/app.wealth.super'
 import { Route as AuthenticatedAppWealthPropertyRouteImport } from './routes/_authenticated/app.wealth.property'
@@ -179,6 +180,12 @@ const AuthenticatedAppAssetsRoute = AuthenticatedAppAssetsRouteImport.update({
   path: '/assets',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppActionPlanRoute =
+  AuthenticatedAppActionPlanRouteImport.update({
+    id: '/action-plan',
+    path: '/action-plan',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppAdvisorIndexRoute =
   AuthenticatedAppAdvisorIndexRouteImport.update({
     id: '/advisor/',
@@ -232,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/app/action-plan': typeof AuthenticatedAppActionPlanRoute
   '/app/assets': typeof AuthenticatedAppAssetsRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
@@ -265,6 +273,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/app/action-plan': typeof AuthenticatedAppActionPlanRoute
   '/app/assets': typeof AuthenticatedAppAssetsRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
@@ -301,6 +310,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/_authenticated/app/action-plan': typeof AuthenticatedAppActionPlanRoute
   '/_authenticated/app/assets': typeof AuthenticatedAppAssetsRoute
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
   '/_authenticated/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
@@ -337,6 +347,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/app'
+    | '/app/action-plan'
     | '/app/assets'
     | '/app/billing'
     | '/app/debt-payoff'
@@ -370,6 +381,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/app/action-plan'
     | '/app/assets'
     | '/app/billing'
     | '/app/debt-payoff'
@@ -405,6 +417,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/app'
+    | '/_authenticated/app/action-plan'
     | '/_authenticated/app/assets'
     | '/_authenticated/app/billing'
     | '/_authenticated/app/debt-payoff'
@@ -619,6 +632,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAssetsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/action-plan': {
+      id: '/_authenticated/app/action-plan'
+      path: '/action-plan'
+      fullPath: '/app/action-plan'
+      preLoaderRoute: typeof AuthenticatedAppActionPlanRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/advisor/': {
       id: '/_authenticated/app/advisor/'
       path: '/advisor'
@@ -679,6 +699,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedAppRouteChildren {
+  AuthenticatedAppActionPlanRoute: typeof AuthenticatedAppActionPlanRoute
   AuthenticatedAppAssetsRoute: typeof AuthenticatedAppAssetsRoute
   AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
   AuthenticatedAppDebtPayoffRoute: typeof AuthenticatedAppDebtPayoffRoute
@@ -711,6 +732,7 @@ interface AuthenticatedAppRouteChildren {
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
+  AuthenticatedAppActionPlanRoute: AuthenticatedAppActionPlanRoute,
   AuthenticatedAppAssetsRoute: AuthenticatedAppAssetsRoute,
   AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
   AuthenticatedAppDebtPayoffRoute: AuthenticatedAppDebtPayoffRoute,
