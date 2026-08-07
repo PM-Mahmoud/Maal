@@ -97,6 +97,7 @@ Implementation plan: [HelloMaal wealth platform implementation plan](./wealth-pl
 
 | Build | Status | Verification | Commit |
 |---|---|---|---|
+| W1.2 | Foundation in progress 2026-08-07 | Canonical schema, backfill, parity-gated summary and append-only valuations built; canonical allocation/performance/exports, imports, linking, FX and duplicate workflows remain | This commit |
 | W1.1 | Built 2026-08-07 | `node test/assets-summary.test.js`; client `npm run typecheck`; client `npm run build`; `npm test` | This commit |
 | 1.1 | Built 2026-07-30 | `node test/data-quality.test.js`; `npm run test:integrity-db`; `npm test` | `c62667b` |
 | 1.2 | Built 2026-07-30 | focused data-quality/import tests; `npm run test:integrity-db`; `npm test` | `c45c455` |

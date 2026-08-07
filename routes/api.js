@@ -630,7 +630,8 @@ router.post('/v1/wealth/valuations', async (req, res) => {
     res.status(201).json(valuation);
   } catch (e) {
     console.error('/api/v1/wealth/valuations error:', e.message);
-    res.status(e.message === 'Superseded valuation not found' ? 404 : 500).json({ error: e.message === 'Superseded valuation not found' ? e.message : 'Could not append valuation' });
+    const status = e.message === 'Superseded valuation not found' ? 404 : (e.statusCode || 500);
+    res.status(status).json({ error: status < 500 ? e.message : 'Could not append valuation' });
   }
 });
 

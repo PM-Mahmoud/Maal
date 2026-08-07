@@ -455,7 +455,7 @@ function mergeAssetSummaryIntoProfile(profile, assetSummary) {
 // Fetches all 7 tables for a user and summarizes them in one call. Thin
 // wrapper around summarizeAssets() — keep new calculation logic in the pure
 // function above, not here, so it stays testable without a DB.
-async function getAssetSummary(userId) {
+async function getLegacyAssetSummary(userId) {
   const [cashAccounts, investments, properties, debts, superAccounts, incomes, otherAssets] = await Promise.all([
     listCashAccounts(userId),
     listInvestments(userId),
@@ -468,6 +468,37 @@ async function getAssetSummary(userId) {
   return summarizeAssets({ cashAccounts, investments, properties, debts, superAccounts, incomes, otherAssets });
 }
 
+function canonicalSummaryMatchesLegacy(canonical, legacy) {
+  const fields = ['cashTotal', 'investmentsTotal', 'propertyTotal', 'propertyMortgageTotal', 'debtsTotal', 'superTotal', 'otherAssetsTotal'];
+  return fields.every((field) => Math.abs((Number(canonical[field]) || 0) - (Number(legacy[field]) || 0)) <= 0.01);
+}
+
+// Parity-gated dual read for the compatibility rollout. Canonical valuations
+// become authoritative only when every component matches the legacy register;
+// partial/stale backfills fail safely to the legacy summary.
+async function getAssetSummary(userId) {
+  const legacy = await getLegacyAssetSummary(userId);
+  try {
+    const snapshot = await require('./canonical-wealth').getCanonicalSnapshot(userId);
+    if (!snapshot.valuations.length || !canonicalSummaryMatchesLegacy(snapshot.summary, legacy)) return legacy;
+    return {
+      cashTotal: snapshot.summary.cashTotal,
+      investmentsTotal: snapshot.summary.investmentsTotal,
+      propertyTotal: snapshot.summary.propertyTotal,
+      propertyMortgageTotal: snapshot.summary.propertyMortgageTotal,
+      debtsTotal: snapshot.summary.debtsTotal,
+      superTotal: snapshot.summary.superTotal,
+      incomeTotal: legacy.incomeTotal,
+      otherAssetsTotal: snapshot.summary.otherAssetsTotal,
+    };
+  } catch (error) {
+    // Deployment-order safety for processes started before the migration has
+    // created the canonical tables. Other database failures remain visible.
+    if (error && error.code === '42P01') return legacy;
+    throw error;
+  }
+}
+
 module.exports = {
   listCashAccounts, getCashAccount, createCashAccount, updateCashAccount, deleteCashAccount,
   listInvestments, getInvestment, createInvestment, updateInvestment, deleteInvestment,
@@ -478,5 +509,6 @@ module.exports = {
   listOtherAssets, getOtherAsset, createOtherAsset, updateOtherAsset, deleteOtherAsset,
   deleteAssetsBySource,
   listBasiqAccountsForQuality,
-  summarizeAssets, wealthTotalsFromSummary, getAssetSummary, mergeAssetSummaryIntoProfile,
+  summarizeAssets, wealthTotalsFromSummary, canonicalSummaryMatchesLegacy,
+  getLegacyAssetSummary, getAssetSummary, mergeAssetSummaryIntoProfile,
 };

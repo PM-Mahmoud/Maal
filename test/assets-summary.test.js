@@ -6,7 +6,7 @@
 // CLAUDE.md's hard rule, financial calculations need a test before merge.
 
 const assert = require('assert');
-const { summarizeAssets, wealthTotalsFromSummary, mergeAssetSummaryIntoProfile } = require('../db/assets');
+const { summarizeAssets, wealthTotalsFromSummary, canonicalSummaryMatchesLegacy, mergeAssetSummaryIntoProfile } = require('../db/assets');
 
 let passed = 0;
 let failed = 0;
@@ -108,6 +108,13 @@ test('missing and Postgres string summary values remain deterministic', () => {
     liabilityTotal: 250,
     netWorth: 750,
   });
+});
+
+test('canonical compatibility read requires component-level parity, not merely matching net worth', () => {
+  const legacy = { cashTotal: 100, investmentsTotal: 200, propertyTotal: 0, propertyMortgageTotal: 0, debtsTotal: 50, superTotal: 0, otherAssetsTotal: 0 };
+  assert.strictEqual(canonicalSummaryMatchesLegacy({ ...legacy }, legacy), true);
+  assert.strictEqual(canonicalSummaryMatchesLegacy({ ...legacy, cashTotal: 150, debtsTotal: 100 }, legacy), false,
+    'offsetting asset/debt errors can preserve net worth but must still fail parity');
 });
 
 console.log('\nmergeAssetSummaryIntoProfile (deployment-ordering safety)');
