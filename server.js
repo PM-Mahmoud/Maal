@@ -114,6 +114,9 @@ app.get('/health', async (_req, res) => {
     db: true,
     integrations: {
       basiq: !!(process.env.BASIQ_API_KEY || '').trim(),
+      lunchflow: !!((process.env.LUNCHFLOW_CLIENT_ID || '').trim()
+        && (process.env.LUNCHFLOW_CLIENT_SECRET || '').trim()
+        && (process.env.PROVIDER_TOKEN_ENCRYPTION_KEY || '').trim()),
       advisor: !!((process.env.AZURE_OPENAI_API_KEY || process.env.GROQ_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.AI_API_KEY || '').trim()),
       azure: !!((process.env.AZURE_OPENAI_API_KEY || '').trim() && (process.env.AZURE_OPENAI_ENDPOINT || '').trim() && (process.env.AZURE_OPENAI_DEPLOYMENT || '').trim()),
       stripe: !!(process.env.STRIPE_SECRET_KEY || '').trim(),

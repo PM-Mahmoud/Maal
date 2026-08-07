@@ -484,6 +484,7 @@ function CategoryRow({ cat, onAdd, onEdit }: { cat: Cat; onAdd: (c: Cat) => void
 
 function sourceLabel(source: unknown) {
   if (source === "basiq") return "Connected";
+  if (source === "lunchflow") return "Lunch Flow";
   if (source === "import") return "Imported";
   if (source === "manual") return "Manual";
   return "Source unavailable";
@@ -566,9 +567,12 @@ const CONNECT_BANKS: string[] = [
 
 function ConnectPanel() {
   const [status, setStatus] = useState<{ connected: boolean; live: boolean } | null>(null);
+  const [lunchFlowStatus, setLunchFlowStatus] = useState<{ connected: boolean; live: boolean } | null>(null);
   const [statusFailed, setStatusFailed] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [lunchFlowSyncing, setLunchFlowSyncing] = useState(false);
+  const [lunchFlowMsg, setLunchFlowMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/v1/basiq/status", { credentials: "include" })
@@ -578,7 +582,30 @@ function ConnectPanel() {
       })
       .then(j => (j && typeof j.live === "boolean" ? setStatus(j) : setStatusFailed(true)))
       .catch(() => setStatusFailed(true));
+    fetch("/lunchflow/status", { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => j && typeof j.live === "boolean" ? setLunchFlowStatus(j) : null)
+      .catch(() => null);
   }, []);
+
+  async function handleLunchFlowSync() {
+    setLunchFlowSyncing(true);
+    setLunchFlowMsg(null);
+    try {
+      const response = await fetch("/lunchflow/sync", {
+        method: "POST",
+        credentials: "include",
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Lunch Flow sync failed");
+      setLunchFlowMsg(`Synced ${result.accounts} account${result.accounts === 1 ? "" : "s"} and ${result.transactions} transactions.`);
+      window.setTimeout(() => window.location.reload(), 700);
+    } catch (error) {
+      setLunchFlowMsg(error instanceof Error ? error.message : "Lunch Flow sync failed.");
+    } finally {
+      setLunchFlowSyncing(false);
+    }
+  }
 
   async function handleSync() {
     setSyncing(true);
@@ -703,9 +730,40 @@ function ConnectPanel() {
         </>
       )}
 
+      {lunchFlowStatus?.live && (
+        <div className="border-t border-border pt-3 mt-3 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[12px] font-semibold">Lunch Flow</p>
+              <p className="text-[11px] text-muted-foreground">
+                {lunchFlowStatus.connected ? "Connected as an additional data provider" : "Global bank and brokerage coverage"}
+              </p>
+            </div>
+            {lunchFlowStatus.connected && <span className="size-2 rounded-full bg-[var(--mint)] shrink-0" />}
+          </div>
+          {lunchFlowStatus.connected ? (
+            <button
+              onClick={handleLunchFlowSync}
+              disabled={lunchFlowSyncing}
+              className="w-full py-2 rounded-[10px] border border-border text-[12px] font-semibold disabled:opacity-50 transition hover:bg-[var(--secondary)]"
+            >
+              {lunchFlowSyncing ? "Syncing Lunch Flow…" : "Sync Lunch Flow"}
+            </button>
+          ) : (
+            <a
+              href="/lunchflow/connect"
+              className="block w-full py-2 rounded-[10px] border border-border text-[12px] font-semibold text-center transition hover:bg-[var(--secondary)]"
+            >
+              Connect with Lunch Flow
+            </a>
+          )}
+          {lunchFlowMsg && <p className="text-[11px] text-muted-foreground">{lunchFlowMsg}</p>}
+        </div>
+      )}
+
       <div className="flex items-start gap-2 text-[11px] text-muted-foreground border-t border-border pt-3 mt-3">
         <Lock className="h-3 w-3 mt-0.5 shrink-0 text-[color:var(--accent)]" />
-        <p><span className="font-semibold text-foreground">Your data is secure.</span> Bank connections use CDR-regulated Basiq infrastructure. Read-only access only.</p>
+        <p><span className="font-semibold text-foreground">Your data is secure.</span> Basiq and Lunch Flow connections are read-only.</p>
       </div>
     </div>
   );
