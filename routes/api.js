@@ -478,9 +478,9 @@ router.get('/v1/markets/earnings', async (req, res) => {
 
 router.get('/v1/notifications', async (req, res) => {
   if (!req.session.userId) return res.json([]);
-  res.json([]);
+  try { res.json(await require('../db/extensibility').listNotifications(req.session.userId, req.query.limit)); } catch (e) { res.status(500).json({ error: 'Could not load notifications' }); }
 });
-router.post('/v1/notifications/read', (_req, res) => res.json({ ok: true }));
+router.post('/v1/notifications/read', async (req, res) => { if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' }); try { await require('../db/extensibility').markNotificationsRead(req.session.userId, Array.isArray(req.body?.ids) ? req.body.ids : []); res.json({ ok: true }); } catch (e) { res.status(500).json({ error: 'Could not update notifications' }); } });
 
 // Notification preferences (PR 10) — currently the daily portfolio digest opt-in.
 // Whitelisted keys only, stored in users.notification_prefs JSONB.

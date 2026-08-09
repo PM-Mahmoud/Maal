@@ -19,6 +19,9 @@ async function loadFinancialExport(userId) {
   data.transaction_categories = (await pool.query(`SELECT c.* FROM transaction_categories c JOIN transactions t ON t.id=c.transaction_id WHERE t.user_id=$1 ORDER BY c.transaction_id`, [userId])).rows;
   data.transaction_provider_details = (await pool.query(`SELECT * FROM transaction_provider_details WHERE user_id=$1 ORDER BY transaction_id`, [userId])).rows;
   data.transaction_rules = (await pool.query(`SELECT * FROM transaction_rules WHERE user_id=$1 ORDER BY id`, [userId])).rows;
+  data.supporting_documents = (await pool.query(`SELECT id,tax_year,document_type,entity_type,entity_id,created_at FROM supporting_documents WHERE user_id=$1 ORDER BY id`, [userId])).rows;
+  data.notifications = (await pool.query(`SELECT id,type,title,body,data,read_at,created_at FROM notifications WHERE user_id=$1 ORDER BY id`, [userId])).rows;
+  data.activity_ledger = (await pool.query(`SELECT * FROM activity_ledger WHERE subject_user_id=$1 ORDER BY id`, [userId])).rows;
   data.vault_files = (await pool.query(`SELECT id,kind,filename,mime,size_bytes,created_at FROM vault_files WHERE user_id=$1 ORDER BY id`, [userId])).rows;
   return data;
 }
