@@ -435,7 +435,7 @@ function mockResponse() {
     assert.deepStrictEqual(savedTransactions.map((row) => row.provider_id), [
       'lunchflow:txn-1', 'lunchflow:txn-2',
     ]);
-    assert.deepStrictEqual(result, { accounts: 2, transactions: 2 });
+    assert.deepStrictEqual(result, { accounts: 2, transactions: 2, holdings: 0 });
   });
 
   await test('refreshes once and retries provider data after an unexpected 401', async () => {

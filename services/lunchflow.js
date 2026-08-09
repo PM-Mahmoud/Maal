@@ -4,8 +4,8 @@ const DEFAULT_BASE_URL = 'https://lunchflow.app';
 const REQUEST_TIMEOUT_MS = 15_000;
 const manifest = Object.freeze({
   id: 'lunchflow', name: 'Lunch Flow', region: 'AU',
-  scopes: Object.freeze(['accounts:read', 'balances:read', 'transactions:read']),
-  capabilities: Object.freeze(['accounts', 'balances', 'transactions']),
+  scopes: Object.freeze(['accounts:read', 'balances:read', 'transactions:read', 'holdings:read']),
+  capabilities: Object.freeze(['accounts', 'balances', 'transactions', 'holdings']),
 });
 
 function config() {
@@ -107,12 +107,25 @@ async function getAccounts(accessToken) {
   return Array.isArray(json) ? json : (json.accounts || json.data || []);
 }
 
-async function getTransactions(accountId, accessToken) {
+async function getTransactions(accountId, accessToken, options = {}) {
+  const query = new URLSearchParams({ include_pending: 'true' });
+  if (options.from) query.set('from', String(options.from));
+  if (options.to) query.set('to', String(options.to));
   const json = await userRequest(
-    `/accounts/${encodeURIComponent(accountId)}/transactions?include_pending=true`,
+    `/accounts/${encodeURIComponent(accountId)}/transactions?${query}`,
     accessToken
   );
   return Array.isArray(json) ? json : (json.transactions || json.data || []);
+}
+
+async function getHoldings(accountId, accessToken) {
+  try {
+    const json = await userRequest(`/accounts/${encodeURIComponent(accountId)}/holdings`, accessToken);
+    return { holdings: Array.isArray(json) ? json : (json.holdings || json.data || []), supported: true };
+  } catch (error) {
+    if ([404, 501].includes(error.status)) return { holdings: [], supported: false };
+    throw error;
+  }
 }
 
 async function getBalance(accountId, accessToken) {
@@ -129,4 +142,5 @@ module.exports = {
   getAccounts,
   getTransactions,
   getBalance,
+  getHoldings,
 };

@@ -608,7 +608,8 @@ function ConnectPanel() {
         if (run.status === "succeeded") {
           const accounts = Number(run.summary?.accounts ?? 0);
           const transactions = Number(run.summary?.transactions ?? 0);
-          setLunchFlowMsg(`Synced ${accounts} account${accounts === 1 ? "" : "s"} and ${transactions} transactions.`);
+          const holdings = Number(run.summary?.holdings ?? 0);
+          setLunchFlowMsg(`Synced ${accounts} account${accounts === 1 ? "" : "s"}, ${transactions} transactions, and ${holdings} holding${holdings === 1 ? "" : "s"}.`);
           window.setTimeout(() => window.location.reload(), 700);
           return;
         }

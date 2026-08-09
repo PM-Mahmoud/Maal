@@ -3,13 +3,21 @@
 const lunchflow = require('./lunchflow');
 const connections = require('../db/provider-connections');
 const imports = require('../db/lunchflow-import');
-const { mapAccount, mapTransaction } = require('../lib/lunchflow-mapping');
+const { mapAccount, mapTransaction, mapHolding } = require('../lib/lunchflow-mapping');
+
+function transactionWindowStart(now = new Date()) {
+  const start = new Date(now);
+  start.setUTCDate(start.getUTCDate() - 120);
+  return start.toISOString().slice(0, 10);
+}
 
 function createSyncService(dependencies = {}) {
   const provider = dependencies.provider || lunchflow;
   const connectionStore = dependencies.connectionStore || connections;
   const accountStore = dependencies.accountStore || imports;
   const transactionStore = dependencies.transactionStore || imports;
+  const holdingStore = dependencies.holdingStore || dependencies.accountStore || imports;
+  const now = dependencies.now || (() => new Date());
   const activeUsers = new Set();
 
   return async function syncLunchFlow(userId, options = {}) {
@@ -35,15 +43,26 @@ function createSyncService(dependencies = {}) {
       if (expiresSoon) await refreshConnection();
 
       async function loadProviderData() {
+        const syncNow = now();
+        const observedAt = syncNow.toISOString();
+        const windowStart = transactionWindowStart(syncNow);
         const rawAccounts = await provider.getAccounts(connection.access_token);
         return Promise.all(rawAccounts.map(async (account) => {
-          const [balance, transactions] = await Promise.all([
+          const [balance, transactions, holdingResponse] = await Promise.all([
             provider.getBalance(account.id, connection.access_token),
-            provider.getTransactions(account.id, connection.access_token),
+            provider.getTransactions(account.id, connection.access_token, { from: windowStart }),
+            provider.getHoldings ? provider.getHoldings(account.id, connection.access_token) : [],
           ]);
+          const holdings = Array.isArray(holdingResponse)
+            ? holdingResponse
+            : (holdingResponse?.holdings || []);
           return {
             account: mapAccount(account, balance),
             transactions: transactions.map(mapTransaction).filter(Boolean),
+            holdings: holdings.map((holding) => mapHolding(holding, account.id, observedAt)).filter(Boolean),
+            holdingsSupported: Array.isArray(holdingResponse) || holdingResponse?.supported === true,
+            observedAt,
+            windowStart,
           };
         }));
       }
@@ -58,20 +77,47 @@ function createSyncService(dependencies = {}) {
       }
       const mappedAccounts = accountGroups.map((group) => group.account).filter(Boolean);
       const mappedTransactions = accountGroups.flatMap((group) => group.transactions);
+      const mappedHoldings = accountGroups.flatMap((group) => group.holdings);
+      const holdingsByAccount = Object.fromEntries(accountGroups
+        .filter((group) => group.holdingsSupported)
+        .map((group) => [group.account.account_reference, group.holdings]));
+      const unsupportedHoldingAccounts = accountGroups
+        .filter((group) => !group.holdingsSupported)
+        .map((group) => group.account.account_reference);
+      const windowStart = accountGroups[0]?.windowStart || transactionWindowStart(now());
       const withFence = options.withFence || (async (mutation) => mutation());
       await withFence(() => accountStore.replaceAccounts(userId, mappedAccounts));
       await options.onProgress?.('accounts', { imported: mappedAccounts.length });
-      await withFence(() => transactionStore.upsertTransactions(userId, mappedTransactions));
+      await withFence(() => transactionStore.upsertTransactions(userId, mappedTransactions, {
+        windowStart,
+        accountReferences: mappedAccounts.map((account) => account.account_reference),
+      }));
       await options.onProgress?.('transactions', { imported: mappedTransactions.length });
       const canonical = accountStore.promoteCanonicalAccounts
-        ? await withFence(() => accountStore.promoteCanonicalAccounts(userId, mappedAccounts))
+          ? await withFence(() => accountStore.promoteCanonicalAccounts(userId, mappedAccounts, {
+            holdingsByAccount,
+            unsupportedHoldingAccounts,
+            observedAt: accountGroups[0]?.observedAt || now().toISOString(),
+          }))
         : null;
       if (canonical) await options.onProgress?.('canonical_accounts', canonical);
-      return { accounts: mappedAccounts.length, transactions: mappedTransactions.length, ...(canonical ? { canonical } : {}) };
+      const holdings = holdingStore.replaceHoldings
+          ? await withFence(() => holdingStore.replaceHoldings(userId, mappedHoldings, {
+            accountReferences: Object.keys(holdingsByAccount),
+            observedAt: accountGroups[0]?.observedAt || now().toISOString(),
+          }))
+        : { holdings: 0 };
+      await options.onProgress?.('holdings', holdings);
+      return {
+        accounts: mappedAccounts.length,
+        transactions: mappedTransactions.length,
+        holdings: Number(holdings?.holdings || 0),
+        ...(canonical ? { canonical } : {}),
+      };
     } finally {
       activeUsers.delete(userId);
     }
   };
 }
 
-module.exports = { createSyncService, syncLunchFlow: createSyncService() };
+module.exports = { transactionWindowStart, createSyncService, syncLunchFlow: createSyncService() };
