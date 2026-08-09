@@ -13,6 +13,7 @@ import {
   X, Lightbulb, CreditCard, Menu,
   PiggyBank, Receipt, Calculator, TrendingDown, Dices,
   BarChart3, BriefcaseBusiness,
+  HandCoins, ShieldCheck, Store,
 } from "lucide-react";
 import { ClipboardList, ListChecks } from "lucide-react";
 
@@ -47,6 +48,9 @@ const PORTFOLIO: Item[] = [
 ];
 
 const TOOLS: Item[] = [
+  { to: "/app/zakat", label: "Zakat", icon: HandCoins },
+  { to: "/app/purification", label: "Purification", icon: ShieldCheck },
+  { to: "/app/marketplace", label: "Partner Services", icon: Store },
   { to: "/app/super-optimizer", label: "Super Optimiser", icon: PiggyBank },
   { to: "/app/tax-optimizer", label: "Tax Optimiser", icon: Receipt },
   { to: "/app/tax-bracket-visualizer", label: "Tax Brackets", icon: Calculator },

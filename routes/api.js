@@ -637,6 +637,27 @@ router.post('/v1/wealth/valuations', async (req, res) => {
 
 router.post('/v1/wealth/import-statement', require('../services/wealth-statement-import').statementImportHandler);
 
+// Governed wealth services. Every calculation persists its exact input snapshot,
+// methodology version and evidence lines; partner access is explicit and revocable.
+const wealthServices = require('../services/wealth-services-api');
+router.post('/v1/zakat/runs', wealthServices.calculateZakatHandler);
+router.get('/v1/zakat/prefill', wealthServices.zakatPrefillHandler);
+router.post('/v1/purification/runs', wealthServices.calculatePurificationHandler);
+router.get('/v1/service-runs', wealthServices.listRunsHandler);
+router.get('/v1/service-runs/:id/evidence', wealthServices.evidenceHandler);
+router.get('/v1/purification/obligations', wealthServices.obligationsHandler);
+router.post('/v1/purification/obligations/:id/satisfy', wealthServices.satisfyHandler);
+router.get('/v1/marketplace', wealthServices.marketplaceHandler);
+router.get('/v1/partner-consents', wealthServices.consentsHandler);
+router.post('/v1/partners/:partnerKey/consents', wealthServices.consentHandler);
+router.delete('/v1/partner-consents/:id', wealthServices.revokeHandler);
+router.post('/v1/admin/partners', wealthServices.partnerManifestHandler);
+router.post('/v1/admin/partners/:partnerKey/approval', wealthServices.partnerApprovalHandler);
+router.post('/v1/admin/marketplace-governance', wealthServices.governanceHandler);
+router.post('/v1/admin/methodologies/:serviceType/:key/:version/approve', wealthServices.methodologyApprovalHandler);
+router.post('/v1/admin/purification-ratios', wealthServices.ratioDatasetHandler);
+router.post('/v1/admin/partners/:partnerKey/sandbox-certification', wealthServices.sandboxCertificationHandler);
+
 router.patch('/v1/profile', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {

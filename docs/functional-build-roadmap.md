@@ -51,12 +51,17 @@ Implementation plan: [HelloMaal wealth platform implementation plan](./wealth-pl
   the existing seven asset tables.
 - [x] Build W1.3 — Add reliable broker/super statement imports and a provider-adapter
   contract with explicit scopes, durable syncs, lineage, health and revocation.
-- [ ] Build W2.1 — Deliver a versioned, explainable zakat calculator against an immutable
+- [x] Build W2.1 — Deliver a versioned, explainable zakat calculator against an immutable
   wealth snapshot, with user-confirmed classifications and downloadable evidence.
-- [ ] Build W2.2 — Deliver a versioned listed-investment purification workflow with
+- [x] Build W2.2 — Deliver a versioned listed-investment purification workflow with
   security/distribution-level calculations, licensed data provenance and obligation history.
-- [ ] Build W3.1 — Add a curated partner registry, consent and audit controls; launch a
+- [x] Build W3.1 — Add a curated partner registry, consent and audit controls; launch a
   product marketplace only after the regulatory and commercial operating model is approved.
+
+Activation note (2026-08-09): the product and governance controls are built. The seeded
+zakat and purification methodology packs intentionally remain `pending_review` until a
+qualified reviewer approves them. The partner marketplace intentionally remains disabled
+until an administrator records the approved regulatory and commercial terms version.
 
 ## 5. Forecasting and reporting
 
