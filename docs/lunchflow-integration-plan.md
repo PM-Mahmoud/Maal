@@ -31,7 +31,31 @@ independent throughout this work.
 - [x] Add an explicit disconnect/re-authorize flow and provider-specific health.
 - [x] Add guarded database integration tests for encrypted token and import persistence.
 - [ ] Validate the production OAuth flow and supported Australian institutions
-      with non-sensitive test accounts.
+      with non-sensitive test accounts. Current provider documentation says
+      Australian banks are not supported; Australian brokerages are supported
+      through SnapTrade, including CommSec, Stake, and Interactive Brokers.
+      Production execution remains blocked until the deployment has provider
+      credentials and dedicated non-sensitive test accounts.
+
+## Validation record (2026-08-27)
+
+- Provider contract reviewed against the [Lunch Flow Platform API
+  documentation](https://www.lunchflow.app/docs/api/platform-api-overview): the
+  OAuth authorize/token paths and bearer-authenticated account paths used by
+  Maal match the documented contract. Access tokens expire after one hour;
+  Maal refreshes proactively and retries once on HTTP 401.
+- [Lunch Flow's Australia coverage note](https://help.lunchflow.app/articles/0888761-australia)
+  states that Australian banks are not currently supported. It lists
+  Interactive Brokers, CommSec, and Stake as Australian brokerage examples via
+  SnapTrade.
+- No production client credentials or dedicated test-account result was
+  available in this workspace, so no real OAuth exchange or institution login
+  was attempted. Do not mark the production validation item complete until a
+  controlled run records connect, callback, account, balance, transaction, and
+  (where supported) holdings results for each approved brokerage account.
+- Automated coverage passes for OAuth state binding, token exchange/refresh,
+  API normalization, 401 retry, 120-day transaction mirroring, holdings
+  support/unsupported behavior, persistence, and durable import handling.
 
 ## Required production environment
 

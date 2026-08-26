@@ -168,6 +168,32 @@ async function test(name, fn) {
     assert.strictEqual(canonicalOptions.observedAt, '2026-08-09T04:00:00.000Z');
   });
 
+  await test('sync treats adapters without holdings support as unsupported', async () => {
+    let canonicalOptions;
+    const sync = createSyncService({
+      now: () => new Date('2026-08-10T04:00:00Z'),
+      provider: {
+        getAccounts: async () => [{ id: 'cash-1', name: 'Cash', type: 'depository', currency: 'AUD' }],
+        getBalance: async () => ({ amount: 100, currency: 'AUD' }),
+        getTransactions: async () => [],
+      },
+      connectionStore: { getConnection: async () => ({ access_token: 'access' }) },
+      accountStore: {
+        replaceAccounts: async () => {},
+        promoteCanonicalAccounts: async (_userId, _accounts, options) => {
+          canonicalOptions = options;
+          return { promoted: 1 };
+        },
+      },
+      transactionStore: { upsertTransactions: async () => {} },
+      holdingStore: { replaceHoldings: async () => ({ holdings: 0 }) },
+    });
+
+    await sync(42);
+    assert.deepStrictEqual(canonicalOptions.holdingsByAccount, {});
+    assert.deepStrictEqual(canonicalOptions.unsupportedHoldingAccounts, ['lunchflow:cash-1']);
+  });
+
   console.log(`\n${passed} passed, ${failed} failed`);
   if (failed) process.exit(1);
 })();

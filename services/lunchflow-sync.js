@@ -51,7 +51,9 @@ function createSyncService(dependencies = {}) {
           const [balance, transactions, holdingResponse] = await Promise.all([
             provider.getBalance(account.id, connection.access_token),
             provider.getTransactions(account.id, connection.access_token, { from: windowStart }),
-            provider.getHoldings ? provider.getHoldings(account.id, connection.access_token) : [],
+            provider.getHoldings
+              ? provider.getHoldings(account.id, connection.access_token)
+              : { holdings: [], supported: false },
           ]);
           const holdings = Array.isArray(holdingResponse)
             ? holdingResponse
