@@ -13,6 +13,8 @@
     "test:wealth-services": "node test/zakat.test.js && node test/purification.test.js && node test/partner-platform.test.js",
     "test:integrity-db": "node test/financial-integrity-db.test.js",
     "test:lunchflow": "node test/lunchflow.test.js && node test/lunchflow-holdings.test.js",
+    "test:collaboration": "node test/collaboration.test.js",
+    "test:collaboration-db": "node test/collaboration-db.test.js",
     "test:lunchflow-db": "node test/lunchflow-db.test.js",
     "eval": "node evals/run-evals.js",
     "build:client": "cd client && npm install && npm run build",

@@ -658,6 +658,28 @@ router.post('/v1/admin/methodologies/:serviceType/:key/:version/approve', wealth
 router.post('/v1/admin/purification-ratios', wealthServices.ratioDatasetHandler);
 router.post('/v1/admin/partners/:partnerKey/sandbox-certification', wealthServices.sandboxCertificationHandler);
 
+// ─── Collaboration and compliance (Build 8) ───────────────────────────────
+// Membership is metadata only: it never widens access to another user's
+// financial records. Shared reads require an explicit, active, scope-matched
+// accountant/adviser grant and have no write endpoints.
+const collaboration = require('../services/collaboration');
+router.get('/v1/collaboration/households', collaboration.listHouseholdsHandler);
+router.post('/v1/collaboration/households', collaboration.createHouseholdHandler);
+router.get('/v1/collaboration/households/:householdId', collaboration.getHouseholdHandler);
+router.post('/v1/collaboration/households/:householdId/members', collaboration.addMemberHandler);
+router.patch('/v1/collaboration/households/:householdId/members/:userId', collaboration.updateMemberHandler);
+router.delete('/v1/collaboration/households/:householdId/members/:userId', collaboration.removeMemberHandler);
+router.get('/v1/collaboration/grants', collaboration.listGrantsHandler);
+router.post('/v1/collaboration/grants', collaboration.createGrantHandler);
+router.post('/v1/collaboration/grants/:grantId/accept', collaboration.acceptGrantHandler);
+router.delete('/v1/collaboration/grants/:grantId', collaboration.revokeGrantHandler);
+router.get('/v1/collaboration/documents', collaboration.listDocumentsHandler);
+router.post('/v1/collaboration/documents', collaboration.linkDocumentHandler);
+router.delete('/v1/collaboration/documents/:documentId', collaboration.unlinkDocumentHandler);
+router.get('/v1/collaboration/shared/:ownerUserId/documents/:documentId', collaboration.sharedDocumentHandler);
+router.get('/v1/collaboration/shared/:ownerUserId/tax-export', collaboration.taxExportHandler);
+router.get('/v1/collaboration/shared/:ownerUserId/:scope', collaboration.sharedReadHandler);
+
 router.patch('/v1/profile', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
@@ -709,6 +731,9 @@ router.get('/v1/cash-risks', require('../services/cash-risks').cashRiskHandler);
 router.post('/v1/monthly-closes/:month', require('../services/monthly-close').monthlyCloseHandler);
 router.get('/v1/monthly-closes', require('../services/monthly-close').listMonthlyClosesHandler);
 router.post('/v1/financial-export', require('../services/financial-export').financialExportHandler);
+router.get('/v1/data-portability', require('../services/collaboration').dataPortabilityHandler);
+router.post('/v1/data-portability', require('../services/collaboration').dataPortabilityHandler);
+router.post('/v1/account/deletion', require('../services/collaboration').deleteAccountHandler);
 router.get('/v1/planning', require('../services/planning').previewHandler);
 router.post('/v1/planning', require('../services/planning').saveHandler);
 router.get('/v1/planning/history', require('../services/planning').historyHandler);

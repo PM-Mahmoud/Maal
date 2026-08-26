@@ -86,10 +86,25 @@ until an administrator records the approved regulatory and commercial terms vers
 
 ## 8. Collaboration and compliance
 
-- [ ] Build 8.1 — Add household membership and ownership boundaries.
-- [ ] Build 8.2 — Add scoped, read-only accountant/adviser access.
-- [ ] Build 8.3 — Add tax-ready exports and supporting-document links.
-- [ ] Build 8.4 — Add complete data portability and deletion workflows.
+- [~] Build 8.1 — Add household membership and ownership boundaries. The server-side
+  slice now creates owner-led households, member records, bounded ownership shares,
+  and owner-only member management. Binding every canonical asset/ownership interest
+  to a household and adding the first-party UI remain.
+- [x] Build 8.2 — Add scoped, read-only accountant/adviser access. Grants are pending
+  until accepted, expire safely, can be revoked immediately, and expose only explicit
+  overview, transaction, document, or tax-export read scopes.
+- [x] Build 8.3 — Add tax-ready exports and supporting-document links. Vault files can
+  be linked to a tax year/entity only by their owner; shared document downloads and
+  Australian FY-bounded tax exports enforce the grant scope.
+- [x] Build 8.4 — Add complete data portability and deletion workflows. Portable JSON/CSV
+  exports include the user's collaboration records, and account deletion requires an
+  explicit confirmation phrase before the existing cascade removes the account.
+
+Build 8 server-side delivery (2026-08-27): collaboration endpoints are live under
+`/api/v1/collaboration/*`, `/api/v1/data-portability`, and `/api/v1/account/deletion`.
+All reads and mutations are tenant-scoped in SQL; membership alone does not reveal a
+member's financial records. The remaining release work is canonical household-to-asset
+assignment, household-aware totals/calculations, and a Settings/Collaboration UI.
 
 ## 9. Extensibility
 
@@ -145,3 +160,11 @@ for those call sites).
 | 7.2 | Built 2026-08-07 | Maal Score and lineage tests; client build/typecheck; `npm test` | `6c587cc` |
 | 7.3 | Built 2026-08-07 | recommendation action tests; client build/typecheck; `npm test` | `5a92b35` |
 | 7.4 | Built 2026-08-07 | recommendation lifecycle/outcome tests; client build/typecheck; `npm test` | `5a92b35`, `277c6ac` |
+| 8.1 | Server slice built 2026-08-27 | `npm run test:collaboration`; optional local PostgreSQL contract `npm run test:collaboration-db` | This commit |
+| 8.2 | Built 2026-08-27 | `npm run test:collaboration`; route registration and grant-scope contract | This commit |
+| 8.3 | Built 2026-08-27 | `npm run test:collaboration`; FY-bounded tax export and same-user Vault-link contract | This commit |
+| 8.4 | Built 2026-08-27 | `npm run test:collaboration`; portability endpoint and deletion-confirmation contract | This commit |
+| 9.1 | Built 2026-08-27 | `node test/extensibility.test.js`; notification APIs/preferences, rule notifications and event publisher | This commit |
+| 9.2 | Built 2026-08-27 | `node test/extensibility.test.js`; event/condition validation, idempotent rule runs and notification actions | This commit |
+| 9.3 | Built 2026-08-27 | `node test/extensibility.test.js`; append-only activity writes/reads and sensitive-operation audit calls | This commit |
+| 9.4 | Built 2026-08-27 | `node test/extensibility.test.js`; scoped tokens, export authorization, HMAC webhooks and delivery deduplication | This commit |
