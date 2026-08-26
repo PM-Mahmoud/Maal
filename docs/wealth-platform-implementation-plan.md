@@ -192,3 +192,14 @@ cannot corrupt canonical records and product experiences match the approved oper
 - Trading, transfers, custody or automated purification/zakat payments.
 - Personalised product recommendations without the required licensing and governance.
 - Credential scraping or brittle browser automation for brokers, super funds or property portals.
+
+
+## Extensibility delivery status (2026-08-27)
+
+The first-party server-side extensibility slice is implemented in `services/extensibility.js`.
+Notifications/preferences, event-condition rules, an append-only sensitive-operation ledger,
+scoped API tokens, financial-export authorization and signed outbound webhooks are wired to
+user-scoped PostgreSQL records. Webhook deliveries and rule runs are idempotent, and delivery
+signatures include a timestamp and event ID for replay-aware consumers. Remaining work is a
+Settings UI, durable retry/backoff processing, email/push fan-out and broader event call-site
+coverage; arbitrary third-party code execution remains explicitly deferred.

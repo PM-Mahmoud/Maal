@@ -93,10 +93,22 @@ until an administrator records the approved regulatory and commercial terms vers
 
 ## 9. Extensibility
 
-- [ ] Build 9.1 — Add a reusable notification service and preferences.
-- [ ] Build 9.2 — Generalise automation into an event/condition rules engine.
-- [ ] Build 9.3 — Add a complete activity ledger for sensitive operations.
-- [ ] Build 9.4 — Add scoped API tokens and webhooks.
+- [x] Build 9.1 — Add a reusable notification service and preferences.
+- [x] Build 9.2 — Generalise automation into an event/condition rules engine.
+- [x] Build 9.3 — Add a complete activity ledger for sensitive operations.
+- [x] Build 9.4 — Add scoped API tokens and webhooks.
+
+Build 9 delivery (2026-08-27): the server-side extensibility slice is complete. It provides
+user-scoped notification read/acknowledgement and preference APIs; validated event types and
+condition rules with idempotent notification actions; append-only activity records and reads;
+read/write/export/webhooks API-token scopes; and signed, timestamped, idempotent outbound
+webhook deliveries. Financial exports emit an audited `export.created` event. The reusable
+event publisher is available to import/sync/service code through `services/extensibility.js`.
+
+Remaining follow-up is deliberately outside this build slice: a first-party Settings UI for
+token/rule/webhook management, a durable retry worker and delivery backoff, email/push channel
+fan-out, and wiring every existing domain mutation to an event (the shared publisher is ready
+for those call sites).
 
 ## Build log
 
