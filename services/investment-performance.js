@@ -4,18 +4,28 @@ const { calculateModifiedDietz } = require('../lib/investment-performance');
 function createInvestmentPerformanceService(database) {
   return async function investmentPerformance(userId, days = 365) {
     const inputs = await database.loadPerformanceInputs(userId, days);
-    if (inputs.snapshots.length < 2) {
+    const canonical = (inputs.canonicalSnapshots || []).filter((row) => Number(row.invest_balance) > 0);
+    if (canonical.length >= 2 && !inputs.canonicalCashFlowCoverage) {
+      return {
+        return_pct: null, investment_gain: null, net_contributions: 0, period_days: days,
+        source: 'canonical', reason: 'cash_flow_coverage_incomplete',
+      };
+    }
+    const snapshots = canonical.length >= 2 ? canonical : inputs.snapshots;
+    if (snapshots.length < 2) {
       return { return_pct: null, investment_gain: null, net_contributions: 0, period_days: days };
     }
-    const opening = inputs.snapshots[0];
-    const closing = inputs.snapshots[inputs.snapshots.length - 1];
+    const opening = snapshots[0];
+    const closing = snapshots[snapshots.length - 1];
     return {
       ...calculateModifiedDietz({
         openingValue: opening.invest_balance, closingValue: closing.invest_balance,
-        startDate: opening.snap_date, endDate: closing.snap_date, cashFlows: inputs.cashFlows,
+        startDate: opening.snap_date, endDate: closing.snap_date,
+        cashFlows: canonical.length >= 2 ? inputs.canonicalCashFlows : inputs.cashFlows,
       }),
       opening_value: Number(opening.invest_balance), closing_value: Number(closing.invest_balance),
       start_date: opening.snap_date, end_date: closing.snap_date, period_days: days,
+      source: canonical.length >= 2 ? 'canonical' : 'compatibility',
     };
   };
 }

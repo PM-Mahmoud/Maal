@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as AuthenticatedAppZakatRouteImport } from './routes/_authenticated/app.zakat'
 import { Route as AuthenticatedAppVaultRouteImport } from './routes/_authenticated/app.vault'
 import { Route as AuthenticatedAppTransactionsRouteImport } from './routes/_authenticated/app.transactions'
 import { Route as AuthenticatedAppToolsRouteImport } from './routes/_authenticated/app.tools'
@@ -26,14 +27,24 @@ import { Route as AuthenticatedAppRetirementRouteImport } from './routes/_authen
 import { Route as AuthenticatedAppResearchRouteImport } from './routes/_authenticated/app.research'
 import { Route as AuthenticatedAppReportRouteImport } from './routes/_authenticated/app.report'
 import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
+import { Route as AuthenticatedAppPurificationRouteImport } from './routes/_authenticated/app.purification'
 import { Route as AuthenticatedAppPortfolioPlanRouteImport } from './routes/_authenticated/app.portfolio-plan'
+import { Route as AuthenticatedAppPlanningRouteImport } from './routes/_authenticated/app.planning'
 import { Route as AuthenticatedAppOnboardingRouteImport } from './routes/_authenticated/app.onboarding'
 import { Route as AuthenticatedAppNetWorthFlowRouteImport } from './routes/_authenticated/app.net-worth-flow'
+import { Route as AuthenticatedAppMarketplaceRouteImport } from './routes/_authenticated/app.marketplace'
 import { Route as AuthenticatedAppGoalsRouteImport } from './routes/_authenticated/app.goals'
 import { Route as AuthenticatedAppDebtPayoffRouteImport } from './routes/_authenticated/app.debt-payoff'
 import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated/app.billing'
 import { Route as AuthenticatedAppAssetsRouteImport } from './routes/_authenticated/app.assets'
+import { Route as AuthenticatedAppActionPlanRouteImport } from './routes/_authenticated/app.action-plan'
 import { Route as AuthenticatedAppAdvisorIndexRouteImport } from './routes/_authenticated/app.advisor.index'
+import { Route as AuthenticatedAppWealthSuperRouteImport } from './routes/_authenticated/app.wealth.super'
+import { Route as AuthenticatedAppWealthPropertyRouteImport } from './routes/_authenticated/app.wealth.property'
+import { Route as AuthenticatedAppWealthOtherRouteImport } from './routes/_authenticated/app.wealth.other'
+import { Route as AuthenticatedAppWealthLiabilitiesRouteImport } from './routes/_authenticated/app.wealth.liabilities'
+import { Route as AuthenticatedAppWealthInvestmentsRouteImport } from './routes/_authenticated/app.wealth.investments'
+import { Route as AuthenticatedAppWealthCashRouteImport } from './routes/_authenticated/app.wealth.cash'
 import { Route as AuthenticatedAppAdvisorThreadIdRouteImport } from './routes/_authenticated/app.advisor.$threadId'
 
 const AuthRoute = AuthRouteImport.update({
@@ -58,6 +69,11 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
 const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppZakatRoute = AuthenticatedAppZakatRouteImport.update({
+  id: '/zakat',
+  path: '/zakat',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
 const AuthenticatedAppVaultRoute = AuthenticatedAppVaultRouteImport.update({
@@ -127,10 +143,22 @@ const AuthenticatedAppRadarRoute = AuthenticatedAppRadarRouteImport.update({
   path: '/radar',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppPurificationRoute =
+  AuthenticatedAppPurificationRouteImport.update({
+    id: '/purification',
+    path: '/purification',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppPortfolioPlanRoute =
   AuthenticatedAppPortfolioPlanRouteImport.update({
     id: '/portfolio-plan',
     path: '/portfolio-plan',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppPlanningRoute =
+  AuthenticatedAppPlanningRouteImport.update({
+    id: '/planning',
+    path: '/planning',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppOnboardingRoute =
@@ -143,6 +171,12 @@ const AuthenticatedAppNetWorthFlowRoute =
   AuthenticatedAppNetWorthFlowRouteImport.update({
     id: '/net-worth-flow',
     path: '/net-worth-flow',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppMarketplaceRoute =
+  AuthenticatedAppMarketplaceRouteImport.update({
+    id: '/marketplace',
+    path: '/marketplace',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppGoalsRoute = AuthenticatedAppGoalsRouteImport.update({
@@ -166,10 +200,52 @@ const AuthenticatedAppAssetsRoute = AuthenticatedAppAssetsRouteImport.update({
   path: '/assets',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppActionPlanRoute =
+  AuthenticatedAppActionPlanRouteImport.update({
+    id: '/action-plan',
+    path: '/action-plan',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppAdvisorIndexRoute =
   AuthenticatedAppAdvisorIndexRouteImport.update({
     id: '/advisor/',
     path: '/advisor/',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppWealthSuperRoute =
+  AuthenticatedAppWealthSuperRouteImport.update({
+    id: '/wealth/super',
+    path: '/wealth/super',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppWealthPropertyRoute =
+  AuthenticatedAppWealthPropertyRouteImport.update({
+    id: '/wealth/property',
+    path: '/wealth/property',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppWealthOtherRoute =
+  AuthenticatedAppWealthOtherRouteImport.update({
+    id: '/wealth/other',
+    path: '/wealth/other',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppWealthLiabilitiesRoute =
+  AuthenticatedAppWealthLiabilitiesRouteImport.update({
+    id: '/wealth/liabilities',
+    path: '/wealth/liabilities',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppWealthInvestmentsRoute =
+  AuthenticatedAppWealthInvestmentsRouteImport.update({
+    id: '/wealth/investments',
+    path: '/wealth/investments',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppWealthCashRoute =
+  AuthenticatedAppWealthCashRouteImport.update({
+    id: '/wealth/cash',
+    path: '/wealth/cash',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppAdvisorThreadIdRoute =
@@ -183,13 +259,17 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/app/action-plan': typeof AuthenticatedAppActionPlanRoute
   '/app/assets': typeof AuthenticatedAppAssetsRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
   '/app/goals': typeof AuthenticatedAppGoalsRoute
+  '/app/marketplace': typeof AuthenticatedAppMarketplaceRoute
   '/app/net-worth-flow': typeof AuthenticatedAppNetWorthFlowRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
+  '/app/planning': typeof AuthenticatedAppPlanningRoute
   '/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
+  '/app/purification': typeof AuthenticatedAppPurificationRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/report': typeof AuthenticatedAppReportRoute
   '/app/research': typeof AuthenticatedAppResearchRoute
@@ -202,20 +282,31 @@ export interface FileRoutesByFullPath {
   '/app/tools': typeof AuthenticatedAppToolsRoute
   '/app/transactions': typeof AuthenticatedAppTransactionsRoute
   '/app/vault': typeof AuthenticatedAppVaultRoute
+  '/app/zakat': typeof AuthenticatedAppZakatRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/advisor/$threadId': typeof AuthenticatedAppAdvisorThreadIdRoute
+  '/app/wealth/cash': typeof AuthenticatedAppWealthCashRoute
+  '/app/wealth/investments': typeof AuthenticatedAppWealthInvestmentsRoute
+  '/app/wealth/liabilities': typeof AuthenticatedAppWealthLiabilitiesRoute
+  '/app/wealth/other': typeof AuthenticatedAppWealthOtherRoute
+  '/app/wealth/property': typeof AuthenticatedAppWealthPropertyRoute
+  '/app/wealth/super': typeof AuthenticatedAppWealthSuperRoute
   '/app/advisor/': typeof AuthenticatedAppAdvisorIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/app/action-plan': typeof AuthenticatedAppActionPlanRoute
   '/app/assets': typeof AuthenticatedAppAssetsRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
   '/app/goals': typeof AuthenticatedAppGoalsRoute
+  '/app/marketplace': typeof AuthenticatedAppMarketplaceRoute
   '/app/net-worth-flow': typeof AuthenticatedAppNetWorthFlowRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
+  '/app/planning': typeof AuthenticatedAppPlanningRoute
   '/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
+  '/app/purification': typeof AuthenticatedAppPurificationRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/report': typeof AuthenticatedAppReportRoute
   '/app/research': typeof AuthenticatedAppResearchRoute
@@ -228,8 +319,15 @@ export interface FileRoutesByTo {
   '/app/tools': typeof AuthenticatedAppToolsRoute
   '/app/transactions': typeof AuthenticatedAppTransactionsRoute
   '/app/vault': typeof AuthenticatedAppVaultRoute
+  '/app/zakat': typeof AuthenticatedAppZakatRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/advisor/$threadId': typeof AuthenticatedAppAdvisorThreadIdRoute
+  '/app/wealth/cash': typeof AuthenticatedAppWealthCashRoute
+  '/app/wealth/investments': typeof AuthenticatedAppWealthInvestmentsRoute
+  '/app/wealth/liabilities': typeof AuthenticatedAppWealthLiabilitiesRoute
+  '/app/wealth/other': typeof AuthenticatedAppWealthOtherRoute
+  '/app/wealth/property': typeof AuthenticatedAppWealthPropertyRoute
+  '/app/wealth/super': typeof AuthenticatedAppWealthSuperRoute
   '/app/advisor': typeof AuthenticatedAppAdvisorIndexRoute
 }
 export interface FileRoutesById {
@@ -238,13 +336,17 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/_authenticated/app/action-plan': typeof AuthenticatedAppActionPlanRoute
   '/_authenticated/app/assets': typeof AuthenticatedAppAssetsRoute
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
   '/_authenticated/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
   '/_authenticated/app/goals': typeof AuthenticatedAppGoalsRoute
+  '/_authenticated/app/marketplace': typeof AuthenticatedAppMarketplaceRoute
   '/_authenticated/app/net-worth-flow': typeof AuthenticatedAppNetWorthFlowRoute
   '/_authenticated/app/onboarding': typeof AuthenticatedAppOnboardingRoute
+  '/_authenticated/app/planning': typeof AuthenticatedAppPlanningRoute
   '/_authenticated/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
+  '/_authenticated/app/purification': typeof AuthenticatedAppPurificationRoute
   '/_authenticated/app/radar': typeof AuthenticatedAppRadarRoute
   '/_authenticated/app/report': typeof AuthenticatedAppReportRoute
   '/_authenticated/app/research': typeof AuthenticatedAppResearchRoute
@@ -257,8 +359,15 @@ export interface FileRoutesById {
   '/_authenticated/app/tools': typeof AuthenticatedAppToolsRoute
   '/_authenticated/app/transactions': typeof AuthenticatedAppTransactionsRoute
   '/_authenticated/app/vault': typeof AuthenticatedAppVaultRoute
+  '/_authenticated/app/zakat': typeof AuthenticatedAppZakatRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/advisor/$threadId': typeof AuthenticatedAppAdvisorThreadIdRoute
+  '/_authenticated/app/wealth/cash': typeof AuthenticatedAppWealthCashRoute
+  '/_authenticated/app/wealth/investments': typeof AuthenticatedAppWealthInvestmentsRoute
+  '/_authenticated/app/wealth/liabilities': typeof AuthenticatedAppWealthLiabilitiesRoute
+  '/_authenticated/app/wealth/other': typeof AuthenticatedAppWealthOtherRoute
+  '/_authenticated/app/wealth/property': typeof AuthenticatedAppWealthPropertyRoute
+  '/_authenticated/app/wealth/super': typeof AuthenticatedAppWealthSuperRoute
   '/_authenticated/app/advisor/': typeof AuthenticatedAppAdvisorIndexRoute
 }
 export interface FileRouteTypes {
@@ -267,13 +376,17 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/app'
+    | '/app/action-plan'
     | '/app/assets'
     | '/app/billing'
     | '/app/debt-payoff'
     | '/app/goals'
+    | '/app/marketplace'
     | '/app/net-worth-flow'
     | '/app/onboarding'
+    | '/app/planning'
     | '/app/portfolio-plan'
+    | '/app/purification'
     | '/app/radar'
     | '/app/report'
     | '/app/research'
@@ -286,20 +399,31 @@ export interface FileRouteTypes {
     | '/app/tools'
     | '/app/transactions'
     | '/app/vault'
+    | '/app/zakat'
     | '/app/'
     | '/app/advisor/$threadId'
+    | '/app/wealth/cash'
+    | '/app/wealth/investments'
+    | '/app/wealth/liabilities'
+    | '/app/wealth/other'
+    | '/app/wealth/property'
+    | '/app/wealth/super'
     | '/app/advisor/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/app/action-plan'
     | '/app/assets'
     | '/app/billing'
     | '/app/debt-payoff'
     | '/app/goals'
+    | '/app/marketplace'
     | '/app/net-worth-flow'
     | '/app/onboarding'
+    | '/app/planning'
     | '/app/portfolio-plan'
+    | '/app/purification'
     | '/app/radar'
     | '/app/report'
     | '/app/research'
@@ -312,8 +436,15 @@ export interface FileRouteTypes {
     | '/app/tools'
     | '/app/transactions'
     | '/app/vault'
+    | '/app/zakat'
     | '/app'
     | '/app/advisor/$threadId'
+    | '/app/wealth/cash'
+    | '/app/wealth/investments'
+    | '/app/wealth/liabilities'
+    | '/app/wealth/other'
+    | '/app/wealth/property'
+    | '/app/wealth/super'
     | '/app/advisor'
   id:
     | '__root__'
@@ -321,13 +452,17 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/app'
+    | '/_authenticated/app/action-plan'
     | '/_authenticated/app/assets'
     | '/_authenticated/app/billing'
     | '/_authenticated/app/debt-payoff'
     | '/_authenticated/app/goals'
+    | '/_authenticated/app/marketplace'
     | '/_authenticated/app/net-worth-flow'
     | '/_authenticated/app/onboarding'
+    | '/_authenticated/app/planning'
     | '/_authenticated/app/portfolio-plan'
+    | '/_authenticated/app/purification'
     | '/_authenticated/app/radar'
     | '/_authenticated/app/report'
     | '/_authenticated/app/research'
@@ -340,8 +475,15 @@ export interface FileRouteTypes {
     | '/_authenticated/app/tools'
     | '/_authenticated/app/transactions'
     | '/_authenticated/app/vault'
+    | '/_authenticated/app/zakat'
     | '/_authenticated/app/'
     | '/_authenticated/app/advisor/$threadId'
+    | '/_authenticated/app/wealth/cash'
+    | '/_authenticated/app/wealth/investments'
+    | '/_authenticated/app/wealth/liabilities'
+    | '/_authenticated/app/wealth/other'
+    | '/_authenticated/app/wealth/property'
+    | '/_authenticated/app/wealth/super'
     | '/_authenticated/app/advisor/'
   fileRoutesById: FileRoutesById
 }
@@ -386,6 +528,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/app/'
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/zakat': {
+      id: '/_authenticated/app/zakat'
+      path: '/zakat'
+      fullPath: '/app/zakat'
+      preLoaderRoute: typeof AuthenticatedAppZakatRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/vault': {
@@ -472,11 +621,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppRadarRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/purification': {
+      id: '/_authenticated/app/purification'
+      path: '/purification'
+      fullPath: '/app/purification'
+      preLoaderRoute: typeof AuthenticatedAppPurificationRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/portfolio-plan': {
       id: '/_authenticated/app/portfolio-plan'
       path: '/portfolio-plan'
       fullPath: '/app/portfolio-plan'
       preLoaderRoute: typeof AuthenticatedAppPortfolioPlanRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/planning': {
+      id: '/_authenticated/app/planning'
+      path: '/planning'
+      fullPath: '/app/planning'
+      preLoaderRoute: typeof AuthenticatedAppPlanningRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/onboarding': {
@@ -491,6 +654,13 @@ declare module '@tanstack/react-router' {
       path: '/net-worth-flow'
       fullPath: '/app/net-worth-flow'
       preLoaderRoute: typeof AuthenticatedAppNetWorthFlowRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/marketplace': {
+      id: '/_authenticated/app/marketplace'
+      path: '/marketplace'
+      fullPath: '/app/marketplace'
+      preLoaderRoute: typeof AuthenticatedAppMarketplaceRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/goals': {
@@ -521,11 +691,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAssetsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/action-plan': {
+      id: '/_authenticated/app/action-plan'
+      path: '/action-plan'
+      fullPath: '/app/action-plan'
+      preLoaderRoute: typeof AuthenticatedAppActionPlanRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/advisor/': {
       id: '/_authenticated/app/advisor/'
       path: '/advisor'
       fullPath: '/app/advisor/'
       preLoaderRoute: typeof AuthenticatedAppAdvisorIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/wealth/super': {
+      id: '/_authenticated/app/wealth/super'
+      path: '/wealth/super'
+      fullPath: '/app/wealth/super'
+      preLoaderRoute: typeof AuthenticatedAppWealthSuperRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/wealth/property': {
+      id: '/_authenticated/app/wealth/property'
+      path: '/wealth/property'
+      fullPath: '/app/wealth/property'
+      preLoaderRoute: typeof AuthenticatedAppWealthPropertyRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/wealth/other': {
+      id: '/_authenticated/app/wealth/other'
+      path: '/wealth/other'
+      fullPath: '/app/wealth/other'
+      preLoaderRoute: typeof AuthenticatedAppWealthOtherRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/wealth/liabilities': {
+      id: '/_authenticated/app/wealth/liabilities'
+      path: '/wealth/liabilities'
+      fullPath: '/app/wealth/liabilities'
+      preLoaderRoute: typeof AuthenticatedAppWealthLiabilitiesRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/wealth/investments': {
+      id: '/_authenticated/app/wealth/investments'
+      path: '/wealth/investments'
+      fullPath: '/app/wealth/investments'
+      preLoaderRoute: typeof AuthenticatedAppWealthInvestmentsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/wealth/cash': {
+      id: '/_authenticated/app/wealth/cash'
+      path: '/wealth/cash'
+      fullPath: '/app/wealth/cash'
+      preLoaderRoute: typeof AuthenticatedAppWealthCashRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/advisor/$threadId': {
@@ -539,13 +758,17 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedAppRouteChildren {
+  AuthenticatedAppActionPlanRoute: typeof AuthenticatedAppActionPlanRoute
   AuthenticatedAppAssetsRoute: typeof AuthenticatedAppAssetsRoute
   AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
   AuthenticatedAppDebtPayoffRoute: typeof AuthenticatedAppDebtPayoffRoute
   AuthenticatedAppGoalsRoute: typeof AuthenticatedAppGoalsRoute
+  AuthenticatedAppMarketplaceRoute: typeof AuthenticatedAppMarketplaceRoute
   AuthenticatedAppNetWorthFlowRoute: typeof AuthenticatedAppNetWorthFlowRoute
   AuthenticatedAppOnboardingRoute: typeof AuthenticatedAppOnboardingRoute
+  AuthenticatedAppPlanningRoute: typeof AuthenticatedAppPlanningRoute
   AuthenticatedAppPortfolioPlanRoute: typeof AuthenticatedAppPortfolioPlanRoute
+  AuthenticatedAppPurificationRoute: typeof AuthenticatedAppPurificationRoute
   AuthenticatedAppRadarRoute: typeof AuthenticatedAppRadarRoute
   AuthenticatedAppReportRoute: typeof AuthenticatedAppReportRoute
   AuthenticatedAppResearchRoute: typeof AuthenticatedAppResearchRoute
@@ -558,19 +781,30 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppToolsRoute: typeof AuthenticatedAppToolsRoute
   AuthenticatedAppTransactionsRoute: typeof AuthenticatedAppTransactionsRoute
   AuthenticatedAppVaultRoute: typeof AuthenticatedAppVaultRoute
+  AuthenticatedAppZakatRoute: typeof AuthenticatedAppZakatRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppAdvisorThreadIdRoute: typeof AuthenticatedAppAdvisorThreadIdRoute
+  AuthenticatedAppWealthCashRoute: typeof AuthenticatedAppWealthCashRoute
+  AuthenticatedAppWealthInvestmentsRoute: typeof AuthenticatedAppWealthInvestmentsRoute
+  AuthenticatedAppWealthLiabilitiesRoute: typeof AuthenticatedAppWealthLiabilitiesRoute
+  AuthenticatedAppWealthOtherRoute: typeof AuthenticatedAppWealthOtherRoute
+  AuthenticatedAppWealthPropertyRoute: typeof AuthenticatedAppWealthPropertyRoute
+  AuthenticatedAppWealthSuperRoute: typeof AuthenticatedAppWealthSuperRoute
   AuthenticatedAppAdvisorIndexRoute: typeof AuthenticatedAppAdvisorIndexRoute
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
+  AuthenticatedAppActionPlanRoute: AuthenticatedAppActionPlanRoute,
   AuthenticatedAppAssetsRoute: AuthenticatedAppAssetsRoute,
   AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
   AuthenticatedAppDebtPayoffRoute: AuthenticatedAppDebtPayoffRoute,
   AuthenticatedAppGoalsRoute: AuthenticatedAppGoalsRoute,
+  AuthenticatedAppMarketplaceRoute: AuthenticatedAppMarketplaceRoute,
   AuthenticatedAppNetWorthFlowRoute: AuthenticatedAppNetWorthFlowRoute,
   AuthenticatedAppOnboardingRoute: AuthenticatedAppOnboardingRoute,
+  AuthenticatedAppPlanningRoute: AuthenticatedAppPlanningRoute,
   AuthenticatedAppPortfolioPlanRoute: AuthenticatedAppPortfolioPlanRoute,
+  AuthenticatedAppPurificationRoute: AuthenticatedAppPurificationRoute,
   AuthenticatedAppRadarRoute: AuthenticatedAppRadarRoute,
   AuthenticatedAppReportRoute: AuthenticatedAppReportRoute,
   AuthenticatedAppResearchRoute: AuthenticatedAppResearchRoute,
@@ -585,8 +819,17 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppToolsRoute: AuthenticatedAppToolsRoute,
   AuthenticatedAppTransactionsRoute: AuthenticatedAppTransactionsRoute,
   AuthenticatedAppVaultRoute: AuthenticatedAppVaultRoute,
+  AuthenticatedAppZakatRoute: AuthenticatedAppZakatRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppAdvisorThreadIdRoute: AuthenticatedAppAdvisorThreadIdRoute,
+  AuthenticatedAppWealthCashRoute: AuthenticatedAppWealthCashRoute,
+  AuthenticatedAppWealthInvestmentsRoute:
+    AuthenticatedAppWealthInvestmentsRoute,
+  AuthenticatedAppWealthLiabilitiesRoute:
+    AuthenticatedAppWealthLiabilitiesRoute,
+  AuthenticatedAppWealthOtherRoute: AuthenticatedAppWealthOtherRoute,
+  AuthenticatedAppWealthPropertyRoute: AuthenticatedAppWealthPropertyRoute,
+  AuthenticatedAppWealthSuperRoute: AuthenticatedAppWealthSuperRoute,
   AuthenticatedAppAdvisorIndexRoute: AuthenticatedAppAdvisorIndexRoute,
 }
 

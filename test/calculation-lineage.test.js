@@ -27,11 +27,16 @@ const score = scoreLineage({
   band: 'Strong',
   hasData: true,
   pillars: [{ key: 'savings', score: 80, weight: 0.25 }],
+  methodology_version: 'maal-health-rules-v1',
+  rules: [{ key: 'savings', inputs: { liquid_assets: 15000 }, assumptions: {}, formula: 'assets / expenses', observed: { value: 3 }, target: { value: 6 }, status: 'attention', explanation: 'Three months covered.' }],
 }, { annual_income: 100000, cash_savings: 15000, total_debt: 5000 });
 assert.equal(score.type, 'maal_score');
+assert.equal(score.version, '2');
 assert.equal(score.result.score, 72);
 assert.equal(score.inputs.annual_income, 100000);
 assert.deepStrictEqual(score.assumptions.weights, { savings: 0.25 });
+assert.equal(score.result.methodology_version, 'maal-health-rules-v1');
+assert.equal(score.result.rules[0].status, 'attention');
 
 const cashFlow = cashFlowLineage([
   { id: 1, amount: '2500', status: 'posted', post_date: new Date('2026-07-01T00:00:00Z') },

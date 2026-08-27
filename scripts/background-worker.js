@@ -2,6 +2,7 @@ const os = require('os');
 const jobs = require('../db/background-jobs');
 const { createBackgroundWorker } = require('../services/background-worker');
 const { basiqImportHandler } = require('../services/basiq-import-job');
+const { lunchflowImportHandler } = require('../services/lunchflow-import-job');
 const {
   basiqConnectionHealthJob,
   seedConnectionHealthJobs,
@@ -14,6 +15,7 @@ const worker = createBackgroundWorker({
   leaseSeconds: Number(process.env.WORKER_LEASE_SECONDS) || 60,
   handlers: {
     basiq_import: basiqImportHandler,
+    lunchflow_import: lunchflowImportHandler,
     basiq_connection_health: basiqConnectionHealthJob,
   },
 });

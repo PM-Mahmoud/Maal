@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -627,6 +627,37 @@ function MaalScoreTile({ score }: { score: MaalScore | null }) {
           </div>
         ))}
       </div>
+      {score.rules.length > 0 && (
+        <details className="mt-4 border-t border-hairline pt-3">
+          <summary className="cursor-pointer text-[12px] font-medium text-mint">How this score was calculated</summary>
+          <div className="mt-3 space-y-3">
+            {score.rules.map((rule) => (
+              <div key={rule.key} className="rounded-lg border border-hairline bg-surface-2/50 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-[12px] font-medium leading-snug">{rule.title}</p>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${rule.status === "healthy" ? "bg-emerald-500/10 text-emerald-500" : rule.status === "needs_data" ? "bg-secondary text-muted-foreground" : "bg-amber-500/10 text-amber-500"}`}>
+                    {rule.status === "needs_data" ? "Needs data" : rule.status === "healthy" ? "On track" : "Review"}
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{rule.explanation}</p>
+                <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-[10px] text-muted-foreground">
+                  <dt>Observed</dt><dd className="text-right text-foreground">{rule.observed.value == null ? "Unavailable" : `${rule.observed.value} ${rule.observed.unit}`}</dd>
+                  <dt>Weight</dt><dd className="text-right text-foreground">{Math.round(rule.pillar_weight * 100)}%</dd>
+                  {Object.entries(rule.inputs).filter(([, value]) => value !== null).map(([key, value]) => (
+                    <Fragment key={`input-${key}`}><dt>{key.replaceAll("_", " ")}</dt><dd className="text-right text-foreground">{String(value)}</dd></Fragment>
+                  ))}
+                  {Object.entries(rule.assumptions).filter(([, value]) => value !== null).map(([key, value]) => (
+                    <Fragment key={`assumption-${key}`}><dt>{`Assumed ${key.replace(/^assumed_/, "").replaceAll("_", " ")}`}</dt><dd className="text-right text-foreground">{String(value)}</dd></Fragment>
+                  ))}
+                </dl>
+                {rule.warnings?.map((warning) => <p key={warning} className="mt-2 text-[10px] text-amber-500">Warning: {warning}</p>)}
+                <p className="mt-2 font-mono text-[10px] text-muted-foreground">Rule: {rule.formula} {rule.target.operator} {rule.target.value} {rule.target.unit}</p>
+              </div>
+            ))}
+            <p className="text-[10px] text-muted-foreground">Methodology: {score.methodologyVersion}. Rules are educational indicators, not personal financial advice.</p>
+          </div>
+        </details>
+      )}
     </div>
   );
 }

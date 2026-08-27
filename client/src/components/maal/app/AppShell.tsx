@@ -8,13 +8,14 @@ import { ThemeToggle } from "@/components/maal/ThemeToggle";
 import { NotificationBell } from "@/components/maal/app/NotificationBell";
 import {
   LayoutDashboard, MessageCircle, FileSearch, Radar as RadarIcon,
-  Wallet, FolderLock, ArrowLeftRight, Target, UserCircle2,
+  Wallet, FolderLock, ArrowLeftRight, Target, UserCircle2, Landmark, Home,
   MessageSquarePlus, Map, LifeBuoy, ChevronDown, LogOut,
   X, Lightbulb, CreditCard, Menu,
   PiggyBank, Receipt, Calculator, TrendingDown, Dices,
-  BarChart3,
+  BarChart3, BriefcaseBusiness,
+  HandCoins, ShieldCheck, Store,
 } from "lucide-react";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, ListChecks } from "lucide-react";
 
 // Single source for the two contact details users see in-app. The old
 // support@maal.app address had no MX record, so every mail sent to it bounced.
@@ -31,15 +32,25 @@ const TOP: Item[] = [
 ];
 
 const PORTFOLIO: Item[] = [
-  { to: "/app/assets", label: "Assets & Liabilities", icon: Wallet },
+  { to: "/app/assets", label: "Overview", icon: Wallet },
+  { to: "/app/wealth/cash", label: "Cash", icon: Landmark },
+  { to: "/app/wealth/investments", label: "Investments", icon: BarChart3 },
+  { to: "/app/wealth/property", label: "Property", icon: Home },
+  { to: "/app/wealth/super", label: "Super", icon: PiggyBank },
+  { to: "/app/wealth/liabilities", label: "Liabilities", icon: TrendingDown },
+  { to: "/app/wealth/other", label: "Other Assets", icon: BriefcaseBusiness },
   { to: "/app/vault", label: "Vault", icon: FolderLock },
   { to: "/app/transactions", label: "Transactions", icon: ArrowLeftRight },
   { to: "/app/goals", label: "Goals", icon: Target },
   { to: "/app/planning", label: "Financial Plan", icon: ClipboardList },
+  { to: "/app/action-plan", label: "Action Plan", icon: ListChecks },
   { to: "/app/onboarding", label: "Profile", icon: UserCircle2 },
 ];
 
 const TOOLS: Item[] = [
+  { to: "/app/zakat", label: "Zakat", icon: HandCoins },
+  { to: "/app/purification", label: "Purification", icon: ShieldCheck },
+  { to: "/app/marketplace", label: "Partner Services", icon: Store },
   { to: "/app/super-optimizer", label: "Super Optimiser", icon: PiggyBank },
   { to: "/app/tax-optimizer", label: "Tax Optimiser", icon: Receipt },
   { to: "/app/tax-bracket-visualizer", label: "Tax Brackets", icon: Calculator },
@@ -102,7 +113,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className="mt-3 w-full flex items-center justify-between px-3 py-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground hover:text-foreground"
             aria-expanded={portfolioOpen}
           >
-            My Portfolio
+            My Wealth
             <ChevronDown className={`size-3 transition-transform ${portfolioOpen ? "" : "-rotate-90"}`} />
           </button>
           {portfolioOpen && PORTFOLIO.map((n) => <NavLink key={n.to} item={n} indent />)}
@@ -189,7 +200,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <nav aria-label="Mobile dashboard navigation" className="space-y-5">
               {[
                 { label: "Main", items: TOP },
-                { label: "My Portfolio", items: PORTFOLIO },
+                { label: "My Wealth", items: PORTFOLIO },
                 { label: "Calculators", items: TOOLS },
                 { label: "Account", items: BOTTOM },
               ].map((group) => (

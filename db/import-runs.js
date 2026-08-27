@@ -4,11 +4,31 @@ async function enqueueImportRun(userId, {
   provider = 'basiq',
   requestKey,
   maxAttempts = 3,
+  jobType = `${provider}_import`,
 }) {
   if (!requestKey) throw new Error('Import run requires requestKey');
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await client.query(
+      `SELECT pg_advisory_xact_lock(hashtextextended('import:' || $1::text || ':' || $2::text, 0))`,
+      [userId, provider]
+    );
+    const active = await client.query(
+      `SELECT run.*, job.id AS active_job_id
+         FROM import_runs run
+         JOIN background_jobs job ON job.id = run.background_job_id
+        WHERE run.user_id=$1 AND run.provider=$2
+          AND run.status IN ('queued','running','retrying')
+          AND job.status IN ('queued','running')
+        ORDER BY run.created_at LIMIT 1`,
+      [userId, provider]
+    );
+    if (active.rows[0]) {
+      const job = (await client.query('SELECT * FROM background_jobs WHERE id=$1', [active.rows[0].background_job_id])).rows[0];
+      await client.query('COMMIT');
+      return { run: active.rows[0], job };
+    }
     const runResult = await client.query(
       `INSERT INTO import_runs (user_id, provider, request_key)
        VALUES ($1,$2,$3)
@@ -29,13 +49,14 @@ async function enqueueImportRun(userId, {
     const jobResult = await client.query(
       `INSERT INTO background_jobs
          (user_id, queue, job_type, payload, idempotency_key, max_attempts)
-       VALUES ($1, 'imports', 'basiq_import', $2::jsonb, $3, $4)
+       VALUES ($1, 'imports', $5, $2::jsonb, $3, $4)
        RETURNING *`,
       [
         userId,
         JSON.stringify({ import_run_id: run.id, user_id: userId }),
         `import-run:${run.id}`,
         Math.max(1, Number(maxAttempts) || 3),
+        jobType,
       ]
     );
     const job = jobResult.rows[0];
