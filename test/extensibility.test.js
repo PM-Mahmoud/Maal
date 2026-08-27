@@ -14,6 +14,15 @@ assert.throws(() => validateWebhookUrl('javascript:alert(1)'), /http\(s\)/);
 assert.throws(() => validateWebhookUrl('http://localhost/hook'), /local host/);
 assert.throws(() => validateWebhookUrl('http://169.254.169.254/latest/meta-data'), /local host/);
 assert.equal(validateWebhookUrl('https://hooks.example.test/maal'), 'https://hooks.example.test/maal');
+// SSRF hardening: IPv6 loopback/unspecified, ULA (fc00::/7), link-local (fe80::/10)
+// and IPv4-mapped private addresses must be rejected the same as their IPv4 forms.
+assert.throws(() => validateWebhookUrl('http://[::1]/hook'), /local host/);
+assert.throws(() => validateWebhookUrl('http://[::]/hook'), /local host/);
+assert.throws(() => validateWebhookUrl('http://[fd00::1]/hook'), /local host/);
+assert.throws(() => validateWebhookUrl('http://[fe80::1]/hook'), /local host/);
+assert.throws(() => validateWebhookUrl('http://[::ffff:169.254.169.254]/latest/meta-data'), /local host/);
+assert.throws(() => validateWebhookUrl('http://[::ffff:127.0.0.1]/hook'), /local host/);
+assert.equal(validateWebhookUrl('https://[2606:4700:4700::1111]/hook'), 'https://[2606:4700:4700::1111]/hook');
 const priorWebhookKey = process.env.WEBHOOK_SECRET_ENCRYPTION_KEY;
 process.env.WEBHOOK_SECRET_ENCRYPTION_KEY = 'test-only-key';
 const encryptedWebhookSecret = encryptWebhookSecret('webhook-secret');
@@ -79,6 +88,7 @@ assert.equal(verifyWebhook('{"ok":true}', signed, 'wrong', '1700000000'), false)
   assert.equal(notifications.length, 1);
   assert.equal(notifications[0][0], 42);
   assert.equal(requests[0].options.headers['X-Maal-Event'], 'data.updated');
+  assert.equal(requests[0].options.redirect, 'manual'); // SSRF: never follow a webhook redirect
   assert.equal(verifyWebhook(requests[0].options.body, requests[0].options.headers['X-Maal-Signature'], 'hook-secret', requests[0].options.headers['X-Maal-Timestamp']), true);
 
   const duplicate = await service.publishEvent(42, 'data.updated', { amount: 125 });
