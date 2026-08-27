@@ -23,10 +23,19 @@ module.exports = {
       CREATE INDEX IF NOT EXISTS automation_rule_runs_user_created ON automation_rule_runs(user_id,created_at DESC);
       CREATE INDEX IF NOT EXISTS webhook_deliveries_user_created ON webhook_deliveries(user_id,created_at DESC);
 
+      -- Append-only guard: rejects ordinary updates, but allows the FK-nulling UPDATE
+      -- emitted by ON DELETE SET NULL on actor_user_id/subject_user_id when a user is
+      -- deleted. Fires on UPDATE only so any cascade DELETE is never blocked.
       CREATE OR REPLACE FUNCTION reject_activity_ledger_mutation() RETURNS trigger AS $$
-      BEGIN RAISE EXCEPTION 'activity ledger is append-only'; END; $$ LANGUAGE plpgsql;
+      BEGIN
+        IF (NEW.actor_user_id IS NULL AND OLD.actor_user_id IS NOT NULL)
+           OR (NEW.subject_user_id IS NULL AND OLD.subject_user_id IS NOT NULL) THEN
+          RETURN NEW;
+        END IF;
+        RAISE EXCEPTION 'activity ledger is append-only';
+      END; $$ LANGUAGE plpgsql;
       DROP TRIGGER IF EXISTS activity_ledger_immutable ON activity_ledger;
-      CREATE TRIGGER activity_ledger_immutable BEFORE UPDATE OR DELETE ON activity_ledger
+      CREATE TRIGGER activity_ledger_immutable BEFORE UPDATE ON activity_ledger
         FOR EACH ROW EXECUTE FUNCTION reject_activity_ledger_mutation();
     `);
   },
