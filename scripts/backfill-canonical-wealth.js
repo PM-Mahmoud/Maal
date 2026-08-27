@@ -64,8 +64,11 @@ async function persistProjection(client, projection) {
           currency, as_of, source, confidence, legacy_key)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
        ON CONFLICT (user_id, legacy_key) DO UPDATE SET
-         owner_type = EXCLUDED.owner_type, ownership_percent = EXCLUDED.ownership_percent,
-         effective_from = EXCLUDED.effective_from, updated_at = NOW()`,
+         financial_account_id = EXCLUDED.financial_account_id,
+         instrument_id = EXCLUDED.instrument_id, units = EXCLUDED.units,
+         cost_basis_minor = EXCLUDED.cost_basis_minor, currency = EXCLUDED.currency,
+         as_of = EXCLUDED.as_of, source = EXCLUDED.source,
+         confidence = EXCLUDED.confidence, updated_at = NOW()`,
       [row.userId, accountIds.get(row.accountKey), instrumentIds.get(row.instrumentKey),
        row.units, row.costBasisMinor, row.currency, row.asOf, row.source, row.confidence,
        row.legacyKey]
