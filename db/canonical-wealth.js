@@ -44,7 +44,7 @@ async function listOwnershipInterests(userId, subjectType = null, subjectKey = n
   }
   const { rows } = await pool.query(
     `SELECT * FROM ownership_interests
-      WHERE user_id = $1${extra} AND (effective_to IS NULL OR effective_to > NOW())
+      WHERE user_id = $1${extra} AND effective_from <= NOW() AND (effective_to IS NULL OR effective_to > NOW())
       ORDER BY created_at, id`,
     params
   );

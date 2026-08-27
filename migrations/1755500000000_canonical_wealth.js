@@ -108,9 +108,10 @@ module.exports = {
       END;
       $$ LANGUAGE plpgsql;
 
+      -- UPDATE-only: ON DELETE CASCADE from users (account deletion) must not be blocked.
       DROP TRIGGER IF EXISTS valuations_append_only_update ON valuations;
       CREATE TRIGGER valuations_append_only_update
-        BEFORE UPDATE OR DELETE ON valuations
+        BEFORE UPDATE ON valuations
         FOR EACH ROW EXECUTE FUNCTION reject_valuation_mutation();
     `);
 

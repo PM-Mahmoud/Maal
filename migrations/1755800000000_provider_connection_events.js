@@ -17,7 +17,7 @@ module.exports = {
         import_run_id BIGINT,
         details JSONB NOT NULL DEFAULT '{}'::jsonb,
         occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        FOREIGN KEY (import_run_id, user_id) REFERENCES import_runs(id, user_id) ON DELETE RESTRICT
+        FOREIGN KEY (import_run_id, user_id) REFERENCES import_runs(id, user_id) ON DELETE NO ACTION
       );
       CREATE INDEX IF NOT EXISTS idx_provider_connection_events_user
         ON provider_connection_events(user_id, provider, occurred_at DESC);

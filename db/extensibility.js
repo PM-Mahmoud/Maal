@@ -113,7 +113,7 @@ async function createRuleRun(userId, ruleId, eventId, event) {
 
 async function createWebhook(userId, url, secret, events) {
   return (await pool.query(
-    'INSERT INTO webhooks(user_id,url,secret,events) VALUES($1,$2,$3,$4) RETURNING id,url,events,active,created_at', [userId, url, secret, events],
+    'INSERT INTO webhooks(user_id,url,secret_encrypted,events) VALUES($1,$2,$3,$4) RETURNING id,url,events,active,created_at', [userId, url, secret, events],
   )).rows[0];
 }
 
@@ -125,7 +125,7 @@ async function listWebhooks(userId) {
 
 async function listActiveWebhooks(userId, eventType) {
   return (await pool.query(
-    `SELECT id,url,secret,events,active FROM webhooks
+    `SELECT id,url,secret_encrypted,events,active FROM webhooks
        WHERE user_id=$1 AND active=TRUE AND $2=ANY(events)`, [userId, eventType],
   )).rows;
 }
@@ -145,11 +145,11 @@ async function createWebhookDelivery(userId, webhookId, eventId, event) {
   )).rows[0] || null;
 }
 
-async function updateWebhookDelivery(id, result) {
+async function updateWebhookDelivery(id, userId, result) {
   return (await pool.query(
-    `UPDATE webhook_deliveries SET status=$2,attempts=$3,response_status=$4,response_body=$5,delivered_at=$6,error=$7
-       WHERE id=$1 RETURNING *`,
-    [id, result.status, result.attempts || 1, result.responseStatus || null, result.responseBody || null, result.deliveredAt || null, result.error || null],
+    `UPDATE webhook_deliveries SET status=$3,attempts=$4,response_status=$5,response_body=$6,delivered_at=$7,error=$8
+       WHERE id=$1 AND user_id=$2 RETURNING *`,
+    [id, userId, result.status, result.attempts || 1, result.responseStatus || null, result.responseBody || null, result.deliveredAt || null, result.error || null],
   )).rows[0];
 }
 

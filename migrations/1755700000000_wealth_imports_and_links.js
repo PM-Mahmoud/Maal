@@ -58,10 +58,15 @@ module.exports = {
       );
       CREATE INDEX IF NOT EXISTS idx_wealth_statement_imports_user
         ON wealth_statement_imports(user_id, created_at DESC);
+      -- Dedicated append-only guard (its own message/table identity), UPDATE-only so
+      -- ON DELETE CASCADE from users (account deletion) is never blocked.
+      CREATE OR REPLACE FUNCTION reject_append_only_mutation() RETURNS trigger AS $$
+      BEGIN RAISE EXCEPTION '% is append-only', TG_TABLE_NAME; END;
+      $$ LANGUAGE plpgsql;
       DROP TRIGGER IF EXISTS wealth_statement_imports_append_only ON wealth_statement_imports;
       CREATE TRIGGER wealth_statement_imports_append_only
-        BEFORE UPDATE OR DELETE ON wealth_statement_imports
-        FOR EACH ROW EXECUTE FUNCTION reject_valuation_mutation();
+        BEFORE UPDATE ON wealth_statement_imports
+        FOR EACH ROW EXECUTE FUNCTION reject_append_only_mutation();
     `);
   },
 };

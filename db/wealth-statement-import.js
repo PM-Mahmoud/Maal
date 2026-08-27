@@ -27,8 +27,13 @@ async function persistStatementImport(userId, statementId, normalized, evidence)
          (user_id, account_type, name, institution, external_reference, currency, source, confidence, as_of)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
        ON CONFLICT (user_id, source, external_reference) WHERE external_reference IS NOT NULL
-       DO UPDATE SET name=EXCLUDED.name, institution=EXCLUDED.institution,
-         currency=EXCLUDED.currency, confidence=EXCLUDED.confidence, as_of=EXCLUDED.as_of, updated_at=NOW()
+       DO UPDATE SET
+         name=CASE WHEN financial_accounts.as_of IS NULL OR (EXCLUDED.as_of IS NOT NULL AND EXCLUDED.as_of >= financial_accounts.as_of) THEN EXCLUDED.name ELSE financial_accounts.name END,
+         institution=CASE WHEN financial_accounts.as_of IS NULL OR (EXCLUDED.as_of IS NOT NULL AND EXCLUDED.as_of >= financial_accounts.as_of) THEN EXCLUDED.institution ELSE financial_accounts.institution END,
+         currency=CASE WHEN financial_accounts.as_of IS NULL OR (EXCLUDED.as_of IS NOT NULL AND EXCLUDED.as_of >= financial_accounts.as_of) THEN EXCLUDED.currency ELSE financial_accounts.currency END,
+         confidence=CASE WHEN financial_accounts.as_of IS NULL OR (EXCLUDED.as_of IS NOT NULL AND EXCLUDED.as_of >= financial_accounts.as_of) THEN EXCLUDED.confidence ELSE financial_accounts.confidence END,
+         as_of=CASE WHEN financial_accounts.as_of IS NULL OR (EXCLUDED.as_of IS NOT NULL AND EXCLUDED.as_of >= financial_accounts.as_of) THEN EXCLUDED.as_of ELSE financial_accounts.as_of END,
+         updated_at=NOW()
        RETURNING id`,
       [userId, normalized.account.accountType, normalized.account.name, normalized.account.institution,
        externalReference, normalized.account.currency, normalized.account.source,
@@ -63,8 +68,12 @@ async function persistStatementImport(userId, statementId, normalized, evidence)
            (user_id, financial_account_id, instrument_id, units, cost_basis_minor, currency, as_of, source, confidence, legacy_key)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
          ON CONFLICT (user_id, legacy_key) DO UPDATE SET
-           units=EXCLUDED.units, cost_basis_minor=EXCLUDED.cost_basis_minor,
-           currency=EXCLUDED.currency, as_of=EXCLUDED.as_of, confidence=EXCLUDED.confidence, updated_at=NOW()
+           units=CASE WHEN holdings.as_of IS NULL OR (EXCLUDED.as_of IS NOT NULL AND EXCLUDED.as_of >= holdings.as_of) THEN EXCLUDED.units ELSE holdings.units END,
+           cost_basis_minor=CASE WHEN holdings.as_of IS NULL OR (EXCLUDED.as_of IS NOT NULL AND EXCLUDED.as_of >= holdings.as_of) THEN EXCLUDED.cost_basis_minor ELSE holdings.cost_basis_minor END,
+           currency=CASE WHEN holdings.as_of IS NULL OR (EXCLUDED.as_of IS NOT NULL AND EXCLUDED.as_of >= holdings.as_of) THEN EXCLUDED.currency ELSE holdings.currency END,
+           confidence=CASE WHEN holdings.as_of IS NULL OR (EXCLUDED.as_of IS NOT NULL AND EXCLUDED.as_of >= holdings.as_of) THEN EXCLUDED.confidence ELSE holdings.confidence END,
+           as_of=CASE WHEN holdings.as_of IS NULL OR (EXCLUDED.as_of IS NOT NULL AND EXCLUDED.as_of >= holdings.as_of) THEN EXCLUDED.as_of ELSE holdings.as_of END,
+           updated_at=NOW()
          RETURNING id`,
         [userId, accountId, instrumentResult.rows[0].id, row.units, row.costBasisMinor,
          row.currency, row.asOf, row.source, row.confidence, holdingKey]

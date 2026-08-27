@@ -50,7 +50,7 @@ assert.equal(verifyWebhook('{"ok":true}', signed, 'wrong', '1700000000'), false)
       { id: 7, active: true, event_type: 'data.updated', condition_path: 'data.amount', condition: { operator: 'gte', value: 100 }, action_type: 'notification', action: { title: 'Large update', body: 'Review the update.' } },
     ],
     createNotification: async (...args) => { notifications.push(args); return { id: 11 }; },
-    listActiveWebhooks: async () => [{ id: 5, url: 'https://hooks.example.test/maal', secret: 'hook-secret', events: ['data.updated'], active: true }],
+    listActiveWebhooks: async () => [{ id: 5, url: 'https://hooks.example.test/maal', secret_encrypted: encryptWebhookSecret('hook-secret'), events: ['data.updated'], active: true }],
     createRuleRun: async (ruleId, eventId) => {
       const key = `${ruleId}:${eventId}`;
       if (claimedRuns.has(key)) return null;
@@ -64,7 +64,7 @@ assert.equal(verifyWebhook('{"ok":true}', signed, 'wrong', '1700000000'), false)
       deliveries.push(row);
       return row;
     },
-    updateWebhookDelivery: async (id, result) => { Object.assign(deliveries.find((row) => row.id === id), result); },
+    updateWebhookDelivery: async (id, userId, result) => { Object.assign(deliveries.find((row) => row.id === id), { userId }, result); },
     recordActivity: async (event) => event,
   };
   const requests = [];

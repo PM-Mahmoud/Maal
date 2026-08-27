@@ -38,7 +38,8 @@ module.exports = {
       CREATE TABLE IF NOT EXISTS service_reminders (
         id BIGSERIAL PRIMARY KEY, user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         service_type TEXT NOT NULL, due_at TIMESTAMPTZ NOT NULL, status TEXT NOT NULL DEFAULT 'scheduled'
-          CHECK(status IN ('scheduled','sent','cancelled')), source_run_id BIGINT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          CHECK(status IN ('scheduled','sent','cancelled')), source_run_id BIGINT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        FOREIGN KEY(source_run_id,user_id) REFERENCES service_runs(id,user_id) ON DELETE CASCADE
       );
       CREATE TABLE IF NOT EXISTS purification_obligations (
         id BIGSERIAL PRIMARY KEY, user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -88,18 +89,30 @@ module.exports = {
       CREATE INDEX IF NOT EXISTS service_runs_user_created ON service_runs(user_id,created_at DESC);
       CREATE INDEX IF NOT EXISTS partner_consents_user_active ON partner_consents(user_id,status,expires_at);
 
+      -- Append-only guard for financial-evidence tables. Fires on UPDATE only, so
+      -- ON DELETE CASCADE from users/parent rows (account deletion) is never blocked.
       CREATE OR REPLACE FUNCTION reject_immutable_financial_evidence() RETURNS trigger AS $$
       BEGIN RAISE EXCEPTION '% is append-only', TG_TABLE_NAME; END; $$ LANGUAGE plpgsql;
+      -- Partner event guard: rejects ordinary updates, but allows the FK-nulling
+      -- UPDATE emitted by ON DELETE SET NULL (user/partner anonymisation on deletion).
+      CREATE OR REPLACE FUNCTION reject_partner_event_mutation() RETURNS trigger AS $$
+      BEGIN
+        IF (NEW.user_id IS NULL AND OLD.user_id IS NOT NULL)
+           OR (NEW.partner_id IS NULL AND OLD.partner_id IS NOT NULL) THEN
+          RETURN NEW;
+        END IF;
+        RAISE EXCEPTION '% is append-only', TG_TABLE_NAME;
+      END; $$ LANGUAGE plpgsql;
       DROP TRIGGER IF EXISTS service_runs_immutable ON service_runs;
       CREATE TRIGGER service_runs_immutable BEFORE UPDATE ON service_runs FOR EACH ROW EXECUTE FUNCTION reject_immutable_financial_evidence();
       DROP TRIGGER IF EXISTS service_run_lines_immutable ON service_run_lines;
       CREATE TRIGGER service_run_lines_immutable BEFORE UPDATE ON service_run_lines FOR EACH ROW EXECUTE FUNCTION reject_immutable_financial_evidence();
       DROP TRIGGER IF EXISTS obligation_events_immutable ON purification_obligation_events;
-      CREATE TRIGGER obligation_events_immutable BEFORE UPDATE OR DELETE ON purification_obligation_events FOR EACH ROW EXECUTE FUNCTION reject_immutable_financial_evidence();
+      CREATE TRIGGER obligation_events_immutable BEFORE UPDATE ON purification_obligation_events FOR EACH ROW EXECUTE FUNCTION reject_immutable_financial_evidence();
       DROP TRIGGER IF EXISTS partner_audit_immutable ON partner_audit_events;
-      CREATE TRIGGER partner_audit_immutable BEFORE UPDATE OR DELETE ON partner_audit_events FOR EACH ROW EXECUTE FUNCTION reject_immutable_financial_evidence();
+      CREATE TRIGGER partner_audit_immutable BEFORE UPDATE ON partner_audit_events FOR EACH ROW EXECUTE FUNCTION reject_partner_event_mutation();
       DROP TRIGGER IF EXISTS partner_usage_immutable ON partner_usage_events;
-      CREATE TRIGGER partner_usage_immutable BEFORE UPDATE OR DELETE ON partner_usage_events FOR EACH ROW EXECUTE FUNCTION reject_immutable_financial_evidence();
+      CREATE TRIGGER partner_usage_immutable BEFORE UPDATE ON partner_usage_events FOR EACH ROW EXECUTE FUNCTION reject_partner_event_mutation();
     `);
   }
 };

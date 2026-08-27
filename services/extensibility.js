@@ -40,7 +40,7 @@ function createExtensibilityService(dependencies = {}) {
       'X-Maal-Event': envelope.type,
       'X-Maal-Delivery': envelope.id,
       'X-Maal-Timestamp': timestamp,
-      'X-Maal-Signature': signWebhook(body, decryptWebhookSecret(webhook.secret), timestamp),
+      'X-Maal-Signature': signWebhook(body, decryptWebhookSecret(webhook.secret_encrypted), timestamp),
     };
     try {
       if (typeof fetchImpl !== 'function') throw new Error('Webhook delivery is not configured');
@@ -61,10 +61,10 @@ function createExtensibilityService(dependencies = {}) {
         deliveredAt: response.ok ? now() : null,
         error: response.ok ? null : `Webhook returned HTTP ${response.status}`,
       };
-      await store.updateWebhookDelivery(delivery.id, result);
+      await store.updateWebhookDelivery(delivery.id, userId, result);
       return { status: result.status, responseStatus: result.responseStatus };
     } catch (error) {
-      await store.updateWebhookDelivery(delivery.id, {
+      await store.updateWebhookDelivery(delivery.id, userId, {
         status: 'failed', attempts: 1, error: String(error.message || error).slice(0, 500), deliveredAt: null,
       });
       return { status: 'failed', error: String(error.message || error).slice(0, 500) };

@@ -65,10 +65,12 @@ async function loadTaxReadyExport(userId, taxYear) {
   data.vault_files = (data.vault_files || []).filter((row) => documentFileIds.has(String(row.id)));
   data.notifications = [];
   data.activity_ledger = [];
-  // Access relationships are collaboration metadata, not tax records. Keep
-  // them in the full portability export, but do not disclose them to a
-  // grantee receiving a tax-scoped export.
+  // Access relationships and household membership are collaboration metadata,
+  // not tax records. Keep them in the full portability export, but do not
+  // disclose them to a grantee receiving a tax-scoped export.
   data.access_grants = [];
+  data.households = [];
+  data.household_members = [];
   return { tax_year: year, tax_year_start: start, tax_year_end: end, ...data };
 }
 module.exports = { loadFinancialExport, loadTaxReadyExport };
