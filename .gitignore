@@ -13,3 +13,10 @@ npm-debug.log*
 !package-lock.json
 !evals/*.json
 !shared/au-constants.json
+
+# macOS / iCloud "conflicted copy" duplicates, e.g. "server 2.js", "api 3.js",
+# "1756200000000_build9_extensibility 3.js". These have bitten deploys before:
+# migrate.js loads EVERY *.js in migrations/, so a duplicate migration file runs
+# as an extra migration. Never commit these — see DEPLOY.md "Migration gotchas".
+* [0-9].*
+* [0-9][0-9].*

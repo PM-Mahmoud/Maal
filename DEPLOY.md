@@ -107,6 +107,70 @@ NODE_ENV=development
 
 ---
 
+## Object storage for Vault (Cloudflare R2 / S3)
+
+Vault stores uploaded documents as raw `bytea` in Postgres **by default**. That
+works, but every upload/download pushes the full file through Neon and counts
+against its transfer allowance. Setting the four `STORAGE_*` env vars switches
+Vault to S3-compatible object storage (Cloudflare R2 recommended — zero egress).
+
+`GET /health` reports `objectStorage: true` once all four are set
+(`services/storage.js` `isConfigured()`):
+
+| Variable | Example | Notes |
+|----------|---------|-------|
+| `STORAGE_ENDPOINT` | `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` | R2 account endpoint |
+| `STORAGE_BUCKET` | `maal-vault` | Keep the bucket **private** |
+| `STORAGE_ACCESS_KEY_ID` | *(from R2 token)* | Use an **Account** API token, scoped to the bucket, Object Read & Write |
+| `STORAGE_SECRET_ACCESS_KEY` | *(from R2 token)* | Shown once at token creation |
+| `STORAGE_REGION` | `auto` | `auto` for R2/B2; a real region for AWS S3 |
+
+Notes:
+- **Coexistence is automatic.** Existing `bytea`-stored files keep working; only
+  *new* uploads go to object storage (`db/vault.js` reads by `storage_key` else
+  `content`). No backfill needed.
+- **Fail-safe fallback.** If any var is missing/wrong, `isConfigured()` returns
+  false and Vault silently reverts to `bytea` — a misconfig won't break uploads.
+  If uploads start failing *after* you set the vars, suspect a bad
+  credential/endpoint/bucket, not the fallback.
+- Set the vars on the **`app`** service (it serves uploads/downloads). Add them to
+  the worker only if it touches Vault files. Prefer a **no-expiry** token (or a
+  rotation reminder) — an expired token silently drops back to `bytea`.
+
+---
+
+## Migration gotchas
+
+`migrate.js` loads **every `*.js` file** in `migrations/` (`.filter(f => f.endsWith('.js'))`),
+runs each once, and records it in the `_migrations` table. Two traps have bitten
+real deploys:
+
+1. **Duplicate migration files fail (or bloat) deploys.** macOS/iCloud creates
+   "conflicted copy" duplicates like `1756200000000_build9_extensibility 3.js`.
+   `migrate.js` treats each as a *separate* migration and runs it. If a migration
+   is idempotent (`CREATE ... IF NOT EXISTS`, `CREATE OR REPLACE`, `DROP TRIGGER
+   IF EXISTS`) the duplicate is a harmless no-op — but a non-idempotent copy will
+   **fail the whole deploy**. These duplicates are now blocked by `.gitignore`
+   (`* [0-9].*`). To find any that slipped in: `git ls-files | grep -E ' [0-9]+\.'`.
+
+2. **`ON CONFLICT DO UPDATE` referencing `EXCLUDED.<col>` for a column not in the
+   INSERT's column list** raises `column excluded.<col> does not exist` — and it's
+   a *plan-time* error, so it fails even when no conflict occurs. This blocked
+   every deploy after the canonical-wealth backfill until fixed (the `holdings`
+   upsert was setting ownership columns that live on `ownership_interests`, not
+   `holdings`). Lesson: an `EXCLUDED.x` reference is only valid when `x` is one of
+   the inserted columns.
+
+**Verifying a deploy actually applied the migrations** (not just that the app is
+up — a failed migration keeps the *previous* build serving):
+```sql
+SELECT name, applied_at FROM _migrations ORDER BY applied_at DESC LIMIT 20;
+```
+Confirm the expected migrations are present, with recent `applied_at`, and that
+there are **no** duplicate `..._name 2` / `..._name 3` rows.
+
+---
+
 ## Known issues to fix before production
 
 1. **Onboarding session_id bug** — `routes/onboarding.js` spreads `req.body` into
