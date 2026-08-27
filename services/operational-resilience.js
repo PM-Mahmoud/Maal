@@ -63,6 +63,12 @@ async function inspectRestoredDatabase(query, now = new Date()) {
     ? new Date(marker.rows[0].marked_at)
     : null;
   const recoveryAgeMs = recoveredAt ? now.getTime() - recoveredAt.getTime() : Infinity;
+  // A recovery point the database marks "just now" can carry a timestamp a few
+  // milliseconds ahead of the app clock (skew between the two clocks, plus the
+  // app's `now` being captured before the DB write), yielding a tiny negative
+  // age. That still means a fresh backup, so tolerate a small clock-skew window
+  // on the lower bound rather than flapping the freshness check.
+  const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
   return {
     required_tables: { ok: missingTables.length === 0, missing: missingTables },
     migrations: {
@@ -73,7 +79,7 @@ async function inspectRestoredDatabase(query, now = new Date()) {
     readable_users: { ok: true, count: Number(users.rows[0].count) },
     raw_records: { ok: true, count: Number(rawRecords.rows[0].count) },
     recovery_point: {
-      ok: recoveryAgeMs >= 0 && recoveryAgeMs <= 30 * 60 * 60 * 1000,
+      ok: recoveryAgeMs >= -CLOCK_SKEW_TOLERANCE_MS && recoveryAgeMs <= 30 * 60 * 60 * 1000,
       generation: marker.rows[0]?.generation || null,
       recovered_at: recoveredAt?.toISOString() || null,
       age_hours: Number.isFinite(recoveryAgeMs) ? recoveryAgeMs / 3600000 : null,
