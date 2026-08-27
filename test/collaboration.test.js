@@ -10,6 +10,7 @@ const {
   normalizeEmail,
   normalizeHouseholdName,
   normalizeOwnership,
+  normalizeOwnershipAllocations,
   normalizeGrant,
   isGrantActive,
   hasScope,
@@ -36,6 +37,24 @@ test('ownership is bounded and preserves two decimal places', () => {
   assert.equal(normalizeOwnership('50.125'), 50.13);
   assert.throws(() => normalizeOwnership(-1), /between 0 and 100/);
   assert.throws(() => normalizeOwnership(100.01), /between 0 and 100/);
+});
+
+test('household allocations require unique members and cannot exceed 100 percent', () => {
+  assert.deepStrictEqual(normalizeOwnershipAllocations([
+    { userId: 1, ownershipPercent: 60 },
+    { user_id: '2', ownership_percent: '40' },
+  ]), [
+    { userId: '1', ownershipPercent: 60 },
+    { userId: '2', ownershipPercent: 40 },
+  ]);
+  assert.throws(() => normalizeOwnershipAllocations([]), /At least one/);
+  assert.throws(() => normalizeOwnershipAllocations([{ userId: 1, ownershipPercent: 0 }]), /greater than zero/);
+  assert.throws(() => normalizeOwnershipAllocations([
+    { userId: 1, ownershipPercent: 50 }, { userId: 1, ownershipPercent: 50 },
+  ]), /only appear once/);
+  assert.throws(() => normalizeOwnershipAllocations([
+    { userId: 1, ownershipPercent: 60 }, { userId: 2, ownershipPercent: 41 },
+  ]), /cannot exceed 100/);
 });
 
 test('grants accept only read-only roles and allow-listed scopes', () => {
@@ -81,6 +100,16 @@ test('database access methods keep owner, member, grant and vault links tenant-s
   assert.match(source, /grantee_user_id = \$1/);
   assert.match(source, /vault_files\.id = \$2 AND vault_files\.user_id = \$1/);
   assert.match(source, /d\.id = \$1 AND d\.user_id = \$2/);
+  assert.match(source, /subject_owner\.household_id = \$1 AND subject_owner\.user_id = \$3/);
+  assert.match(source, /oi\.household_id = \$1/);
+});
+
+test('household ownership migration binds interests to real household members', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'migrations', '1756300000000_household_ownership.js'), 'utf8');
+  assert.match(source, /ADD COLUMN IF NOT EXISTS household_id/);
+  assert.match(source, /ADD COLUMN IF NOT EXISTS owner_user_id/);
+  assert.match(source, /REFERENCES household_members\(household_id, user_id\)/);
+  assert.match(source, /ownership_household_pair_check/);
 });
 
 console.log(`\n${passed} collaboration tests passed`);
