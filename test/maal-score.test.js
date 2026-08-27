@@ -43,6 +43,40 @@ test('score is always between 0 and 100', () => {
   assert.ok(r.score >= 0 && r.score <= 100, `score ${r.score} out of range`);
 });
 
+test('every pillar exposes the rule, inputs, threshold, and outcome behind its score', () => {
+  const result = computeMaalScore({
+    annual_income: 120000,
+    monthly_expenses: 4000,
+    cash_savings: 12000,
+    total_debt: 60000,
+    hecs_balance: 20000,
+    super_balance: 100000,
+    age: 40,
+    insurance_cover: 'partial',
+  });
+
+  assert.strictEqual(result.methodology_version, 'maal-health-rules-v1');
+  assert.strictEqual(result.rules.length, 5);
+  const savings = result.rules.find((rule) => rule.key === 'savings');
+  assert.deepStrictEqual(savings.inputs, { cash_savings: 12000, monthly_expenses: 4000 });
+  assert.strictEqual(savings.observed.value, 3);
+  assert.deepStrictEqual(savings.target, { operator: '>=', value: 6, unit: 'months' });
+  assert.strictEqual(savings.status, 'attention');
+  assert.match(savings.explanation, /3 months/);
+  assert.ok(result.rules.every((rule) => rule.formula && rule.pillar_weight > 0));
+});
+
+test('rules identify missing inputs instead of presenting fallback assumptions as user facts', () => {
+  const result = computeMaalScore({ cash_savings: 5000 });
+  const savings = result.rules.find((rule) => rule.key === 'savings');
+  const superRule = result.rules.find((rule) => rule.key === 'super');
+  assert.strictEqual(savings.status, 'needs_data');
+  assert.strictEqual(savings.inputs.monthly_expenses, null);
+  assert.strictEqual(savings.assumptions.monthly_expenses, 3500);
+  assert.strictEqual(superRule.status, 'needs_data');
+  assert.strictEqual(result.rules.find((rule) => rule.key === 'debt').status, 'needs_data');
+});
+
 test('higher assets with the same income never produce a lower score', () => {
   const base = { annual_income: 95000, super_balance: 50000, investment_portfolio: 10000, property_value: 0, hecs_balance: 0, total_debt: 0 };
   const richer = { ...base, super_balance: 300000, investment_portfolio: 200000 };

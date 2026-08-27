@@ -38,6 +38,7 @@ import {
   HandCoins,
   ShieldCheck,
   Plus,
+  Pencil,
   X,
   LayoutGrid,
   List as ListIcon,
@@ -59,6 +60,8 @@ export const Route = createFileRoute("/_authenticated/app/assets")({
 
 type CatKey =
   | "bank"
+  | "super"
+  | "property_mortgage"
   | "real_estate"
   | "crypto"
   | "public"
@@ -78,7 +81,7 @@ type Cat = {
   title: string;
   blurb: string;
   Icon: React.ComponentType<{ className?: string }>;
-  table: "cash_accounts" | "investments" | "properties" | "debts" | "other_assets";
+  table: "cash_accounts" | "investments" | "properties" | "debts" | "super_accounts" | "other_assets";
   filter?: { key: string; values: string[] }; // narrow rows of shared tables
   amountKey: string;
   nameKey: string;
@@ -96,8 +99,9 @@ function rowAmount(cat: Cat, r: any): number {
 const CATS: Cat[] = [
   { key: "bank", side: "asset", group: "accounts", title: "Banks & Brokerages", blurb: "Banking and brokerage accounts", Icon: Landmark, table: "cash_accounts", amountKey: "balance", nameKey: "label" },
   { key: "public", side: "asset", group: "accounts", title: "Investment Accounts", blurb: "Stocks, ETFs and managed funds", Icon: LineChart, table: "investments", filter: { key: "kind", values: ["etf", "stock", "managed_fund", "other"] }, amountKey: "value", nameKey: "name" },
+  { key: "super", side: "asset", group: "accounts", title: "Superannuation", blurb: "Super funds and retirement savings", Icon: PiggyBank, table: "super_accounts", amountKey: "balance", nameKey: "label" },
 
-  { key: "real_estate", side: "asset", group: "assets", title: "Real Estate", blurb: "Residential & commercial property", Icon: Home, table: "properties", amountKey: "value", nameKey: "label", netAgainst: "mortgage_balance" },
+  { key: "real_estate", side: "asset", group: "assets", title: "Real Estate", blurb: "Residential & commercial property", Icon: Home, table: "properties", amountKey: "value", nameKey: "label" },
   { key: "crypto", side: "asset", group: "assets", title: "Crypto Holdings", blurb: "Wallets, exchanges and on-chain", Icon: PiggyBank, table: "investments", filter: { key: "kind", values: ["crypto"] }, amountKey: "value", nameKey: "name" },
   { key: "private", side: "asset", group: "assets", title: "Private Investments", blurb: "PE, VC, SAFEs & angel deals", Icon: Briefcase, table: "other_assets", filter: { key: "kind", values: ["private_investment"] }, amountKey: "value", nameKey: "label" },
   { key: "vehicle", side: "asset", group: "assets", title: "Vehicles", blurb: "Cars and other vehicles", Icon: Car, table: "other_assets", filter: { key: "kind", values: ["vehicle"] }, amountKey: "value", nameKey: "label" },
@@ -106,6 +110,7 @@ const CATS: Cat[] = [
   { key: "other_asset", side: "asset", group: "assets", title: "Other Assets", blurb: "Anything else of value", Icon: Anchor, table: "other_assets", filter: { key: "kind", values: ["other"] }, amountKey: "value", nameKey: "label" },
 
   { key: "credit_card", side: "liability", group: "liabilities", title: "Credit Cards", blurb: "Personal & business cards", Icon: CreditCard, table: "debts", filter: { key: "kind", values: ["credit_card"] }, amountKey: "balance", nameKey: "label" },
+  { key: "property_mortgage", side: "liability", group: "liabilities", title: "Property Mortgages", blurb: "Mortgages linked to your properties", Icon: Home, table: "properties", amountKey: "mortgage_balance", nameKey: "label" },
   { key: "loan", side: "liability", group: "liabilities", title: "Mortgages & Loans", blurb: "Mortgages, personal & car loans", Icon: TrendingDown, table: "debts", filter: { key: "kind", values: ["mortgage", "personal", "car", "hecs"] }, amountKey: "balance", nameKey: "label" },
   { key: "other_liability", side: "liability", group: "liabilities", title: "Other Liabilities", blurb: "Taxes owed, private debts", Icon: HandCoins, table: "debts", filter: { key: "kind", values: ["other"] }, amountKey: "balance", nameKey: "label" },
 ];
@@ -113,53 +118,63 @@ const CATS: Cat[] = [
 const ASSET_CATS = CATS.filter((c) => c.side === "asset");
 const LIABILITY_CATS = CATS.filter((c) => c.side === "liability");
 
+export type WealthSection = "overview" | "cash" | "investments" | "property" | "super" | "liabilities" | "other";
+
+const WEALTH_SECTIONS: Record<Exclude<WealthSection, "overview">, { title: string; description: string; keys: CatKey[] }> = {
+  cash: { title: "Cash", description: "Bank accounts, savings, offsets and term deposits.", keys: ["bank"] },
+  investments: { title: "Investments", description: "Listed investments, managed funds and crypto holdings.", keys: ["public", "crypto"] },
+  property: { title: "Property", description: "Property values, mortgages and the equity you own.", keys: ["real_estate", "property_mortgage"] },
+  super: { title: "Super", description: "Your superannuation funds and retirement savings.", keys: ["super"] },
+  liabilities: { title: "Liabilities", description: "Credit cards, mortgages, loans and other obligations.", keys: ["property_mortgage", "credit_card", "loan", "other_liability"] },
+  other: { title: "Other Assets", description: "Private investments, metals, vehicles, collectibles and other valuables.", keys: ["private", "metal", "vehicle", "collectible", "other_asset"] },
+};
+
 /* ------------------------------------------------------------------ */
 /*  Page                                                               */
 /* ------------------------------------------------------------------ */
 
-function PortfolioPage() {
-  const { add } = Route.useSearch();
+export function WealthPortfolioPage({ section = "overview", initialAdd }: { section?: WealthSection; initialAdd?: "asset" | "liability" }) {
   const [view, setView] = useState<"cards" | "list">("cards");
   const [activeCat, setActiveCat] = useState<Cat | null>(null);
+  const [editingRow, setEditingRow] = useState<any | null>(null);
   const [bumps, setBumps] = useState(0);
 
   useEffect(() => {
-    if (add === "asset") setActiveCat(CATS.find((cat) => cat.key === "bank") ?? null);
-    if (add === "liability") setActiveCat(CATS.find((cat) => cat.key === "credit_card") ?? null);
-  }, [add]);
+    if (initialAdd === "asset") setActiveCat(CATS.find((cat) => cat.key === "bank") ?? null);
+    if (initialAdd === "liability") setActiveCat(CATS.find((cat) => cat.key === "credit_card") ?? null);
+  }, [initialAdd]);
+
+  const sectionConfig = section === "overview" ? null : WEALTH_SECTIONS[section];
+  const sectionCats = sectionConfig ? CATS.filter((cat) => sectionConfig.keys.includes(cat.key)) : [];
+  const openAdd = (cat: Cat) => { setEditingRow(null); setActiveCat(cat); };
+  const openEdit = (cat: Cat, row: any) => { setEditingRow(row); setActiveCat(cat); };
 
   return (
     <div className="px-4 sm:px-6 md:px-10 py-6 md:py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-[28px] tracking-display font-bold leading-tight">My Portfolio</h1>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground mb-1">My Wealth</p>
+          <h1 className="text-[28px] tracking-display font-bold leading-tight">{sectionConfig?.title ?? "Overview"}</h1>
+          <p className="mt-1 text-[12px] text-muted-foreground">{sectionConfig?.description ?? "One reconciled view of everything you own and owe."}</p>
+        </div>
         <ViewToggle view={view} onChange={setView} />
       </div>
+
+      {section === "overview" && <WealthSummary />}
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-8 items-start">
         {/* Main column: 3 sections */}
         <div className="space-y-10 min-w-0">
-          <PortfolioSection
-            key={`accounts-${bumps}`}
-            title="Accounts"
-            cats={CATS.filter((c) => c.group === "accounts")}
-            view={view}
-            onAdd={setActiveCat}
-          />
-          <PortfolioSection
-            key={`assets-${bumps}`}
-            title="Assets"
-            cats={CATS.filter((c) => c.group === "assets")}
-            view={view}
-            onAdd={setActiveCat}
-          />
-          <PortfolioSection
-            key={`liab-${bumps}`}
-            title="Liabilities"
-            cats={CATS.filter((c) => c.group === "liabilities")}
-            view={view}
-            onAdd={setActiveCat}
-          />
+          {sectionConfig ? (
+            <PortfolioSection key={`${section}-${bumps}`} title={sectionConfig.title} cats={sectionCats} view={view} onAdd={openAdd} onEdit={openEdit} />
+          ) : (
+            <>
+              <PortfolioSection key={`accounts-${bumps}`} title="Accounts" cats={CATS.filter((c) => c.group === "accounts")} view={view} onAdd={openAdd} onEdit={openEdit} />
+              <PortfolioSection key={`assets-${bumps}`} title="Assets" cats={CATS.filter((c) => c.group === "assets")} view={view} onAdd={openAdd} onEdit={openEdit} />
+              <PortfolioSection key={`liab-${bumps}`} title="Liabilities" cats={CATS.filter((c) => c.group === "liabilities")} view={view} onAdd={openAdd} onEdit={openEdit} />
+            </>
+          )}
 
           <p className="text-[11px] text-muted-foreground pt-6 text-center">
             Maal does not provide financial advice. Information is for educational purposes only.
@@ -168,21 +183,86 @@ function PortfolioPage() {
 
         {/* Right rail */}
         <aside className="space-y-4 xl:sticky xl:top-6">
-          <AddPanel onPick={setActiveCat} />
-          <ConnectPanel />
+          <AddPanel onPick={openAdd} />
+          {(section === "overview" || section === "cash") && <ConnectPanel />}
         </aside>
       </div>
 
       <FormDialog
         cat={activeCat}
-        onClose={() => setActiveCat(null)}
+        row={editingRow}
+        onClose={() => { setActiveCat(null); setEditingRow(null); }}
         onSaved={() => {
           setActiveCat(null);
+          setEditingRow(null);
           setBumps((b) => b + 1);
         }}
       />
     </div>
   );
+}
+
+function WealthSummary() {
+  const [summary, setSummary] = useState<{ assetTotal: number; liabilityTotal: number; netWorth: number; components: Record<string, number> } | null>(null);
+  const [latestSnapshot, setLatestSnapshot] = useState<{ date: string; netWorth: number } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/v1/wealth-summary", { credentials: "include" })
+      .then((response) => {
+        if (response.status === 401) handleUnauthenticated();
+        if (!response.ok) throw new Error("Could not load wealth summary");
+        return response.json();
+      })
+      .then(setSummary)
+      .catch(() => toast.error("Could not load wealth totals"));
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/v1/snapshots?days=1", { credentials: "include" })
+      .then((response) => response.ok ? response.json() : [])
+      .then((rows) => setLatestSnapshot(Array.isArray(rows) && rows.length ? rows[rows.length - 1] : null))
+      .catch(() => setLatestSnapshot(null));
+  }, []);
+
+  const cards = [
+    { label: "Net worth", value: summary?.netWorth },
+    { label: "Total assets", value: summary?.assetTotal },
+    { label: "Total liabilities", value: summary?.liabilityTotal },
+  ];
+  const trackedClasses = summary ? [
+    summary.components.cashTotal,
+    summary.components.investmentsTotal,
+    summary.components.propertyTotal,
+    summary.components.superTotal,
+    summary.components.otherAssetsTotal,
+  ].filter((value) => Number(value) !== 0).length : 0;
+
+  return (
+    <section aria-label="Wealth totals" className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+      {cards.map((card) => (
+        <div key={card.label} className="rounded-[12px] border border-border bg-[var(--surface)] px-4 py-3">
+          <p className="text-[11px] font-semibold text-muted-foreground">{card.label}</p>
+          <p className="mt-1 text-[20px] font-bold tabular-nums">{card.value === undefined ? "—" : formatAUD(card.value)}</p>
+        </div>
+      ))}
+      {summary && trackedClasses < 5 && (
+        <p className="sm:col-span-3 text-[11px] text-muted-foreground">
+          Wealth baseline: {trackedClasses} of 5 asset classes tracked. Add missing assets so your net worth and future service calculations are complete.
+        </p>
+      )}
+      {summary && latestSnapshot && (
+        <p className="sm:col-span-3 text-[11px] text-muted-foreground">
+          Latest daily snapshot ({new Date(`${latestSnapshot.date}T00:00:00`).toLocaleDateString("en-AU")}): {formatAUD(latestSnapshot.netWorth)}
+          {latestSnapshot.netWorth !== summary.netWorth ? ` · current wealth has changed by ${formatAUD(summary.netWorth - latestSnapshot.netWorth)}` : " · reconciled with current wealth"}.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function PortfolioPage() {
+  const { add } = Route.useSearch();
+  return <WealthPortfolioPage initialAdd={add === "asset" || add === "liability" ? add : undefined} />;
 }
 
 /* ------------------------------------------------------------------ */
@@ -220,22 +300,24 @@ function PortfolioSection({
   cats,
   view,
   onAdd,
+  onEdit,
 }: {
   title: string;
   cats: Cat[];
   view: "cards" | "list";
   onAdd: (c: Cat) => void;
+  onEdit: (c: Cat, row: any) => void;
 }) {
   return (
     <section>
       <h2 className="text-[15px] font-bold tracking-display text-muted-foreground mb-3">{title}</h2>
       {view === "cards" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {cats.map((c) => <CategoryCard key={c.key} cat={c} onAdd={onAdd} />)}
+          {cats.map((c) => <CategoryCard key={c.key} cat={c} onAdd={onAdd} onEdit={onEdit} />)}
         </div>
       ) : (
         <div className="space-y-2">
-          {cats.map((c) => <CategoryRow key={c.key} cat={c} onAdd={onAdd} />)}
+          {cats.map((c) => <CategoryRow key={c.key} cat={c} onAdd={onAdd} onEdit={onEdit} />)}
         </div>
       )}
     </section>
@@ -269,10 +351,14 @@ function useCategoryRows(cat: Cat) {
   return { rows, loading, deleteRow, reload };
 }
 
-function CategoryCard({ cat, onAdd }: { cat: Cat; onAdd: (c: Cat) => void }) {
+function CategoryCard({ cat, onAdd, onEdit }: { cat: Cat; onAdd: (c: Cat) => void; onEdit: (c: Cat, row: any) => void }) {
   const { rows, loading, deleteRow } = useCategoryRows(cat);
   const total = rows.reduce((a, r) => a + rowAmount(cat, r), 0);
   const isEmpty = !loading && rows.length === 0;
+  const latestUpdate = rows.reduce<string | null>((latest, row) => {
+    const candidate = row.updated_at || row.created_at;
+    return candidate && (!latest || candidate > latest) ? candidate : latest;
+  }, null);
 
   return (
     <div className="rounded-[14px] border border-border bg-[var(--surface)] overflow-hidden flex flex-col min-h-[200px]">
@@ -319,13 +405,16 @@ function CategoryCard({ cat, onAdd }: { cat: Cat; onAdd: (c: Cat) => void }) {
                     <div className="min-w-0">
                       <p className="text-[13px] font-medium truncate">{r[cat.nameKey] || "Untitled"}</p>
                       <p className="text-[11px] text-muted-foreground truncate">
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-[color:var(--accent)]/12 text-[color:var(--accent)] text-[10px] font-semibold mr-1.5">Manual</span>
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-[color:var(--accent)]/12 text-[color:var(--accent)] text-[10px] font-semibold mr-1.5">{sourceLabel(r.source)}</span>
                         {r.institution || r.ticker || r.account_type || r.kind || cat.title}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="tabular-nums text-[13px] font-semibold">{formatAUD(Number(r[cat.amountKey] ?? 0))}</span>
+                    <button onClick={() => onEdit(cat, r)} className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-muted-foreground hover:text-foreground rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]" aria-label={`Edit ${r[cat.nameKey] || cat.title}`}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
                     <button
                       onClick={() => deleteRow(r.id)}
                       className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-muted-foreground hover:text-foreground transition-opacity rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
@@ -339,7 +428,7 @@ function CategoryCard({ cat, onAdd }: { cat: Cat; onAdd: (c: Cat) => void }) {
             </ul>
             {/* Footer total */}
             <div className="px-4 py-2.5 border-t border-border flex items-center justify-between text-[12px]">
-              <span className="text-muted-foreground">{rows.length} {rows.length === 1 ? "entry" : "entries"}</span>
+              <span className="text-muted-foreground">{rows.length} {rows.length === 1 ? "entry" : "entries"}{latestUpdate ? ` · updated ${new Date(latestUpdate).toLocaleDateString("en-AU")}` : ""}</span>
               <span className="tabular-nums font-semibold">{cat.netAgainst ? "equity = " : "= "}{formatAUD(total)}</span>
             </div>
           </>
@@ -349,7 +438,7 @@ function CategoryCard({ cat, onAdd }: { cat: Cat; onAdd: (c: Cat) => void }) {
   );
 }
 
-function CategoryRow({ cat, onAdd }: { cat: Cat; onAdd: (c: Cat) => void }) {
+function CategoryRow({ cat, onAdd, onEdit }: { cat: Cat; onAdd: (c: Cat) => void; onEdit: (c: Cat, row: any) => void }) {
   const { rows, deleteRow } = useCategoryRows(cat);
   const total = rows.reduce((a, r) => a + rowAmount(cat, r), 0);
 
@@ -372,9 +461,15 @@ function CategoryRow({ cat, onAdd }: { cat: Cat; onAdd: (c: Cat) => void }) {
         <ul className="divide-y divide-border">
           {rows.map((r) => (
             <li key={r.id} className="px-4 py-2 flex items-center justify-between text-[13px] group">
-              <span className="truncate">{r[cat.nameKey] || "Untitled"}</span>
+              <span className="truncate">
+                {r[cat.nameKey] || "Untitled"}
+                <span className="ml-1 text-[10px] text-muted-foreground">{sourceLabel(r.source)}</span>
+              </span>
               <div className="flex items-center gap-2">
                 <span className="tabular-nums">{formatAUD(Number(r[cat.amountKey] ?? 0))}</span>
+                <button onClick={() => onEdit(cat, r)} className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-muted-foreground hover:text-foreground rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]" aria-label={`Edit ${r[cat.nameKey] || cat.title}`}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
                 <button onClick={() => deleteRow(r.id)} className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-muted-foreground hover:text-foreground rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]" aria-label="Remove">
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -385,6 +480,14 @@ function CategoryRow({ cat, onAdd }: { cat: Cat; onAdd: (c: Cat) => void }) {
       )}
     </div>
   );
+}
+
+function sourceLabel(source: unknown) {
+  if (source === "basiq") return "Connected";
+  if (source === "lunchflow") return "Lunch Flow";
+  if (source === "import") return "Imported";
+  if (source === "manual") return "Manual";
+  return "Source unavailable";
 }
 
 /* ------------------------------------------------------------------ */
@@ -464,9 +567,12 @@ const CONNECT_BANKS: string[] = [
 
 function ConnectPanel() {
   const [status, setStatus] = useState<{ connected: boolean; live: boolean } | null>(null);
+  const [lunchFlowStatus, setLunchFlowStatus] = useState<{ connected: boolean; live: boolean } | null>(null);
   const [statusFailed, setStatusFailed] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [lunchFlowSyncing, setLunchFlowSyncing] = useState(false);
+  const [lunchFlowMsg, setLunchFlowMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/v1/basiq/status", { credentials: "include" })
@@ -476,7 +582,56 @@ function ConnectPanel() {
       })
       .then(j => (j && typeof j.live === "boolean" ? setStatus(j) : setStatusFailed(true)))
       .catch(() => setStatusFailed(true));
+    fetch("/lunchflow/status", { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => j && typeof j.live === "boolean" ? setLunchFlowStatus(j) : null)
+      .catch(() => null);
   }, []);
+
+  async function handleLunchFlowSync() {
+    setLunchFlowSyncing(true);
+    setLunchFlowMsg(null);
+    try {
+      const response = await fetch("/lunchflow/sync", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Lunch Flow sync failed");
+      setLunchFlowMsg("Lunch Flow sync queued…");
+      for (let attempt = 0; attempt < 120; attempt++) {
+        await new Promise(resolve => window.setTimeout(resolve, 1000));
+        const statusResponse = await fetch(`/api/v1/import-runs/${encodeURIComponent(result.import_run_id)}`, { credentials: "include" });
+        if (!statusResponse.ok) throw new Error("Could not check Lunch Flow sync progress");
+        const { import_run: run } = await statusResponse.json();
+        if (run.status === "succeeded") {
+          const accounts = Number(run.summary?.accounts ?? 0);
+          const transactions = Number(run.summary?.transactions ?? 0);
+          const holdings = Number(run.summary?.holdings ?? 0);
+          setLunchFlowMsg(`Synced ${accounts} account${accounts === 1 ? "" : "s"}, ${transactions} transactions, and ${holdings} holding${holdings === 1 ? "" : "s"}.`);
+          window.setTimeout(() => window.location.reload(), 700);
+          return;
+        }
+        if (run.status === "dead") throw new Error(run.last_error || "Lunch Flow sync failed after several attempts");
+        setLunchFlowMsg(run.status === "retrying" ? "Lunch Flow is temporarily unavailable — retrying…" : `Syncing ${run.current_stage || "accounts"}…`);
+      }
+      setLunchFlowMsg("Sync is taking longer than expected. You can safely leave this page.");
+    } catch (error) {
+      setLunchFlowMsg(error instanceof Error ? error.message : "Lunch Flow sync failed.");
+    } finally {
+      setLunchFlowSyncing(false);
+    }
+  }
+
+  async function handleLunchFlowDisconnect() {
+    if (!window.confirm("Disconnect Lunch Flow and remove its stored access tokens?")) return;
+    const response = await fetch("/lunchflow/disconnect", { method: "POST", credentials: "include" });
+    const result = await response.json();
+    if (!response.ok) { setLunchFlowMsg(result.error || "Could not disconnect Lunch Flow."); return; }
+    setLunchFlowStatus(current => current ? { ...current, connected: false } : current);
+    setLunchFlowMsg(result.remote_revoke_failed ? "Disconnected locally. Lunch Flow could not confirm remote revocation; review access in Lunch Flow." : "Lunch Flow disconnected.");
+  }
 
   async function handleSync() {
     setSyncing(true);
@@ -601,9 +756,49 @@ function ConnectPanel() {
         </>
       )}
 
+      {lunchFlowStatus?.live && (
+        <div className="border-t border-border pt-3 mt-3 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[12px] font-semibold">Lunch Flow</p>
+              <p className="text-[11px] text-muted-foreground">
+                {lunchFlowStatus.connected ? "Connected as an additional data provider" : "Global bank and brokerage coverage"}
+              </p>
+            </div>
+            {lunchFlowStatus.connected && <span className="size-2 rounded-full bg-[var(--mint)] shrink-0" />}
+          </div>
+          {lunchFlowStatus.connected ? (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={handleLunchFlowSync}
+                disabled={lunchFlowSyncing}
+                className="w-full py-2 rounded-[10px] border border-border text-[12px] font-semibold disabled:opacity-50 transition hover:bg-[var(--secondary)]"
+              >
+                {lunchFlowSyncing ? "Syncing…" : "Sync now"}
+              </button>
+              <button
+                onClick={handleLunchFlowDisconnect}
+                disabled={lunchFlowSyncing}
+                className="w-full py-2 rounded-[10px] border border-border text-[12px] font-semibold text-muted-foreground disabled:opacity-50 transition hover:bg-[var(--secondary)]"
+              >
+                Disconnect
+              </button>
+            </div>
+          ) : (
+            <a
+              href="/lunchflow/connect"
+              className="block w-full py-2 rounded-[10px] border border-border text-[12px] font-semibold text-center transition hover:bg-[var(--secondary)]"
+            >
+              Connect with Lunch Flow
+            </a>
+          )}
+          {lunchFlowMsg && <p className="text-[11px] text-muted-foreground">{lunchFlowMsg}</p>}
+        </div>
+      )}
+
       <div className="flex items-start gap-2 text-[11px] text-muted-foreground border-t border-border pt-3 mt-3">
         <Lock className="h-3 w-3 mt-0.5 shrink-0 text-[color:var(--accent)]" />
-        <p><span className="font-semibold text-foreground">Your data is secure.</span> Bank connections use CDR-regulated Basiq infrastructure. Read-only access only.</p>
+        <p><span className="font-semibold text-foreground">Your data is secure.</span> Basiq and Lunch Flow connections are read-only.</p>
       </div>
     </div>
   );
@@ -625,7 +820,7 @@ type FieldSpec = {
 };
 
 type FormSpec = {
-  table: "cash_accounts" | "investments" | "properties" | "debts" | "other_assets";
+  table: "cash_accounts" | "investments" | "properties" | "debts" | "super_accounts" | "other_assets";
   title: string;
   blurb: string;
   fields: FieldSpec[];
@@ -652,6 +847,25 @@ function specFor(cat: Cat): FormSpec {
         ],
         buildPayload: (v) => ({ label: v.label, institution: v.institution || null, account_type: v.account_type || "savings", balance: Number(v.balance || 0) }),
       };
+    case "super":
+      return {
+        table: "super_accounts",
+        title: "Add Super Fund",
+        blurb: "Add a superannuation fund and its latest balance.",
+        fields: [
+          { key: "label", label: "Account name", placeholder: "e.g. AustralianSuper", full: true, required: true },
+          { key: "fund_name", label: "Fund", placeholder: "e.g. AustralianSuper" },
+          { key: "balance", label: "Current balance (AUD)", type: "number", required: true },
+          { key: "employer_contrib", label: "Annual employer contributions", type: "number" },
+        ],
+        buildPayload: (v) => ({
+          label: v.label,
+          fund_name: v.fund_name || v.label,
+          balance: Number(v.balance || 0),
+          employer_contrib: Number(v.employer_contrib || 0),
+        }),
+      };
+    case "property_mortgage":
     case "real_estate":
       return {
         table: "properties",
@@ -861,10 +1075,12 @@ function specFor(cat: Cat): FormSpec {
 
 function FormDialog({
   cat,
+  row,
   onClose,
   onSaved,
 }: {
   cat: Cat | null;
+  row?: any | null;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -877,11 +1093,12 @@ function FormDialog({
     if (!cat) return;
     const init: Record<string, any> = {};
     spec?.fields.forEach((f) => {
-      init[f.key] = f.type === "select" && f.options?.[0] ? f.options[0].value : "";
+      const rowKey = fieldKeyForRow(cat, f.key);
+      init[f.key] = row?.[rowKey] ?? (f.type === "select" && f.options?.[0] ? f.options[0].value : "");
     });
     setValues(init);
     setErrors({});
-  }, [cat, spec]);
+  }, [cat, row, spec]);
 
   if (!cat || !spec) return null;
 
@@ -909,13 +1126,16 @@ function FormDialog({
       return;
     }
     const payload = { ...spec.buildPayload(values), user_id: u.user.id };
-    const { error } = await (supabase.from(spec.table) as any).insert(payload);
+    const query = supabase.from(spec.table) as any;
+    const { error } = row?.id
+      ? await query.update(payload).eq("id", row.id)
+      : await query.insert(payload);
     setSaving(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    toast.success(`${cat.title} added`);
+    toast.success(`${cat.title} ${row?.id ? "updated" : "added"}`);
     onSaved();
   }
 
@@ -923,7 +1143,7 @@ function FormDialog({
     <Dialog open={!!cat} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>{spec.title}</DialogTitle>
+          <DialogTitle>{row?.id ? spec.title.replace(/^Add /, "Edit ") : spec.title}</DialogTitle>
           <DialogDescription>{spec.blurb}</DialogDescription>
         </DialogHeader>
 
@@ -977,10 +1197,19 @@ function FormDialog({
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={submit} disabled={saving} className="bg-foreground text-background hover:bg-foreground/90">
-            {saving ? "Saving…" : `Add ${cat.side === "asset" ? "Asset" : "Liability"}`}
+            {saving ? "Saving…" : row?.id ? "Save changes" : `Add ${cat.side === "asset" ? "Asset" : "Liability"}`}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
+}
+
+function fieldKeyForRow(cat: Cat, fieldKey: string) {
+  if (cat.key === "real_estate" && fieldKey === "kind") return "property_type";
+  if ((cat.key === "credit_card" || cat.key === "loan") && fieldKey === "rate") return "interest_rate";
+  if (["private", "vehicle", "metal", "collectible", "other_asset"].includes(cat.key) && fieldKey === "name") return "label";
+  if (["private", "vehicle", "collectible", "other_asset"].includes(cat.key) && fieldKey === "description") return "description";
+  if (cat.key === "metal" && fieldKey === "notes") return "description";
+  return fieldKey;
 }

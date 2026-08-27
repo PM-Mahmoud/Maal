@@ -192,3 +192,30 @@ cannot corrupt canonical records and product experiences match the approved oper
 - Trading, transfers, custody or automated purification/zakat payments.
 - Personalised product recommendations without the required licensing and governance.
 - Credential scraping or brittle browser automation for brokers, super funds or property portals.
+
+## Collaboration/compliance delivery status (2026-08-27)
+
+The Build 8 server-side slice is implemented in `db/collaboration.js`,
+`services/collaboration.js` and the Build 8 migration. It provides owner-led household
+membership with bounded ownership shares; pending, accepting, expiring and revocable
+accountant/adviser grants; allow-listed read-only scopes; Vault-backed supporting-document
+links; Australian financial-year tax-ready JSON/CSV exports; portable JSON/CSV exports that
+include collaboration metadata; and confirmation-protected account deletion. Focused unit
+coverage and a local-only PostgreSQL contract cover the tenant boundaries.
+
+This slice intentionally does not claim the entire household model is finished. Canonical
+accounts, holdings, valuations and `ownership_interests` still need a household assignment
+and household-aware totals/calculations. A first-party Settings/Collaboration UI, async
+deletion/export request tracking, and broader sensitive-operation audit wiring remain before
+Build 8 can be considered complete end-to-end.
+
+
+## Extensibility delivery status (2026-08-27)
+
+The first-party server-side extensibility slice is implemented in `services/extensibility.js`.
+Notifications/preferences, event-condition rules, an append-only sensitive-operation ledger,
+scoped API tokens, financial-export authorization and signed outbound webhooks are wired to
+user-scoped PostgreSQL records. Webhook deliveries and rule runs are idempotent, and delivery
+signatures include a timestamp and event ID for replay-aware consumers. Remaining work is a
+Settings UI, durable retry/backoff processing, email/push fan-out and broader event call-site
+coverage; arbitrary third-party code execution remains explicitly deferred.
