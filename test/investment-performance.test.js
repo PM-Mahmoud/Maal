@@ -20,9 +20,15 @@ assert.equal(calculateModifiedDietz({ openingValue: 0, closingValue: 100, startD
       assert.equal(days, 365);
       return {
         snapshots: [
+          { snap_date: '2026-01-01', invest_balance: 999 },
+          { snap_date: '2026-01-31', invest_balance: 999 },
+        ],
+        canonicalSnapshots: [
           { snap_date: '2026-01-01', invest_balance: 10000 },
           { snap_date: '2026-01-31', invest_balance: 12600 },
         ],
+        canonicalCashFlows: [{ amount: 2000, occurred_on: '2026-01-16' }],
+        canonicalCashFlowCoverage: true,
         cashFlows: [{ amount: 2000, occurred_on: '2026-01-16' }],
       };
     },
@@ -30,5 +36,15 @@ assert.equal(calculateModifiedDietz({ openingValue: 0, closingValue: 100, startD
   const performance = await calculate(91, 365);
   assert.equal(scopedUser, 91);
   assert.equal(performance.return_pct, 5.45);
+  assert.equal(performance.source, 'canonical');
+
+  const incomplete = createInvestmentPerformanceService({ loadPerformanceInputs: async () => ({
+    snapshots: [], canonicalSnapshots: [{ snap_date: '2026-01-01', invest_balance: 100 }, { snap_date: '2026-01-31', invest_balance: 110 }],
+    canonicalCashFlows: [], canonicalCashFlowCoverage: false,
+  }) });
+  assert.deepStrictEqual(await incomplete(91, 365), {
+    return_pct: null, investment_gain: null, net_contributions: 0, period_days: 365,
+    source: 'canonical', reason: 'cash_flow_coverage_incomplete',
+  });
   console.log('✓ investment performance excludes deposits using user-scoped cash flows');
 })().catch((error) => { console.error(error); process.exit(1); });

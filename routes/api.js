@@ -478,9 +478,9 @@ router.get('/v1/markets/earnings', async (req, res) => {
 
 router.get('/v1/notifications', async (req, res) => {
   if (!req.session.userId) return res.json([]);
-  res.json([]);
+  try { res.json(await require('../db/extensibility').listNotifications(req.session.userId, req.query.limit)); } catch (e) { res.status(500).json({ error: 'Could not load notifications' }); }
 });
-router.post('/v1/notifications/read', (_req, res) => res.json({ ok: true }));
+router.post('/v1/notifications/read', async (req, res) => { if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' }); try { await require('../db/extensibility').markNotificationsRead(req.session.userId, Array.isArray(req.body?.ids) ? req.body.ids : []); res.json({ ok: true }); } catch (e) { res.status(500).json({ error: 'Could not update notifications' }); } });
 
 // Notification preferences (PR 10) — currently the daily portfolio digest opt-in.
 // Whitelisted keys only, stored in users.notification_prefs JSONB.
@@ -590,6 +590,96 @@ router.get('/v1/profile', async (req, res) => {
   }
 });
 
+// Current canonical totals for the My Wealth overview. This deliberately uses
+// db/assets.js rather than recomputing in React so every consumer shares the
+// same user-scoped wealth equation.
+router.get('/v1/wealth-summary', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const assetsDb = require('../db/assets');
+    const components = await assetsDb.getAssetSummary(req.session.userId);
+    res.json({ ...assetsDb.wealthTotalsFromSummary(components), components });
+  } catch (e) {
+    console.error('/api/v1/wealth-summary error:', e.message);
+    res.status(500).json({ error: 'Could not load wealth summary' });
+  }
+});
+
+// W1.2 shadow read model. Existing asset tables remain the compatibility
+// projection until parity has been proven in production; this endpoint exposes
+// canonical accounts/holdings/valuations without allowing cross-user reads.
+router.get('/v1/wealth/canonical', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    res.json(await require('../db/canonical-wealth').getCanonicalSnapshot(req.session.userId));
+  } catch (e) {
+    console.error('/api/v1/wealth/canonical error:', e.message);
+    res.status(500).json({ error: 'Could not load canonical wealth records' });
+  }
+});
+
+router.post('/v1/wealth/valuations', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const data = req.body || {};
+    const required = ['subject_type', 'subject_key', 'classification', 'amount_minor', 'currency', 'as_of'];
+    if (required.some((key) => data[key] === undefined || data[key] === null || data[key] === '')) {
+      return res.status(400).json({ error: 'Missing required valuation fields' });
+    }
+    const valuation = await require('../db/canonical-wealth').appendValuation(req.session.userId, data);
+    res.status(201).json(valuation);
+  } catch (e) {
+    console.error('/api/v1/wealth/valuations error:', e.message);
+    const status = e.message === 'Superseded valuation not found' ? 404 : (e.statusCode || 500);
+    res.status(status).json({ error: status < 500 ? e.message : 'Could not append valuation' });
+  }
+});
+
+router.post('/v1/wealth/import-statement', require('../services/wealth-statement-import').statementImportHandler);
+
+// Governed wealth services. Every calculation persists its exact input snapshot,
+// methodology version and evidence lines; partner access is explicit and revocable.
+const wealthServices = require('../services/wealth-services-api');
+router.post('/v1/zakat/runs', wealthServices.calculateZakatHandler);
+router.get('/v1/zakat/prefill', wealthServices.zakatPrefillHandler);
+router.post('/v1/purification/runs', wealthServices.calculatePurificationHandler);
+router.get('/v1/service-runs', wealthServices.listRunsHandler);
+router.get('/v1/service-runs/:id/evidence', wealthServices.evidenceHandler);
+router.get('/v1/purification/obligations', wealthServices.obligationsHandler);
+router.post('/v1/purification/obligations/:id/satisfy', wealthServices.satisfyHandler);
+router.get('/v1/marketplace', wealthServices.marketplaceHandler);
+router.get('/v1/partner-consents', wealthServices.consentsHandler);
+router.post('/v1/partners/:partnerKey/consents', wealthServices.consentHandler);
+router.delete('/v1/partner-consents/:id', wealthServices.revokeHandler);
+router.post('/v1/admin/partners', wealthServices.partnerManifestHandler);
+router.post('/v1/admin/partners/:partnerKey/approval', wealthServices.partnerApprovalHandler);
+router.post('/v1/admin/marketplace-governance', wealthServices.governanceHandler);
+router.post('/v1/admin/methodologies/:serviceType/:key/:version/approve', wealthServices.methodologyApprovalHandler);
+router.post('/v1/admin/purification-ratios', wealthServices.ratioDatasetHandler);
+router.post('/v1/admin/partners/:partnerKey/sandbox-certification', wealthServices.sandboxCertificationHandler);
+
+// ─── Collaboration and compliance (Build 8) ───────────────────────────────
+// Membership is metadata only: it never widens access to another user's
+// financial records. Shared reads require an explicit, active, scope-matched
+// accountant/adviser grant and have no write endpoints.
+const collaboration = require('../services/collaboration');
+router.get('/v1/collaboration/households', collaboration.listHouseholdsHandler);
+router.post('/v1/collaboration/households', collaboration.createHouseholdHandler);
+router.get('/v1/collaboration/households/:householdId', collaboration.getHouseholdHandler);
+router.post('/v1/collaboration/households/:householdId/members', collaboration.addMemberHandler);
+router.patch('/v1/collaboration/households/:householdId/members/:userId', collaboration.updateMemberHandler);
+router.delete('/v1/collaboration/households/:householdId/members/:userId', collaboration.removeMemberHandler);
+router.get('/v1/collaboration/grants', collaboration.listGrantsHandler);
+router.post('/v1/collaboration/grants', collaboration.createGrantHandler);
+router.post('/v1/collaboration/grants/:grantId/accept', collaboration.acceptGrantHandler);
+router.delete('/v1/collaboration/grants/:grantId', collaboration.revokeGrantHandler);
+router.get('/v1/collaboration/documents', collaboration.listDocumentsHandler);
+router.post('/v1/collaboration/documents', collaboration.linkDocumentHandler);
+router.delete('/v1/collaboration/documents/:documentId', collaboration.unlinkDocumentHandler);
+router.get('/v1/collaboration/shared/:ownerUserId/documents/:documentId', collaboration.sharedDocumentHandler);
+router.get('/v1/collaboration/shared/:ownerUserId/tax-export', collaboration.taxExportHandler);
+router.get('/v1/collaboration/shared/:ownerUserId/:scope', collaboration.sharedReadHandler);
+
 router.patch('/v1/profile', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
@@ -641,9 +731,16 @@ router.get('/v1/cash-risks', require('../services/cash-risks').cashRiskHandler);
 router.post('/v1/monthly-closes/:month', require('../services/monthly-close').monthlyCloseHandler);
 router.get('/v1/monthly-closes', require('../services/monthly-close').listMonthlyClosesHandler);
 router.post('/v1/financial-export', require('../services/financial-export').financialExportHandler);
+router.get('/v1/data-portability', require('../services/collaboration').dataPortabilityHandler);
+router.post('/v1/data-portability', require('../services/collaboration').dataPortabilityHandler);
+router.post('/v1/account/deletion', require('../services/collaboration').deleteAccountHandler);
 router.get('/v1/planning', require('../services/planning').previewHandler);
 router.post('/v1/planning', require('../services/planning').saveHandler);
 router.get('/v1/planning/history', require('../services/planning').historyHandler);
+router.get('/v1/recommendation-actions', require('../services/recommendation-actions').listHandler);
+router.post('/v1/recommendation-actions/refresh', require('../services/recommendation-actions').refreshHandler);
+router.post('/v1/recommendation-actions/:id/status', require('../services/recommendation-actions').statusHandler);
+router.post('/v1/recommendation-actions/:id/outcomes', require('../services/recommendation-actions').outcomeHandler);
 
 // ─── Vault (real document storage — Postgres bytea via db/vault.js) ────────
 // The React vault page used a Supabase Storage bucket that doesn't exist (the

@@ -441,6 +441,11 @@ router.post('/forgot-password', authLimiter,
 
 router.post('/api/account/delete', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not signed in.' });
+  const { isDeletionConfirmed, DELETION_CONFIRMATION } = require('../lib/collaboration');
+  const confirmation = req.body && (req.body.confirmation || req.body.confirm);
+  if (!isDeletionConfirmed(confirmation)) {
+    return res.status(400).json({ error: `Type ${DELETION_CONFIRMATION} to confirm permanent deletion.` });
+  }
   try {
     const { deleteUser } = require('../db/users');
     await deleteUser(req.session.userId);
