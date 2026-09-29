@@ -477,9 +477,14 @@ function canonicalSummaryMatchesLegacy(canonical, legacy) {
 // become authoritative only when every component matches the legacy register;
 // partial/stale backfills fail safely to the legacy summary.
 async function getAssetSummary(userId) {
+  // Start the canonical read alongside the legacy one (each DB round-trip is
+  // costly); its failure is captured here and handled in the catch below.
+  const canonical = require('./canonical-wealth').getCanonicalSnapshot(userId)
+    .then((snapshot) => ({ snapshot }), (error) => ({ error }));
   const legacy = await getLegacyAssetSummary(userId);
   try {
-    const snapshot = await require('./canonical-wealth').getCanonicalSnapshot(userId);
+    const { snapshot, error } = await canonical;
+    if (error) throw error;
     if (!snapshot.valuations.length || !canonicalSummaryMatchesLegacy(snapshot.summary, legacy)) return legacy;
     return {
       cashTotal: snapshot.summary.cashTotal,

@@ -529,17 +529,16 @@ router.get('/v1/score', async (req, res) => {
     const { computeMaalScore } = require('../lib/maal-score');
     const { recordScoreSnapshot, getScoreSnapshots, shapeScoreSnapshotHistory } = require('../db/score-snapshots');
 
-    const profile = (await getProfileByUserId(req.session.userId)) || {};
-    const assetSummary = await assetsDb.getAssetSummary(req.session.userId);
-    const effectiveProfile = assetsDb.mergeAssetSummaryIntoProfile(profile, assetSummary);
+    // Independent reads/writes run in parallel — every DB round-trip is costly.
+    const [profileRow, assetSummary] = await Promise.all([
+      getProfileByUserId(req.session.userId),
+      assetsDb.getAssetSummary(req.session.userId),
+    ]);
+    const effectiveProfile = assetsDb.mergeAssetSummaryIntoProfile(profileRow || {}, assetSummary);
     const score = computeMaalScore(effectiveProfile);
-    try {
-      await require('../services/calculation-lineage').recordScoreMetric(
-        req.session.userId, score, effectiveProfile
-      );
-    } catch (e) {
-      console.error('/api/v1/score lineage error:', e.message);
-    }
+    const lineage = require('../services/calculation-lineage')
+      .recordScoreMetric(req.session.userId, score, effectiveProfile)
+      .catch((e) => console.error('/api/v1/score lineage error:', e.message));
 
     // Record today's score (upsert, at most one row/user/day) so the React
     // dashboard accrues a real daily history. Best-effort: recording or reading
@@ -559,6 +558,7 @@ router.get('/v1/score', async (req, res) => {
     } catch (e) {
       console.error('/api/v1/score history error:', e.message);
     }
+    await lineage;
 
     res.json({ ok: true, ...score, history });
   } catch (e) {
