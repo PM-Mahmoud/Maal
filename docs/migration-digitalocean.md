@@ -125,16 +125,17 @@ to `https://www.hellomaal.com/` *now*, while Render is still serving.
 2. GoDaddy → My Products → hellomaal.com → **DNS**:
    - Edit the `www` **CNAME** (currently `mizan-ufgq.onrender.com`) → DO's target.
    - **Do not touch** MX, TXT or NS records (email and verification).
-3. GoDaddy → same domain → **Forwarding** → forward `hellomaal.com` to
-   `https://www.hellomaal.com`, type **Permanent (301)**, **Forward only** (no
-   masking). GoDaddy then replaces the bare-domain `A` record (`216.24.57.1`,
-   Render) itself.
+3. **Leave the bare-domain `A` record (`216.24.57.1`, Render) alone for now.**
+   Render keeps 301-ing `hellomaal.com` → `www`, which now lands on DO. The
+   GoDaddy forwarding is set up in Step 6, just before Render's web service is
+   suspended. One fewer change on switch-over day.
 4. Wait for DO to show `www.hellomaal.com` as **Active** with a certificate.
-5. Check: `https://www.hellomaal.com/health` is served by DO, and
-   `https://hellomaal.com` lands on `https://www.hellomaal.com`. Sign in with
+5. Check: `https://www.hellomaal.com/health` is served by DO (no
+   `x-render-origin-server` header), and `https://hellomaal.com` still lands
+   on `https://www.hellomaal.com`. Sign in with
    **Google** and with an email code; open the dashboard.
 
-If bare `https://hellomaal.com` shows a certificate warning after forwarding,
+If, in Step 6, bare `https://hellomaal.com` shows a certificate warning after forwarding,
 GoDaddy's forwarding isn't serving HTTPS for it: the fallback is moving DNS to
 Cloudflare's free plan (copy every GoDaddy record first, MX included).
 
@@ -145,8 +146,13 @@ Once www.hellomaal.com serves from DO:
 - [ ] **Suspend** (don't delete) the Render **cron jobs** — otherwise backups
       verification/marker run twice a day.
 - [ ] **Suspend** the Render **worker**.
-- [ ] Leave the Render **web** service running but idle for ~1 week as a
-      rollback target, then suspend it.
+- [ ] Leave the Render **web** service running for ~1 week as a rollback
+      target (it also keeps redirecting the bare domain to www).
+- [ ] After that week: GoDaddy → hellomaal.com → **Forwarding** → forward
+      `hellomaal.com` to `https://www.hellomaal.com`, **Permanent (301)**,
+      **Forward only**. GoDaddy replaces the bare-domain `A` record itself.
+      Check `https://hellomaal.com` lands on www with no certificate warning,
+      **then** suspend the Render web service.
 
 ## Step 7 — Re-check third-party settings
 
