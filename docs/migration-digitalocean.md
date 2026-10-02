@@ -28,8 +28,8 @@ Singapore.
 | Backup verification (18:00 UTC) + backup marker (12:00 UTC) | Render cron | DO `SCHEDULED` jobs, same times |
 | Database | Neon Sydney | **unchanged** |
 | Vault files | Cloudflare R2 | **unchanged** |
-| Domain | hellomaal.com → Render | hellomaal.com → DO |
-| External cron (radar, digest, constants drift) | cron-job.org → `https://hellomaal.com/internal/...` | **unchanged** (same URLs follow the domain) |
+| Domain | www → Render (bare domain 301s to www) | www → DO; bare domain forwarded to www by GoDaddy |
+| External cron (radar, digest, constants drift) | cron-job.org → `https://www.hellomaal.com/internal/...` | switch URLs to `www.` before Step 5 |
 | Logged-in users | sessions in Postgres | **stay logged in** (same DB) |
 
 ## Before you start
@@ -37,7 +37,7 @@ Singapore.
 - [ ] PR #76 merged (it removes wasted queries regardless of host).
 - [ ] A DigitalOcean account with billing set up. Rough cost for this spec:
       web 1 GB + worker 0.5 GB + short jobs — check current App Platform pricing.
-- [ ] Access to wherever **hellomaal.com's DNS** is managed (registrar or Cloudflare).
+- [ ] Access to wherever **hellomaal.com's DNS** is managed (GoDaddy).
 - [ ] Render dashboard open on the **web service → Environment** page.
 - [ ] **Neon IP allow-list:** Neon console → Settings → IP Allow. If it's on,
       you'll need to add DO's addresses (App Platform's dedicated egress IP
@@ -59,7 +59,7 @@ Wait for the old TTL to pass before step 5.
    ```
 2. Confirm **region = Sydney (syd)** on every component.
 3. **Temporarily remove the `domains:` block** in the dashboard (or leave the
-   domain unverified) so DO doesn't try to claim hellomaal.com yet.
+   domain unverified) so DO doesn't try to claim www.hellomaal.com yet.
 4. If the `SCHEDULED` job kind isn't offered in your account, delete those two
    jobs for now and see *Fallback for scheduled jobs* below.
 
@@ -77,7 +77,7 @@ into DO → App → Settings → **App-Level Environment Variables**, ticking
 - Use the **same** `SESSION_SECRET`, `PROVIDER_TOKEN_ENCRYPTION_KEY` and
   `WEBHOOK_SECRET_ENCRYPTION_KEY` — a new value logs everyone out or makes
   stored provider tokens / webhook secrets unreadable.
-- Keep `BASE_URL=https://hellomaal.com` (not the temporary DO URL).
+- Set `BASE_URL=https://www.hellomaal.com` (www is the canonical host, see Step 5; not the temporary DO URL).
 - Never paste keys into chat, commits, or this repo (CLAUDE.md hard rule).
 
 ## Step 4 — Deploy and test on the temporary URL
@@ -106,23 +106,41 @@ DO gives the app a URL like `maal-xxxxx.ondigitalocean.app`. Deploy, then check:
 Both Render and DO are now connected to the same database. That's safe: the
 worker leases each job, so two workers can't process the same one.
 
-## Step 5 — Switch the domain
+## Step 5 — Switch the domain (GoDaddy DNS)
 
-1. In DO → App → Settings → **Domains**, add `hellomaal.com` (primary) and
-   `www.hellomaal.com`. DO shows the DNS records to create.
-2. At your DNS provider, replace the Render records with DO's:
-   - `www` → **CNAME** to the `…ondigitalocean.app` target DO shows.
-   - Apex `hellomaal.com` → CNAME/ALIAS/"flattened" record to the same target,
-     if your provider supports it (Cloudflare does). Otherwise follow DO's
-     instructions for apex domains.
-3. Wait for DO to show the domain as **Active** with a TLS certificate
-   (usually minutes).
-4. Check the live site: `https://hellomaal.com/health`, sign in with **Google**
-   and with an email code, open the dashboard.
+hellomaal.com's DNS is at **GoDaddy** (nameservers `ns73/ns74.domaincontrol.com`),
+which also runs the domain's **email** (MX → `secureserver.net`). GoDaddy can't
+point the bare domain at App Platform (no CNAME/ALIAS at the apex), so
+**`www.hellomaal.com` is the canonical host** and GoDaddy forwards the bare
+domain to it. The site already works this way today (Render 301s bare → www).
+
+**Before switching — make every integration use `www`.** A forwarded bare-domain
+URL turns into a redirect, which webhooks (POST) and some cron services don't
+follow. In Step 7's table, change any URL that starts `https://www.hellomaal.com/`
+to `https://www.hellomaal.com/` *now*, while Render is still serving.
+
+1. In DO → App → Settings → **Domains**, add **only** `www.hellomaal.com`.
+   Choose "I'll manage my domain" (keep DNS at GoDaddy). DO shows a CNAME target
+   like `maal-xxxxx.ondigitalocean.app`.
+2. GoDaddy → My Products → hellomaal.com → **DNS**:
+   - Edit the `www` **CNAME** (currently `mizan-ufgq.onrender.com`) → DO's target.
+   - **Do not touch** MX, TXT or NS records (email and verification).
+3. GoDaddy → same domain → **Forwarding** → forward `hellomaal.com` to
+   `https://www.hellomaal.com`, type **Permanent (301)**, **Forward only** (no
+   masking). GoDaddy then replaces the bare-domain `A` record (`216.24.57.1`,
+   Render) itself.
+4. Wait for DO to show `www.hellomaal.com` as **Active** with a certificate.
+5. Check: `https://www.hellomaal.com/health` is served by DO, and
+   `https://hellomaal.com` lands on `https://www.hellomaal.com`. Sign in with
+   **Google** and with an email code; open the dashboard.
+
+If bare `https://hellomaal.com` shows a certificate warning after forwarding,
+GoDaddy's forwarding isn't serving HTTPS for it: the fallback is moving DNS to
+Cloudflare's free plan (copy every GoDaddy record first, MX included).
 
 ## Step 6 — Turn off duplicates on Render
 
-Once hellomaal.com serves from DO:
+Once www.hellomaal.com serves from DO:
 
 - [ ] **Suspend** (don't delete) the Render **cron jobs** — otherwise backups
       verification/marker run twice a day.
@@ -132,15 +150,15 @@ Once hellomaal.com serves from DO:
 
 ## Step 7 — Re-check third-party settings
 
-The domain doesn't change, so most integrations need nothing. Verify anyway:
+Every URL below must use `www.hellomaal.com`. Update them **before** Step 5 (see there). After the switch, verify:
 
 | Integration | Where | What to check |
 |---|---|---|
-| Google sign-in | Google Cloud Console → Credentials | Redirect URI `https://hellomaal.com/auth/google/callback` still listed |
-| Stripe | Dashboard → Developers → Webhooks | Endpoint `https://hellomaal.com/billing/webhook`; **send a test event** and confirm 200 |
-| Lunch Flow | provider console / `LUNCHFLOW_REDIRECT_URI` | Redirect points at hellomaal.com |
+| Google sign-in | Google Cloud Console → Credentials | Redirect URI `https://www.hellomaal.com/auth/google/callback` still listed |
+| Stripe | Dashboard → Developers → Webhooks | Endpoint `https://www.hellomaal.com/billing/webhook`; **send a test event** and confirm 200 |
+| Lunch Flow | provider console / `LUNCHFLOW_REDIRECT_URI` | Redirect points at www.hellomaal.com |
 | Basiq | — | No redirect back to Maal (users press "Sync now") — nothing to change |
-| cron-job.org | job list | Radar / digest / constants-drift URLs use hellomaal.com; next runs return 200 |
+| cron-job.org | job list | Radar / digest / constants-drift URLs use www.hellomaal.com; next runs return 200 |
 | Twilio | — | Inbound SMS is dormant; nothing to do |
 
 ## Step 8 — Final checks and clean-up
