@@ -1179,11 +1179,16 @@ router.get('/v1/transaction-categories', (req, res) => {
 router.post('/v1/transactions', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   let row;
+  let categoryAssignment;
   try {
-    const { normalizeImportedTransaction } = require('../lib/transaction-import');
-    row = normalizeImportedTransaction(
-      req.body?.data && typeof req.body.data === 'object' ? req.body.data : req.body
-    );
+    const { normalizeImportedTransaction, resolveClientCategory } = require('../lib/transaction-import');
+    const source = req.body?.data && typeof req.body.data === 'object' ? req.body.data : req.body;
+    row = normalizeImportedTransaction(source);
+    // The client posts a legacy simple `category` (e.g. "groceries") that is NOT a
+    // column on the protected transactions table — persist it into the separate
+    // transaction_categories FK table below. "other"/unknown resolves to null so
+    // auto-categorisation still drives the display (CSV import always sends "other").
+    categoryAssignment = resolveClientCategory(source?.category);
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
@@ -1207,6 +1212,21 @@ router.post('/v1/transactions', async (req, res) => {
        DO NOTHING`,
       [req.session.userId, `request:${hash}`, JSON.stringify(row), hash]
     );
+    // Persist the user's explicit category into transaction_categories (source
+    // 'manual'), scoped by user_id. The transactions row was just inserted for this
+    // user, so ownership is guaranteed; we still pass user_id for the FK/index.
+    if (categoryAssignment) {
+      await client.query(
+        `INSERT INTO transaction_categories
+           (transaction_id, user_id, category_group, category, source, updated_at)
+         VALUES ($1, $2, $3, $4, 'manual', NOW())
+         ON CONFLICT (transaction_id)
+         DO UPDATE SET category_group = EXCLUDED.category_group,
+           category = EXCLUDED.category, source = 'manual', updated_at = NOW()`,
+        [inserted.rows[0].id, req.session.userId,
+          categoryAssignment.category_group, categoryAssignment.category]
+      );
+    }
     await client.query('COMMIT');
 
     try {
