@@ -669,6 +669,8 @@ router.get('/v1/collaboration/households/:householdId', collaboration.getHouseho
 router.post('/v1/collaboration/households/:householdId/members', collaboration.addMemberHandler);
 router.patch('/v1/collaboration/households/:householdId/members/:userId', collaboration.updateMemberHandler);
 router.delete('/v1/collaboration/households/:householdId/members/:userId', collaboration.removeMemberHandler);
+router.put('/v1/collaboration/households/:householdId/ownership', collaboration.replaceOwnershipHandler);
+router.get('/v1/collaboration/households/:householdId/wealth', collaboration.householdSnapshotHandler);
 router.get('/v1/collaboration/grants', collaboration.listGrantsHandler);
 router.post('/v1/collaboration/grants', collaboration.createGrantHandler);
 router.post('/v1/collaboration/grants/:grantId/accept', collaboration.acceptGrantHandler);

@@ -8,8 +8,10 @@ const { loadTaxReadyExport } = require('../db/financial-export');
 const { serializeFinancialExport } = require('../lib/financial-export');
 const {
   READ_SCOPES,
+  OWNERSHIP_SUBJECT_TYPES,
   normalizeHouseholdName,
   normalizeOwnership,
+  normalizeOwnershipAllocations,
   normalizeGrant,
   isDeletionConfirmed,
 } = require('../lib/collaboration');
@@ -33,7 +35,7 @@ function bodyData(req) {
 }
 
 function sendError(res, error, fallback = 'Could not update collaboration settings.') {
-  const status = error.statusCode || (/^(Household name|Ownership|A valid grantee|Grant role|Grant scopes|Grant expiry|Tax year|Document type|Invalid)/.test(error.message) ? 400 : 500);
+  const status = error.statusCode || (/^(Household name|Ownership|Household ownership|At least one household|Each ownership|A household member|A valid grantee|Grant role|Grant scopes|Grant expiry|Tax year|Document type|Invalid)/.test(error.message) ? 400 : 500);
   if (status >= 500) console.error('[collaboration]', error.message);
   res.status(status).json({ error: status < 500 ? error.message : fallback });
 }
@@ -97,6 +99,35 @@ async function removeMemberHandler(req, res) {
     if (!row) return res.status(403).json({ error: 'Only the household owner can remove a member.' });
     res.json({ ok: true });
   } catch (error) { sendError(res, error); }
+}
+
+async function replaceOwnershipHandler(req, res) {
+  const actorId = currentUserId(req, res); if (!actorId) return;
+  try {
+    const data = bodyData(req);
+    const subjectType = String(data.subjectType || data.subject_type || '').trim().toLowerCase();
+    if (!OWNERSHIP_SUBJECT_TYPES.includes(subjectType)) throw new Error('Invalid ownership subject type.');
+    const subjectKey = String(data.subjectKey || data.subject_key || '').trim().slice(0, 240);
+    if (!subjectKey) throw new Error('Invalid ownership subject key.');
+    const rows = await collaborationDb.replaceHouseholdOwnership(
+      positiveId(req.params.householdId, 'household id'), actorId,
+      positiveId(data.subjectOwnerUserId || data.subject_owner_user_id, 'subject owner user id'),
+      subjectType, subjectKey, normalizeOwnershipAllocations(data.allocations)
+    );
+    if (!rows) return res.status(403).json({ error: 'Only the household owner can allocate member-owned household assets.' });
+    res.json({ ownershipInterests: rows });
+  } catch (error) { sendError(res, error); }
+}
+
+async function householdSnapshotHandler(req, res) {
+  const userId = currentUserId(req, res); if (!userId) return;
+  try {
+    const snapshot = await collaborationDb.getHouseholdCanonicalSnapshot(
+      positiveId(req.params.householdId, 'household id'), userId
+    );
+    if (!snapshot) return res.status(404).json({ error: 'Household not found.' });
+    res.json(snapshot);
+  } catch (error) { sendError(res, error, 'Could not load household wealth.'); }
 }
 
 async function listGrantsHandler(req, res) {
@@ -258,6 +289,7 @@ async function deleteAccountHandler(req, res) {
 module.exports = {
   listHouseholdsHandler, createHouseholdHandler, getHouseholdHandler,
   addMemberHandler, updateMemberHandler, removeMemberHandler,
+  replaceOwnershipHandler, householdSnapshotHandler,
   listGrantsHandler, createGrantHandler, acceptGrantHandler, revokeGrantHandler,
   listDocumentsHandler, linkDocumentHandler, unlinkDocumentHandler,
   sharedReadHandler, sharedDocumentHandler, taxExportHandler,
