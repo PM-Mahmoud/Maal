@@ -1,0 +1,114 @@
+# DigitalOcean App Platform spec — Maal in Sydney (next to Neon ap-southeast-2).
+# Replaces render.yaml. See docs/migration-digitalocean.md for the full runbook.
+#
+# Validate before use:   doctl apps spec validate .do/app.yaml
+# Create the app:        doctl apps create --spec .do/app.yaml
+#
+# SECRETS: every `type: SECRET` below is declared WITHOUT a value on purpose.
+# Paste the values in the DigitalOcean dashboard (App → Settings → App-Level
+# Environment Variables → Encrypt). Never put a real value in this file.
+
+name: maal
+region: syd
+
+# Shared by every component (web, worker, jobs). Values are set in the dashboard.
+envs:
+  - { key: NODE_ENV, value: production, scope: RUN_AND_BUILD_TIME }
+  - { key: BASE_URL, value: "https://hellomaal.com", scope: RUN_TIME }
+  # Core
+  - { key: DATABASE_URL, type: SECRET, scope: RUN_TIME }
+  - { key: SESSION_SECRET, type: SECRET, scope: RUN_TIME }
+  - { key: ADMIN_PASSWORD, type: SECRET, scope: RUN_TIME }
+  - { key: PROVIDER_TOKEN_ENCRYPTION_KEY, type: SECRET, scope: RUN_TIME }
+  - { key: WEBHOOK_SECRET_ENCRYPTION_KEY, type: SECRET, scope: RUN_TIME }
+  # Auth + email
+  - { key: GOOGLE_CLIENT_ID, type: SECRET, scope: RUN_TIME }
+  - { key: GOOGLE_CLIENT_SECRET, type: SECRET, scope: RUN_TIME }
+  - { key: RESEND_API_KEY, type: SECRET, scope: RUN_TIME }
+  - { key: EMAIL_FROM, type: SECRET, scope: RUN_TIME }
+  # Money + bank data
+  - { key: STRIPE_SECRET_KEY, type: SECRET, scope: RUN_TIME }
+  - { key: STRIPE_WEBHOOK_SECRET, type: SECRET, scope: RUN_TIME }
+  - { key: BASIQ_API_KEY, type: SECRET, scope: RUN_TIME }
+  - { key: LUNCHFLOW_CLIENT_ID, type: SECRET, scope: RUN_TIME }
+  - { key: LUNCHFLOW_CLIENT_SECRET, type: SECRET, scope: RUN_TIME }
+  # AI gateway
+  - { key: AZURE_OPENAI_ENDPOINT, type: SECRET, scope: RUN_TIME }
+  - { key: AZURE_OPENAI_API_KEY, type: SECRET, scope: RUN_TIME }
+  - { key: AZURE_OPENAI_DEPLOYMENT, type: SECRET, scope: RUN_TIME }
+  - { key: AZURE_OPENAI_API_VERSION, type: SECRET, scope: RUN_TIME }
+  - { key: ANTHROPIC_API_KEY, type: SECRET, scope: RUN_TIME }
+  - { key: GROQ_API_KEY, type: SECRET, scope: RUN_TIME }
+  - { key: ISAACUS_API_KEY, type: SECRET, scope: RUN_TIME }
+  # Market data + search
+  - { key: FINNHUB_API_KEY, type: SECRET, scope: RUN_TIME }
+  - { key: EXA_API_KEY, type: SECRET, scope: RUN_TIME }
+  - { key: FINANCIAL_DATASETS_API_KEY, type: SECRET, scope: RUN_TIME }
+  # Vault object storage (Cloudflare R2)
+  - { key: STORAGE_ENDPOINT, type: SECRET, scope: RUN_TIME }
+  - { key: STORAGE_BUCKET, type: SECRET, scope: RUN_TIME }
+  - { key: STORAGE_ACCESS_KEY_ID, type: SECRET, scope: RUN_TIME }
+  - { key: STORAGE_SECRET_ACCESS_KEY, type: SECRET, scope: RUN_TIME }
+  - { key: STORAGE_REGION, type: SECRET, scope: RUN_TIME }
+  # Cron + ops
+  - { key: RADAR_CRON_SECRET, type: SECRET, scope: RUN_TIME }
+  - { key: OPERATIONAL_ALERT_WEBHOOK_URL, type: SECRET, scope: RUN_TIME }
+  # Any other key set on Render (TWILIO_*, MAAL_WATCHLIST, GATEWAY_*, …) — add
+  # here or in the dashboard. Copy the full list from Render; see the runbook.
+
+services:
+  - name: web
+    github: { repo: PM-Mahmoud/Maal, branch: main, deploy_on_push: true }
+    environment_slug: node-js
+    build_command: npm install && npm run build:client
+    run_command: npm start
+    http_port: 8080
+    instance_size_slug: apps-s-1vcpu-1gb
+    instance_count: 1
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 20
+    domains:
+      - { domain: hellomaal.com, type: PRIMARY }
+      - { domain: www.hellomaal.com, type: ALIAS }
+
+workers:
+  - name: import-worker
+    github: { repo: PM-Mahmoud/Maal, branch: main, deploy_on_push: true }
+    environment_slug: node-js
+    build_command: npm install
+    run_command: npm run worker
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    instance_count: 1
+
+jobs:
+  # Runs ONCE per deploy before the new version goes live (Render ran
+  # `npm run migrate` inside each service's build — four times per deploy).
+  - name: migrate
+    kind: PRE_DEPLOY
+    github: { repo: PM-Mahmoud/Maal, branch: main, deploy_on_push: true }
+    environment_slug: node-js
+    build_command: npm install
+    run_command: npm run migrate
+    instance_size_slug: apps-s-1vcpu-0.5gb
+
+  # Render cron schedules were UTC; kept identical.
+  - name: backup-verification
+    kind: SCHEDULED
+    schedule: { cron: "0 18 * * *", time_zone: UTC }
+    github: { repo: PM-Mahmoud/Maal, branch: main, deploy_on_push: true }
+    environment_slug: node-js
+    build_command: npm install
+    run_command: npm run verify:backup
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    envs:
+      - { key: BACKUP_RESTORE_DATABASE_URL, type: SECRET, scope: RUN_TIME }
+
+  - name: backup-marker
+    kind: SCHEDULED
+    schedule: { cron: "0 12 * * *", time_zone: UTC }
+    github: { repo: PM-Mahmoud/Maal, branch: main, deploy_on_push: true }
+    environment_slug: node-js
+    build_command: npm install
+    run_command: npm run mark:backup-source
+    instance_size_slug: apps-s-1vcpu-0.5gb
