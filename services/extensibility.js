@@ -48,7 +48,9 @@ function createExtensibilityService(dependencies = {}) {
       const timeout = controller ? setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS) : null;
       let response;
       try {
-        response = await fetchImpl(webhook.url, { method: 'POST', headers, body, signal: controller?.signal });
+        // redirect:'manual' prevents a webhook target from 3xx-redirecting delivery
+        // to an internal host (SSRF) — a redirect is recorded as a failed delivery.
+        response = await fetchImpl(webhook.url, { method: 'POST', headers, body, redirect: 'manual', signal: controller?.signal });
       } finally {
         if (timeout) clearTimeout(timeout);
       }
