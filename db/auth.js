@@ -21,6 +21,10 @@ const sessionStore = new PgSessionStore({
   // Prune expired sessions hourly instead of the default 15 min — the table is
   // tiny and this trims needless DELETE traffic to Neon.
   pruneSessionInterval: 60 * 60,
+  // express-session otherwise UPDATEs the session row on EVERY request just to
+  // slide its expiry. Sessions are not rolling (the cookie expires 30 days after
+  // login regardless), so that write bought nothing and cost a DB round-trip.
+  disableTouch: true,
 });
 
 module.exports = { pool, sessionStore };

@@ -20,18 +20,28 @@ export type Snapshot = {
 
 export async function fetchSnapshots(days = 366): Promise<Snapshot[]> {
   try {
-    const r = await fetch(`/api/v1/snapshots?days=${days}`, { credentials: "include" });
+    // The three enrichments don't depend on each other or on the snapshot rows,
+    // so fetch all four in parallel instead of as a waterfall. Enrichments are
+    // best-effort: a failed one just leaves its field unset.
+    const optionalJson = (url: string) =>
+      fetch(url, { credentials: "include" })
+        .then((res) => (res.ok ? res.json() : undefined))
+        .catch(() => undefined);
+    const [r, performance, forecast, risks] = await Promise.all([
+      fetch(`/api/v1/snapshots?days=${days}`, { credentials: "include" }),
+      optionalJson(`/api/v1/investment-performance?days=${days}`),
+      optionalJson("/api/v1/cashflow-forecast?days=30"),
+      optionalJson("/api/v1/cash-risks?days=30"),
+    ]);
     if (r.status === 401) handleUnauthenticated();
     if (!r.ok) throw new Error("Could not load balance history.");
     const j = await r.json();
     const snapshots: Snapshot[] = Array.isArray(j) ? j : [];
     if (snapshots.length) {
-      const performance = await fetch(`/api/v1/investment-performance?days=${days}`, { credentials: "include" });
-      if (performance.ok) snapshots[snapshots.length - 1].investmentPerformance = await performance.json();
-      const forecast = await fetch("/api/v1/cashflow-forecast?days=30", { credentials: "include" });
-      if (forecast.ok) snapshots[snapshots.length - 1].cashForecast = await forecast.json();
-      const risks = await fetch("/api/v1/cash-risks?days=30", { credentials: "include" });
-      if (risks.ok) snapshots[snapshots.length - 1].cashRisks = await risks.json();
+      const latest = snapshots[snapshots.length - 1];
+      if (performance !== undefined) latest.investmentPerformance = performance;
+      if (forecast !== undefined) latest.cashForecast = forecast;
+      if (risks !== undefined) latest.cashRisks = risks;
     }
     return snapshots;
   } catch (error) {

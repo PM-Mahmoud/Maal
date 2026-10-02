@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/api";
 import { computeMaalScore, type ScoreInputs } from "@/lib/score";
 import { fetchProfile } from "@/lib/profile";
+import { shareInFlight } from "@/lib/in-flight";
 
 export type Portfolio = {
   income: number;
@@ -34,7 +35,7 @@ type TableResult = {
   error: { message: string } | null;
 };
 
-export async function fetchPortfolio(): Promise<Portfolio> {
+async function loadPortfolio(): Promise<Portfolio> {
   const [income, sup, inv, prop, cash, debts, profile] = await Promise.all([
     supabase.from("incomes").select("annual_amount, updated_at"),
     supabase.from("super_accounts").select("balance, source, updated_at"),
@@ -119,3 +120,6 @@ export function scoreFromPortfolio(p: Portfolio) {
 // table that never existed (via the generic API) and was never called. Daily
 // score history is now recorded SERVER-SIDE in maal_score_snapshots by
 // GET /api/v1/score, so the client can't fabricate its own score history.
+
+// Dashboard and SetupChecklist both load balances on mount — share one fetch.
+export const fetchPortfolio = shareInFlight(loadPortfolio);

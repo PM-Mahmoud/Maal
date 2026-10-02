@@ -30,8 +30,10 @@ export type Profile = {
 };
 
 import { handleUnauthenticated } from "@/integrations/api";
+import { shareInFlight } from "@/lib/in-flight";
 
-export async function fetchProfile(): Promise<Profile | null> {
+// Several dashboard widgets (and fetchPortfolio) ask for the profile at once — share one fetch.
+export const fetchProfile = shareInFlight(async (): Promise<Profile | null> => {
   try {
     const r = await fetch("/api/v1/profile", { credentials: "include" });
     if (r.status === 401) handleUnauthenticated();
@@ -40,7 +42,7 @@ export async function fetchProfile(): Promise<Profile | null> {
   } catch {
     return null;
   }
-}
+});
 
 // Partial update — send only the fields you're changing.
 export async function saveProfile(patch: Partial<Profile>): Promise<Profile | null> {
