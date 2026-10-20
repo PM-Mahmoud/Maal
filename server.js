@@ -343,6 +343,14 @@ app.get('/about', (req, res) => {
   });
 });
 
+app.get('/ai-transparency', (req, res) => {
+  const { buildAnalyticsSnippet } = require('./lib/landing-context');
+  res.render('ai-transparency', { layout: false,
+    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || ''),
+    user: req.session && req.session.userId ? { id: req.session.userId } : null,
+  });
+});
+
 app.get('/security', (req, res) => {
   const { buildAnalyticsSnippet } = require('./lib/landing-context');
   res.render('security', { layout: false,

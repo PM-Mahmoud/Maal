@@ -6,6 +6,7 @@ import { Disclaimer } from "@/components/maal/Disclaimer";
 import { MaalMark } from "@/components/maal/MaalMark";
 import { ThemeToggle } from "@/components/maal/ThemeToggle";
 import { NotificationBell } from "@/components/maal/app/NotificationBell";
+import { TrainingNotice } from "@/components/maal/app/TrainingNotice";
 import {
   LayoutDashboard, MessageCircle, FileSearch, Radar as RadarIcon,
   Wallet, FolderLock, ArrowLeftRight, Target, UserCircle2, Landmark, Home,
@@ -60,6 +61,7 @@ const TOOLS: Item[] = [
 
 const BOTTOM: Item[] = [
   { label: "Plan & Usage", to: "/app/billing", icon: CreditCard },
+  { label: "Privacy & Security", to: "/app/privacy", icon: ShieldCheck },
   { label: "Roadmap", to: "/app/roadmap", icon: Map },
 ];
 
@@ -177,7 +179,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </header>
-        <main className="flex-1">{children}</main>
+        <main className="flex-1"><TrainingNotice />{children}</main>
         <footer className="border-t border-border px-6 py-4">
           <Disclaimer variant="inline" />
         </footer>

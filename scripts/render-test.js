@@ -34,6 +34,7 @@ const cases = {
   'pricing': { analyticsSnippet: '', user: null },
   'about': { analyticsSnippet: '', user: null },
   'security': { analyticsSnippet: '', user: null },
+  'ai-transparency': { analyticsSnippet: '', user: null },
   'financial-wellbeing-score': { analyticsSnippet: '', user: null },
   'contact': { analyticsSnippet: '', user: null, success: false, name: '', email: '', message: '' },
   'auth-forgot-password': { error: null, success: null, email: '' },
