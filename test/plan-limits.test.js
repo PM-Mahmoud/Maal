@@ -4,7 +4,7 @@
 // decision 10): Free = 0 AI usage at launch, Max advisor soft cap = 1000.
 
 const assert = require('assert');
-const { PLAN_LIMITS, normalizePlan, periodKey, limitFor, evaluate, upgradeMessage, MONTHLY_FEATURES } = require('../lib/plan-limits');
+const { PLAN_LIMITS, FREE_ADVISOR_MESSAGES_MAX, normalizePlan, periodKey, limitFor, evaluate, upgradeMessage, MONTHLY_FEATURES } = require('../lib/plan-limits');
 
 let passed = 0;
 let failed = 0;
@@ -23,11 +23,13 @@ function test(name, fn) {
 
 console.log('\nplan limits (product contract)');
 
-test('Free tier = 0 AI usage everywhere (launch cost guardrail)', () => {
-  for (const f of Object.keys(PLAN_LIMITS.free)) {
-    assert.strictEqual(PLAN_LIMITS.free[f], 0, 'free.' + f);
-    assert.strictEqual(evaluate('free', f, 0).allowed, false, 'free.' + f + ' must be denied at 0 used');
-  }
+test('Free tier = 0 AI usage everywhere by default (launch cost guardrail)', () => {
+  withFreeEnv(undefined, () => {
+    for (const f of Object.keys(PLAN_LIMITS.free)) {
+      assert.strictEqual(PLAN_LIMITS.free[f], 0, 'free.' + f);
+      assert.strictEqual(evaluate('free', f, 0).allowed, false, 'free.' + f + ' must be denied at 0 used');
+    }
+  });
 });
 
 test('Pro: 500 messages / 10 research / 10 radars / 10 files', () => {
@@ -86,6 +88,53 @@ test('usage in a new month starts from a different key (implicit reset)', () => 
 });
 
 console.log('\nupgradeMessage()');
+
+function withFreeEnv(value, fn) {
+  const prev = process.env.FREE_ADVISOR_MESSAGES;
+  if (value === undefined) delete process.env.FREE_ADVISOR_MESSAGES; else process.env.FREE_ADVISOR_MESSAGES = value;
+  try { fn(); } finally {
+    if (prev === undefined) delete process.env.FREE_ADVISOR_MESSAGES; else process.env.FREE_ADVISOR_MESSAGES = prev;
+  }
+}
+
+test('FREE_ADVISOR_MESSAGES unset/invalid keeps Free chat at 0', () => {
+  for (const v of [undefined, '', '0', '-5', 'abc', 'NaN', '0.9']) {
+    withFreeEnv(v, () => {
+      assert.strictEqual(limitFor('free', 'advisor_messages'), 0, 'value ' + v);
+      assert.strictEqual(evaluate('free', 'advisor_messages', 0).allowed, false, 'value ' + v);
+    });
+  }
+});
+
+test('FREE_ADVISOR_MESSAGES opens Free chat up to the allowance', () => {
+  withFreeEnv('25', () => {
+    assert.strictEqual(limitFor('free', 'advisor_messages'), 25);
+    assert.strictEqual(evaluate('free', 'advisor_messages', 24).allowed, true);
+    assert.strictEqual(evaluate('free', 'advisor_messages', 25).allowed, false);
+    assert.strictEqual(limitFor('bogus-plan', 'advisor_messages'), 25); // unknown plan → free
+  });
+  withFreeEnv('7.8', () => assert.strictEqual(limitFor('free', 'advisor_messages'), 7));
+});
+
+test('FREE_ADVISOR_MESSAGES is capped and touches only advisor_messages', () => {
+  withFreeEnv('999999', () => {
+    assert.strictEqual(limitFor('free', 'advisor_messages'), FREE_ADVISOR_MESSAGES_MAX);
+    for (const f of ['research_runs', 'active_radars', 'ai_files']) {
+      assert.strictEqual(limitFor('free', f), 0, f + ' must stay Pro-only');
+    }
+    assert.strictEqual(limitFor('pro', 'advisor_messages'), 500);
+    assert.strictEqual(limitFor('max', 'advisor_messages'), 1000);
+  });
+});
+
+test('Free upgrade copy: allowance used up vs locked', () => {
+  withFreeEnv('10', () => {
+    const m = upgradeMessage('free', 'advisor_messages');
+    assert.ok(m.includes('10 free Ask Maal messages') && m.includes('Pro'), m);
+    assert.ok(upgradeMessage('free', 'research_runs').includes('part of Maal Pro'));
+  });
+  withFreeEnv(undefined, () => assert.ok(upgradeMessage('free', 'advisor_messages').includes('part of Maal Pro')));
+});
 
 test('free-tier message pitches Pro; paid-tier message explains the reset', () => {
   assert.ok(upgradeMessage('free', 'advisor_messages').includes('Pro'));
