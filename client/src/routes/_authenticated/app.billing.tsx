@@ -114,7 +114,10 @@ function BillingPage() {
             <>
               {plan === "free" && (
                 <div className="mb-4 px-4 py-3 rounded-[10px] border border-border bg-[var(--secondary)] text-[13px]">
-                  <span className="font-semibold">You're on Free.</span> Ask Maal, Research and Radar are part of Pro — everything else stays free.
+                  <span className="font-semibold">You're on Free.</span>{" "}
+                  {(usage.features.advisor_messages?.limit ?? 0) > 0
+                    ? `You can try Ask Maal with ${usage.features.advisor_messages.limit} free messages this month. Research and Radar are part of Pro.`
+                    : "Ask Maal, Research and Radar are part of Pro — everything else stays free."}
                 </div>
               )}
               <ul className="space-y-4">
