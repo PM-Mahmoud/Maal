@@ -208,6 +208,8 @@ router.post('/signup', authLimiter,
     const passwordHash = await bcrypt.hash(password, 12);
     const { phone } = req.body;
     const user = await createUser({ email, name, passwordHash, provider: 'credentials' });
+    // The signup page shows the model-training disclosure (spec D4).
+    await require('../db/training-consents').recordSignupGrant(user.id, 'signup');
 
     // Save phone if provided
     if (phone && phone.trim()) {
@@ -282,6 +284,8 @@ router.post('/signup/email-code', authLimiter,
     }
 
     const user = await createUser({ email, name, passwordHash: null, provider: 'credentials' });
+    // The signup page shows the model-training disclosure (spec D4).
+    await require('../db/training-consents').recordSignupGrant(user.id, 'signup');
 
     const otp = generateOtp();
     await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));

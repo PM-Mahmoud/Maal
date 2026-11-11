@@ -513,6 +513,41 @@ router.post('/v1/notification-prefs', async (req, res) => {
   }
 });
 
+// Model-training consent (Tier 3 PR 1, spec D4). Append-only log; the current
+// state is derived by lib/training-consent.js. Only the 'general' scope can be
+// set here — CDR (Basiq) consent is captured in the bank-connection flow once
+// its lawyer-approved wording ships, never through this endpoint.
+router.get('/v1/privacy/training-consent', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const { listForUser } = require('../db/training-consents');
+    const { summarize } = require('../lib/training-consent');
+    res.json(summarize(await listForUser(req.session.userId)));
+  } catch (e) {
+    console.error('/api/v1/privacy/training-consent GET error:', e.message);
+    res.status(500).json({ error: 'Could not load your privacy settings.' });
+  }
+});
+
+router.post('/v1/privacy/training-consent', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const d = (req.body && req.body.data && typeof req.body.data === 'object') ? req.body.data : (req.body || {});
+  if (typeof d.granted !== 'boolean') return res.status(400).json({ error: 'granted must be true or false.' });
+  if (d.scope !== undefined && d.scope !== 'general') {
+    return res.status(400).json({ error: 'Only general training consent can be changed here.' });
+  }
+  const source = d.source === 'notice' ? 'notice' : 'settings';
+  try {
+    const { record, listForUser } = require('../db/training-consents');
+    const { summarize } = require('../lib/training-consent');
+    await record(req.session.userId, { scope: 'general', granted: d.granted, source });
+    res.json(summarize(await listForUser(req.session.userId)));
+  } catch (e) {
+    console.error('/api/v1/privacy/training-consent POST error:', e.message);
+    res.status(500).json({ error: 'Could not update your privacy settings.' });
+  }
+});
+
 // ─── Maal Score (authoritative — same engine as the EJS dashboard) ─────────
 // GET /api/v1/score → { ok, score, band, pillars, hasData, history }
 // Computes the real Maal Score for the logged-in user via lib/maal-score.js

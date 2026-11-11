@@ -83,6 +83,8 @@ router.get('/auth/google', (req, res) => {
   }
   const state = require('crypto').randomBytes(16).toString('hex');
   req.session.oauthState = state;
+  // Only Google signups started from /signup saw the training disclosure.
+  req.session.oauthFromSignup = req.query.from === 'signup';
   req.session.oauthBase = requestBase(req);
   req.session.save(() => res.redirect(googleAuthUrl(state, req.session.oauthBase)));
 });
@@ -127,6 +129,9 @@ router.get('/auth/google/callback', async (req, res) => {
           provider: 'google',
           providerId: profile.sub,
         });
+        if (req.session.oauthFromSignup) {
+          await require('../db/training-consents').recordSignupGrant(user.id, 'signup_google');
+        }
         // Mark email verified immediately for OAuth users
         await require('../db/pool').query(
           `UPDATE users SET email_verified = true WHERE id = $1`, [user.id]
