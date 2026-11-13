@@ -9,7 +9,7 @@
 
 Maal is an AI-powered financial clarity and wealth-advisory platform for everyday Australians.  
 It delivers a **Financial Health Score**, a **personalised action plan**, and tools to track net worth, optimise tax & super, manage debt, and plan for retirement — no human advisor needed.  
-Career-agnostic and values-agnostic — built for all Australians.
+Built for all Australians, career-agnostic. **Pivot (2026-11):** in addition to all of the above, Maal connects users to **profit-based (non-interest) products from vetted partners**, starting with our first partner (name under NDA — never write it in this public repo) — shown as general information, never moving money. Maal's suggestions are profit-based by default for everyone (this replaces the old "values-agnostic" stance). Full rules: CLAUDE.md → Positioning.
 
 **Pricing:** Free / Pro $20/mo / Max $200/mo (AUD)  
 **Disclaimer (mandatory on every page):** "Maal does not provide financial advice. Any information provided by Maal is for educational purposes only."
