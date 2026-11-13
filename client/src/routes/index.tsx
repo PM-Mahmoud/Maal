@@ -1,315 +1,347 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, type CSSProperties } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { MaalMark } from "../components/maal/MaalMark";
-import "../retro-landing.css";
+import "../v2-landing.css";
 import { useWaitlistGated, signupLink } from "../lib/waitlist";
+
+// Homepage — Maal v2 visual system (specs/onboarding-v2-membership.md, PR 3).
+// Prices must match lib/membership.js; test/membership.test.js checks this file.
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Maal: Financial clarity for every Australian" },
-      { name: "description", content: "Maal reads your assets, debts, super, and income to deliver a 0–100 Financial Wellbeing Score and a plain-English action plan to improve it." },
-      { property: "og:title", content: "Maal: Financial clarity for every Australian" },
-      { property: "og:description", content: "Maal reads your assets, debts, super, and income to deliver a 0–100 Financial Wellbeing Score and a plain-English action plan to improve it." },
+      { title: "Maal: Your interest-free ecosystem" },
+      { name: "description", content: "Maal brings your accounts, super, debt and net worth into one place, with a Maal Score, a plan and AI chat, built for Australians and interest-free by default." },
+      { property: "og:title", content: "Maal: Your interest-free ecosystem" },
+      { property: "og:description", content: "Your accounts, super, debt and net worth in one place, with a Maal Score, a plan and AI chat. Built for Australians." },
     ],
   }),
   component: Index,
 });
 
-const Star = ({ className, style }: { className?: string; style?: CSSProperties }) => (
-  <svg className={className} style={style} viewBox="0 0 100 100" fill="currentColor" aria-hidden>
-    <path d="M50 0l9 34 34-9-25 25 25 25-34-9-9 34-9-34-34 9 25-25L7 25l34 9z" />
-  </svg>
-);
+const ASK_PROMPTS = [
+  "Am I on track for retirement?",
+  "Where is my money going each month?",
+  "How fast can I clear my HECS?",
+  "What would an interest-free plan look like?",
+];
 
-const TickerItems = () => (
-  <span>
-    Built for Australia <span className="rf-star">✦</span>
-    {" "}Super · HECS · ATO native <span className="rf-star">✦</span>
-    {" "}Read-only via Basiq <span className="rf-star">✦</span>
-    {" "}Education, never advice <span className="rf-star">✦</span>
-    {" "}One score. One plan. No spreadsheets. <span className="rf-star">✦</span>
-  </span>
-);
+// A quiet field of stars for the dusk hero — drawn here, no image files.
+const STARS = Array.from({ length: 46 }, (_, i) => {
+  const x = (i * 73) % 100;
+  const y = (i * 37) % 62;
+  const r = i % 7 === 0 ? 1.4 : i % 3 === 0 ? 1 : 0.7;
+  return { x, y, r, o: 0.35 + ((i * 13) % 50) / 100 };
+});
 
 function Index() {
-  const signup = signupLink(useWaitlistGated());
+  const gated = useWaitlistGated();
+  const signup = signupLink(gated);
+  const [promptIdx, setPromptIdx] = useState(0);
+  const [question, setQuestion] = useState("");
+
   useEffect(() => {
-    const fill = document.getElementById("rf-fill");
-    if (fill) requestAnimationFrame(() => requestAnimationFrame(() => { (fill as HTMLElement).style.width = "82%"; }));
-    const els = Array.from(document.querySelectorAll(".rf-reveal"));
-    if (!("IntersectionObserver" in window)) { els.forEach((e) => e.classList.add("is-visible")); return; }
+    const t = setInterval(() => setPromptIdx((i) => (i + 1) % ASK_PROMPTS.length), 3200);
+    const els = Array.from(document.querySelectorAll(".v2-reveal"));
+    if (!("IntersectionObserver" in window)) {
+      els.forEach((e) => e.classList.add("is-visible"));
+      return () => clearInterval(t);
+    }
     const obs = new IntersectionObserver((entries) => {
       entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("is-visible"); obs.unobserve(e.target); } });
     }, { threshold: 0.08, rootMargin: "0px 0px -40px 0px" });
     els.forEach((e) => obs.observe(e));
-    return () => obs.disconnect();
+    return () => { clearInterval(t); obs.disconnect(); };
   }, []);
 
-  const badge = (
-    <span className="rf-wordmark-badge">
-      <MaalMark size={18} />
-    </span>
-  );
+  // The hero chat box is a door into Maal: asking a question starts sign-up
+  // (or the waitlist while invite-only). The question is kept for after.
+  const ask = (e: FormEvent) => {
+    e.preventDefault();
+    try { if (question.trim()) sessionStorage.setItem("maal_first_question", question.trim().slice(0, 300)); } catch { /* private mode */ }
+    window.location.href = signup.href;
+  };
 
   return (
-    <div className="rf-scope">
-      {/* Ticker */}
-      <div className="rf-ticker">
-        <div className="rf-ticker-track"><TickerItems /><span aria-hidden="true"><TickerItems /></span></div>
-      </div>
-
-      {/* Header */}
-      <header className="rf-header">
-        <div className="rf-header-inner">
-          <div className="rf-header-left">
-            <a href="/" className="rf-wordmark">{badge}<span className="rf-wordmark-text">Maal</span></a>
-            <nav className="rf-nav">
-              <a href="#how">How it Works</a>
-              <a href="/pricing">Pricing</a>
+    <div className="v2">
+      {/* Header (sits on the hero) */}
+      <header className="v2-header">
+        <div className="v2-header-inner">
+          <div style={{ display: "flex", alignItems: "center", gap: "2.5rem" }}>
+            <a href="/" className="v2-brand" aria-label="Maal home">
+              <MaalMark size={20} />
+              <span className="v2-brand-name">Maal</span>
+            </a>
+            <nav className="v2-nav" aria-label="Main">
+              <a href="#how">How it works</a>
+              <a href="#pricing">Pricing</a>
             </nav>
           </div>
-          <div className="rf-header-right">
-            <a href="/login" className="rf-login">Log in</a>
-            <a href={signup.href} className="rf-btn rf-btn-ghost rf-btn-sm rf-signup">{signup.label}</a>
-            <a href="/score" className="rf-btn rf-btn-ink rf-btn-cta">Get your free score</a>
+          <div className="v2-header-right">
+            <a href="/login" className="v2-login">Log in</a>
+            <a href={signup.href} className="v2-btn v2-btn-glass v2-signup">{signup.label}</a>
+            <a href="/score" className="v2-btn v2-btn-light v2-btn-cta">Get your free score</a>
           </div>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="rf-hero">
-        <Star className="rf-star-deco one" />
-        <Star className="rf-star-deco two" />
-        <div className="rf-wrap">
-          <div className="rf-hero-grid">
-            <div>
-              <h1 className="rf-hero-h1">Your money,<br /><span className="rf-underline">in <span className="rf-mark">balance.</span></span></h1>
-              <p className="rf-hero-sub">
-                Your accounts, super and debt, turned into one score and a plan. Free in 2 minutes.
-              </p>
-              <div className="rf-hero-actions">
-                <a href="/score" className="rf-btn rf-btn-lg">Get your free score</a>
-                <a href="#how" className="rf-btn rf-btn-lg rf-btn-ghost">See how it works →</a>
-              </div>
-              <p className="rf-hero-note">Free to start. No card required. Read-only bank connections via Basiq. Education only, never financial advice.</p>
-            </div>
+      <section className="v2-hero">
+        <svg className="v2-stars" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
+          {STARS.map((s, i) => <circle key={i} cx={s.x} cy={s.y} r={s.r / 6} fill="#fff" opacity={s.o} />)}
+        </svg>
+        <div className="v2-hero-inner">
+          <span className="v2-badge">$4.99 for 1 year — Limited time</span>
+          <h1 className="v2-hero-h1">Your <em>interest-free</em> ecosystem</h1>
+          <p className="v2-hero-sub">
+            <strong>One place for your whole financial life.</strong> See your accounts, super, debt and net worth together,
+            get a Maal Score and a plan, and grow your money the profit-based way.
+          </p>
+          <div className="v2-hero-actions">
+            <a href="/score" className="v2-btn v2-btn-light v2-btn-lg">Get your free score →</a>
+            <a href={signup.href} className="v2-btn v2-btn-glass v2-btn-lg">{gated ? "Join the waitlist" : "Start your free trial"}</a>
+          </div>
 
-            <div className="rf-card">
-              <div className="rf-score-top">
-                <span className="rf-score-label">Financial wellbeing score</span>
-                <span className="rf-chip">
-                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.5l2.5 2.5L9.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  On track
-                </span>
-              </div>
-              <div className="rf-score-num"><span className="rf-score-big">82</span><span className="rf-score-outof">/ 100</span></div>
-              <div className="rf-score-bar"><div className="rf-score-fill" id="rf-fill" /></div>
-              <div className="rf-score-rows">
-                <div className="rf-score-row"><span><span className="rf-dot" style={{ background: "var(--rf-orange)" }} />Savings buffer</span><b>74 / 100</b></div>
-                <div className="rf-score-row"><span><span className="rf-dot" style={{ background: "var(--rf-teal)" }} />Debt health</span><b>68 / 100</b></div>
-                <div className="rf-score-row"><span><span className="rf-dot" style={{ background: "var(--rf-gold)" }} />Super &amp; retirement</span><b>78 / 100</b></div>
-              </div>
-              <p className="rf-score-caption">One score across the parts of money Australians actually deal with.</p>
-            </div>
+          <form className="v2-ask" onSubmit={ask}>
+            <input
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder={ASK_PROMPTS[promptIdx]}
+              aria-label="Ask Maal a question"
+              maxLength={300}
+            />
+            <button type="submit" aria-label="Ask">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
+          </form>
+          <p className="v2-ask-note">See everything. Ask anything.</p>
+
+          <div className="v2-facts">
+            <span className="v2-fact">Read-only open banking (CDR)</span>
+            <span className="v2-fact">Built for Australians</span>
+            <span className="v2-fact">Interest-free by default</span>
+            <span className="v2-fact">Education, not advice</span>
           </div>
         </div>
       </section>
 
-      {/* Stats strip */}
-      <div className="rf-strip">
-        <div className="rf-strip-grid">
-          <div className="rf-strip-item"><div className="rf-strip-big">1 score</div><div className="rf-strip-small">Five pillars: savings, debt, super, trajectory &amp; protection</div></div>
-          <div className="rf-strip-item"><div className="rf-strip-big">100+</div><div className="rf-strip-small">Institutions via Basiq open banking (coming soon)</div></div>
-          <div className="rf-strip-item"><div className="rf-strip-big">Built for AU</div><div className="rf-strip-small">Super, HECS &amp; ATO native</div></div>
-          <div className="rf-strip-item"><div className="rf-strip-big">Read-only</div><div className="rf-strip-small">Maal can never move your money</div></div>
+      {/* Product preview */}
+      <div className="v2-preview v2-wrap">
+        <div className="v2-preview-card" aria-label="Example Maal dashboard">
+          <div className="v2-panel">
+            <div className="v2-panel-head">
+              <span className="v2-kicker">Net worth</span>
+              <span className="v2-up">▲ $3,412 (4.1%)</span>
+            </div>
+            <div className="v2-big">$86,540</div>
+            <svg viewBox="0 0 300 90" style={{ width: "100%", height: 90, marginTop: 10, display: "block" }} aria-hidden>
+              <defs>
+                <linearGradient id="v2-nw" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor="currentColor" stopOpacity="0.16" />
+                  <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <path d="M0,70 C30,66 55,60 80,62 C110,64 130,50 160,46 C190,42 210,36 240,28 C262,22 282,16 300,10 L300,90 L0,90 Z" fill="url(#v2-nw)" />
+              <path d="M0,70 C30,66 55,60 80,62 C110,64 130,50 160,46 C190,42 210,36 240,28 C262,22 282,16 300,10" fill="none" stroke="currentColor" strokeWidth="1.6" />
+            </svg>
+            <div className="v2-ranges">
+              {["1W", "1M", "3M", "YTD", "All"].map((r) => <span key={r} className={`v2-range${r === "3M" ? " on" : ""}`}>{r}</span>)}
+            </div>
+          </div>
+          <div className="v2-panel">
+            <div className="v2-panel-head">
+              <span className="v2-kicker">Maal Score</span>
+              <span className="v2-tag">On track</span>
+            </div>
+            <div className="v2-ring">
+              <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden>
+                <circle cx="32" cy="32" r="27" fill="none" stroke="var(--v2-surface-2)" strokeWidth="6" />
+                <circle cx="32" cy="32" r="27" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeDasharray="139 170" transform="rotate(-90 32 32)" />
+              </svg>
+              <div>
+                <div className="v2-big" style={{ fontSize: "2.2rem", marginTop: 0 }}>82<span className="v2-muted" style={{ fontSize: "1rem" }}> / 100</span></div>
+              </div>
+            </div>
+            <div className="v2-pillars">
+              {[["Savings buffer", 74], ["Debt health", 68], ["Super & retirement", 78]].map(([label, v]) => (
+                <div key={label as string} className="v2-pillar">
+                  <span>{label}</span><b>{v}</b>
+                  <div className="v2-bar"><span style={{ width: `${v}%` }} /></div>
+                </div>
+              ))}
+            </div>
+            <div className="v2-guide">
+              <span className="v2-kicker">Your setup</span>
+              <p style={{ fontFamily: "var(--v2-serif)", fontSize: "1.35rem", marginTop: 4 }}>Make the most of Maal</p>
+              <div className="v2-guide-bar"><span className="on" /><span className="on" /><span /><span /></div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Products */}
-      <section className="rf-section">
-        <div className="rf-wrap rf-reveal">
-          <span className="rf-eyebrow">Products</span>
-          <h2 className="rf-h2">Everything about your money, <span className="rf-mark">finally in one place.</span></h2>
-          <p className="rf-lede">Not another budgeting app. Maal turns your accounts, super and debt into a single number, and a plan to move it.</p>
-          <div className="rf-products-grid">
-            <a href="/signup" className="rf-product rf-p-orange">
-              <span className="rf-product-eyebrow">Scores</span>
-              <h3 className="rf-product-title">Your money in one number.</h3>
-              <div className="rf-product-mock">
-                <div className="rf-inner" style={{ borderRadius: 16, padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: "1rem", width: "100%", maxWidth: 280 }}>
-                  <svg viewBox="0 0 90 90" width="66" height="66" style={{ flexShrink: 0 }}>
-                    <circle cx="45" cy="45" r="38" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="8" />
-                    <circle cx="45" cy="45" r="38" fill="none" stroke="#fff" strokeWidth="8" strokeLinecap="round" strokeDasharray="172 239" transform="rotate(-90 45 45)" />
-                    <text x="45" y="52" textAnchor="middle" fill="#fff" fontSize="24" fontWeight="800" fontFamily="'Bricolage Grotesque',sans-serif">72</text>
-                  </svg>
-                  <div><p style={{ fontWeight: 700, fontSize: 14 }}>Maal Score</p><p style={{ fontSize: 11, opacity: .8, marginTop: 2 }}>Strong · tracked daily</p></div>
-                </div>
+      {/* Everything in one place */}
+      <section className="v2-section">
+        <div className="v2-wrap v2-reveal">
+          <span className="v2-kicker">Everything in one place</span>
+          <h2 className="v2-h2">Your money, finally<br />in one clear picture.</h2>
+          <p className="v2-lede">Not another budgeting app. Maal turns your accounts, super and debt into one number and a plan to move it, then helps you grow the profit-based way.</p>
+          <div className="v2-grid v2-grid-2">
+            <a href={signup.href} className="v2-card">
+              <span className="v2-kicker">Maal Score</span>
+              <h3>Your money in one number.</h3>
+              <p>A 0–100 read across five pillars: savings, debt, super, wealth trajectory and protection.</p>
+              <div className="v2-card-mock">
+                <div className="v2-row"><span>Savings buffer</span><b>74</b></div>
+                <div className="v2-row"><span>Debt health</span><b>68</b></div>
+                <div className="v2-row"><span>Super &amp; retirement</span><b>78</b></div>
               </div>
-              <div className="rf-product-foot"><span>Scores</span><span>→</span></div>
             </a>
-
-            <a href="/signup" className="rf-product rf-p-teal">
-              <span className="rf-product-eyebrow">Ask Maal</span>
-              <h3 className="rf-product-title">Ask anything, grounded in your data.</h3>
-              <div className="rf-product-mock">
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", width: "100%" }}>
-                  <div className="rf-inner" style={{ borderRadius: 9999, padding: "0.5rem 1rem", fontSize: 12, width: "fit-content" }}>Is my super on track for 60?</div>
-                  <div className="rf-inner" style={{ borderRadius: 14, padding: "0.75rem 1rem", fontSize: 12.5, lineHeight: 1.55, maxWidth: 300 }}>On your trajectory you’re tracking ~$46k ahead of the ASFA comfortable benchmark.</div>
-                </div>
+            <a href={signup.href} className="v2-card">
+              <span className="v2-kicker">Ask Maal</span>
+              <h3>Ask anything, grounded in your data.</h3>
+              <p>AI chat that answers with your real numbers, Australian tax and super rules, and plain English.</p>
+              <div className="v2-card-mock">
+                <div className="v2-chat-q">Is my super on track for 60?</div>
+                <div className="v2-chat-a">On your current path you’re about $46k ahead of the ASFA comfortable benchmark for your age.</div>
               </div>
-              <div className="rf-product-foot"><span>Ask Maal</span><span>→</span></div>
             </a>
-
-            <a href="/signup" className="rf-product rf-p-rust">
-              <span className="rf-product-eyebrow">Radar</span>
-              <h3 className="rf-product-title">Catch what’s changing.</h3>
-              <div className="rf-product-mock">
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", width: "100%" }}>
-                  <div className="rf-inner" style={{ borderRadius: 12, padding: "0.625rem 1rem", fontSize: 12.5 }}>📈 NVDA moved +11% today</div>
-                  <div className="rf-inner" style={{ borderRadius: 12, padding: "0.625rem 1rem", fontSize: 12 }}>We flagged it. Here’s what drove it.</div>
-                </div>
+            <a href={signup.href} className="v2-card">
+              <span className="v2-kicker">Accounts</span>
+              <h3>Every account, one picture.</h3>
+              <p>Banks, super, property, crypto, vehicles and debts, connected read-only or added by hand.</p>
+              <div className="v2-card-mock">
+                <div className="v2-row"><span>Everyday account · bank</span><span className="v2-tag">Synced</span></div>
+                <div className="v2-row"><span>Super fund</span><span className="v2-tag">Synced</span></div>
+                <div className="v2-row"><span className="v2-muted">Read-only · revoke anytime</span><span /></div>
               </div>
-              <div className="rf-product-foot"><span>Radar</span><span>→</span></div>
             </a>
-
-            <a href="/signup" className="rf-product rf-p-gold">
-              <span className="rf-product-eyebrow">Portfolio</span>
-              <h3 className="rf-product-title">See your wealth move over time.</h3>
-              <div className="rf-product-mock">
-                <div className="rf-inner" style={{ borderRadius: 16, padding: "1.25rem", width: "100%" }}>
-                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.03em", fontFamily: "'Bricolage Grotesque',sans-serif" }}>$39,550</span>
-                    <span className="rf-inner" style={{ borderRadius: 9999, padding: "0.25rem 0.625rem", fontSize: 11, fontWeight: 700 }}>▲ +7.5% · 1M</span>
-                  </div>
-                  <svg viewBox="0 0 200 60" style={{ marginTop: "0.75rem", width: "100%", height: 56, display: "block" }}>
-                    <defs><linearGradient id="rf-sp" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="rgba(34,28,21,0.35)" /><stop offset="100%" stopColor="rgba(34,28,21,0)" /></linearGradient></defs>
-                    <path d="M0,50 C30,45 60,40 90,35 C120,30 150,25 200,12" fill="none" stroke="#221C15" strokeWidth="2" />
-                    <path d="M0,50 C30,45 60,40 90,35 C120,30 150,25 200,12 L200,60 L0,60 Z" fill="url(#rf-sp)" />
-                  </svg>
-                </div>
+            <a href={signup.href} className="v2-card">
+              <span className="v2-kicker">Profit-based investing · Coming soon</span>
+              <h3>Grow without interest.</h3>
+              <p>Explore profit-based investment options from our partners, shown as general information so the decisions stay yours.</p>
+              <div className="v2-card-mock">
+                <div className="v2-row"><span>Profit-sharing, not interest</span><span className="v2-tag">Coming soon</span></div>
+                <div className="v2-row"><span className="v2-muted">General information only, not advice</span><span /></div>
               </div>
-              <div className="rf-product-foot"><span>Portfolio</span><span>→</span></div>
-            </a>
-
-            <a href="/signup" className="rf-product rf-p-cocoa wide">
-              <span className="rf-product-eyebrow">Accounts</span>
-              <h3 className="rf-product-title">Every account, one clear picture.</h3>
-              <div className="rf-product-mock">
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", width: "100%", maxWidth: 600 }}>
-                  <div className="rf-inner" style={{ borderRadius: 12, padding: "0.75rem 1rem", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12.5 }}><span>CommBank · transactions</span><span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--rf-gold)" }} /></div>
-                  <div className="rf-inner" style={{ borderRadius: 12, padding: "0.75rem 1rem", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12.5 }}><span>AustralianSuper · super</span><span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--rf-gold)" }} /></div>
-                  <div className="rf-inner" style={{ borderRadius: 12, padding: "0.75rem 1rem", fontSize: 12, opacity: .8, gridColumn: "span 2" }}>Read-only via Basiq · revoke anytime</div>
-                </div>
-              </div>
-              <div className="rf-product-foot"><span>Accounts</span><span>→</span></div>
             </a>
           </div>
         </div>
       </section>
 
-      {/* How */}
-      <section className="rf-section rf-section-alt" id="how">
-        <div className="rf-wrap rf-reveal">
-          <span className="rf-eyebrow">How it works</span>
-          <h2 className="rf-h2">Three steps from spreadsheets to a single, honest number.</h2>
-          <div className="rf-how-grid">
-            <div className="rf-step"><div className="rf-step-num">01</div><h3 className="rf-step-title">Tell Maal what you have</h3><p className="rf-step-body">Add your income, super balance, HECS, mortgage, savings, and any investments. Takes a few minutes, and no bank login is needed to start.</p></div>
-            <div className="rf-step"><div className="rf-step-num">02</div><h3 className="rf-step-title">Get your Maal Score</h3><p className="rf-step-body">A weighted 0–100 read of your financial health across five pillars: savings buffer, debt health, super adequacy, wealth trajectory, and protection.</p></div>
-            <div className="rf-step"><div className="rf-step-num">03</div><h3 className="rf-step-title">Improve with Ask Maal, Radar &amp; Research</h3><p className="rf-step-body">Ask questions grounded in your own data, run research on markets and super, and let Radar watch for changes that matter, so you keep improving your financial situation.</p></div>
+      {/* How it works */}
+      <section className="v2-section v2-section-alt" id="how">
+        <div className="v2-wrap v2-reveal">
+          <span className="v2-kicker">How it works</span>
+          <h2 className="v2-h2">From scattered accounts to<br />one honest number.</h2>
+          <div className="v2-grid v2-grid-3">
+            <div className="v2-card">
+              <span className="v2-step-num">01</span>
+              <h3>Connect or add what you have</h3>
+              <p>Link your bank read-only through open banking, or add income, super, HECS, mortgage and savings by hand in a few minutes.</p>
+            </div>
+            <div className="v2-card">
+              <span className="v2-step-num">02</span>
+              <h3>Get your Maal Score</h3>
+              <p>A weighted 0–100 read of your financial health, with what’s helping and what’s holding you back.</p>
+            </div>
+            <div className="v2-card">
+              <span className="v2-step-num">03</span>
+              <h3>Improve, the interest-free way</h3>
+              <p>Ask Maal questions, let Radar watch for changes, and see profit-based ways to grow, so your score keeps climbing.</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Why */}
-      <section className="rf-section">
-        <div className="rf-wrap rf-reveal">
-          <span className="rf-eyebrow">Why Maal · Read-only · Bank-level security via Basiq (CDR-regulated), coming soon</span>
-          <h2 className="rf-h2">Built for the financial life <span className="rf-mark">Australians</span> actually have.</h2>
-          <p className="rf-lede">Super guarantee, HECS indexation, tax brackets, all updated for FY2025–26. Super, EOFY, the ATO, property, debt and open banking all shape how Australians build wealth. Maal brings them into one clear picture.</p>
-          <div className="rf-why-list">
-            <div className="rf-why-item"><div className="rf-why-title">Clarity by design</div><p className="rf-why-body">Net worth, debt, super, spending and investments in one place, explained in plain language so you always know where you stand.</p></div>
-            <div className="rf-why-item"><div className="rf-why-title">Australian to the core</div><p className="rf-why-body">Superannuation, HECS-HELP, EOFY and the ATO: Maal is built around the way money actually works in Australia.</p></div>
-            <div className="rf-why-item"><div className="rf-why-title">Secure and read-only</div><p className="rf-why-body">Bank connections via Basiq under the Consumer Data Right (coming soon). Maal can never move money. Credentials are never stored. Your data is never sold.</p></div>
-            <div className="rf-why-item"><div className="rf-why-title">Education, not instructions</div><p className="rf-why-body">Maal explains what’s happening in your finances and why it matters. The decisions stay yours.</p></div>
-            <div className="rf-why-item"><div className="rf-why-title">Not a credit score</div><p className="rf-why-body">A credit score measures how safe you are to lend to, and it exists for lenders. The Maal Score measures your whole financial wellbeing, and it exists for you.</p></div>
+      {/* Why Maal */}
+      <section className="v2-section">
+        <div className="v2-wrap v2-reveal">
+          <span className="v2-kicker">Why Maal</span>
+          <h2 className="v2-h2">Built for the financial life<br />Australians actually have.</h2>
+          <div className="v2-why">
+            <div className="v2-why-item"><h3>Interest-free by default</h3><p>Maal analyses the debts you already have honestly, and points you to profit-based alternatives rather than new interest-bearing products.</p></div>
+            <div className="v2-why-item"><h3>Australian to the core</h3><p>Super, HECS-HELP, EOFY and the ATO, with tax and super figures kept up to date for each financial year.</p></div>
+            <div className="v2-why-item"><h3>Secure and read-only</h3><p>Bank connections run through Basiq under the Consumer Data Right. Maal can never move your money, never stores your bank password and never sells your data.</p></div>
+            <div className="v2-why-item"><h3>Not a credit score</h3><p>A credit score exists for lenders. The Maal Score measures your whole financial wellbeing, and it exists for you.</p></div>
           </div>
-          <p style={{ marginTop: "1.5rem", fontSize: 12, lineHeight: 1.7, opacity: 0.7 }}>
-            Maal’s score and insights are general and educational only, not personal financial advice. They don’t
-            take into account your full financial situation, and Maal doesn’t recommend specific products or
-            investments. For advice tailored to you, speak with a licensed financial adviser.
+          <p className="v2-fine">
+            Maal’s score and insights are general and educational only, not personal financial advice. They don’t take into
+            account your full financial situation. For advice tailored to you, speak with a licensed financial adviser.
           </p>
         </div>
       </section>
 
       {/* Pricing */}
-      <section className="rf-section rf-section-alt">
-        <div className="rf-wrap rf-reveal">
-          <span className="rf-eyebrow">Pricing</span>
-          <h2 className="rf-h2">One membership. Try it free for 14 days.</h2>
-          <div className="rf-price-grid" style={{ gridTemplateColumns: "minmax(0, 520px)", justifyContent: "center" }}>
-            <div className="rf-price featured">
-              <span className="rf-price-popular">Limited time</span>
-              <p className="rf-price-name">Maal Membership</p>
-              <div className="rf-price-amt"><span className="rf-price-big">$4.99</span><span className="rf-price-per">for your first year</span></div>
-              <p className="rf-price-desc">Then $49.99/year. Access to AI chat, your Maal Score, open banking, tax &amp; super tools and retirement projections. Starts with a 14-day free trial, no card needed. Cancel anytime.</p>
-              <a href={signup.href} className="rf-btn rf-btn-block">{signup.label === "Sign up" ? "Start your free trial" : signup.label}</a>
+      <section className="v2-section v2-section-alt" id="pricing">
+        <div className="v2-wrap v2-reveal" style={{ textAlign: "center" }}>
+          <span className="v2-kicker">Pricing</span>
+          <h2 className="v2-h2">One membership.<br />Try it free for 14 days.</h2>
+          <div className="v2-price" style={{ textAlign: "left" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="v2-kicker">Maal Membership</span>
+              <span className="v2-tag">Limited time</span>
             </div>
+            <div className="v2-price-amt"><span className="v2-price-big">$4.99</span><span className="v2-price-per">for your first year</span></div>
+            <p className="v2-muted" style={{ marginTop: ".4rem" }}>Then $49.99/year. Starts with a 14-day free trial, no card needed. Cancel anytime.</p>
+            <ul className="v2-list">
+              <li>Access to AI chat with Ask Maal</li>
+              <li>Your Maal Score, plan and net worth in one place</li>
+              <li>Open banking, tax &amp; super tools and retirement projections</li>
+              <li>Profit-based investment options from our partners (coming soon, general information only)</li>
+            </ul>
+            <a href={signup.href} className="v2-btn v2-btn-ink v2-btn-lg v2-btn-block">{gated ? "Join the waitlist" : "Start your free trial"}</a>
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="rf-cta">
-        <div className="rf-wrap rf-reveal">
-          <div className="rf-cta-block">
-            <Star className="rf-star-deco one" style={{ top: "14%", right: "8%", color: "var(--rf-gold)" }} />
-            <h2 className="rf-cta-h2">Stop guessing.<br />Start scoring.</h2>
-            <p className="rf-cta-sub">Two minutes to your first Maal Score. No bank login. No credit card.</p>
-            <div className="rf-cta-actions">
-              <a href="/score" className="rf-btn rf-btn-lg rf-btn-ink">Get your free score</a>
-            </div>
+      <section className="v2-cta">
+        <div className="v2-wrap v2-reveal">
+          <h2>Stop guessing.<br /><em style={{ fontStyle: "italic" }}>Start knowing.</em></h2>
+          <p>Two minutes to your first Maal Score. No bank login, no card.</p>
+          <div className="v2-hero-actions">
+            <a href="/score" className="v2-btn v2-btn-light v2-btn-lg">Get your free score →</a>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="rf-footer">
-        <div className="rf-footer-main">
-          <div>
-            <a href="/" className="rf-wordmark">{badge}<span className="rf-wordmark-text" style={{ color: "var(--rf-cream)" }}>Maal</span></a>
-            <p className="rf-footer-desc">The financial wellbeing score for every Australian. One score. One plan. No spreadsheets.</p>
+      <footer className="v2-footer">
+        <div className="v2-wrap">
+          <div className="v2-footer-grid">
+            <div>
+              <a href="/" className="v2-brand"><MaalMark size={18} /><span className="v2-brand-name">Maal</span></a>
+              <p style={{ marginTop: "1rem", maxWidth: 320 }}>Your interest-free ecosystem. One score, one plan, everything in one place.</p>
+            </div>
+            <div>
+              <p className="v2-kicker">Product</p>
+              <ul>
+                <li><a href="/score">Free Maal Score</a></li>
+                <li><a href="/financial-wellbeing-score">Financial wellbeing score</a></li>
+                <li><a href="/pricing">Pricing</a></li>
+              </ul>
+            </div>
+            <div>
+              <p className="v2-kicker">Company</p>
+              <ul>
+                <li><a href="/about">About</a></li>
+                <li><a href="/security">Security</a></li>
+                <li><a href="/contact">Contact</a></li>
+              </ul>
+            </div>
+            <div>
+              <p className="v2-kicker">Account</p>
+              <ul>
+                <li><a href="/login">Log in</a></li>
+                <li><a href={signup.href}>{signup.label}</a></li>
+              </ul>
+            </div>
           </div>
-          <div className="rf-footer-col">
-            <p className="rf-footer-col-title">Product</p>
-            <ul>
-              <li><a href="/score">Score Calculator</a></li>
-              <li><a href="/financial-wellbeing-score">Financial Wellbeing Score</a></li>
-              <li><a href="/pricing">Pricing</a></li>
-            </ul>
+          <div className="v2-disclaimer">
+            <p>DISCLAIMER: Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.</p>
+            <p>Maal Pty Ltd is not an Australian Financial Services Licensee. Information provided is general in nature and does not take into account your individual objectives, financial situation, or needs. Always consider seeking advice from a qualified financial adviser before making investment decisions. Past performance is not a reliable indicator of future performance.</p>
           </div>
-          <div className="rf-footer-col">
-            <p className="rf-footer-col-title">Company</p>
-            <ul>
-              <li><a href="/about">About</a></li>
-              <li><a href="/security">Security</a></li>
-              <li><a href="/contact">Contact</a></li>
-            </ul>
-          </div>
-          <div className="rf-footer-col">
-            <p className="rf-footer-col-title">Account</p>
-            <ul>
-              <li><a href="/login">Log in</a></li>
-              <li><a href="/signup">Sign up</a></li>
-            </ul>
-          </div>
-        </div>
-        <div className="rf-disclaimer">
-          <p>DISCLAIMER: Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.</p>
-          <p>Maal Pty Ltd is not an Australian Financial Services Licensee. Information provided is general in nature and does not take into account your individual objectives, financial situation, or needs. Always consider seeking advice from a qualified financial adviser before making investment decisions. Past performance is not a reliable indicator of future performance.</p>
-        </div>
-        <div className="rf-footer-bottom">
-          <div className="rf-footer-bottom-inner">
+          <div className="v2-footer-bottom">
             <span>© {new Date().getFullYear()} Maal Pty Ltd. Built in Australia.</span>
             <span>All amounts in AUD</span>
           </div>
