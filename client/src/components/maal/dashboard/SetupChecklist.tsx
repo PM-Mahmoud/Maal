@@ -49,8 +49,14 @@ export function SetupChecklist() {
 
   return (
     <div className="rounded-[14px] border border-border bg-[var(--surface)] p-5">
-      <div className="flex items-start justify-between gap-2 mb-1">
-        <h2 className="text-[14px] font-bold tracking-display">Finish setting up Maal</h2>
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-3">
+          <ProgressRing done={act.completed} total={act.total} />
+          <div>
+            <p className="text-[10.5px] font-mono uppercase tracking-[.14em] text-muted-foreground">Your guide</p>
+            <h2 className="text-[20px] leading-tight" style={{ fontFamily: "'Instrument Serif', serif" }}>Make the most of Maal</h2>
+          </div>
+        </div>
         <button onClick={dismiss} aria-label="Dismiss" className="text-muted-foreground hover:text-foreground">
           <X className="size-3.5" />
         </button>
@@ -65,12 +71,6 @@ export function SetupChecklist() {
         </div>
       )}
 
-      <div className="flex items-center gap-3 mb-3">
-        <div className="flex-1 h-1.5 bg-[var(--secondary)] rounded-full overflow-hidden">
-          <div className="h-full rounded-full bg-foreground" style={{ width: `${act.pct}%` }} />
-        </div>
-        <span className="text-[11px] text-muted-foreground tabular-nums">{act.completed}/{act.total}</span>
-      </div>
 
       <ul className="space-y-1">
         {act.steps.map((s) => (
@@ -89,6 +89,22 @@ export function SetupChecklist() {
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+// "1/5" progress ring for the setup guide.
+function ProgressRing({ done, total }: { done: number; total: number }) {
+  const r = 20;
+  const c = 2 * Math.PI * r;
+  const pct = total > 0 ? done / total : 0;
+  return (
+    <div className="relative size-[52px] shrink-0" aria-label={`${done} of ${total} steps done`}>
+      <svg viewBox="0 0 52 52" className="size-full -rotate-90" aria-hidden>
+        <circle cx="26" cy="26" r={r} fill="none" stroke="var(--secondary)" strokeWidth="5" />
+        <circle cx="26" cy="26" r={r} fill="none" stroke="var(--mint, #12B5A6)" strokeWidth="5" strokeLinecap="round" strokeDasharray={`${c * pct} ${c}`} />
+      </svg>
+      <span className="absolute inset-0 grid place-items-center text-[12px] font-semibold tabular-nums">{done}/{total}</span>
     </div>
   );
 }

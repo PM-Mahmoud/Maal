@@ -117,6 +117,9 @@ function normalizeProfile(row, user) {
     onboarded: !!r.completed_onboarding, // React alias
     created_at: (user && user.created_at) || null, // account-creation date (dashboard "All" range floor)
     dashboard_layout: od.dashboard_layout || null,
+    goals: Array.isArray(od.goals) ? od.goals : [],
+    heard_from: od.heard_from || null,
+    welcome_completed_at: od.welcome_completed_at || null,
     dashboard_layout_updated_at: od.dashboard_layout_updated_at || null,
   };
 }
@@ -131,6 +134,11 @@ function profilePatchToColumns(patch) {
   for (const k of ['display_name', 'age_band', 'risk', 'dashboard_layout', 'dashboard_layout_updated_at']) {
     if (k in p) onboarding_data[k] = p[k];
   }
+  // /welcome flow answers — only known values are stored (lib/welcome.js).
+  const welcome = require('../lib/welcome');
+  if ('goals' in p) onboarding_data.goals = welcome.sanitizeGoals(p.goals);
+  if ('heard_from' in p) onboarding_data.heard_from = welcome.sanitizeHeardFrom(p.heard_from);
+  if ('welcome_completed' in p && p.welcome_completed) onboarding_data.welcome_completed_at = new Date().toISOString();
   const numCols = ['annual_income', 'super_balance', 'investment_portfolio', 'property_value',
     'total_debt', 'cash_savings', 'monthly_expenses', 'hecs_balance', 'retirement_age'];
   for (const k of numCols) {

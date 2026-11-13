@@ -1,0 +1,116 @@
+/* ============================================================
+   Maal v2 visual system — server-rendered pages (sign-up).
+   Same tokens as client/src/v2-landing.css (homepage); keep the
+   two in step when changing colours or fonts.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300..700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+.v2 {
+  --v2-bg: #F7F6F2; --v2-surface: #FFFFFF; --v2-surface-2: #F1EFEA;
+  --v2-ink: #101114; --v2-muted: #6A6F79; --v2-hair: #E5E2DB; --v2-hair-strong: #D4D0C7;
+  --v2-accent: #12B5A6; --v2-accent-soft: #DDF5F1; --v2-bad: #C2410C; --v2-good: #0E8A7E;
+  --v2-serif: 'Instrument Serif', 'Times New Roman', serif;
+  --v2-sans: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --v2-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+  background: var(--v2-bg); color: var(--v2-ink); font-family: var(--v2-sans);
+  font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; margin: 0; min-height: 100vh;
+}
+.v2 *, .v2 *::before, .v2 *::after { box-sizing: border-box; }
+:where(.v2) a { color: inherit; }
+:where(.v2) p { margin: 0; }
+:where(.v2) h1, :where(.v2) h2 { margin: 0; font-weight: 400; }
+
+.v2-kicker { font-family: var(--v2-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--v2-muted); }
+.v2-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem; width: 100%;
+  height: 46px; padding: 0 1.1rem; border-radius: 10px; border: 1px solid transparent; cursor: pointer;
+  font-family: var(--v2-sans); font-size: 14.5px; font-weight: 600; text-decoration: none;
+  transition: opacity .15s, border-color .15s, background .15s, transform .1s;
+}
+.v2-btn:active { transform: translateY(1px); }
+.v2-btn:focus-visible, .v2-input:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 2px; }
+.v2-btn-ink { background: var(--v2-ink); color: #fff; }
+.v2-btn-ink:hover { opacity: .88; }
+.v2-btn-ink:disabled { background: #CFCCC5; color: #fff; cursor: not-allowed; opacity: 1; }
+.v2-btn-line { background: var(--v2-surface); color: var(--v2-ink); border-color: var(--v2-hair-strong); }
+.v2-btn-line:hover { border-color: var(--v2-ink); }
+
+/* ---------- Auth split ---------- */
+.v2-auth { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 16px; min-height: 100vh; }
+@media (min-width: 960px) { .v2-auth { grid-template-columns: 1fr 1fr; padding: 24px; } }
+.v2-auth-card {
+  background: var(--v2-surface); border: 1px solid var(--v2-hair); border-radius: 20px;
+  display: flex; align-items: center; justify-content: center; padding: 40px 20px;
+}
+.v2-auth-inner { width: 100%; max-width: 380px; }
+.v2-auth-logo { display: flex; justify-content: center; align-items: center; gap: .45rem; text-decoration: none; margin-bottom: 1.4rem; }
+.v2-auth-logo span { font-family: var(--v2-serif); font-size: 26px; line-height: 1; }
+.v2-pill { display: inline-block; padding: .3rem .7rem; border-radius: 999px; background: var(--v2-accent-soft); color: #0D4B45; font-family: var(--v2-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.v2-offer { text-align: center; }
+.v2-offer-big { font-family: var(--v2-serif); font-size: 76px; line-height: .95; margin-top: .9rem; }
+.v2-offer-sub { font-family: var(--v2-serif); font-size: 30px; line-height: 1.1; color: #5B5F68; }
+.v2-offer-fine { margin-top: .6rem; font-size: 12.5px; color: var(--v2-muted); }
+.v2-auth h1 { font-family: var(--v2-serif); font-size: 34px; line-height: 1.1; text-align: center; }
+
+.v2-field { position: relative; margin-top: .65rem; }
+.v2-input {
+  width: 100%; height: 50px; padding: 18px 14px 6px; border-radius: 10px; border: 1px solid var(--v2-hair-strong);
+  background: var(--v2-surface); color: var(--v2-ink); font: inherit; font-size: 15px;
+}
+.v2-input:focus { border-color: var(--v2-ink); outline: none; }
+.v2-field label { position: absolute; left: 14px; top: 6px; font-size: 11px; color: var(--v2-muted); pointer-events: none; }
+.v2-input.has-eye { padding-right: 46px; }
+.v2-eye { position: absolute; right: 8px; top: 9px; width: 32px; height: 32px; border: 0; background: transparent; color: var(--v2-muted); cursor: pointer; border-radius: 8px; display: grid; place-items: center; }
+.v2-eye:hover { color: var(--v2-ink); }
+
+.v2-social { display: grid; grid-template-columns: 1fr; gap: .5rem; margin-top: 1.6rem; }
+.v2-divider { display: flex; align-items: center; gap: .75rem; margin: 1.1rem 0 .4rem; font-size: 12px; color: var(--v2-muted); }
+.v2-divider::before, .v2-divider::after { content: ""; flex: 1; height: 1px; background: var(--v2-hair); }
+.v2-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-top: 1.2rem; }
+.v2-actions-1 { grid-template-columns: 1fr; }
+.v2-switch { margin-top: 1rem; text-align: center; font-size: 13px; color: var(--v2-muted); }
+.v2-switch a, .v2-linkbtn { color: var(--v2-ink); text-decoration: underline; text-underline-offset: 2px; }
+.v2-linkbtn { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+.v2-legal { margin-top: 1.4rem; font-size: 11.5px; line-height: 1.6; color: var(--v2-muted); text-align: center; }
+.v2-note { margin-top: 1rem; padding: .7rem .85rem; border-radius: 10px; border: 1px solid var(--v2-hair); background: var(--v2-surface-2); font-size: 13px; }
+.v2-note a { font-weight: 600; }
+.v2-alert { margin-top: 1rem; padding: .7rem .85rem; border-radius: 10px; border: 1px solid rgba(194,65,12,.35); background: rgba(194,65,12,.07); color: #7C2D12; font-size: 13px; }
+.v2-alert a { font-weight: 700; }
+
+/* Password rules */
+.v2-strength { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: .55rem; font-size: 12px; min-height: 18px; }
+.v2-strength-bars { display: flex; gap: 3px; }
+.v2-strength-bars span { width: 22px; height: 4px; border-radius: 999px; background: var(--v2-hair); }
+.v2-rules { list-style: none; padding: 0; margin: .5rem 0 0; display: grid; gap: .25rem; font-size: 12.5px; color: var(--v2-muted); }
+.v2-rules li { display: flex; align-items: center; gap: .45rem; }
+.v2-rules li::before { content: "•"; width: 12px; text-align: center; }
+.v2-rules li.ok { color: var(--v2-good); }
+.v2-rules li.ok::before { content: "✓"; }
+.v2-rules li.bad { color: var(--v2-bad); }
+.v2-rules li.bad::before { content: "✕"; }
+
+/* Right panel: Maal's own night sky (CSS only) */
+.v2-sky {
+  display: none; position: relative; overflow: hidden; border-radius: 20px; color: #fff;
+  background:
+    radial-gradient(60% 40% at 75% 15%, rgba(255,214,170,.22), rgba(255,214,170,0) 70%),
+    radial-gradient(70% 50% at 20% 90%, rgba(18,181,166,.25), rgba(18,181,166,0) 70%),
+    linear-gradient(180deg, #0A1226 0%, #14244A 50%, #2C3E6B 80%, #6B6A86 100%);
+}
+@media (min-width: 960px) { .v2-sky { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px; } }
+.v2-sky-stars { position: absolute; inset: 0; opacity: .55; }
+.v2-sky h2 { position: relative; font-family: var(--v2-serif); font-size: 40px; line-height: 1.08; text-align: center; max-width: 420px; }
+.v2-sky .v2-kicker { position: relative; color: rgba(255,255,255,.7); margin-top: 1rem; }
+.v2-glass {
+  position: relative; margin-top: 2.2rem; width: 100%; max-width: 360px; padding: 18px; border-radius: 16px;
+  background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.22); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.v2-glass .v2-kicker { color: rgba(255,255,255,.7); margin-top: 0; }
+.v2-glass-big { font-family: var(--v2-serif); font-size: 42px; line-height: 1; margin-top: .4rem; }
+.v2-glass-row { display: flex; justify-content: space-between; font-size: 13px; margin-top: .55rem; color: rgba(255,255,255,.85); }
+.v2-glass-bar { height: 4px; border-radius: 999px; background: rgba(255,255,255,.2); margin-top: .3rem; overflow: hidden; }
+.v2-glass-bar span { display: block; height: 100%; background: #fff; border-radius: inherit; }
+
+.v2-disclaimer-line { margin-top: 1.6rem; font-size: 11px; line-height: 1.6; color: var(--v2-muted); text-align: center; }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { .v2-btn { transition: none; } }
