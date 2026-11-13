@@ -101,17 +101,27 @@ router.post('/auth/logout', (req, res) => {
 
 const planLimits = require('../lib/plan-limits');
 const usageDb = require('../db/usage');
+// Effective plan = stored plan + 14-day trial (services/access.js). Trial users
+// get member limits; an expired trial without a paid plan is 'free' (paywall).
+const access = require('../services/access');
+async function effectivePlanFor(user) {
+  return (await access.forUser(user)).plan;
+}
 
 function send402(res, plan, feature, limit, used) {
+  const p = planLimits.normalizePlan(plan);
   res.status(402).json({
     error: planLimits.upgradeMessage(plan, feature),
     code: 'usage_limit',
+    // Free here means the trial ended with no paid plan → client shows the paywall.
+    trialEnded: p === 'free',
     upgrade: true,
     upgradeUrl: '/app/billing',
     feature,
-    plan: planLimits.normalizePlan(plan),
-    limit,
-    used,
+    plan: p,
+    // The member Ask Maal cap is never shown to users, so don't send it.
+    limit: p === 'member' && feature === 'advisor_messages' ? null : limit,
+    used: p === 'member' && feature === 'advisor_messages' ? null : used,
   });
 }
 
@@ -122,7 +132,7 @@ function send402(res, plan, feature, limit, used) {
 // errors — availability wins, and the failure is logged.
 async function gateMonthlyAiUsage(req, res, feature) {
   const user = await findUserById(req.session.userId);
-  const plan = planLimits.normalizePlan(user && user.plan);
+  const plan = await effectivePlanFor(user);
   const limit = planLimits.limitFor(plan, feature);
   if (limit <= 0) { // Free tier (0) — deny without touching the DB.
     send402(res, plan, feature, limit, 0);
@@ -145,7 +155,8 @@ router.get('/v1/usage', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
     const user = await findUserById(req.session.userId);
-    const plan = planLimits.normalizePlan(user && user.plan);
+    const acc = await access.forUser(user);
+    const plan = acc.plan;
     const period = planLimits.periodKey();
     const [counts, activeRadars] = await Promise.all([
       usageDb.getCounts(req.session.userId),
@@ -156,9 +167,28 @@ router.get('/v1/usage', async (req, res) => {
       features[f] = { used: counts[f] || 0, limit: planLimits.limitFor(plan, f) };
     });
     features.active_radars = { used: activeRadars, limit: planLimits.limitFor(plan, 'active_radars') };
+    // The member Ask Maal cap is never shown: send usage but no number to show.
+    if (plan === 'member') features.advisor_messages.limit = null;
     const now = new Date();
     const resetsOn = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().slice(0, 10);
-    res.json({ plan, period, resetsOn, features });
+    const { MEMBERSHIP, formatAud, offerLine } = require('../lib/membership');
+    res.json({
+      plan,
+      basePlan: acc.basePlan,
+      paid: acc.paid,
+      paywalled: acc.paywalled,
+      trial: acc.trial && {
+        active: acc.trial.active,
+        endsAt: acc.trial.endsAt ? acc.trial.endsAt.toISOString() : null,
+        daysLeft: acc.trial.daysLeft,
+      },
+      offer: {
+        firstYear: formatAud(MEMBERSHIP.firstYearCents),
+        renewal: formatAud(MEMBERSHIP.yearCents),
+        line: offerLine(),
+      },
+      period, resetsOn, features,
+    });
   } catch (e) {
     console.error('/api/v1/usage error:', e.message);
     res.status(500).json({ error: 'Could not load usage' });
@@ -998,7 +1028,7 @@ router.post('/v1/alerts', async (req, res) => {
     // insert happen atomically inside createRadarIfUnderActiveLimit (per-user
     // advisory lock) so two concurrent creates can't both exceed the cap.
     const user = await findUserById(req.session.userId);
-    const plan = planLimits.normalizePlan(user && user.plan);
+    const plan = await effectivePlanFor(user);
     const limit = planLimits.limitFor(plan, 'active_radars');
     const freq = ['daily', 'weekly', 'monthly'].includes(d.frequency) ? d.frequency : 'daily';
     const id = await radarDb.createRadarIfUnderActiveLimit(req.session.userId, {
@@ -1046,7 +1076,7 @@ router.post('/v1/alerts/toggle', async (req, res) => {
       // it atomically (count + update under a per-user lock). Deactivating is
       // always allowed.
       const user = await findUserById(req.session.userId);
-      const plan = planLimits.normalizePlan(user && user.plan);
+      const plan = await effectivePlanFor(user);
       const limit = planLimits.limitFor(plan, 'active_radars');
       const ok = await radarDb.activateRadarIfUnderLimit(d.id, req.session.userId, limit);
       if (!ok) {

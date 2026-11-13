@@ -94,6 +94,8 @@ app.use((req, res, next) => {
   res.locals.session = req.session;
   // Navbar shows "Join waitlist" instead of "Sign up" while signups are invite-only.
   res.locals.waitlistGated = require('./lib/waitlist-gate').isGateOn();
+  // Pricing facts for templates (one source: lib/membership.js).
+  res.locals.membership = require('./lib/membership');
   next();
 });
 

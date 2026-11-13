@@ -74,7 +74,7 @@ app.post('/score/save', express.json(), (req, res) => {
   res.json({ ok: true, emailed: true, waitlisted: !!consent, score: computeQuickScore(req.body).total });
 });
 app.get('/pricing', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'pricing.ejs'), { analyticsSnippet: '', user: null })
+  ejs.renderFile(path.join(VIEWS, 'pricing.ejs'), { analyticsSnippet: '', user: null, membership: require('../lib/membership') })
     .then(html => res.send(html)).catch(next);
 });
 app.get('/waitlist', (_req, res, next) => {
@@ -200,10 +200,19 @@ app.get('/api/v1/transaction-rules', (_req, res) => res.json([]));
 app.get('/api/v1/radar-templates', (_req, res) => res.json([]));
 app.get('/api/v1/radar-template-versions', (_req, res) => res.json([]));
 app.get('/api/v1/research', (_req, res) => res.json([]));
-app.get('/api/v1/usage', (_req, res) => res.json({
-  plan: 'pro', period: '2026-07', resetsOn: '2026-08-01',
+// ?state=trial (default) | ended | member — preview each Plan & Usage state.
+app.get('/api/v1/usage', (req, res) => res.json({
+  ...(() => {
+    const m = require('../lib/membership');
+    const state = String(req.query.state || (req.headers.referer || '').split('state=')[1] || 'trial').split('&')[0];
+    const offer = { firstYear: m.formatAud(m.MEMBERSHIP.firstYearCents), renewal: m.formatAud(m.MEMBERSHIP.yearCents), line: m.offerLine() };
+    if (state === 'member') return { plan: 'member', basePlan: 'member', paid: true, paywalled: false, trial: null, offer };
+    if (state === 'ended') return { plan: 'free', basePlan: 'free', paid: false, paywalled: true, trial: { active: false, endsAt: null, daysLeft: 0 }, offer };
+    return { plan: 'member', basePlan: 'free', paid: false, paywalled: false, trial: { active: true, endsAt: null, daysLeft: 9 }, offer };
+  })(),
+  period: '2026-11', resetsOn: '2026-12-01',
   features: {
-    advisor_messages: { used: 37, limit: 500 },
+    advisor_messages: { used: 37, limit: null },
     research_runs: { used: 2, limit: 10 },
     ai_files: { used: 1, limit: 10 },
     active_radars: { used: 1, limit: 10 },

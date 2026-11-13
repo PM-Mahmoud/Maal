@@ -71,7 +71,8 @@ async function handleInboundSms({ from, body }) {
   // Meter against the advisor-message budget (SMS shares it). Free tier = 0.
   const planLimits = require('../lib/plan-limits');
   const usageDb = require('../db/usage');
-  const plan = planLimits.normalizePlan(user.plan);
+  // Stored plan + 14-day trial (services/access.js): trial users get member limits.
+  const plan = (await require('./access').forUser(user)).plan;
   const limit = planLimits.limitFor(plan, 'advisor_messages');
   if (limit <= 0) {
     return { messages: [planLimits.upgradeMessage(plan, 'advisor_messages')] };
