@@ -321,6 +321,7 @@ app.use('/onboarding', require('./routes/onboarding'));
 app.use('/api/onboarding', require('./routes/onboarding'));
 app.use('/score', require('./routes/score'));
 app.use('/api/waitlist', require('./routes/waitlist'));
+app.use(require('./routes/referrals'));
 
 // Public pages
 app.get('/pricing', (req, res) => {

@@ -32,8 +32,10 @@ app.get('/login', (_req, res, next) => {
   ejs.renderFile(path.join(VIEWS, 'auth-login.ejs'), { error: null, email: '' })
     .then(html => res.send(html)).catch(next);
 });
-app.get('/signup', (_req, res, next) => {
+app.get('/signup', (req, res, next) => {
   ejs.renderFile(path.join(VIEWS, 'auth-signup.ejs'), {
+    // ?ref=1 previews arriving through a friend's referral link.
+    referred: req.query.ref === '1', gated: req.query.ref !== '1',
     error: null, email: '', name: '',
   }).then(html => res.send(html)).catch(next);
 });
@@ -200,6 +202,10 @@ app.get('/api/v1/transaction-rules', (_req, res) => res.json([]));
 app.get('/api/v1/radar-templates', (_req, res) => res.json([]));
 app.get('/api/v1/radar-template-versions', (_req, res) => res.json([]));
 app.get('/api/v1/research', (_req, res) => res.json([]));
+app.get('/api/v1/referrals', (_req, res) => res.json({
+  code: 'K7MQ2XRP', link: 'http://localhost:4173/r/K7MQ2XRP',
+  signedUp: 4, paid: 2, towardsNext: 2, needed: 3, rewardStatus: null,
+}));
 // ?state=trial (default) | ended | member — preview each Plan & Usage state.
 app.get('/api/v1/usage', (req, res) => res.json({
   ...(() => {

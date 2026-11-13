@@ -18,9 +18,19 @@ async function findEntry(email) {
   return gate.matchEntry(rows, canonical);
 }
 
-async function canSignUp(email) {
+// `referralCode` (from the session after a friend's /r/<code> link) acts as an
+// invite: a valid, not-used-up code that isn't the person's own lets them in
+// even while the waitlist gate is on (services/referrals.js validInvite).
+async function canSignUp(email, referralCode) {
   if (!gate.isGateOn()) return true;
-  return gate.canCreateAccount(await findEntry(email));
+  if (gate.canCreateAccount(await findEntry(email))) return true;
+  if (!referralCode) return false;
+  try {
+    return !!(await require('./referrals').validInvite(referralCode, email));
+  } catch (e) {
+    console.error('[waitlist] referral invite check failed:', e.message);
+    return false;
+  }
 }
 
 // Best-effort: flip the waitlist row to 'joined' once the account exists.

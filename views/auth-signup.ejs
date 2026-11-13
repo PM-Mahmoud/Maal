@@ -35,6 +35,9 @@
         <div class="rf-auth-box">
           <span class="rf-eyebrow">Create account</span>
           <h1 class="rf-auth-h1">Start with Maal.</h1>
+          <% if (locals.referred) { %>
+            <div class="rf-invite">A friend invited you to Maal, so you can skip the waitlist. Start with a 14-day free trial, no card needed.</div>
+          <% } %>
           <% if (locals.gated && !locals.notInvited) { %>
             <div class="rf-invite">Maal is <strong>invite-only</strong> for now. Use the email address your invite was sent to. Not invited yet? <a href="/waitlist">Join the waitlist</a>.</div>
           <% } %>

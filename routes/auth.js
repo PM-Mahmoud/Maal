@@ -182,7 +182,9 @@ router.post('/login', authLimiter,
 router.get('/signup', (req, res) => {
   if (req.session.userId) return res.redirect('/app');
   const error = req.query.invite === 'required' ? waitlistAccess.NOT_INVITED_MESSAGE : null;
-  res.render('auth-signup', { layout: false, error, notInvited: !!error, gated: isGateOn(), email: '', name: '' });
+  // Arrived through a friend's referral link: no invite-only notice.
+  const referred = !!req.session.referralCode;
+  res.render('auth-signup', { layout: false, error, notInvited: !!error, gated: isGateOn() && !referred, referred, email: '', name: '' });
 });
 
 router.post('/signup', authLimiter,
@@ -207,7 +209,7 @@ router.post('/signup', authLimiter,
     if (existing) {
       return res.render('auth-signup', { layout: false, error: 'An account with this email already exists. Sign in instead.', email, name });
     }
-    if (!(await waitlistAccess.canSignUp(email))) {
+    if (!(await waitlistAccess.canSignUp(email, req.session.referralCode))) {
       return res.render('auth-signup', { layout: false, error: waitlistAccess.NOT_INVITED_MESSAGE, notInvited: true, gated: true, email, name });
     }
 
@@ -215,6 +217,7 @@ router.post('/signup', authLimiter,
     const { phone } = req.body;
     const user = await createUser({ email, name, passwordHash, provider: 'credentials' });
     waitlistAccess.recordJoined(email);
+    await require('../services/referrals').onSignup(req, user);
 
     // Save phone if provided
     if (phone && phone.trim()) {
@@ -287,12 +290,13 @@ router.post('/signup/email-code', authLimiter,
     if (existing) {
       return res.render('auth-signup', { layout: false, error: 'An account with this email already exists. Sign in instead.', email, name });
     }
-    if (!(await waitlistAccess.canSignUp(email))) {
+    if (!(await waitlistAccess.canSignUp(email, req.session.referralCode))) {
       return res.render('auth-signup', { layout: false, error: waitlistAccess.NOT_INVITED_MESSAGE, notInvited: true, gated: true, email, name });
     }
 
     const user = await createUser({ email, name, passwordHash: null, provider: 'credentials' });
     waitlistAccess.recordJoined(email);
+    await require('../services/referrals').onSignup(req, user);
 
     const otp = generateOtp();
     await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));

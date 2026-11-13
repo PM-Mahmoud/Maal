@@ -21,6 +21,7 @@ const pool = require('../db/pool');
 // this table, marked not for sale, so existing subscribers' Stripe sessions
 // and webhooks still resolve — they can't be bought any more.
 const membership = require('../lib/membership');
+const referrals = require('../services/referrals');
 const PLANS = {
   member: {
     name: membership.MEMBERSHIP.name,
@@ -120,6 +121,8 @@ router.post('/webhook',
                 await pool.query('UPDATE users SET stripe_customer_id = $1 WHERE id = $2 AND (stripe_customer_id IS NULL OR stripe_customer_id != $1)', [session.customer, Number(userId)]);
               }
               console.log(`[billing] Plan '${planKey}' applied to user ${userId} via webhook`);
+              // Referral: count this first payment, grant/apply renewal rewards.
+              await referrals.onPaid(Number(userId), stripe, session.subscription || undefined);
             }
           }
           break;
@@ -141,8 +144,23 @@ router.post('/webhook',
           break;
         }
         case 'invoice.payment_succeeded': {
-          // Renewal — plan stays current, just log
-          console.log(`[billing] Invoice paid for customer ${event.data.object.customer}`);
+          // Renewal — plan stays current. A yearly renewal uses up any
+          // referral reward that was applied to it.
+          const invoice = event.data.object;
+          console.log(`[billing] Invoice paid for customer ${invoice.customer}`);
+          if (invoice.billing_reason === 'subscription_cycle' && invoice.customer) {
+            const { rows } = await pool.query('SELECT id FROM users WHERE stripe_customer_id = $1', [invoice.customer]);
+            if (rows.length) await referrals.onRenewalPaid(rows[0].id);
+          }
+          break;
+        }
+        case 'charge.refunded': {
+          // A refunded payment no longer counts toward the referrer's reward.
+          const customerId = event.data.object.customer;
+          if (customerId) {
+            const { rows } = await pool.query('SELECT id FROM users WHERE stripe_customer_id = $1', [customerId]);
+            if (rows.length) await referrals.onRefund(rows[0].id);
+          }
           break;
         }
         default:
@@ -253,6 +271,7 @@ router.get('/success', requireAuth, async (req, res) => {
         String(stripeSession.metadata.userId) === String(req.session.userId)
       ) {
         await setUserPlan(req.session.userId, planKey);
+        await referrals.onPaid(req.session.userId, stripe, stripeSession.subscription || undefined);
         return res.redirect(`/app/billing?billing=success&plan=${planKey}`);
       }
     }

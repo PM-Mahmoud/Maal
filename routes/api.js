@@ -70,12 +70,13 @@ router.post('/auth/signup', async (req, res) => {
     const existing = await findUserByEmail(email.toLowerCase().trim());
     if (existing) return res.status(409).json({ error: 'Email already in use' });
     const waitlistAccess = require('../services/waitlist-access');
-    if (!(await waitlistAccess.canSignUp(email.toLowerCase().trim()))) {
+    if (!(await waitlistAccess.canSignUp(email.toLowerCase().trim(), req.session.referralCode))) {
       return res.status(403).json({ error: waitlistAccess.NOT_INVITED_MESSAGE, code: 'not_invited' });
     }
     const hash = await bcrypt.hash(password, 12);
     const user = await createUser({ email: email.toLowerCase().trim(), passwordHash: hash, provider: 'email' });
     waitlistAccess.recordJoined(user.email);
+    await require('../services/referrals').onSignup(req, user);
     await new Promise((resolve, reject) => req.session.regenerate(e => e ? reject(e) : resolve()));
     req.session.userId = user.id;
     req.session.userEmail = user.email;
