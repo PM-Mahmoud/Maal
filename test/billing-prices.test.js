@@ -26,60 +26,55 @@ function test(name, fn) {
 
 console.log('\nprice matrix (cents, AUD)');
 
-test('Pro is $20/month and $200/year', () => {
+const membership = require('../lib/membership');
+const { FIRST_YEAR_COUPON_ID } = require('../routes/billing');
+
+test('Membership is $49.99/year with a $45 first-year discount ($4.99 first year)', () => {
+  assert.strictEqual(PLANS.member.year, 4999);
+  assert.strictEqual(PLANS.member.firstYearDiscount, 4500);
+  assert.strictEqual(PLANS.member.year - PLANS.member.firstYearDiscount, 499);
+  assert.strictEqual(PLANS.member.forSale, true);
+});
+
+test('billing reads its numbers from lib/membership.js (single source)', () => {
+  assert.strictEqual(PLANS.member.year, membership.MEMBERSHIP.yearCents);
+  assert.strictEqual(PLANS.member.firstYearDiscount, membership.FIRST_YEAR_DISCOUNT_CENTS);
+  assert.strictEqual(FIRST_YEAR_COUPON_ID, 'maal-first-year-4500');
+});
+
+test('legacy Pro/Max keep their prices on record but are not for sale', () => {
   assert.strictEqual(PLANS.pro.month, 2000);
-  assert.strictEqual(PLANS.pro.year, 20000);
-});
-
-test('Max is $200/month and $2,000/year', () => {
   assert.strictEqual(PLANS.max.month, 20000);
-  assert.strictEqual(PLANS.max.year, 200000);
-});
-
-test('annual really is 2 months free on every paid plan', () => {
-  for (const key of ['pro', 'max']) {
-    const p = PLANS[key];
-    assert.strictEqual(p.year, p.month * 10, `${key}: annual must equal 10 months`);
-    assert.strictEqual(p.month * 12 - p.year, p.month * 2, `${key}: saving must equal 2 months`);
-  }
+  assert.strictEqual(PLANS.pro.forSale, false);
+  assert.strictEqual(PLANS.max.forSale, false);
 });
 
 console.log('\nresolvePrice');
 
-test('resolves the annual amount and interval', () => {
-  const r = resolvePrice('pro', 'year');
-  assert.strictEqual(r.amount, 20000);
+test('membership resolves to the yearly price with its first-year discount', () => {
+  const r = resolvePrice('member');
+  assert.strictEqual(r.amount, 4999);
   assert.strictEqual(r.interval, 'year');
-  assert.strictEqual(r.plan.name, 'Maal Pro');
+  assert.strictEqual(r.discount, 4500);
+  assert.strictEqual(r.plan.name, 'Maal Membership');
 });
 
-test('resolves the monthly amount and interval', () => {
-  const r = resolvePrice('max', 'month');
-  assert.strictEqual(r.amount, 20000);
-  assert.strictEqual(r.interval, 'month');
-});
-
-test('an unknown interval falls back to monthly, never to a free or NaN charge', () => {
-  for (const bad of ['weekly', '', null, undefined, 'YEAR ']) {
-    const r = resolvePrice('pro', bad);
-    assert.strictEqual(r.interval, 'month', `interval ${JSON.stringify(bad)}`);
-    assert.strictEqual(r.amount, 2000);
+test('membership is always yearly, whatever interval is passed', () => {
+  for (const iv of ['month', 'year', 'weekly', '', null, undefined]) {
+    assert.strictEqual(resolvePrice('member', iv).interval, 'year');
   }
 });
 
-test('an unknown plan resolves to null so checkout refuses rather than charging', () => {
-  for (const bad of ['enterprise', 'free', '', null, undefined]) {
+test('legacy and unknown plans resolve to null so checkout refuses them', () => {
+  for (const bad of ['pro', 'max', 'enterprise', 'free', '', null, undefined]) {
     assert.strictEqual(resolvePrice(bad, 'month'), null, `plan ${JSON.stringify(bad)}`);
   }
 });
 
-test('every resolvable price is a positive integer number of cents', () => {
-  for (const plan of ['pro', 'max']) {
-    for (const interval of ['month', 'year']) {
-      const { amount } = resolvePrice(plan, interval);
-      assert.ok(Number.isInteger(amount) && amount > 0, `${plan}/${interval} = ${amount}`);
-    }
-  }
+test('the charged amount and discount are positive integer cents, discount < price', () => {
+  const { amount, discount } = resolvePrice('member');
+  assert.ok(Number.isInteger(amount) && amount > 0);
+  assert.ok(Number.isInteger(discount) && discount > 0 && discount < amount);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

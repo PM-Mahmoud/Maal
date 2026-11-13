@@ -16,31 +16,48 @@ const router = express.Router();
 const { setUserPlan } = require('../db/users');
 const pool = require('../db/pool');
 
-// Plan × billing interval. Amounts are in CENTS (AUD).
-// Annual = 10 months' price, i.e. the advertised "2 months free".
+// Plans. Amounts are in CENTS (AUD). Only `member` is for sale
+// (lib/membership.js: $4.99 first year, then $49.99/yr). `pro`/`max` stay in
+// this table, marked not for sale, so existing subscribers' Stripe sessions
+// and webhooks still resolve — they can't be bought any more.
+const membership = require('../lib/membership');
 const PLANS = {
-  pro: {
-    name: 'Maal Pro',
-    blurb: 'The full advisor experience',
-    month: 2000,    // $20.00/mo
-    year: 20000,    // $200.00/yr  (12 × $20 = $240, so 2 months free)
+  member: {
+    name: membership.MEMBERSHIP.name,
+    blurb: 'Access to AI chat, your Maal Score and every money tool',
+    year: membership.MEMBERSHIP.yearCents,                 // $49.99/yr
+    firstYearDiscount: membership.FIRST_YEAR_DISCOUNT_CENTS, // → $4.99 first year
+    forSale: true,
   },
-  max: {
-    name: 'Maal Max',
-    blurb: 'For complex finances',
-    month: 20000,   // $200.00/mo
-    year: 200000,   // $2,000.00/yr (12 × $200 = $2,400, so 2 months free)
-  },
+  pro: { name: 'Maal Pro', blurb: 'Legacy plan', month: 2000, year: 20000, forSale: false },
+  max: { name: 'Maal Max', blurb: 'Legacy plan', month: 20000, year: 200000, forSale: false },
 };
 
-const INTERVALS = new Set(['month', 'year']);
-
-// Resolve a (plan, interval) pair to the Stripe line item, or null if invalid.
-function resolvePrice(planKey, interval) {
+// Resolve a plan to its Stripe line item, or null if it isn't for sale.
+// Membership is yearly only; the interval argument is ignored for it.
+function resolvePrice(planKey) {
   const plan = PLANS[planKey];
-  if (!plan) return null;
-  const iv = INTERVALS.has(interval) ? interval : 'month';
-  return { plan, interval: iv, amount: plan[iv] };
+  if (!plan || !plan.forSale) return null;
+  return { plan, interval: 'year', amount: plan.year, discount: plan.firstYearDiscount || 0 };
+}
+
+// The first-year offer is a Stripe coupon (a one-time amount off the first
+// yearly invoice). Created on first use and reused after; the id is fixed so
+// it's idempotent across deploys and instances.
+const FIRST_YEAR_COUPON_ID = 'maal-first-year-' + membership.FIRST_YEAR_DISCOUNT_CENTS;
+async function ensureFirstYearCoupon(stripe) {
+  try {
+    return await stripe.coupons.retrieve(FIRST_YEAR_COUPON_ID);
+  } catch (err) {
+    if (err && err.statusCode !== 404 && err.code !== 'resource_missing') throw err;
+    return stripe.coupons.create({
+      id: FIRST_YEAR_COUPON_ID,
+      name: 'First year: ' + membership.formatAud(membership.MEMBERSHIP.firstYearCents),
+      amount_off: membership.FIRST_YEAR_DISCOUNT_CENTS,
+      currency: membership.MEMBERSHIP.currency,
+      duration: 'once',
+    });
+  }
 }
 
 function requireAuth(req, res, next) {
@@ -152,10 +169,10 @@ function demoModeAllowed() {
 }
 
 router.post('/checkout', requireAuth, async (req, res) => {
-  const planKey = (req.body.plan || '').toLowerCase();
-  const priced = resolvePrice(planKey, (req.body.interval || 'month').toLowerCase());
+  const planKey = (req.body.plan || 'member').toLowerCase();
+  const priced = resolvePrice(planKey);
   if (!priced) return res.redirect('/app/billing');
-  const { plan, interval, amount } = priced;
+  const { plan, interval, amount, discount } = priced;
 
   const stripe = getStripe();
 
@@ -178,8 +195,16 @@ router.post('/checkout', requireAuth, async (req, res) => {
   }
 
   try {
+    // Only new members get the first-year price; someone re-joining after
+    // cancelling pays the normal yearly price.
+    const { rows: priorRows } = await pool.query('SELECT plan, stripe_customer_id FROM users WHERE id = $1', [req.session.userId]);
+    const returning = !!(priorRows[0] && priorRows[0].stripe_customer_id);
+    const discounts = discount > 0 && !returning
+      ? [{ coupon: (await ensureFirstYearCoupon(stripe)).id }]
+      : undefined;
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
+      discounts,
       payment_method_types: ['card'],
       customer_email: req.session.email || undefined,
       line_items: [{
@@ -189,7 +214,7 @@ router.post('/checkout', requireAuth, async (req, res) => {
           unit_amount: amount,
           recurring: { interval },
           product_data: {
-            name: interval === 'year' ? `${plan.name} (annual)` : plan.name,
+            name: plan.name,
             description: plan.blurb,
           },
         },
@@ -294,3 +319,4 @@ module.exports = router;
 // export so `app.use('/billing', require('./routes/billing'))` is unchanged.
 module.exports.PLANS = PLANS;
 module.exports.resolvePrice = resolvePrice;
+module.exports.FIRST_YEAR_COUPON_ID = FIRST_YEAR_COUPON_ID;

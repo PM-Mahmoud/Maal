@@ -1,8 +1,16 @@
-// lib/usage.functions.ts — plan + per-feature usage metering (GET /api/v1/usage)
+// lib/usage.functions.ts — plan, trial + per-feature usage (GET /api/v1/usage)
 
-export type UsageFeature = { used: number; limit: number };
+// `limit` is null when the number is intentionally not shown (the member
+// Ask Maal cap is never advertised).
+export type UsageFeature = { used: number; limit: number | null };
 export type Usage = {
-  plan: "free" | "pro" | "max";
+  // Effective plan: 'member' during the 14-day trial; 'free' once it ends unpaid.
+  plan: "free" | "member" | "pro" | "max";
+  basePlan: string; // what's stored on the account (free / member / legacy pro, max)
+  paid: boolean;
+  paywalled: boolean;
+  trial: { active: boolean; endsAt: string | null; daysLeft: number } | null;
+  offer: { firstYear: string; renewal: string; line: string };
   period: string; // 'YYYY-MM'
   resetsOn: string; // 'YYYY-MM-DD'
   features: Record<string, UsageFeature>;

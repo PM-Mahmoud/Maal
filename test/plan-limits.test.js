@@ -127,20 +127,38 @@ test('FREE_ADVISOR_MESSAGES is capped and touches only advisor_messages', () => 
   });
 });
 
-test('Free upgrade copy: allowance used up vs locked', () => {
+test('Free (trial ended) copy offers membership with the renewal price', () => {
   withFreeEnv('10', () => {
     const m = upgradeMessage('free', 'advisor_messages');
-    assert.ok(m.includes('10 free Ask Maal messages') && m.includes('Pro'), m);
-    assert.ok(upgradeMessage('free', 'research_runs').includes('part of Maal Pro'));
+    assert.ok(m.includes('free Ask Maal messages') && m.includes('$4.99') && m.includes('$49.99/year'), m);
+    assert.ok(upgradeMessage('free', 'research_runs').includes('free trial has ended'));
   });
-  withFreeEnv(undefined, () => assert.ok(upgradeMessage('free', 'advisor_messages').includes('part of Maal Pro')));
+  withFreeEnv(undefined, () => {
+    const m = upgradeMessage('free', 'advisor_messages');
+    assert.ok(m.includes('free trial has ended') && m.includes('$4.99') && m.includes('$49.99/year'), m);
+  });
 });
 
-test('free-tier message pitches Pro; paid-tier message explains the reset', () => {
-  assert.ok(upgradeMessage('free', 'advisor_messages').includes('Pro'));
+test('member: 100 Ask Maal messages, hard stop, and the number is never shown', () => {
+  withFreeEnv(undefined, () => {
+    assert.strictEqual(limitFor('member', 'advisor_messages'), 100);
+    assert.strictEqual(evaluate('member', 'advisor_messages', 99).allowed, true);
+    assert.strictEqual(evaluate('member', 'advisor_messages', 100).allowed, false);
+    for (const f of ['advisor_messages', 'research_runs', 'active_radars', 'ai_files']) {
+      // "the 1st" (reset day) is fine; no limit number may appear.
+      assert.ok(!/\d/.test(upgradeMessage('member', f).replace('1st', '')), f + ' message must not contain a number');
+    }
+    assert.deepStrictEqual(
+      ['research_runs', 'active_radars', 'ai_files'].map((f) => limitFor('member', f)),
+      [10, 10, 10]
+    );
+  });
+});
+
+test('legacy plan messages explain the reset and never upsell Max (not sold)', () => {
   assert.ok(upgradeMessage('pro', 'research_runs').includes('resets on the 1st'));
-  assert.ok(upgradeMessage('pro', 'research_runs').includes('Max'));
-  assert.ok(!upgradeMessage('max', 'advisor_messages').includes('Upgrade to Max'));
+  assert.ok(!upgradeMessage('pro', 'research_runs').includes('Max'));
+  assert.ok(!upgradeMessage('max', 'advisor_messages').includes('Upgrade'));
 });
 
 test('active_radars (concurrent) message talks about pausing, not a monthly reset', () => {

@@ -1,9 +1,8 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { CreditCard, Check, Sparkles } from "lucide-react";
+import { CreditCard, Check, Sparkles, Clock } from "lucide-react";
 import { z } from "zod";
 import { getUsage, type Usage } from "@/lib/usage.functions";
-import { SUPPORT_EMAIL } from "@/components/maal/app/AppShell";
 
 const searchSchema = z.object({
   billing: z.enum([
@@ -13,36 +12,10 @@ const searchSchema = z.object({
   plan: z.string().optional(),
 });
 
-type Interval = "month" | "year";
-
 export const Route = createFileRoute("/_authenticated/app/billing")({
   component: BillingPage,
   validateSearch: searchSchema,
 });
-
-const PLANS = [
-  {
-    key: "free",
-    name: "Free",
-    price: "$0",
-    blurb: "Track everything, no AI",
-    features: ["Dashboard, net worth & Maal Score", "Assets, transactions, goals & vault", "Manual + Basiq account linking", "AI features locked"],
-  },
-  {
-    key: "pro",
-    name: "Pro",
-    price: "$20",
-    blurb: "The full advisor experience",
-    features: ["500 Ask Maal messages / month", "10 research reports / month", "10 active radars", "10 AI file exports / month"],
-  },
-  {
-    key: "max",
-    name: "Max",
-    price: "$200",
-    blurb: "For complex finances",
-    features: ["1,000 Ask Maal messages / month", "50 research reports / month", "50 active radars", "100 AI file exports / month"],
-  },
-] as const;
 
 const FEATURE_LABELS: Record<string, string> = {
   advisor_messages: "Ask Maal messages",
@@ -51,13 +24,10 @@ const FEATURE_LABELS: Record<string, string> = {
   ai_files: "AI file exports",
 };
 
-// Tier ordering used to distinguish upgrades from downgrades.
-const PLAN_RANK: Record<string, number> = { free: 0, pro: 1, max: 2 };
-
 const BANNERS: Record<string, { tone: "good" | "bad"; text: string }> = {
-  success: { tone: "good", text: "Payment received. Your plan is now active, welcome aboard!" },
+  success: { tone: "good", text: "Payment received. Welcome to Maal, your membership is active." },
   demo: { tone: "good", text: "Plan updated (demo mode, no payment was taken)." },
-  downgraded: { tone: "good", text: "You're back on the Free plan." },
+  downgraded: { tone: "good", text: "Your membership has ended." },
   cancel_scheduled: { tone: "good", text: "Your subscription will end when the current billing period finishes. You keep full access until then." },
   cancel: { tone: "bad", text: "Checkout was cancelled, so your plan hasn't changed." },
   error: { tone: "bad", text: "Something went wrong with checkout. Your plan hasn't changed, please try again." },
@@ -66,15 +36,10 @@ const BANNERS: Record<string, { tone: "good" | "bad"; text: string }> = {
   error_stripe: { tone: "bad", text: "Stripe couldn't start the checkout session. Nothing was charged, please try again shortly." },
 };
 
-// Annual is billed as 10 months, i.e. 2 months free. Mirrors the PLANS matrix
-// in routes/billing.js, which is the authority for what actually gets charged.
-const ANNUAL_PRICE: Record<string, string> = { free: "$0", pro: "$200", max: "$2,000" };
-
 function BillingPage() {
   const search = useSearch({ from: "/_authenticated/app/billing" });
   const [usage, setUsage] = useState<Usage | null>(null);
   const [loading, setLoading] = useState(true);
-  const [interval, setInterval] = useState<Interval>("month");
 
   useEffect(() => {
     getUsage()
@@ -93,7 +58,7 @@ function BillingPage() {
         <h1 className="text-[22px] font-bold tracking-display">Plan &amp; Usage</h1>
       </div>
       <p className="text-[13px] text-muted-foreground mb-6">
-        Your subscription and AI usage. Monthly quotas reset on the 1st of each month; active radars are a live concurrent limit.
+        Your membership and usage. Monthly usage resets on the 1st of each month.
       </p>
 
       {banner && (
@@ -112,19 +77,14 @@ function BillingPage() {
             <p className="text-[13px] text-muted-foreground">Couldn't load usage right now.</p>
           ) : (
             <>
-              {plan === "free" && (
-                <div className="mb-4 px-4 py-3 rounded-[10px] border border-border bg-[var(--secondary)] text-[13px]">
-                  <span className="font-semibold">You're on Free.</span>{" "}
-                  {(usage.features.advisor_messages?.limit ?? 0) > 0
-                    ? `You can try Ask Maal with ${usage.features.advisor_messages.limit} free messages this month. Research and Radar are part of Pro.`
-                    : "Ask Maal, Research and Radar are part of Pro — everything else stays free."}
-                </div>
-              )}
               <ul className="space-y-4">
                 {Object.entries(usage.features).map(([key, f]) => {
                   const label = FEATURE_LABELS[key] ?? key;
                   const concurrent = key === "active_radars";
-                  const pct = f.limit > 0 ? Math.min(100, Math.round((f.used / f.limit) * 100)) : 0;
+                  // limit === null: the number is deliberately not shown (member chat cap).
+                  const hidden = f.limit === null;
+                  const lim = f.limit ?? 0;
+                  const pct = lim > 0 ? Math.min(100, Math.round((f.used / lim) * 100)) : 0;
                   return (
                     <li key={key}>
                       <div className="flex items-baseline justify-between text-[13px]">
@@ -133,13 +93,13 @@ function BillingPage() {
                           {concurrent && <span className="ml-1.5 text-[11px] text-muted-foreground">(currently active)</span>}
                         </span>
                         <span className="text-muted-foreground tabular-nums">
-                          {f.limit > 0 ? `${f.used} / ${f.limit}` : "Locked on Free"}
+                          {hidden ? `${f.used} this month` : lim > 0 ? `${f.used} / ${lim}` : "Paused"}
                         </span>
                       </div>
                       <div className="h-1.5 bg-[var(--secondary)] rounded-full overflow-hidden mt-1.5">
                         <div
-                          className={`h-full rounded-full ${f.limit === 0 ? "bg-border" : pct >= 90 ? "bg-red-500" : "bg-foreground"}`}
-                          style={{ width: f.limit > 0 ? `${pct}%` : "100%" }}
+                          className={`h-full rounded-full ${hidden ? "bg-foreground/30" : lim === 0 ? "bg-border" : pct >= 90 ? "bg-red-500" : "bg-foreground"}`}
+                          style={{ width: hidden ? "100%" : lim > 0 ? `${pct}%` : "100%" }}
                         />
                       </div>
                     </li>
@@ -147,117 +107,89 @@ function BillingPage() {
                 })}
               </ul>
               <p className="text-[12px] text-muted-foreground mt-4">
-                Monthly quotas reset on {usage.resetsOn}. Active radars is a concurrent limit — pause or delete a radar to free a slot.
+                Usage resets on {usage.resetsOn}. Active radars counts radars running right now; pause or delete one to free a slot.
               </p>
             </>
           )}
         </div>
       </section>
 
-      {/* Plans */}
+      {/* Membership */}
       <section>
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-          <h2 className="text-[15px] font-bold tracking-display">Plans</h2>
-          <div className="inline-flex items-center rounded-full border border-border p-0.5 text-[11px] font-semibold">
-            <button
-              type="button"
-              onClick={() => setInterval("month")}
-              className={`px-3 py-1 rounded-full transition-colors ${interval === "month" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Monthly
-            </button>
-            <button
-              type="button"
-              onClick={() => setInterval("year")}
-              className={`px-3 py-1 rounded-full transition-colors ${interval === "year" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Annual <span className="text-[10px] font-bold uppercase tracking-wide">2 months free</span>
-            </button>
-          </div>
-        </div>
-        <div className="grid md:grid-cols-3 gap-4">
-          {PLANS.map((p) => {
-            const current = p.key === plan;
-            const currentRank = PLAN_RANK[plan] ?? 0;
-            const targetRank = PLAN_RANK[p.key];
-            const isUpgrade = !current && targetRank > currentRank;
-            // Paid→paid downgrades (e.g. Max → Pro) have no supported endpoint:
-            // /billing/downgrade always lands on Free, and /billing/checkout
-            // would open a SECOND subscription alongside the current one.
-            // Never route those through checkout — offer a support request.
-            const isPaidDowngrade = !current && p.key !== "free" && targetRank < currentRank;
-            return (
-              <div key={p.key} className={`rounded-[14px] border p-5 bg-[var(--surface)] flex flex-col ${current ? "border-foreground" : "border-border"}`}>
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[15px] font-bold tracking-display">{p.name}</h3>
-                  {current && (
-                    <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[var(--secondary)]">Current</span>
-                  )}
-                </div>
-                <p className="mt-1 text-[22px] font-bold tracking-display">
-                  {interval === "year" ? ANNUAL_PRICE[p.key] : p.price}
-                  <span className="text-[12px] font-medium text-muted-foreground">
-                    {p.key === "free" ? " AUD" : interval === "year" ? " AUD/yr" : " AUD/mo"}
-                  </span>
-                </p>
-                <p className="text-[12px] text-muted-foreground">{p.blurb}</p>
-                <ul className="mt-3 space-y-1.5 flex-1">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-1.5 text-[12.5px]">
-                      <Check className="size-3.5 mt-0.5 shrink-0 text-muted-foreground" /> {f}
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-4">
-                  {current ? (
-                    p.key !== "free" ? (
-                      <form method="post" action="/billing/downgrade">
-                        <button type="submit" className="w-full px-4 py-2 rounded-[10px] border border-border text-[13px] font-semibold hover:border-foreground transition-colors">
-                          Cancel at period end
-                        </button>
-                      </form>
-                    ) : (
-                      <div className="w-full px-4 py-2 rounded-[10px] border border-transparent text-[13px] text-center text-muted-foreground">Your plan</div>
-                    )
-                  ) : p.key === "free" ? (
-                    <form method="post" action="/billing/downgrade">
-                      <button type="submit" className="w-full px-4 py-2 rounded-[10px] border border-border text-[13px] font-semibold hover:border-foreground transition-colors">
-                        Switch to Free
-                      </button>
-                    </form>
-                  ) : isUpgrade ? (
-                    <form method="post" action="/billing/checkout">
-                      <input type="hidden" name="plan" value={p.key} />
-                      <input type="hidden" name="interval" value={interval} />
-                      <button type="submit" className="w-full px-4 py-2 rounded-[10px] bg-foreground text-background text-[13px] font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5">
-                        <Sparkles className="size-3.5" /> Upgrade to {p.name}
-                      </button>
-                    </form>
-                  ) : (
-                    // Paid → lower-paid tier (e.g. Max → Pro): no change-plan
-                    // endpoint exists, so don't send the user through checkout
-                    // (which would bill a second subscription).
-                    <a
-                      href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Plan change request: ${plan} to ${p.key}`)}`}
-                      className="w-full px-4 py-2 rounded-[10px] border border-border text-[13px] font-semibold hover:border-foreground transition-colors inline-flex items-center justify-center"
-                    >
-                      Request switch to {p.name}
-                    </a>
-                  )}
-                </div>
-                {isPaidDowngrade && (
-                  <p className="text-[11px] text-muted-foreground mt-2">
-                    Plan downgrades between paid tiers are handled by support so your billing is adjusted, not duplicated.
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <p className="text-[11px] text-muted-foreground mt-4">
-          Subscriptions are billed monthly in AUD via Stripe and can be cancelled any time. Downgrading takes effect immediately.
-        </p>
+        <h2 className="text-[15px] font-bold tracking-display mb-3">Membership</h2>
+        {usage && <MembershipCard usage={usage} />}
       </section>
+    </div>
+  );
+}
+
+const MEMBER_FEATURES = [
+  "Access to AI chat with Ask Maal",
+  "Your Maal Score, plan and net worth in one place",
+  "Connect banks, super, property, crypto and debt",
+  "Research reports and Radar alerts",
+  "Profit-based investment options from partners (coming soon, general information only)",
+];
+
+function MembershipCard({ usage }: { usage: Usage }) {
+  const { basePlan, paid, trial, offer } = usage;
+  const legacy = basePlan === "pro" || basePlan === "max";
+
+  const status = paid
+    ? legacy
+      ? `You're on the ${basePlan === "pro" ? "Pro" : "Max"} plan. It's no longer sold, and you keep it for as long as you stay subscribed.`
+      : `You're a Maal member. Your membership renews at ${offer.renewal}/year.`
+    : trial?.active
+      ? `Free trial: ${trial.daysLeft} day${trial.daysLeft === 1 ? "" : "s"} left. Join any time to keep everything when it ends.`
+      : "Your free trial has ended. Join to keep using Maal.";
+
+  return (
+    <div className={`rounded-[14px] border p-5 bg-[var(--surface)] ${paid ? "border-foreground" : "border-border"}`}>
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-[15px] font-bold tracking-display">Maal Membership</h3>
+        <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[var(--secondary)] inline-flex items-center gap-1">
+          {paid ? "Active" : trial?.active ? (<><Clock className="size-3" /> Trial</>) : "Trial ended"}
+        </span>
+      </div>
+      <p className="mt-2 text-[13px]">{status}</p>
+
+      {!paid && (
+        <>
+          <p className="mt-3 text-[26px] font-bold tracking-display">
+            {offer.firstYear}
+            <span className="text-[12px] font-medium text-muted-foreground"> AUD for your first year</span>
+          </p>
+          <p className="text-[12px] text-muted-foreground">Then {offer.renewal}/year, renewing automatically. Cancel anytime.</p>
+        </>
+      )}
+
+      <ul className="mt-4 space-y-1.5">
+        {MEMBER_FEATURES.map((f) => (
+          <li key={f} className="flex items-start gap-1.5 text-[12.5px]">
+            <Check className="size-3.5 mt-0.5 shrink-0 text-muted-foreground" /> {f}
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-5">
+        {paid ? (
+          <form method="post" action="/billing/downgrade">
+            <button type="submit" className="w-full md:w-auto px-4 py-2 rounded-[10px] border border-border text-[13px] font-semibold hover:border-foreground transition-colors">
+              Cancel at period end
+            </button>
+          </form>
+        ) : (
+          <form method="post" action="/billing/checkout">
+            <input type="hidden" name="plan" value="member" />
+            <button type="submit" className="w-full md:w-auto px-5 py-2.5 rounded-[10px] bg-foreground text-background text-[13px] font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5">
+              <Sparkles className="size-3.5" /> Join for {offer.firstYear}
+            </button>
+          </form>
+        )}
+      </div>
+      <p className="text-[11px] text-muted-foreground mt-4">
+        Billed yearly in AUD via Stripe. {paid ? "Cancelling keeps your access until the end of the year you've paid for." : `${offer.line}`}
+      </p>
     </div>
   );
 }

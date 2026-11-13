@@ -31,7 +31,7 @@ const base = { session, user, profile, pageTitle: 'Test' };
 const cases = {
   'auth-login': { error: null, email: '' },
   'auth-signup': { error: null, email: '', name: '' },
-  'pricing': { analyticsSnippet: '', user: null },
+  'pricing': { analyticsSnippet: '', user: null, membership: require('../lib/membership') },
   'about': { analyticsSnippet: '', user: null },
   'security': { analyticsSnippet: '', user: null },
   'financial-wellbeing-score': { analyticsSnippet: '', user: null },

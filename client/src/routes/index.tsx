@@ -246,26 +246,14 @@ function Index() {
       <section className="rf-section rf-section-alt">
         <div className="rf-wrap rf-reveal">
           <span className="rf-eyebrow">Pricing</span>
-          <h2 className="rf-h2">Start free. Upgrade when Maal starts paying for itself.</h2>
-          <div className="rf-price-grid">
-            <div className="rf-price">
-              <p className="rf-price-name">Free</p>
-              <div className="rf-price-amt"><span className="rf-price-big">$0</span><span className="rf-price-per">forever</span></div>
-              <p className="rf-price-desc">Maal Score, basic dashboard, manual entry.</p>
-              <a href="/signup" className="rf-btn rf-btn-ghost rf-btn-block">Start free</a>
-            </div>
+          <h2 className="rf-h2">One membership. Try it free for 14 days.</h2>
+          <div className="rf-price-grid" style={{ gridTemplateColumns: "minmax(0, 520px)", justifyContent: "center" }}>
             <div className="rf-price featured">
-              <span className="rf-price-popular">Most popular</span>
-              <p className="rf-price-name">Pro</p>
-              <div className="rf-price-amt"><span className="rf-price-big">$20</span><span className="rf-price-per">AUD / month</span></div>
-              <p className="rf-price-desc">Open banking sync, tax &amp; super tools, retirement projections, Ask Maal.</p>
-              <a href="/pricing" className="rf-btn rf-btn-block">Get Pro</a>
-            </div>
-            <div className="rf-price">
-              <p className="rf-price-name">Max</p>
-              <div className="rf-price-amt"><span className="rf-price-big">$200</span><span className="rf-price-per">AUD / month</span></div>
-              <p className="rf-price-desc">Multi-entity, Radar alerts, Vault PDF extraction, priority support.</p>
-              <a href="/contact" className="rf-btn rf-btn-ghost rf-btn-block">Talk to us</a>
+              <span className="rf-price-popular">Limited time</span>
+              <p className="rf-price-name">Maal Membership</p>
+              <div className="rf-price-amt"><span className="rf-price-big">$4.99</span><span className="rf-price-per">for your first year</span></div>
+              <p className="rf-price-desc">Then $49.99/year. Access to AI chat, your Maal Score, open banking, tax &amp; super tools and retirement projections. Starts with a 14-day free trial, no card needed. Cancel anytime.</p>
+              <a href={signup.href} className="rf-btn rf-btn-block">{signup.label === "Sign up" ? "Start your free trial" : signup.label}</a>
             </div>
           </div>
         </div>

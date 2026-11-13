@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/png" href="/favicon.png">
   <title>Pricing | Maal</title>
-  <meta name="description" content="Free, Pro $20/mo, and Max $200/mo. Simple subscription pricing for a financial wellbeing score and plain-English action plan, built for Australians.">
+  <meta name="description" content="One Maal membership: a 14-day free trial, then $4.99 for your first year and $49.99/year after. Built for Australians.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -61,100 +61,51 @@
   <%- include('partials/navbar') %>
 
   <main>
+    <%
+      // res.locals.membership is set in server.js (one source: lib/membership.js).
+      const m = locals.membership;
+      const first = m.formatAud(m.MEMBERSHIP.firstYearCents);
+      const renew = m.formatAud(m.MEMBERSHIP.yearCents);
+      const gated = locals.waitlistGated !== false;
+      const ctaHref = gated ? '/waitlist' : '/signup';
+    %>
     <section class="pr-section">
       <p class="pr-kicker">Pricing</p>
-      <h1 class="pr-h1">Simple pricing.<br>No hidden agenda.</h1>
-      <p class="pr-sub">We make money from your subscription, nothing else. Maal replaces the spreadsheet and the awkward annual review. Cancel anytime. All amounts in AUD.</p>
+      <h1 class="pr-h1">One membership.<br>Everything included.</h1>
+      <p class="pr-sub">Try every part of Maal free for <%= m.TRIAL_DAYS %> days, no card needed. Then <%= first %> for your first year and <%= renew %>/year after that. Cancel anytime. All amounts in AUD.</p>
     </section>
 
-    <div class="billing-toggle">
-      <button type="button" class="bt-opt active" data-period="monthly" onclick="setPeriod('monthly')">Monthly</button>
-      <button type="button" class="bt-opt" data-period="annual" onclick="setPeriod('annual')">Annual <span class="bt-save">2 months free</span></button>
-    </div>
-
-    <div class="tiers">
-      <div class="tier">
-        <div class="tier-top"><span class="tier-name">Free</span></div>
-        <div class="tier-price">
-          <span class="tier-price-num">$0</span>
-          <span class="tier-price-per price-monthly">forever, no card required</span>
-          <span class="tier-price-per price-annual" style="display:none">forever, no card required</span>
-        </div>
-        <p class="tier-desc">Start building your full financial picture with Maal.</p>
-        <ul class="tier-list">
-          <li><span class="tier-check">&#10003;</span> Limited Ask Maal chat, research and radar usage each month</li>
-          <li><span class="tier-check">&#10003;</span> Track accounts, real estate, crypto, vehicles, debt and more</li>
-          <li><span class="tier-check">&#10003;</span> Net worth, transactions, allocations and performance</li>
-          <li><span class="tier-check">&#10003;</span> Bank connections pause after 30 days of inactivity, and you can reconnect any time</li>
-        </ul>
-        <a href="/signup" class="tier-cta outline">Start free</a>
-      </div>
-
+    <div class="tiers" style="grid-template-columns:minmax(0,520px);justify-content:center;">
       <div class="tier featured">
         <div class="tier-top">
-          <span class="tier-name">Pro</span>
-          <span class="tier-badge">Recommended</span>
+          <span class="tier-name"><%= m.MEMBERSHIP.name %></span>
+          <span class="tier-badge">Limited time</span>
         </div>
         <div class="tier-price">
-          <span class="tier-price-num price-monthly">$20</span>
-          <span class="tier-price-num price-annual" style="display:none">$200</span>
-          <span class="tier-price-per price-monthly">AUD / month</span>
-          <span class="tier-price-per price-annual" style="display:none">AUD / year</span>
+          <span class="tier-price-num"><%= first %></span>
+          <span class="tier-price-per">for your first year</span>
         </div>
-        <p class="tier-desc">For active users who use Maal regularly.</p>
+        <p class="tier-desc">Then <%= renew %>/year, renewing automatically until you cancel. Starts with a <%= m.TRIAL_DAYS %>-day free trial, no card required.</p>
         <ul class="tier-list">
-          <li><span class="tier-check">&#10003;</span> Everything in Free</li>
-          <li><span class="tier-check">&#10003;</span> 10x the monthly usage across chat, research and radars</li>
-          <li><span class="tier-check">&#10003;</span> The latest frontier AI models</li>
-          <li><span class="tier-check">&#10003;</span> The most robust, accurate financial data</li>
-          <li><span class="tier-check">&#10003;</span> Ask for any report, like an EOFY super summary or a net worth snapshot, and Maal emails it to you</li>
-          <li><span class="tier-check">&#10003;</span> Priority support</li>
+          <li><span class="tier-check">&#10003;</span> Access to AI chat with Ask Maal</li>
+          <li><span class="tier-check">&#10003;</span> Your Maal Score, plan and net worth in one place</li>
+          <li><span class="tier-check">&#10003;</span> Connect bank accounts, super, property, crypto, vehicles and debt</li>
+          <li><span class="tier-check">&#10003;</span> Research reports and Radar alerts on what matters to you</li>
+          <li><span class="tier-check">&#10003;</span> Explore profit-based investment options from our partners <span style="opacity:.7">(coming soon, general information only)</span></li>
         </ul>
-        <a href="/signup" class="tier-cta solid" data-plan-cta data-plan="pro">Get Pro</a>
-      </div>
-
-      <div class="tier">
-        <div class="tier-top"><span class="tier-name">Max</span></div>
-        <div class="tier-price">
-          <span class="tier-price-num price-monthly">$200</span>
-          <span class="tier-price-num price-annual" style="display:none">$2,000</span>
-          <span class="tier-price-per price-monthly">AUD / month</span>
-          <span class="tier-price-per price-annual" style="display:none">AUD / year</span>
-        </div>
-        <p class="tier-desc">For people who want a second set of eyes on serious money, with Mahmoud personally.</p>
-        <ul class="tier-list">
-          <li><span class="tier-check">&#10003;</span> Everything in Pro</li>
-          <li><span class="tier-check">&#10003;</span> 10x Pro's usage across chat, research and radars</li>
-          <li><span class="tier-check">&#10003;</span> Personal setup with founder Mahmoud</li>
-          <li><span class="tier-check">&#10003;</span> Early access to new features</li>
-          <li><span class="tier-check">&#10003;</span> Top-level priority support</li>
-        </ul>
-        <a href="/contact" class="tier-cta outline">Talk to us</a>
+        <a href="<%= ctaHref %>" class="tier-cta solid"><%= gated ? 'Join the waitlist' : 'Start your free trial' %></a>
+        <p style="margin-top:.75rem;font-size:12px;opacity:.75;text-align:center;"><%= gated ? 'Maal is invite-only right now. Your invite includes the free trial.' : 'No card needed for the trial.' %></p>
       </div>
     </div>
 
     <section class="compare">
       <div class="compare-inner">
-        <h2>Feature comparison</h2>
+        <h2>How it works</h2>
         <table class="compare-table">
-          <thead>
-            <tr>
-              <th>Feature</th>
-              <th>Free</th>
-              <th>Pro</th>
-              <th>Max</th>
-            </tr>
-          </thead>
           <tbody>
-            <tr><td>Maal Score (0–100)</td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
-            <tr><td>Connect accounts, real estate, crypto, vehicles &amp; debt</td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
-            <tr><td>Net worth, transactions, allocations &amp; performance</td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
-            <tr><td>Ask Maal chat, research &amp; radars</td><td>Limited</td><td>10x Free</td><td>10x Pro</td></tr>
-            <tr><td>Frontier AI models &amp; most accurate financial data</td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
-            <tr><td>Any report (EOFY super summary, net worth snapshot) emailed on request</td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td><td><span class="c-check">&#10003;</span></td></tr>
-            <tr><td>Priority support</td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td><td>Top-level</td></tr>
-            <tr><td>Personal setup with founder Mahmoud</td><td><span class="c-dash">—</span></td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td></tr>
-            <tr><td>Early access to new features</td><td><span class="c-dash">—</span></td><td><span class="c-dash">—</span></td><td><span class="c-check">&#10003;</span></td></tr>
+            <tr><td>Days 1–<%= m.TRIAL_DAYS %></td><td>Full access, free. No card.</td></tr>
+            <tr><td>After your trial</td><td>Join for <%= first %> for your first year to keep using Maal.</td></tr>
+            <tr><td>Every year after</td><td><%= renew %>/year. Cancel anytime in Plan &amp; Usage before it renews.</td></tr>
           </tbody>
         </table>
       </div>
@@ -167,24 +118,5 @@
 
   <%- include('partials/footer') %>
   <%- analyticsSnippet %>
-  <script>
-    // Carry the chosen billing period through signup so the app can preselect
-    // it at checkout. Without this, picking Annual changed the displayed price
-    // but the user still landed on monthly billing.
-    function syncCtas(period) {
-      document.querySelectorAll('[data-plan-cta]').forEach(function (a) {
-        var plan = a.getAttribute('data-plan');
-        var interval = period === 'annual' ? 'year' : 'month';
-        a.setAttribute('href', '/signup?plan=' + plan + '&interval=' + interval);
-      });
-    }
-
-    function setPeriod(period) {
-      syncCtas(period);
-      document.querySelectorAll('.bt-opt').forEach(function(b) { b.classList.toggle('active', b.dataset.period === period); });
-      document.querySelectorAll('.price-monthly').forEach(function(el) { el.style.display = period === 'monthly' ? '' : 'none'; });
-      document.querySelectorAll('.price-annual').forEach(function(el) { el.style.display = period === 'annual' ? '' : 'none'; });
-    }
-  </script>
 </body>
 </html>
