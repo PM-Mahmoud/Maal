@@ -22,7 +22,7 @@
     <section class="v2-auth-card">
       <div class="v2-auth-inner">
         <a href="/" class="v2-auth-logo" aria-label="Maal home">
-          <svg class="maal-mark" width="18" height="18" viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true"><g fill="#C9A84C"><rect x="0" y="0" width="1" height="7"/><rect x="6" y="0" width="1" height="7"/><rect x="1" y="1" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/></g><g fill="#0A2918"><rect x="2" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/></g></svg>
+          <svg class="maal-mark" width="18" height="18" viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true"><g fill="currentColor"><rect x="0" y="0" width="1" height="7"/><rect x="6" y="0" width="1" height="7"/><rect x="1" y="1" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/></g><g fill="currentColor"><rect x="2" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/></g></svg>
           <span>Maal</span>
         </a>
 
@@ -32,7 +32,8 @@
             <span class="v2-pill">Limited time offer</span>
             <p class="v2-offer-big"><%= first %></p>
             <p class="v2-offer-sub">for your first year</p>
-            <p class="v2-offer-fine">Then <%= renew %>/year. Starts with a <%= m.TRIAL_DAYS %>-day free trial, no card needed. Cancel anytime.</p>
+            <p class="v2-offer-fine">Renews at <%= renew %>/year. Cancel anytime.</p>
+            <p class="v2-offer-lede">Your whole financial life in one place, interest-free. Starts with a <%= m.TRIAL_DAYS %>-day free trial, no card needed.</p>
           </div>
 
           <% if (locals.referred) { %>

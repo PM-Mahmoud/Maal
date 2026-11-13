@@ -42,14 +42,14 @@ export function MembershipGate({ children }: { children: ReactNode }) {
         {paywalled && usage && (
           <div className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/30" role="dialog" aria-modal="true" aria-labelledby="paywall-title">
             <div className="w-full max-w-[440px] rounded-[18px] p-7 text-center text-white shadow-2xl"
-              style={{ background: "radial-gradient(70% 60% at 80% 0%, rgba(18,181,166,.35), rgba(18,181,166,0) 70%), linear-gradient(180deg, #0B1428, #1C2B52)" }}>
-              <p className="text-[11px] font-mono uppercase tracking-[.14em] text-white/70">Your free trial has ended</p>
-              <span className="inline-block mt-4 px-3 py-1 rounded-full text-[11px] font-mono uppercase tracking-[.08em] bg-[#DDF5F1] text-[#0D4B45]">Limited time offer</span>
-              <h2 id="paywall-title" className="mt-3 text-[64px] leading-none" style={{ fontFamily: "'Instrument Serif', serif" }}>{usage.offer.firstYear}</h2>
-              <p className="text-[22px] text-white/85" style={{ fontFamily: "'Instrument Serif', serif" }}>for your first year</p>
+              style={{ background: "radial-gradient(80% 50% at 50% 115%, rgba(110,150,180,.45), rgba(110,150,180,0) 70%), linear-gradient(180deg, #0C1218, #18222C)", fontFamily: "Inter, system-ui, sans-serif" }}>
+              <p className="text-[11px] uppercase tracking-[.08em] text-white/80">Your free trial has ended · Join Maal today</p>
+              <span className="inline-block mt-4 px-3 py-1 rounded-[6px] text-[13px] bg-[#1191A9] text-white">Limited time offer</span>
+              <h2 id="paywall-title" className="mt-3 text-[64px] leading-none" style={{ fontFamily: "Lora, Georgia, serif" }}>{usage.offer.firstYear}</h2>
+              <p className="mt-2 text-[24px]" style={{ fontFamily: "Lora, Georgia, serif" }}>for your first year</p>
               <p className="mt-3 text-[13px] text-white/75">Then {usage.offer.renewal}/year. Cancel anytime in Plan &amp; Usage.</p>
-              <div className="mt-6"><JoinButton label="Join Maal" /></div>
-              <a href="/app/billing" className="mt-4 inline-block text-[12px] text-white/70 underline underline-offset-2">See what's included</a>
+              <div className="mt-6 flex justify-center"><JoinButton label="Join today" /></div>
+              <a href="/app/billing" className="mt-4 inline-block text-[12px] text-white/80 underline underline-offset-2">See what's included</a>
             </div>
           </div>
         )}
@@ -66,9 +66,9 @@ function JoinButton({ label, small }: { label: string; small?: boolean }) {
         type="submit"
         className={small
           ? "px-3.5 py-1.5 rounded-[9px] bg-foreground text-background text-[12.5px] font-semibold hover:opacity-90 inline-flex items-center gap-1.5"
-          : "w-full px-5 py-3 rounded-[10px] bg-white text-[#101114] text-[14px] font-semibold hover:bg-white/90 inline-flex items-center justify-center gap-1.5"}
+          : "px-8 py-3 rounded-[6px] bg-white text-[#101010] text-[14px] font-normal hover:bg-white/90 inline-flex items-center justify-center gap-1.5"}
       >
-        <Sparkles className="size-3.5" /> {label}
+        {small && <Sparkles className="size-3.5" />} {label}
       </button>
     </form>
   );

@@ -40,9 +40,10 @@ const HEARD = [
 ] as const;
 
 // Australian banks, shown by name only (no logos).
-const BANKS = [
-  "CommBank", "Westpac", "NAB", "ANZ", "Macquarie", "ING", "Bankwest", "St.George",
-  "Bendigo Bank", "Suncorp", "BOQ", "ubank", "Up", "HSBC", "Great Southern Bank", "Heritage",
+const BANKS: [string, string][] = [
+  ["CommBank", "CB"], ["Westpac", "W"], ["NAB", "NAB"], ["ANZ", "ANZ"], ["Macquarie", "M"], ["ING", "ING"],
+  ["Bankwest", "BW"], ["St.George", "SG"], ["Bendigo Bank", "B"], ["Suncorp", "S"], ["BOQ", "BOQ"], ["ubank", "u"],
+  ["Up", "Up"], ["HSBC", "HSBC"], ["Great Southern Bank", "GSB"], ["Heritage", "H"], ["Bank Australia", "BA"], ["Rabobank", "R"],
 ];
 
 type LinkedAccount = { id: string | number; institution_name?: string; institution_type?: string };
@@ -99,7 +100,7 @@ function Welcome() {
   const dark = step === "connect";
 
   return (
-    <div className="v2" style={dark ? { background: "var(--v2-night)", color: "#fff" } : undefined}>
+    <div className="v2" style={{ background: dark ? "#000" : "#fff", color: dark ? "#fff" : undefined }}>
       <WelcomeStyles />
       <header className={`wl-top${dark ? " is-dark" : ""}`}>
         <button className="wl-chip" onClick={back} disabled={step === "referral"} style={step === "referral" ? { visibility: "hidden" } : undefined}>Back</button>
@@ -206,11 +207,11 @@ function ReferralStep({ onNext }: { onNext: () => void }) {
   return (
     <div className="wl-col">
       <div className="wl-offer">
-        <span className="v2-kicker" style={{ color: "rgba(255,255,255,.75)" }}>Limited time offer</span>
+        <span style={{ fontSize: 13, opacity: .9 }}>Limited time offer</span>
         <p className="wl-offer-h">Refer 3 friends,<br />renew for $4.99.</p>
-        <p style={{ opacity: .85, fontSize: 14 }}>Your friends skip the waitlist. You save $45 on next year.</p>
+        <p style={{ opacity: .9, fontSize: 14 }}>Your friends skip the waitlist.<br />You save $45 on next year.</p>
       </div>
-      <p className="v2-kicker" style={{ marginTop: "1.6rem" }}>How it works</p>
+      <p className="wl-howto">How it works</p>
       <ol className="wl-timeline">
         <li><b>Share your link</b><span>Send it to friends who aren’t on Maal yet. It lets them skip the waitlist.</span></li>
         <li><b>They join</b><span>They start with a free trial, then the same $4.99 first-year offer.</span></li>
@@ -273,10 +274,13 @@ function ConnectStep({ onLinked, onSkip }: { onLinked: (a: LinkedAccount[], coun
     <div className="wl-col" style={{ textAlign: "center" }}>
       <h1 className="wl-h1">Connect your accounts</h1>
       <p className="wl-sub" style={{ color: "rgba(255,255,255,.75)" }}>Add your everyday accounts to see every dollar in and out. Read-only, through Australia’s Consumer Data Right.</p>
-      <div className="wl-banks" aria-label="Supported Australian banks include">
-        {BANKS.map((b) => <span key={b} className="wl-bank">{b}</span>)}
-        <span className="wl-bank wl-bank-more">+100 more</span>
+      {/* Round bank badges with initials (names on hover / for screen readers) — no bank logos. */}
+      <div className="wl-banks" role="list" aria-label="Supported Australian banks include">
+        {BANKS.map(([name, short], i) => (
+          <span key={name} role="listitem" title={name} aria-label={name} className={`wl-bank${i === 8 ? " wl-bank-hero" : ""}`}>{short}</span>
+        ))}
       </div>
+      <p className="wl-bank-names">{BANKS.slice(0, 8).map(([n]) => n).join(" · ")} and 100+ more</p>
       {live === false ? (
         <>
           <p className="wl-note">Bank connections are switching on soon. You can add your accounts by hand from the dashboard in the meantime.</p>
@@ -296,55 +300,67 @@ function ConnectStep({ onLinked, onSkip }: { onLinked: (a: LinkedAccount[], coun
   );
 }
 
-// Flow-specific layout, on top of the v2 tokens in v2-landing.css.
+// Flow-specific layout matched to the reference design in Figma (frames 08–14),
+// on top of the v2 tokens in v2-landing.css.
 function WelcomeStyles() {
   return (
     <style>{`
-      .wl-top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--v2-hair); background: var(--v2-bg); }
-      .wl-top.is-dark { background: var(--v2-night); border-color: rgba(255,255,255,.12); }
-      .wl-logo { display: inline-flex; align-items: center; gap: .4rem; font-family: var(--v2-serif); font-size: 22px; }
-      .wl-chip { font: inherit; font-size: 13px; padding: .35rem .8rem; border-radius: 8px; border: 1px solid var(--v2-hair-strong); background: transparent; color: inherit; cursor: pointer; }
-      .is-dark .wl-chip { border-color: rgba(255,255,255,.3); }
-      .wl-main { min-height: calc(100vh - 120px); display: flex; justify-content: center; padding: 48px 16px 32px; }
-      .wl-main.is-dark { background:
-        radial-gradient(55% 45% at 85% 80%, rgba(18,181,166,.25), rgba(18,181,166,0) 70%),
-        radial-gradient(60% 50% at 10% 10%, rgba(120,140,220,.18), rgba(120,140,220,0) 70%),
-        var(--v2-night); }
-      .wl-col { width: 100%; max-width: 440px; }
-      .wl-h1 { font-family: var(--v2-serif); font-size: clamp(2rem, 6vw, 2.6rem); line-height: 1.08; text-align: center; }
-      .wl-sub { text-align: center; color: var(--v2-muted); margin-top: .6rem; font-size: 14.5px; }
-      .wl-options { margin-top: 1.6rem; display: grid; gap: .55rem; }
-      .wl-option { display: flex; align-items: center; gap: .75rem; width: 100%; text-align: left; padding: .9rem 1rem; border-radius: 12px;
-        border: 1px solid var(--v2-hair-strong); background: var(--v2-surface); color: var(--v2-ink); font: inherit; font-size: 14.5px; cursor: pointer; transition: border-color .15s, background .15s; }
-      .wl-option:hover { border-color: var(--v2-ink); }
-      .wl-option.on { background: var(--v2-surface-2); border-color: var(--v2-ink); }
+      .wl-top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; border-bottom: 1px solid #D8D8D8; background: #fff; }
+      .wl-top.is-dark { background: #000; border-color: transparent; color: #fff; }
+      .wl-logo { display: inline-flex; align-items: center; gap: .45rem; font-family: var(--v2-serif); font-size: 22px; color: inherit; }
+      .wl-chip { font: inherit; font-size: 15px; padding: .45rem .85rem; border-radius: 10px; border: 1px solid #888; background: transparent; color: #151515; cursor: pointer; }
+      .is-dark .wl-chip { color: #fff; }
+      .wl-main { min-height: calc(100vh - 130px); display: flex; justify-content: center; padding: 64px 16px 40px; background: #fff; }
+      .wl-main.is-dark { color: #fff; background:
+        radial-gradient(60% 70% at 108% 92%, rgba(80,150,210,.55) 0%, rgba(40,90,150,.35) 35%, rgba(0,0,0,0) 62%),
+        radial-gradient(45% 55% at 96% 100%, rgba(220,235,255,.18), rgba(0,0,0,0) 60%),
+        #000; }
+      .wl-col { width: 100%; max-width: 380px; }
+      .wl-h1 { font-family: var(--v2-serif); font-weight: 400; font-size: clamp(1.8rem, 5vw, 2.15rem); line-height: 1.25; text-align: center; color: #000; }
+      .is-dark .wl-h1 { color: #fff; }
+      .wl-sub { text-align: center; color: #666; margin-top: .5rem; font-size: 15px; }
+      .wl-options { margin-top: 1.4rem; display: grid; gap: .6rem; }
+      .wl-option { display: flex; align-items: center; gap: .8rem; width: 100%; text-align: left; padding: 0 1rem; height: 54px; border-radius: 16px;
+        border: 1px solid #CACACA; background: #fff; color: #000; font: inherit; font-size: 15px; cursor: pointer; transition: border-color .15s, background .15s; }
+      .wl-option:hover { border-color: #8C8C8C; }
+      .wl-option.on { background: #F6F6F6; border-color: #8C8C8C; }
       .wl-option:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 2px; }
-      .wl-option-icon { color: var(--v2-muted); display: inline-flex; }
-      .wl-tick { margin-left: auto; color: var(--v2-accent); }
-      .wl-cta { margin-top: 1.4rem; }
-      .v2-btn:disabled { opacity: .45; cursor: not-allowed; }
-      .wl-skip-link { display: block; margin: 1rem auto 0; background: none; border: 0; font: inherit; font-size: 13px; color: var(--v2-muted); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
-      .wl-offer { border-radius: 16px; padding: 22px; color: #fff; text-align: center;
-        background: linear-gradient(135deg, #0E3B37 0%, #12B5A6 60%, #8FD9CF 100%); }
-      .wl-offer-h { font-family: var(--v2-serif); font-size: 2.2rem; line-height: 1.05; margin: .5rem 0 .6rem; }
-      .wl-timeline { list-style: none; padding: 0; margin: .9rem 0 0; display: grid; gap: 1rem; counter-reset: s; }
-      .wl-timeline li { position: relative; padding-left: 2.2rem; display: grid; gap: .15rem; font-size: 14px; }
-      .wl-timeline li span { color: var(--v2-muted); font-size: 13px; }
-      .wl-timeline li::before { counter-increment: s; content: counter(s); position: absolute; left: 0; top: 0; width: 1.5rem; height: 1.5rem; border-radius: 50%;
-        background: var(--v2-ink); color: var(--v2-bg); font-family: var(--v2-mono); font-size: 11px; display: grid; place-items: center; }
-      .wl-banks { margin: 2rem auto 0; display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; }
-      .wl-bank { padding: .5rem .85rem; border-radius: 999px; border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.07); font-size: 13px; }
-      .wl-bank-more { color: rgba(255,255,255,.65); }
-      .wl-note { margin-top: 1.2rem; font-size: 13.5px; color: rgba(255,255,255,.8); }
-      .wl-linked { margin-top: 1.6rem; border: 1px solid var(--v2-hair); border-radius: 12px; background: var(--v2-surface); }
-      .wl-linked-row { display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem; border-bottom: 1px solid var(--v2-hair); font-size: 14px; }
+      .wl-option-plain { height: 48px; border-radius: 12px; }
+      .wl-option-icon { color: #000; display: inline-flex; }
+      .wl-tick { margin-left: auto; color: #000; }
+      .wl-cta { margin-top: 1.2rem; }
+      .wl-col .v2-btn { border-radius: 10px; text-transform: none; font-size: 15px; height: 46px; }
+      .v2-btn:disabled { opacity: .35; cursor: not-allowed; }
+      .wl-skip-link { display: block; margin: 1rem auto 0; background: none; border: 0; font: inherit; font-size: 13px; color: #111; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+      .wl-offer { border-radius: 14px; padding: 22px 20px; color: #fff; text-align: center;
+        background: linear-gradient(140deg, #0A8FA6 0%, #2E9FC0 50%, #9CB8F0 82%, #CDB8FF 100%); }
+      .wl-offer-h { font-family: var(--v2-serif); font-weight: 400; font-size: 1.85rem; line-height: 1.2; margin: .4rem 0 .5rem; }
+      .wl-howto { margin-top: 1.3rem; font-size: 14px; color: #000; }
+      .wl-timeline { list-style: none; padding: 0; margin: .9rem 0 0; display: grid; gap: 1.1rem; position: relative; }
+      .wl-timeline::before { content: ""; position: absolute; left: 12px; top: 14px; bottom: 30px; width: 2px; background: #6B6B6B; }
+      .wl-timeline li { position: relative; padding-left: 2.6rem; display: grid; gap: .15rem; font-size: 14.5px; color: #000; }
+      .wl-timeline li b { font-weight: 400; }
+      .wl-timeline li span { color: #666; font-size: 12.5px; line-height: 1.5; }
+      .wl-timeline li::before { content: "✓"; position: absolute; left: 0; top: -1px; width: 26px; height: 26px; border-radius: 50%;
+        background: #020109; color: #fff; font-size: 13px; display: grid; place-items: center; }
+      .wl-banks { margin: 1.6rem auto 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; max-width: 380px; }
+      .wl-bank { aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 600; letter-spacing: .02em;
+        color: #fff; background: radial-gradient(circle at 35% 30%, #2A3442, #10151C); border: 1px solid rgba(255,255,255,.16);
+        box-shadow: 0 0 0 4px rgba(255,255,255,.04); }
+      .wl-bank-hero { transform: scale(1.18); background: radial-gradient(circle at 35% 30%, #2E7FD0, #164A86); box-shadow: 0 0 0 5px rgba(80,150,230,.25), 0 0 26px rgba(80,150,230,.55); }
+      .wl-bank-names { margin-top: 1rem; font-size: 12.5px; color: rgba(255,255,255,.65); }
+      .wl-note { margin-top: 1.2rem; font-size: 14px; color: rgba(255,255,255,.82); }
+      .is-dark .v2-btn-light { color: #151515; text-transform: none; }
+      .wl-linked { margin-top: 1.4rem; border: 1px solid #E6E6E6; border-radius: 14px; background: #fff; }
+      .wl-linked-row { display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem; border-bottom: 1px solid #E6E6E6; font-size: 14.5px; color: #000; }
       .wl-linked-row:last-child { border-bottom: 0; }
-      .wl-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--v2-accent); flex-shrink: 0; }
-      .wl-muted { color: var(--v2-muted); font-size: 12.5px; }
-      .wl-foot { text-align: center; padding: 16px; border-top: 1px solid var(--v2-hair); font-size: 12px; }
-      .wl-foot a { text-decoration: underline; text-underline-offset: 2px; color: var(--v2-muted); }
-      .wl-foot.is-dark { border-color: rgba(255,255,255,.12); background: var(--v2-night); }
-      .wl-foot.is-dark a { color: rgba(255,255,255,.65); }
+      .wl-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--v2-good); flex-shrink: 0; }
+      .wl-muted { color: #666; font-size: 12.5px; }
+      .wl-foot { text-align: center; padding: 18px; border-top: 1px solid #EBEBEB; font-size: 13px; background: #fff; }
+      .wl-foot a { text-decoration: underline; text-underline-offset: 2px; color: #111; }
+      .wl-foot.is-dark { border-color: transparent; background: #000; }
+      .wl-foot.is-dark a { color: #fff; }
+      @media (max-width: 420px) { .wl-banks { grid-template-columns: repeat(5, 1fr); } }
     `}</style>
   );
 }

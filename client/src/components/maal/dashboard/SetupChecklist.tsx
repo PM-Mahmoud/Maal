@@ -54,7 +54,7 @@ export function SetupChecklist() {
           <ProgressRing done={act.completed} total={act.total} />
           <div>
             <p className="text-[10.5px] font-mono uppercase tracking-[.14em] text-muted-foreground">Your guide</p>
-            <h2 className="text-[20px] leading-tight" style={{ fontFamily: "'Instrument Serif', serif" }}>Make the most of Maal</h2>
+            <h2 className="text-[20px] leading-tight" style={{ fontFamily: "Lora, Georgia, serif" }}>Make the most of Maal</h2>
           </div>
         </div>
         <button onClick={dismiss} aria-label="Dismiss" className="text-muted-foreground hover:text-foreground">
