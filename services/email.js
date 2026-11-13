@@ -98,6 +98,98 @@ async function sendWaitlistConfirmation(email) {
 
 // ─── Outbound channels (PR 10) ─────────────────────────────────────────────
 const BASE_URL = (process.env.BASE_URL || 'https://hellomaal.com').replace(/\/+$/, '');
+
+// Free Maal Score result, sent from /score (incl. the event kiosk). `report` is
+// lib/quick-score.computeQuickScore() output — recomputed server-side, never
+// client-supplied text. `waitlisted` adds the "you're on the list" paragraph.
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+async function sendScoreReport(email, { name, report, waitlisted }) {
+  const first = String(name || '').trim().split(/\s+/)[0] || '';
+  const hi = first ? `${escHtml(first)}, your` : 'Your';
+  const pillarRows = report.pillars.map((p) => `
+            <tr><td style="padding:6px 0;font-size:0.9rem;color:#F0EFE9;">${escHtml(p.label)}${p.key === 'protection' ? ' <span style="color:#8A8D83;font-size:0.8rem;">(estimate)</span>' : ''}</td>
+                <td style="padding:6px 0;font-size:0.9rem;color:#C9A84C;text-align:right;font-weight:600;">${p.score}</td></tr>`).join('');
+  const list = (items) => items.map((t) => `<li style="margin:0 0 6px;">${escHtml(t)}</li>`).join('');
+  const waitlistHtml = waitlisted
+    ? `<p style="margin:24px 0 0;padding:14px 16px;border:1px solid rgba(201,168,76,0.25);border-radius:10px;font-size:0.9rem;color:#F0EFE9;line-height:1.6;"><strong>You're on the Maal waitlist.</strong> We're letting people in in waves. We'll email your invite as soon as your spot opens, so you can track your score over time and get a personalised plan.</p>`
+    : '';
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Maal Score</title></head>
+<body style="margin:0;padding:0;background:#0A0F0D;font-family:'DM Sans',system-ui,sans-serif;color:#F0EFE9;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0F0D;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#0F2E24;border:1px solid rgba(201,168,76,0.15);border-radius:16px;overflow:hidden;max-width:560px;width:100%;">
+        <tr><td style="padding:40px 40px 32px;">
+          <p style="margin:0 0 24px;font-size:1.5rem;font-weight:600;color:#C9A84C;">Maal</p>
+          <h1 style="margin:0 0 8px;font-size:1.4rem;font-weight:600;color:#F0EFE9;">${hi} Maal Score is ${report.total} / 100</h1>
+          <p style="margin:0 0 24px;font-size:0.95rem;color:#8A8D83;">Band: <strong style="color:#F0EFE9;">${escHtml(report.band)}</strong></p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid rgba(201,168,76,0.15);border-bottom:1px solid rgba(201,168,76,0.15);margin:0 0 24px;">${pillarRows}
+          </table>
+          <p style="margin:0 0 6px;font-size:0.85rem;font-weight:600;color:#7ED4A6;">What's helping</p>
+          <ul style="margin:0 0 18px;padding-left:18px;font-size:0.9rem;color:#F0EFE9;line-height:1.6;">${list(report.helping)}</ul>
+          ${report.holdingBack.length ? `<p style="margin:0 0 6px;font-size:0.85rem;font-weight:600;color:#E0A070;">What's holding you back</p>
+          <ul style="margin:0 0 18px;padding-left:18px;font-size:0.9rem;color:#F0EFE9;line-height:1.6;">${list(report.holdingBack)}</ul>` : ''}
+          <p style="margin:0 0 6px;font-size:0.85rem;font-weight:600;color:#C9A84C;">Your next 3 things to understand</p>
+          <ol style="margin:0;padding-left:18px;font-size:0.9rem;color:#F0EFE9;line-height:1.6;">${list(report.nextSteps)}</ol>
+          ${waitlistHtml}
+          <p style="margin:28px 0 0;font-size:0.8rem;color:rgba(138,141,131,0.75);line-height:1.6;">This is a quick estimate from the answers you gave, not a full assessment. Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`.trim();
+  const text = [
+    `${first ? first + ', your' : 'Your'} Maal Score is ${report.total} / 100 (${report.band}).`,
+    '',
+    ...report.pillars.map((p) => `${p.label}: ${p.score}${p.key === 'protection' ? ' (estimate)' : ''}`),
+    '',
+    "What's helping:", ...report.helping.map((t) => '- ' + t),
+    ...(report.holdingBack.length ? ['', "What's holding you back:", ...report.holdingBack.map((t) => '- ' + t)] : []),
+    '', 'Your next 3 things to understand:', ...report.nextSteps.map((t, i) => `${i + 1}. ${t}`),
+    ...(waitlisted ? ['', "You're on the Maal waitlist. We'll email your invite as soon as your spot opens."] : []),
+    '', 'Maal does not provide financial advice. Any information provided by Maal is for educational purposes only.',
+  ].join('\n');
+  return sendEmail({ to: email, subject: `Your Maal Score: ${report.total} / 100`, html, text });
+}
+
+// Invite from the waitlist: the link goes to /signup, where this email is now
+// allowed through the invite-only gate (services/waitlist-access.js).
+async function sendWaitlistInvite(email, name) {
+  const first = String(name || '').trim().split(/\s+/)[0] || '';
+  const safeFirst = first.replace(/[<>&"']/g, '');
+  const link = BASE_URL + '/signup';
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Maal invite is here</title></head>
+<body style="margin:0;padding:0;background:#0A0F0D;font-family:'DM Sans',system-ui,sans-serif;color:#F0EFE9;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0F0D;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#0F2E24;border:1px solid rgba(201,168,76,0.15);border-radius:16px;overflow:hidden;max-width:560px;width:100%;">
+        <tr><td style="padding:40px 40px 32px;">
+          <p style="margin:0 0 24px;font-size:1.5rem;font-weight:600;color:#C9A84C;">Maal</p>
+          <h1 style="margin:0 0 16px;font-size:1.5rem;font-weight:600;color:#F0EFE9;">${safeFirst ? safeFirst + ', your' : 'Your'} spot is ready.</h1>
+          <p style="margin:0 0 24px;font-size:0.95rem;color:#8A8D83;line-height:1.7;">You're off the waitlist. Create your Maal account with this email address to get your Maal Score and personalised plan.</p>
+          <p style="margin:0 0 28px;"><a href="${link}" style="display:inline-block;background:#C9A84C;color:#0A0F0D;font-weight:600;text-decoration:none;padding:12px 22px;border-radius:8px;">Create my account</a></p>
+          <p style="margin:0;font-size:0.85rem;color:rgba(138,141,131,0.6);line-height:1.5;">Maal does not provide financial advice. Any information provided by Maal is for educational purposes only.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`.trim();
+  return sendEmail({
+    to: email,
+    subject: 'Your Maal invite is here',
+    html,
+    text: `${first ? first + ', your' : 'Your'} spot is ready.\n\nYou're off the Maal waitlist. Create your account with this email address: ${link}\n\nMaal does not provide financial advice. Any information provided by Maal is for educational purposes only.`,
+  });
+}
 const AUD = (n) => '$' + Math.round(Number(n) || 0).toLocaleString('en-AU');
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
@@ -188,4 +280,4 @@ async function sendTeamNotification({ kind, message, from, page, replyTo }) {
   return sendEmail({ to: FEEDBACK_INBOX, subject: `[Maal ${kind}] from ${from}`, html, text, replyTo });
 }
 
-module.exports = { sendEmail, sendWaitlistConfirmation, sendPortfolioDigest, sendResearchComplete, sendGeneratedFile, sendTeamNotification };
+module.exports = { sendEmail, sendWaitlistConfirmation, sendWaitlistInvite, sendScoreReport, sendPortfolioDigest, sendResearchComplete, sendGeneratedFile, sendTeamNotification };

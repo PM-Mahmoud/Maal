@@ -1,38 +1,48 @@
 /**
- * Waitlist route — owns: POST /api/waitlist (email signup + confirmation send)
- * Does NOT own: user auth, subscription management, any other form submissions
+ * Waitlist route — owns: POST /api/waitlist (email signup + confirmation send),
+ * GET /api/waitlist/status (is signup invite-only right now?)
+ * Does NOT own: user auth, invites (routes/admin.js), any other form submissions
  */
 const express = require('express');
 const router = express.Router();
 const { saveWaitlistEmail } = require('../db/waitlist');
 const { sendWaitlistConfirmation } = require('../services/email');
+const gate = require('../lib/waitlist-gate');
+
+router.get('/status', (_req, res) => {
+  res.json({ gated: gate.isGateOn() });
+});
 
 router.post('/', async (req, res) => {
-  const { email } = req.body || {};
-
-  if (!email || typeof email !== 'string') {
-    return res.status(400).json({ ok: false, error: 'Valid email required.' });
-  }
-
-  const normalised = email.trim().toLowerCase();
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailPattern.test(normalised)) {
+  const body = req.body || {};
+  const email = gate.normaliseEmail(body.email);
+  if (!email) {
     return res.status(400).json({ ok: false, error: 'Please enter a valid email address.' });
   }
+  if (!gate.parseConsent(body.consent)) {
+    return res.status(400).json({ ok: false, error: 'Please tick the box so we can email you your invite.' });
+  }
+
+  const name = typeof body.name === 'string' ? body.name.trim().slice(0, 100) || null : null;
+  const rawScore = Number(body.score);
+  const score = Number.isInteger(rawScore) && rawScore >= 0 && rawScore <= 100 ? rawScore : null;
 
   try {
-    const isNew = await saveWaitlistEmail(normalised);
-
-    // Send confirmation regardless — idempotent is fine for waitlists
-    sendWaitlistConfirmation(email.trim()).catch((err) => {
-      console.error('[waitlist] Confirmation email failed:', err.message);
+    const isNew = await saveWaitlistEmail(email, {
+      name,
+      consent: true,
+      source: gate.normaliseSource(body.source),
+      score,
     });
 
     if (!isNew) {
-      // Already on list — still OK, just don't re-confirm
-      return res.json({ ok: true, message: 'Already on the waitlist.' });
+      // Already on list — still OK, just don't re-send the confirmation.
+      return res.json({ ok: true, message: 'You’re already on the waitlist.' });
     }
 
+    sendWaitlistConfirmation(email).catch((err) => {
+      console.error('[waitlist] Confirmation email failed:', err.message);
+    });
     res.json({ ok: true });
   } catch (err) {
     console.error('[waitlist] Error:', err.message);

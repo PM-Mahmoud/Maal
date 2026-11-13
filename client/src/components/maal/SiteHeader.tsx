@@ -2,10 +2,12 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/api";
 import { MaalMark } from "./MaalMark";
+import { useWaitlistGated, signupLink } from "@/lib/waitlist";
 
 export function SiteHeader() {
   const [authed, setAuthed] = useState(false);
   const navigate = useNavigate();
+  const signup = signupLink(useWaitlistGated());
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setAuthed(!!data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setAuthed(!!s));
@@ -21,7 +23,6 @@ export function SiteHeader() {
           </Link>
           <nav className="hidden md:flex items-center gap-7 text-[13px] text-muted-foreground">
             {/* plain anchors: these pages are server-rendered EJS, not client routes */}
-            <a href="/score" className="hover:text-foreground transition-colors">Score Calculator</a>
             <a href="/#how" className="hover:text-foreground transition-colors">How it Works</a>
             <a href="/pricing" className="hover:text-foreground transition-colors">Pricing</a>
           </nav>
@@ -44,12 +45,18 @@ export function SiteHeader() {
             </>
           ) : (
             <>
-              <a href="/login" className="text-[13px] font-medium text-muted-foreground hover:text-foreground">
+              <a href="/login" className="hidden sm:inline text-[13px] font-medium text-muted-foreground hover:text-foreground">
                 Log in
               </a>
               <a
+                href={signup.href}
+                className="hidden sm:inline-flex border border-border px-4 py-2 rounded-[8px] text-[13px] font-semibold hover:bg-[var(--secondary)] transition-colors"
+              >
+                {signup.label}
+              </a>
+              <a
                 href="/score"
-                className="bg-foreground text-background px-4 py-2 rounded-[8px] text-[13px] font-semibold hover:bg-foreground/90 active:scale-[0.98] transition-all"
+                className="bg-foreground text-background px-5 py-2.5 rounded-[8px] text-[14px] font-bold hover:bg-foreground/90 active:scale-[0.98] transition-all"
               >
                 Get your free score
               </a>

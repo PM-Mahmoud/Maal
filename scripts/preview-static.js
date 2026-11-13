@@ -59,12 +59,19 @@ app.get('/google-link', (_req, res, next) => {
 });
 
 // ── Public marketing pages ──────────────────────────────────
-app.get('/score', (_req, res, next) => {
+app.get('/score', (req, res, next) => {
   ejs.renderFile(path.join(VIEWS, 'score.ejs'), {
     analyticsSnippet: '',
     themeCSS: '<link rel="stylesheet" href="/css/theme.css">',
+    kiosk: req.query.kiosk === '1',
     result: null, formData: null, error: null,
   }).then(html => res.send(html)).catch(next);
+});
+// Mock of POST /score/save — no email is sent and nothing is stored in preview.
+app.post('/score/save', express.json(), (req, res) => {
+  const { computeQuickScore } = require('../lib/quick-score');
+  const consent = req.body && (req.body.consent === true || req.body.consent === 'on');
+  res.json({ ok: true, emailed: true, waitlisted: !!consent, score: computeQuickScore(req.body).total });
 });
 app.get('/pricing', (_req, res, next) => {
   ejs.renderFile(path.join(VIEWS, 'pricing.ejs'), { analyticsSnippet: '', user: null })
