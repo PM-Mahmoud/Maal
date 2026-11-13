@@ -53,7 +53,6 @@
           <span class="rf-wordmark-text">Maal</span>
         </a>
         <nav class="rf-nav">
-          <a href="/score">Score Calculator</a>
           <a href="#how">How it Works</a>
           <a href="#pricing">Pricing</a>
         </nav>
@@ -61,6 +60,7 @@
       <div class="rf-header-right">
         <%# Authenticated navigation lives only in the app shell at /app. %>
         <a href="/login" class="rf-login">Log in</a>
+        <a href="<%= locals.waitlistGated !== false ? '/waitlist' : '/signup' %>" class="rf-btn rf-btn-ghost rf-signup"><%= locals.waitlistGated !== false ? 'Join waitlist' : 'Sign up' %></a>
         <a href="/score" class="rf-btn rf-btn-ink">Get your free score</a>
         <button class="rf-hamburger" onclick="rfToggleNav()" aria-label="Toggle menu">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -69,9 +69,10 @@
     </div>
   </header>
   <div class="rf-mobile-menu" id="rf-mobile-nav">
-    <a href="/score">Score Calculator</a>
+    <a href="/score">Get your free score</a>
     <a href="#how">How it Works</a>
     <a href="#pricing">Pricing</a>
+    <a href="<%= locals.waitlistGated !== false ? '/waitlist' : '/signup' %>"><%= locals.waitlistGated !== false ? 'Join waitlist' : 'Sign up' %></a>
     <a href="/login">Log in</a>
   </div>
 

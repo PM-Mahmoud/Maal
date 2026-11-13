@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, type CSSProperties } from "react";
 import { MaalMark } from "../components/maal/MaalMark";
 import "../retro-landing.css";
+import { useWaitlistGated, signupLink } from "../lib/waitlist";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -32,6 +33,7 @@ const TickerItems = () => (
 );
 
 function Index() {
+  const signup = signupLink(useWaitlistGated());
   useEffect(() => {
     const fill = document.getElementById("rf-fill");
     if (fill) requestAnimationFrame(() => requestAnimationFrame(() => { (fill as HTMLElement).style.width = "82%"; }));
@@ -63,14 +65,14 @@ function Index() {
           <div className="rf-header-left">
             <a href="/" className="rf-wordmark">{badge}<span className="rf-wordmark-text">Maal</span></a>
             <nav className="rf-nav">
-              <a href="/score">Score Calculator</a>
               <a href="#how">How it Works</a>
               <a href="/pricing">Pricing</a>
             </nav>
           </div>
           <div className="rf-header-right">
             <a href="/login" className="rf-login">Log in</a>
-            <a href="/score" className="rf-btn rf-btn-ink">Get your free score</a>
+            <a href={signup.href} className="rf-btn rf-btn-ghost rf-btn-sm rf-signup">{signup.label}</a>
+            <a href="/score" className="rf-btn rf-btn-ink rf-btn-cta">Get your free score</a>
           </div>
         </div>
       </header>

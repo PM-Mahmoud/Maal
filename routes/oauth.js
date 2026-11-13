@@ -120,13 +120,17 @@ router.get('/auth/google/callback', async (req, res) => {
         await new Promise((resolve, reject) => req.session.save(e => e ? reject(e) : resolve()));
         return res.redirect('/auth/google/link-required');
       } else {
-        // Brand new user via Google
+        // Brand new user via Google — invite-only while the waitlist gate is on.
+        if (!(await require('../services/waitlist-access').canSignUp(profile.email))) {
+          return res.redirect('/signup?invite=required');
+        }
         user = await createUser({
           email: profile.email,
           name: profile.name || profile.email,
           provider: 'google',
           providerId: profile.sub,
         });
+        require('../services/waitlist-access').recordJoined(profile.email);
         // Mark email verified immediately for OAuth users
         await require('../db/pool').query(
           `UPDATE users SET email_verified = true WHERE id = $1`, [user.id]

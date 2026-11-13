@@ -86,10 +86,36 @@
     .sc-intro-trust { margin-top: 1.25rem; font-size: 12px; color: var(--fg-muted); }
     .sc-intro-start { margin-top: 2rem; height: 48px; padding: 0 1.5rem; border-radius: 8px; background: var(--fg); color: #fff; font-size: 14px; font-weight: 600; border: none; cursor: pointer; font-family: var(--font-body); transition: opacity .15s; }
     .sc-intro-start:hover { opacity: .88; }
+    /* Inputs default to a large intrinsic min-width in flex rows, which pushed
+       the button outside the box; let them shrink and keep the button whole. */
+    .sc-email-row > .sc-email-input { min-width: 0; }
+    .sc-email-name { flex: 0 1 32%; }
+    .sc-email-row > .sc-email-btn { flex-shrink: 0; }
+    /* Kiosk: big full-width button on its own row for touch. */
+    body.sc-kiosk .sc-email-row { flex-wrap: wrap; }
+    body.sc-kiosk .sc-email-row > .sc-email-btn { flex: 1 0 100%; }
+    .sc-consent { display: flex; gap: .5rem; align-items: flex-start; margin-top: .75rem; font-size: 12.5px; color: var(--fg-muted); line-height: 1.5; cursor: pointer; }
+    .sc-consent input { margin-top: .15rem; accent-color: var(--fg); width: 16px; height: 16px; flex-shrink: 0; }
+    .sc-email-error { margin-top: .6rem; font-size: 12.5px; color: #C2410C; }
+    .sc-countdown { margin-top: .75rem; font-size: 12px; color: var(--fg-muted); }
+    /* ── Event kiosk (?kiosk=1): no site chrome, touch-sized ── */
+    body.sc-kiosk main { padding-top: 2.5rem; }
+    body.sc-kiosk .sc-wrap { max-width: 720px; }
+    body.sc-kiosk .sc-h1 { font-size: clamp(2rem, 4.5vw, 2.8rem); }
+    body.sc-kiosk .sc-input, body.sc-kiosk .sc-email-input { height: 56px; font-size: 18px; }
+    body.sc-kiosk .sc-next, body.sc-kiosk .sc-back, body.sc-kiosk .sc-intro-start, body.sc-kiosk .sc-email-btn { height: 56px; font-size: 16px; padding: 0 1.75rem; }
+    body.sc-kiosk .sc-consent { font-size: 15px; }
+    body.sc-kiosk .sc-consent input { width: 22px; height: 22px; }
+    body.sc-kiosk .sc-kiosk-brand { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; width: 100%; max-width: 720px; box-sizing: border-box; margin: 0 auto; padding: 1.5rem 1.5rem 0; font-weight: 800; font-size: 22px; }
+    body.sc-kiosk .sc-kiosk-brand small { font-weight: 600; font-size: 13px; color: var(--fg-muted); }
   </style>
 </head>
-<body>
-  <%- include('partials/navbar') %>
+<body<%= locals.kiosk ? ' class=sc-kiosk' : '' %>>
+  <% if (locals.kiosk) { %>
+    <div class="sc-kiosk-brand"><span>Maal</span><small>Free Maal Score · 2 minutes</small></div>
+  <% } else { %>
+    <%- include('partials/navbar') %>
+  <% } %>
 
   <main>
     <section>
@@ -99,7 +125,7 @@
     </section>
   </main>
 
-  <%- include('partials/footer') %>
+  <% if (!locals.kiosk) { %><%- include('partials/footer') %><% } %>
   <%- analyticsSnippet %>
 
   <script>
@@ -109,7 +135,14 @@
     var root = document.getElementById('sc-app');
     var step = 0;
     var introShown = false;
-    var inputs = { age: 35, income: 95000, assets: 250000, debts: 80000, superBalance: 90000 };
+    var DEFAULT_INPUTS = { age: 35, income: 95000, assets: 250000, debts: 80000, superBalance: 90000 };
+    var inputs = Object.assign({}, DEFAULT_INPUTS);
+    var params = new URLSearchParams(window.location.search);
+    var KIOSK = <%= locals.kiosk ? 'true' : 'false' %>;
+    // ?src=<tag> marks where the signup came from (e.g. the Wholesum stall).
+    var SOURCE = params.get('src') || (KIOSK ? 'kiosk' : 'website');
+    var IDLE_RESET_MS = 90 * 1000;      // kiosk: untouched this long → back to start
+    var DONE_RESET_SECONDS = 15;        // kiosk: after sending, reset for the next person
     var STEPS = [
       { title: 'You', question: 'How old are you and what do you earn?',
         fields: [
@@ -285,7 +318,6 @@
         '</svg>';
     }
 
-    var emailSent = false;
 
       // Plain-English commentary for the four pillars this calculator actually
       // derives from user input (Protection is a fixed estimate — see below —
@@ -374,22 +406,24 @@
       html += '<p class="sc-hint" style="margin-top:.75rem;">These are educational prompts, not personal financial advice.</p>';
       html += '</div>';
 
-      if (!emailSent) {
-        html += '<div class="sc-email-box" id="sc-email-container">';
-        html += '<p class="sc-email-title">Email me my full report: score breakdown, what\'s holding me back, and my next 3 moves.</p>';
-        html += '<p class="sc-email-body">We won\'t sell or share your email.</p>';
-        html += '<div class="sc-email-row">';
-        html += '<input class="sc-email-input" id="sc-email" type="email" placeholder="you@example.com" autocomplete="email">';
-        html += '<button class="sc-email-btn" id="sc-email-btn">Email my report</button>';
-        html += '</div>';
-        html += '</div>';
-      } else {
-        html += '<div class="sc-email-sent"><p class="sc-email-sent-title">You\'re set.</p><p class="sc-email-sent-body">Your report is queued. <a href="/signup" style="color:var(--fg)">Create an account</a> to track your score over time.</p></div>';
-      }
+      var ac = KIOSK ? 'off' : 'email';
+      html += '<div class="sc-email-box" id="sc-email-container">';
+      html += '<p class="sc-email-title">Email me my score and save my spot.</p>';
+      html += '<p class="sc-email-body">Get your score breakdown and next 3 moves by email, and join the waitlist for early access. We won\'t sell or share your email.</p>';
+      html += '<form id="sc-email-form" autocomplete="' + (KIOSK ? 'off' : 'on') + '" novalidate>';
+      html += '<div class="sc-email-row">';
+      html += '<input class="sc-email-input sc-email-name" id="sc-name" type="text" placeholder="First name" maxlength="100" autocomplete="' + (KIOSK ? 'off' : 'given-name') + '">';
+      html += '<input class="sc-email-input" id="sc-email" type="email" placeholder="you@example.com" autocomplete="' + ac + '" autocapitalize="off" spellcheck="false">';
+      html += '<button class="sc-email-btn" id="sc-email-btn" type="submit">Send my score</button>';
+      html += '</div>';
+      html += '<label class="sc-consent"><input id="sc-consent" type="checkbox"> Also put me on the waitlist and email my early-access invite and occasional Maal updates. Unsubscribe any time.</label>';
+      html += '<p class="sc-email-error" id="sc-email-error" style="display:none"></p>';
+      html += '</form>';
+      html += '</div>';
 
       html += '<div class="sc-result-nav">';
       html += '<button class="sc-restart" id="sc-restart">← Start over</button>';
-      html += '<a href="/pricing" style="font-size:13px;font-weight:600;color:var(--fg);text-decoration:none">See pricing →</a>';
+      if (!KIOSK) html += '<a href="/pricing" style="font-size:13px;font-weight:600;color:var(--fg);text-decoration:none">See pricing →</a>';
       html += '</div>';
       html += '<div class="sc-disclaimer">Maal does not provide financial advice. This calculator is for educational purposes only.</div>';
 
@@ -402,38 +436,97 @@
         });
       }, 100);
 
-      // Email submit
-      var emailBtn = document.getElementById('sc-email-btn');
-      if (emailBtn) {
-        emailBtn.addEventListener('click', function() {
-          var email = document.getElementById('sc-email').value.trim();
-          emailBtn.disabled = true;
-          emailBtn.textContent = 'Sending…';
-          fetch('/score/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              age: inputs.age, income: inputs.income,
-              superBalance: inputs.superBalance,
-              computed_score: res.total,
-              email: email
-            })
-          }).then(function(resp) {
-            emailSent = true;
-            var c = document.getElementById('sc-email-container');
-            if (c) c.outerHTML = '<div class="sc-email-sent"><p class="sc-email-sent-title">You\'re set.</p><p class="sc-email-sent-body">Your report is queued. <a href="/signup" style="color:var(--fg)">Create an account</a> to track your score over time.</p></div>';
-          }).catch(function() {
-            emailBtn.disabled = false;
-            emailBtn.textContent = 'Email my report';
+      // Email submit — server recomputes the score from these answers
+      // (lib/quick-score.js), emails it, and adds to the waitlist if ticked.
+      var form = document.getElementById('sc-email-form');
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var emailBtn = document.getElementById('sc-email-btn');
+        var errEl = document.getElementById('sc-email-error');
+        var email = document.getElementById('sc-email').value.trim();
+        var name = document.getElementById('sc-name').value.trim();
+        var consent = document.getElementById('sc-consent').checked;
+        errEl.style.display = 'none';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          errEl.textContent = 'Please enter a valid email address.';
+          errEl.style.display = 'block';
+          return;
+        }
+        emailBtn.disabled = true;
+        emailBtn.textContent = 'Sending…';
+        fetch('/score/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            age: inputs.age, income: inputs.income, assets: inputs.assets,
+            debts: inputs.debts, superBalance: inputs.superBalance,
+            email: email, name: name, consent: consent, source: SOURCE
+          })
+        }).then(function(resp) {
+          return resp.json().catch(function() { return {}; }).then(function(data) {
+            if (!resp.ok || !data.ok) throw new Error(data.error || 'We couldn\u2019t send your score just now. Please try again.');
+            return data;
           });
+        }).then(function(data) {
+          showSent(data);
+        }).catch(function(err) {
+          errEl.textContent = err.message || 'Something went wrong. Please try again.';
+          errEl.style.display = 'block';
+          emailBtn.disabled = false;
+          emailBtn.textContent = 'Send my score';
         });
-      }
+      });
 
       // Restart
       document.getElementById('sc-restart').addEventListener('click', function() {
+        if (KIOSK) { resetForNextPerson(); return; }
         step = 0;
         renderWizard();
       });
+    }
+
+    function showSent(data) {
+      var c = document.getElementById('sc-email-container');
+      if (!c) return;
+      var title = data.emailed ? 'Check your inbox.' : 'You\'re on the list.';
+      var body = data.emailed ? 'Your Maal Score is on its way.' : 'We couldn\'t send your score email just now, but your spot is saved.';
+      if (data.waitlisted) body += ' You\'re on the waitlist, and we\'ll email your invite as soon as your spot opens.';
+      var html = '<div class="sc-email-sent" id="sc-email-container"><p class="sc-email-sent-title">' + title + '</p><p class="sc-email-sent-body">' + body + '</p>';
+      if (KIOSK) html += '<p class="sc-countdown" id="sc-countdown"></p>';
+      html += '</div>';
+      c.outerHTML = html;
+      if (KIOSK) startDoneCountdown();
+    }
+
+    // ── Kiosk: never leave one person's answers or email for the next ──
+    var idleTimer = null, doneTimer = null;
+    function resetForNextPerson() {
+      clearInterval(doneTimer); doneTimer = null;
+      inputs = Object.assign({}, DEFAULT_INPUTS);
+      step = 0;
+      introShown = false;
+      window.scrollTo(0, 0);
+      renderIntro();
+    }
+    function startDoneCountdown() {
+      var left = DONE_RESET_SECONDS;
+      var el = document.getElementById('sc-countdown');
+      function tick() {
+        if (el) el.textContent = 'Thanks! Restarting for the next person in ' + left + 's…';
+        if (left-- <= 0) resetForNextPerson();
+      }
+      tick();
+      doneTimer = setInterval(tick, 1000);
+    }
+    function armIdleReset() {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(function() { if (introShown || step > 0) resetForNextPerson(); armIdleReset(); }, IDLE_RESET_MS);
+    }
+    if (KIOSK) {
+      ['pointerdown', 'keydown', 'input', 'scroll'].forEach(function(ev) {
+        document.addEventListener(ev, armIdleReset, { passive: true });
+      });
+      armIdleReset();
     }
 
     renderIntro();

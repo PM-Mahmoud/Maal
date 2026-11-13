@@ -87,6 +87,12 @@ body::after {
   text-transform: uppercase; letter-spacing: .04em;
 }
 .lv-header-login { font-weight: 700 !important; text-transform: uppercase; letter-spacing: .05em; }
+.lv-header-signup {
+  background: var(--bg) !important; color: var(--ink) !important;
+  border: 2px solid var(--ink) !important; border-radius: 9999px !important;
+  font-weight: 700 !important; text-transform: uppercase; letter-spacing: .04em;
+}
+.lv-mobile-menu a.lv-mobile-cta { background: var(--accent) !important; color: #fff !important; border: 2px solid var(--ink) !important; border-radius: 9999px !important; text-transform: uppercase; }
 .lv-mobile-menu { border-bottom: 2px solid var(--ink) !important; background: var(--bg) !important; }
 
 /* ---- 4. Cards → chunky ink borders + hard shadows ---- */
@@ -187,7 +193,7 @@ body::after {
    No keyframed animations in this skin → no motion guard needed.
    ============================================================ */
 .tier-cta.solid:active, .ct-submit:active, .wl-submit:active, .sc-next:active,
-.sc-intro-start:active, .sc-email-btn:active, .fw-cta-primary:active, .lv-header-cta:active,
+.sc-intro-start:active, .sc-email-btn:active, .fw-cta-primary:active, .lv-header-cta:active, .lv-header-signup:active,
 .tier-cta.outline:active, .fw-cta-secondary:active {
   transform: translate(1px,1px) !important;
   box-shadow: 1px 1px 0 var(--ink) !important;

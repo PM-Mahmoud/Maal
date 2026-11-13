@@ -142,7 +142,8 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 <div class="topbar">
   <span class="topbar-logo">◈ Maal</span>
   <span class="topbar-title">Admin</span>
-  <a href="/admin/logout" class="topbar-logout">Sign out</a>
+  <a href="/admin/waitlist" class="topbar-logout" style="margin-left:1.5rem">Waitlist</a>
+  <a href="/admin/logout" class="topbar-logout" style="margin-left:auto">Sign out</a>
 </div>
 <div class="main">
   <div class="stats">
@@ -163,6 +164,106 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <tbody>${feedbackRows}</tbody>
   </table>
 </div></body></html>`);
+});
+
+// ─── Waitlist: view, export, invite ─────────────────────────────────────────
+const waitlistDb = require('../db/waitlist');
+const waitlistGate = require('../lib/waitlist-gate');
+
+router.get('/admin/waitlist', requireAdmin, async (req, res) => {
+  const status = waitlistGate.normaliseStatus(req.query.status);
+  const source = req.query.source ? waitlistGate.normaliseSource(req.query.source) : null;
+  const [rows, counts] = await Promise.all([
+    waitlistDb.listWaitlist({ status, source }),
+    waitlistDb.waitlistCounts(),
+  ]);
+  const flash = req.query.invited != null
+    ? `<div class="flash">Invited ${esc(req.query.invited)} ${req.query.invited === '1' ? 'person' : 'people'}${Number(req.query.failed) ? ` · ${esc(req.query.failed)} email(s) failed to send (they are still marked invited)` : ''}.</div>`
+    : '';
+  const day = (d) => d ? new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+  const badge = { pending: 'warn', invited: 'creds', joined: 'ok' };
+  const qs = (o) => '?' + Object.entries(o).filter(([, v]) => v).map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
+  const tab = (label, s) => `<a class="tab${status === s ? ' on' : ''}" href="/admin/waitlist${qs({ status: s, source })}">${label}</a>`;
+  const body = rows.length ? rows.map((r) => `<tr>
+      <td>${r.status === 'pending' ? `<input type="checkbox" name="ids" value="${esc(r.id)}" form="invite-form">` : ''}</td>
+      <td><strong>${esc(r.name) || '—'}</strong><br><span class="muted">${esc(r.email)}</span></td>
+      <td><span class="badge ${badge[r.status] || 'creds'}">${esc(r.status)}</span></td>
+      <td><a class="muted" href="/admin/waitlist${qs({ status, source: r.source })}">${esc(r.source)}</a></td>
+      <td>${r.consent_contact ? '✓' : '<span class="muted">no</span>'}</td>
+      <td>${r.score == null ? '<span class="muted">—</span>' : esc(r.score)}</td>
+      <td class="muted">${day(r.created_at)}</td>
+      <td class="muted">${day(r.invited_at)}</td>
+    </tr>`).join('') : '<tr><td colspan="8" class="muted">Nobody here yet.</td></tr>';
+
+  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Waitlist — Maal Admin</title>
+<style>
+:root{--bg:#0A0F0D;--fg:#F0EFE9;--fg-muted:#8A8D83;--accent:#C9A84C;--green-deep:#0F2E24;--border:rgba(201,168,76,0.15)}
+*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif}
+.topbar{background:rgba(15,46,36,.9);border-bottom:1px solid var(--border);padding:0 2rem;height:56px;display:flex;align-items:center;gap:1.25rem}
+.topbar a{color:var(--fg-muted);text-decoration:none;font-size:.85rem}.topbar a:hover{color:var(--fg)}.logo{color:var(--accent)!important;font-weight:600;font-size:1.05rem!important}
+.main{padding:2rem}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem}
+.stat{background:var(--green-deep);border:1px solid var(--border);border-radius:12px;padding:1.1rem}.stat-val{font-size:1.8rem;font-weight:700;color:var(--accent)}
+.stat-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--fg-muted);margin-top:.3rem}
+.bar{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin-bottom:1rem}.tab{padding:.4rem .8rem;border:1px solid var(--border);border-radius:999px;color:var(--fg-muted);text-decoration:none;font-size:.8rem}
+.tab.on{background:var(--accent);color:#0A0F0D;border-color:var(--accent)}.spacer{flex:1}
+.btn{background:var(--accent);color:#0A0F0D;font-weight:600;border:none;border-radius:8px;padding:.55rem 1rem;cursor:pointer;font-size:.85rem;text-decoration:none}
+.btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;background:var(--green-deep);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+th{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--fg-muted);padding:.7rem 1rem;text-align:left;border-bottom:1px solid var(--border)}
+td{padding:.75rem 1rem;border-bottom:1px solid rgba(255,255,255,.04);font-size:.86rem;vertical-align:middle}.muted{color:var(--fg-muted);font-size:.8rem}
+.badge{font-size:.7rem;font-weight:600;padding:.2rem .5rem;border-radius:4px}.badge.ok{background:rgba(126,212,166,.12);color:#7ED4A6}
+.badge.warn{background:rgba(201,168,76,.1);color:var(--accent)}.badge.creds{background:rgba(255,255,255,.06);color:var(--fg-muted)}
+.flash{background:rgba(126,212,166,.12);color:#7ED4A6;border:1px solid rgba(126,212,166,.25);padding:.7rem 1rem;border-radius:8px;margin-bottom:1rem;font-size:.85rem}
+.note{font-size:.8rem;color:var(--fg-muted);margin-bottom:1.25rem}
+</style></head><body>
+<div class="topbar"><a class="logo" href="/admin">◈ Maal</a><a href="/admin">Users</a><a href="/admin/waitlist" style="color:var(--fg)">Waitlist</a><a href="/admin/logout" style="margin-left:auto">Sign out</a></div>
+<div class="main">
+  ${flash}
+  <p class="note">Signups are <strong>${waitlistGate.isGateOn() ? 'invite-only' : 'open to everyone'}</strong> (WAITLIST_GATE ${waitlistGate.isGateOn() ? 'on' : 'off'}). Inviting someone emails them a link to create their account.</p>
+  <div class="stats">
+    <div class="stat"><div class="stat-val">${counts.pending}</div><div class="stat-label">Waiting</div></div>
+    <div class="stat"><div class="stat-val">${counts.invited}</div><div class="stat-label">Invited</div></div>
+    <div class="stat"><div class="stat-val">${counts.joined}</div><div class="stat-label">Joined</div></div>
+  </div>
+  <div class="bar">
+    ${tab('All', null)}${tab('Waiting', 'pending')}${tab('Invited', 'invited')}${tab('Joined', 'joined')}
+    ${source ? `<span class="muted">source: ${esc(source)} · <a class="muted" href="/admin/waitlist${qs({ status })}">clear</a></span>` : ''}
+    <span class="spacer"></span>
+    <a class="btn ghost" href="/admin/waitlist.csv${qs({ status, source })}">Export CSV</a>
+    <form id="invite-form" method="POST" action="/admin/waitlist/invite" onsubmit="return confirm('Send invite emails to the selected people?')">
+      <button class="btn" type="submit">Invite selected</button>
+    </form>
+  </div>
+  <table>
+    <thead><tr><th><input type="checkbox" aria-label="Select all waiting" onclick="document.querySelectorAll('input[name=ids]').forEach(c=>c.checked=this.checked)"></th><th>Person</th><th>Status</th><th>Source</th><th>Consent</th><th>Score</th><th>Joined list</th><th>Invited</th></tr></thead>
+    <tbody>${body}</tbody>
+  </table>
+</div></body></html>`);
+});
+
+router.get('/admin/waitlist.csv', requireAdmin, async (req, res) => {
+  const status = waitlistGate.normaliseStatus(req.query.status);
+  const source = req.query.source ? waitlistGate.normaliseSource(req.query.source) : null;
+  const rows = await waitlistDb.listWaitlist({ status, source });
+  const stamp = new Date().toISOString().slice(0, 10);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="maal-waitlist-${stamp}.csv"`);
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(waitlistGate.toCsv(rows));
+});
+
+router.post('/admin/waitlist/invite', requireAdmin, async (req, res) => {
+  const raw = [].concat(req.body.ids || []);
+  const ids = [...new Set(raw.map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 500);
+  const invited = await waitlistDb.markInvited(ids);
+  const { sendWaitlistInvite } = require('../services/email');
+  let failed = 0;
+  for (const row of invited) {
+    try { await sendWaitlistInvite(row.email, row.name); }
+    catch (e) { failed++; console.error('[admin] invite email failed for waitlist id ' + row.id + ':', e.message); }
+  }
+  res.redirect(`/admin/waitlist?status=invited&invited=${invited.length}&failed=${failed}`);
 });
 
 router.get('/admin/logout', (req, res) => {

@@ -25,6 +25,10 @@
     @media (min-width: 500px) { .wl-form { flex-direction: row; } }
     .wl-input { flex: 1; height: 44px; padding: 0 .875rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); font-size: 14px; font-family: var(--font-body); color: var(--fg); outline: none; box-sizing: border-box; transition: border-color .15s; }
     .wl-input:focus { border-color: var(--fg); }
+    .wl-form-wrap { margin-top: 2rem; }
+    .wl-form-wrap .wl-form { margin-top: 0; }
+    .wl-consent { display: flex; gap: .5rem; align-items: flex-start; margin-top: .75rem; font-size: 13px; color: var(--fg-muted); line-height: 1.5; cursor: pointer; }
+    .wl-consent input { margin-top: .2rem; accent-color: var(--fg); }
     .wl-input::placeholder { color: var(--fg-muted); }
     .wl-submit { height: 44px; padding: 0 1.25rem; border-radius: 8px; background: var(--fg); color: #fff; font-size: 13px; font-weight: 600; border: none; cursor: pointer; font-family: var(--font-body); transition: opacity .15s; white-space: nowrap; }
     .wl-submit:hover { opacity: .88; }
@@ -56,9 +60,13 @@
         <p class="wl-success-body">We'll email you the moment your invite is ready.</p>
       </div>
 
-      <form id="wl-form" class="wl-form">
-        <input id="wl-email" class="wl-input" type="email" required placeholder="you@example.com" autocomplete="email">
-        <button id="wl-btn" class="wl-submit" type="submit">Join waitlist</button>
+      <form id="wl-form" class="wl-form-wrap">
+        <div class="wl-form">
+          <input id="wl-name" class="wl-input" type="text" placeholder="First name" autocomplete="given-name" maxlength="100">
+          <input id="wl-email" class="wl-input" type="email" required placeholder="you@example.com" autocomplete="email">
+          <button id="wl-btn" class="wl-submit" type="submit">Join waitlist</button>
+        </div>
+        <label class="wl-consent"><input id="wl-consent" type="checkbox" required> Email me my invite and occasional Maal updates. Unsubscribe any time.</label>
       </form>
       <p id="wl-error" class="wl-alert" style="display:none"></p>
       <p class="wl-trust">No spam. No card required. Maal provides education and general information only.</p>
@@ -107,13 +115,17 @@
       e.preventDefault();
       var email = document.getElementById('wl-email').value.trim();
       if (!email) return;
+      var consent = document.getElementById('wl-consent').checked;
+      var name = document.getElementById('wl-name').value.trim();
+      // ?src=<tag> marks where the signup came from (e.g. an event QR code).
+      var src = new URLSearchParams(window.location.search).get('src') || 'website';
       btn.disabled = true;
       btn.textContent = 'Joining\u2026';
       errorEl.style.display = 'none';
       fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email })
+        body: JSON.stringify({ email: email, name: name, consent: consent, source: src })
       }).then(function(r) { return r.json(); }).then(function(data) {
         if (data.ok) {
           form.style.display = 'none';

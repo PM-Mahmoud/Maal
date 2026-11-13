@@ -143,9 +143,11 @@ img, svg { display: block; }
   border-radius: 10px; background: var(--rf-paper); color: var(--rf-ink);
   box-shadow: 2px 2px 0 var(--rf-shadow); cursor: pointer;
 }
+.rf-signup { display: none; }
 @media (min-width: 900px) {
   .rf-nav { display: flex; }
   .rf-login { display: inline; }
+  .rf-signup { display: inline-flex; padding: 0.5rem 1rem; font-size: 0.78rem; }
   .rf-hamburger { display: none; }
 }
 .rf-mobile-menu {
