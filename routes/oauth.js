@@ -104,6 +104,7 @@ router.get('/auth/google/callback', async (req, res) => {
     if (!profile.email) return res.redirect('/login?error=no_email');
 
     // Find or create user
+    let isNewUser = false;
     let user = await findUserByProvider('google', profile.sub);
     if (!user) {
       user = await findUserByEmail(profile.email);
@@ -124,6 +125,7 @@ router.get('/auth/google/callback', async (req, res) => {
         if (!(await require('../services/waitlist-access').canSignUp(profile.email, req.session.referralCode))) {
           return res.redirect('/signup?invite=required');
         }
+        isNewUser = true;
         user = await createUser({
           email: profile.email,
           name: profile.name || profile.email,
@@ -151,8 +153,9 @@ router.get('/auth/google/callback', async (req, res) => {
       req.session.emailVerified = true;
       req.session.save((err) => {
         if (err) console.error('[oauth] Session save error:', err.message);
-        // EJS dashboard is retired — land directly on the React app.
-        res.redirect('/app');
+        // New Google accounts go through the welcome flow; returning users
+        // land straight on the React app.
+        res.redirect(isNewUser ? '/welcome' : '/app');
       });
     });
   } catch (err) {

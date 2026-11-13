@@ -362,7 +362,8 @@ router.post('/verify-email', otpLimiter, async (req, res) => {
       if (err) console.error('[verify-otp] Session save error:', err.message);
       // React app owns both destinations now: the EJS /dashboard is retired and
       // the EJS /onboarding wizard is legacy — new users get the React flow.
-      res.redirect(isPasswordlessLogin ? '/app' : '/app/onboarding');
+      // New accounts go through the welcome flow (onboarding v2, PR 4).
+      res.redirect(isPasswordlessLogin ? '/app' : '/welcome');
     });
   });
 });

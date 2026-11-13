@@ -1,0 +1,121 @@
+/* ============================================================
+   Maal v2 visual system — server-rendered pages (sign-up).
+   Same tokens as client/src/v2-landing.css (homepage); keep the
+   two in step. Matched to the reference design in Figma (frames
+   02–07): Lora + Inter, #F8F9F6 page, white card on #E6E6E6,
+   label-inside inputs on #BDBDBD, #020109 buttons, #00A274 rules.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap');
+
+.v2 {
+  --v2-bg: #F8F9F6; --v2-surface: #FFFFFF; --v2-surface-2: #F6F6F6;
+  --v2-ink: #202120; --v2-muted: #666666; --v2-faint: #999999; --v2-hair: #E6E6E6; --v2-hair-strong: #BDBDBD;
+  --v2-btn: #020109; --v2-accent: #0F8FA6; --v2-accent-soft: #D7F8FF; --v2-accent-ink: #007993;
+  --v2-bad: #D93A2B; --v2-good: #00A274;
+  --v2-serif: 'Lora', Georgia, 'Times New Roman', serif;
+  --v2-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --v2-mono: 'Inter', system-ui, sans-serif;
+  background: var(--v2-bg); color: var(--v2-ink); font-family: var(--v2-sans);
+  font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; margin: 0; min-height: 100vh;
+}
+.v2 *, .v2 *::before, .v2 *::after { box-sizing: border-box; }
+:where(.v2) a { color: inherit; }
+:where(.v2) p { margin: 0; }
+:where(.v2) h1, :where(.v2) h2 { margin: 0; font-weight: 400; }
+
+.v2-kicker { font-family: var(--v2-sans); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--v2-faint); }
+.v2-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem; width: 100%;
+  height: 48px; padding: 0 1.1rem; border-radius: 8px; border: 1px solid transparent; cursor: pointer;
+  font-family: var(--v2-sans); font-size: 16px; font-weight: 400; text-decoration: none;
+  transition: opacity .15s, border-color .15s, background .15s, transform .1s;
+}
+.v2-btn:active { transform: translateY(1px); }
+.v2-btn:focus-visible, .v2-input:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 2px; }
+.v2-btn-ink { background: var(--v2-btn); color: #fff; }
+.v2-btn-ink:hover { opacity: .88; }
+.v2-btn-ink:disabled { background: #D8D6D2; color: #fff; cursor: not-allowed; opacity: 1; }
+.v2-btn-line { background: var(--v2-surface); color: var(--v2-btn); border-color: #999; }
+.v2-btn-line:hover { border-color: var(--v2-ink); }
+
+/* ---------- Auth split ---------- */
+.v2-auth { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 16px; min-height: 100vh; }
+@media (min-width: 960px) { .v2-auth { grid-template-columns: 1fr 1fr; padding: 24px; } }
+.v2-auth-card {
+  background: var(--v2-surface); border: 1px solid var(--v2-hair); border-radius: 20px;
+  display: flex; align-items: center; justify-content: center; padding: 40px 20px;
+}
+.v2-auth-inner { width: 100%; max-width: 380px; }
+.v2-auth-logo { display: flex; justify-content: center; align-items: center; gap: .45rem; text-decoration: none; margin-bottom: 1.4rem; }
+.v2-auth-logo { color: var(--v2-ink); }
+.v2-auth-logo span { font-family: var(--v2-serif); font-size: 24px; line-height: 1; }
+.v2-pill { display: inline-block; padding: .3rem .7rem; border-radius: 8px; background: var(--v2-accent-soft); color: var(--v2-accent-ink); font-family: var(--v2-sans); font-size: 13px; }
+.v2-offer { text-align: center; }
+.v2-offer-big { font-family: var(--v2-serif); font-size: 84px; line-height: 1; margin-top: .4rem; color: var(--v2-ink); }
+.v2-offer-sub { font-family: var(--v2-serif); font-size: 40px; line-height: 1.15; color: var(--v2-muted); }
+.v2-offer-fine { margin-top: .5rem; font-size: 12.5px; color: var(--v2-faint); }
+.v2-offer-lede { margin-top: .6rem; font-size: 15px; line-height: 1.45; color: var(--v2-muted); }
+.v2-auth h1 { font-family: var(--v2-serif); font-size: 32px; line-height: 1.3; text-align: center; color: var(--v2-ink); margin-top: .4rem; }
+
+.v2-field { position: relative; margin-top: .65rem; }
+.v2-input {
+  width: 100%; height: 54px; padding: 22px 12px 6px; border-radius: 8px; border: 1px solid var(--v2-hair-strong);
+  background: var(--v2-surface); color: var(--v2-ink); font: inherit; font-size: 16px;
+}
+.v2-input:focus { border-color: var(--v2-ink); outline: none; }
+.v2-field label { position: absolute; left: 12px; top: 7px; font-size: 11.5px; color: var(--v2-muted); pointer-events: none; }
+.v2-input.has-eye { padding-right: 46px; }
+.v2-eye { position: absolute; right: 8px; top: 9px; width: 32px; height: 32px; border: 0; background: transparent; color: var(--v2-muted); cursor: pointer; border-radius: 8px; display: grid; place-items: center; }
+.v2-eye:hover { color: var(--v2-ink); }
+
+.v2-social { display: grid; grid-template-columns: 1fr; gap: .5rem; margin-top: 1.4rem; }
+.v2-social .v2-btn { border-color: #999; }
+.v2-divider { display: flex; align-items: center; gap: .75rem; margin: 1.1rem 0 .4rem; font-size: 12px; color: var(--v2-muted); }
+.v2-divider::before, .v2-divider::after { content: ""; flex: 1; height: 1px; background: var(--v2-hair); }
+.v2-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-top: 1.2rem; }
+.v2-actions-1 { grid-template-columns: 1fr; }
+.v2-switch { margin-top: 1rem; text-align: center; font-size: 13px; color: var(--v2-muted); }
+.v2-switch a, .v2-linkbtn { color: var(--v2-ink); text-decoration: underline; text-underline-offset: 2px; }
+.v2-linkbtn { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+.v2-legal { margin-top: 1.4rem; font-size: 11.5px; line-height: 1.6; color: var(--v2-muted); text-align: center; }
+.v2-note { margin-top: 1rem; padding: .7rem .85rem; border-radius: 10px; border: 1px solid var(--v2-hair); background: var(--v2-surface-2); font-size: 13px; }
+.v2-note a { font-weight: 600; }
+.v2-alert { margin-top: 1rem; padding: .7rem .85rem; border-radius: 10px; border: 1px solid rgba(194,65,12,.35); background: rgba(194,65,12,.07); color: #7C2D12; font-size: 13px; }
+.v2-alert a { font-weight: 700; }
+
+/* Password rules */
+.v2-strength { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: .55rem; font-size: 12px; min-height: 18px; }
+.v2-strength-bars { display: flex; gap: 3px; }
+.v2-strength-bars span { width: 20px; height: 3px; border-radius: 2px; background: var(--v2-hair); }
+.v2-rules { list-style: none; padding: 0; margin: .5rem 0 0; display: grid; gap: .25rem; font-size: 12.5px; color: var(--v2-muted); }
+.v2-rules li { display: flex; align-items: center; gap: .45rem; }
+.v2-rules li::before { content: "•"; width: 14px; text-align: center; font-size: 15px; }
+.v2-rules li.ok { color: var(--v2-good); }
+.v2-rules li.ok::before { content: "✓"; }
+.v2-rules li.bad { color: var(--v2-bad); }
+.v2-rules li.bad::before { content: "✕"; }
+
+/* Right panel: Maal's own night sky (CSS only) */
+.v2-sky {
+  display: none; position: relative; overflow: hidden; border-radius: 20px; color: #fff;
+  background:
+    radial-gradient(90% 30% at 50% 108%, rgba(120,160,190,.55), rgba(120,160,190,0) 70%),
+    linear-gradient(180deg, #0C1218 0%, #131C25 45%, #22323F 75%, #4E6A7D 100%);
+}
+@media (min-width: 960px) { .v2-sky { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px; } }
+.v2-sky-stars { position: absolute; inset: 0; opacity: .55; }
+.v2-sky h2 { position: relative; font-family: var(--v2-serif); font-size: 34px; line-height: 1.2; text-align: center; max-width: 460px; }
+.v2-sky .v2-kicker { position: relative; color: rgba(255,255,255,.75); margin-top: 1rem; }
+.v2-glass {
+  position: relative; margin-top: 2.2rem; width: 100%; max-width: 360px; padding: 18px; border-radius: 20px;
+  background: rgba(195,216,227,.16); border: 1px solid #98ABB4; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.v2-glass .v2-kicker { color: #A6B5BE; margin-top: 0; }
+.v2-glass-big { font-family: var(--v2-serif); font-size: 32px; line-height: 1.2; margin-top: .4rem; }
+.v2-glass-row { display: flex; justify-content: space-between; font-size: 13px; margin-top: .55rem; color: rgba(255,255,255,.85); }
+.v2-glass-bar { height: 4px; border-radius: 999px; background: rgba(255,255,255,.2); margin-top: .3rem; overflow: hidden; }
+.v2-glass-bar span { display: block; height: 100%; background: #fff; border-radius: inherit; }
+
+.v2-disclaimer-line { margin-top: 1.6rem; font-size: 11px; line-height: 1.6; color: var(--v2-muted); text-align: center; }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { .v2-btn { transition: none; } }

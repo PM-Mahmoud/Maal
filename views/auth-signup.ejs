@@ -1,123 +1,220 @@
-<!DOCTYPE html>
+<%
+  // Sign-up — onboarding v2 (specs/onboarding-v2-membership.md, PR 4).
+  // Step 1: the offer + Google / email. Step 2: create the account (name +
+  // password with live rules). Both steps live on this page; JS switches
+  // between them. Prices come from lib/membership.js via res.locals.
+  const m = locals.membership;
+  const first = m.formatAud(m.MEMBERSHIP.firstYearCents);
+  const renew = m.formatAud(m.MEMBERSHIP.yearCents);
+  // Server re-render after a form error: go back to the step that was posted.
+  const startOnAccount = !!(locals.name || (locals.error && !locals.notInvited));
+%><!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/png" href="/favicon.png">
-  <title>Create account — Maal</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/retro.css">
-  <style>
-    .rf-alert { padding: .7rem .9rem; background: var(--rf-orange); color: var(--rf-cream); border: 2px solid var(--rf-ink); border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: .85rem; }
-    .rf-switch { margin-top: 1rem; text-align: center; font-size: 12.5px; }
-    .rf-switch button { background: none; border: none; padding: 0; font: inherit; color: var(--rf-muted); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
-    .rf-switch button:hover { color: var(--rf-ink); }
-    .rf-invite { padding: .75rem .9rem; border: 2px solid var(--rf-ink); border-radius: 10px; background: var(--rf-paper, transparent); font-size: 13px; line-height: 1.5; margin-bottom: 1rem; }
-    .rf-invite a { font-weight: 700; color: var(--rf-ink); text-decoration: underline; text-underline-offset: 2px; }
-    .rf-auth-disclaimer { margin-top: 2.5rem; font-size: 11.5px; color: var(--rf-muted); line-height: 1.7; }
-    [data-method] { display: none; }
-    [data-method].active { display: flex; }
-    html[data-theme="dark"] .maal-mark .mm-a{fill:#E2C06A}html[data-theme="dark"] .maal-mark .mm-b{fill:#1A4D2E}
-  </style>
+  <title>Create your account | Maal</title>
+  <link rel="stylesheet" href="/css/v2.css">
 </head>
-<body>
-  <div class="rf-auth">
-    <div class="rf-auth-form">
-      <div class="rf-auth-head">
-        <a href="/" class="rf-wordmark">
-          <span class="rf-wordmark-badge"><svg class="maal-mark" width="14" height="14" viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true"><g class="mm-a" fill="#C9A84C"><rect x="0" y="0" width="1" height="7"/><rect x="6" y="0" width="1" height="7"/><rect x="1" y="1" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/></g><g class="mm-b" fill="#0A2918"><rect x="2" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/></g></svg></span>
-          <span class="rf-wordmark-text">Maal</span>
+<body class="v2">
+  <main class="v2-auth">
+    <section class="v2-auth-card">
+      <div class="v2-auth-inner">
+        <a href="/" class="v2-auth-logo" aria-label="Maal home">
+          <svg class="maal-mark" width="18" height="18" viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true"><g fill="currentColor"><rect x="0" y="0" width="1" height="7"/><rect x="6" y="0" width="1" height="7"/><rect x="1" y="1" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/></g><g fill="currentColor"><rect x="2" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/></g></svg>
+          <span>Maal</span>
         </a>
-      </div>
-      <div class="rf-auth-inner">
-        <div class="rf-auth-box">
-          <span class="rf-eyebrow">Create account</span>
-          <h1 class="rf-auth-h1">Start with Maal.</h1>
-          <% if (locals.referred) { %>
-            <div class="rf-invite">A friend invited you to Maal, so you can skip the waitlist. Start with a 14-day free trial, no card needed.</div>
-          <% } %>
-          <% if (locals.gated && !locals.notInvited) { %>
-            <div class="rf-invite">Maal is <strong>invite-only</strong> for now. Use the email address your invite was sent to. Not invited yet? <a href="/waitlist">Join the waitlist</a>.</div>
-          <% } %>
 
-          <a href="/auth/google" class="rf-auth-google">
-            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.75h3.57c2.08-1.92 3.28-4.74 3.28-8.07z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.75c-.99.66-2.26 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.12c-.22-.66-.35-1.36-.35-2.12s.13-1.46.35-2.12V7.04H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.96l3.66-2.84z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.04l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
-            </svg>
-            Continue with Google
-          </a>
-
-          <div class="rf-auth-divider">or</div>
-
-          <% if (locals.error) { %><div class="rf-alert"><%= error %><% if (locals.notInvited) { %> <a href="/waitlist" style="color:inherit;font-weight:800;text-decoration:underline;">Join the waitlist →</a><% } %></div><% } %>
-
-          <form action="/signup/email-code" method="POST" class="rf-auth-form-el active" data-method="email">
-            <input class="rf-input" type="text" name="name" placeholder="Full name" autocomplete="name" required value="<%= locals.name || '' %>">
-            <input class="rf-input" type="email" name="email" placeholder="you@example.com" autocomplete="email" required value="<%= locals.email || '' %>">
-            <button type="submit" class="rf-btn rf-btn-block rf-btn-lg">Continue with email</button>
-          </form>
-
-          <form action="/signup" method="POST" class="rf-auth-form-el" data-method="password">
-            <input class="rf-input" type="text" name="name" placeholder="Full name" autocomplete="name" required value="<%= locals.name || '' %>">
-            <input class="rf-input" type="email" name="email" placeholder="you@example.com" autocomplete="email" required value="<%= locals.email || '' %>">
-            <input class="rf-input" type="password" name="password" placeholder="Password (min 8 characters)" autocomplete="new-password" minlength="8" required>
-            <button type="submit" class="rf-btn rf-btn-block rf-btn-lg">Create account</button>
-          </form>
-
-          <p class="rf-switch">
-            <button type="button" id="method-toggle" onclick="toggleMethod()">Create account with password instead</button>
-          </p>
-
-          <p class="rf-auth-toggle">Already have an account? <a href="/login">Sign in</a></p>
-
-          <div class="rf-auth-disclaimer">
-            Maal does not provide financial advice. Any information is for educational purposes only.
+        <!-- Step 1: offer -->
+        <div id="step-offer" <%= startOnAccount ? 'hidden' : '' %>>
+          <div class="v2-offer">
+            <span class="v2-pill">Limited time offer</span>
+            <p class="v2-offer-big"><%= first %></p>
+            <p class="v2-offer-sub">for your first year</p>
+            <p class="v2-offer-fine">Renews at <%= renew %>/year. Cancel anytime.</p>
+            <p class="v2-offer-lede">Your whole financial life in one place, interest-free. Starts with a <%= m.TRIAL_DAYS %>-day free trial, no card needed.</p>
           </div>
-        </div>
-      </div>
-    </div>
 
-    <div class="rf-auth-side">
-      <svg class="rf-star-deco one" style="top:8%;right:8%;color:var(--rf-gold);" viewBox="0 0 100 100" fill="currentColor"><path d="M50 0l9 34 34-9-25 25 25 25-34-9-9 34-9-34-34 9 25-25L7 25l34 9z"/></svg>
-      <span class="rf-eyebrow" style="color:var(--rf-gold);">Security</span>
-      <h2 class="rf-trust-h2">Privacy first, by design.</h2>
-      <ul class="rf-trust-list">
-        <li class="rf-trust-item">
-          <span class="rf-trust-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-          <span><span class="rf-trust-t">Bank-level encryption</span><span class="rf-trust-s">Security and confidentiality are built into every layer, from the connection to your bank down to how data is stored.</span></span>
-        </li>
-        <li class="rf-trust-item">
-          <span class="rf-trust-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6z"/></svg></span>
-          <span><span class="rf-trust-t">Your data, your control</span><span class="rf-trust-s">You choose what to connect, and you can delete it at any time.</span></span>
-        </li>
-        <li class="rf-trust-item">
-          <span class="rf-trust-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg></span>
-          <span><span class="rf-trust-t">Access controlled</span><span class="rf-trust-s">Your financial data is tied to your account for personalised features and restricted to authorised access.</span></span>
-        </li>
-        <li class="rf-trust-item">
-          <span class="rf-trust-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 12 2 2 4-4"/><path d="M12 2 4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6z"/></svg></span>
-          <span><span class="rf-trust-t">CDR-accredited</span><span class="rf-trust-s">Connections run through Basiq, an Australian Consumer Data Right accredited data recipient.</span></span>
-        </li>
-      </ul>
-      <a href="/security" class="rf-btn rf-btn-ghost" style="margin-top:2rem;width:fit-content;">Read our security page →</a>
-    </div>
-  </div>
+          <% if (locals.referred) { %>
+            <div class="v2-note">A friend invited you to Maal, so you can skip the waitlist.</div>
+          <% } else if (locals.gated && !locals.notInvited) { %>
+            <div class="v2-note">Maal is <strong>invite-only</strong> for now. Use the email address your invite was sent to. Not invited yet? <a href="/waitlist">Join the waitlist</a>.</div>
+          <% } %>
+          <% if (locals.error && locals.notInvited) { %>
+            <div class="v2-alert" role="alert"><%= error %> <a href="/waitlist">Join the waitlist →</a></div>
+          <% } %>
+
+          <div class="v2-social">
+            <a href="/auth/google" class="v2-btn v2-btn-line">
+              <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.75h3.57c2.08-1.92 3.28-4.74 3.28-8.07z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.75c-.99.66-2.26 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.12c-.22-.66-.35-1.36-.35-2.12s.13-1.46.35-2.12V7.04H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.96l3.66-2.84z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.04l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
+              </svg>
+              Continue with Google
+            </a>
+          </div>
+
+          <div class="v2-divider">or sign up with email</div>
+          <form id="offer-form" novalidate>
+            <div class="v2-field">
+              <input class="v2-input" id="offer-email" type="email" autocomplete="email" required placeholder=" " value="<%= locals.email || '' %>">
+              <label for="offer-email">Email</label>
+            </div>
+            <p class="v2-alert" id="offer-error" hidden></p>
+            <div class="v2-actions v2-actions-1"><button type="submit" class="v2-btn v2-btn-ink">Sign up</button></div>
+          </form>
+          <p class="v2-switch">Already have an account? <a href="/login">Sign in</a></p>
+        </div>
+
+        <!-- Step 2: create account -->
+        <div id="step-account" <%= startOnAccount ? '' : 'hidden' %>>
+          <h1>Create an account</h1>
+          <% if (locals.error && !locals.notInvited) { %>
+            <div class="v2-alert" role="alert"><%= error %></div>
+          <% } %>
+          <form id="account-form" action="/signup" method="POST" novalidate>
+            <div class="v2-field">
+              <input class="v2-input" id="acc-email" name="email" type="email" autocomplete="email" required placeholder=" " value="<%= locals.email || '' %>">
+              <label for="acc-email">Email</label>
+            </div>
+            <div class="v2-field">
+              <input class="v2-input" id="acc-name" name="name" type="text" autocomplete="name" required maxlength="100" placeholder=" " value="<%= locals.name || '' %>">
+              <label for="acc-name">Your full name</label>
+            </div>
+            <div class="v2-field">
+              <input class="v2-input has-eye" id="acc-password" name="password" type="password" autocomplete="new-password" required placeholder=" " aria-describedby="pw-rules">
+              <label for="acc-password">Create a password</label>
+              <button type="button" class="v2-eye" id="pw-eye" aria-label="Show password" aria-pressed="false">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="v2-strength" aria-live="polite"><span id="pw-label"></span><span class="v2-strength-bars" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></span></div>
+            <!-- These three rules are exactly what the server enforces (routes/auth.js passwordStrengthError). -->
+            <ul class="v2-rules" id="pw-rules">
+              <li data-rule="len">At least 8 characters</li>
+              <li data-rule="upper">1 uppercase letter</li>
+              <li data-rule="num">1 number</li>
+            </ul>
+            <div class="v2-actions">
+              <button type="button" class="v2-btn v2-btn-line" id="acc-back">Back</button>
+              <button type="submit" class="v2-btn v2-btn-ink" id="acc-next" disabled>Next</button>
+            </div>
+          </form>
+          <p class="v2-switch">Prefer no password? <button type="button" class="v2-linkbtn" id="use-code">Email me a sign-up code instead</button></p>
+          <form id="code-form" action="/signup/email-code" method="POST" hidden>
+            <input type="hidden" name="email" id="code-email">
+            <input type="hidden" name="name" id="code-name">
+          </form>
+        </div>
+
+        <p class="v2-legal">By creating an account you agree to Maal's terms and acknowledge how we handle your data on our <a href="/security">Security &amp; privacy</a> page.</p>
+        <p class="v2-disclaimer-line">Maal does not provide financial advice. Any information provided by Maal is for educational purposes only.</p>
+      </div>
+    </section>
+
+    <aside class="v2-sky" aria-hidden="true">
+      <svg class="v2-sky-stars" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <% for (let i = 0; i < 40; i++) { %><circle cx="<%= (i * 73) % 100 %>" cy="<%= (i * 37) % 70 %>" r="<%= i % 7 === 0 ? 0.24 : 0.13 %>" fill="#fff" opacity="<%= (0.35 + ((i * 13) % 50) / 100).toFixed(2) %>"/><% } %>
+      </svg>
+      <h2>See everything. Ask anything. Grow interest-free.</h2>
+      <p class="v2-kicker">Built for Australians</p>
+      <div class="v2-glass">
+        <p class="v2-kicker">Maal Score</p>
+        <p class="v2-glass-big">82 <span style="font-size:16px;opacity:.7">/ 100</span></p>
+        <div class="v2-glass-row"><span>Savings buffer</span><span>74</span></div>
+        <div class="v2-glass-bar"><span style="width:74%"></span></div>
+        <div class="v2-glass-row"><span>Debt health</span><span>68</span></div>
+        <div class="v2-glass-bar"><span style="width:68%"></span></div>
+        <div class="v2-glass-row"><span>Super &amp; retirement</span><span>78</span></div>
+        <div class="v2-glass-bar"><span style="width:78%"></span></div>
+      </div>
+    </aside>
+  </main>
 
   <script>
-    function toggleMethod() {
-      const email = document.querySelector('[data-method="email"]');
-      const pass = document.querySelector('[data-method="password"]');
-      const btn = document.getElementById('method-toggle');
-      const usingPassword = pass.classList.contains('active');
-      email.classList.toggle('active', usingPassword);
-      pass.classList.toggle('active', !usingPassword);
-      btn.textContent = usingPassword ? 'Create account with password instead' : 'Continue with email code instead';
+  (function () {
+    var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    var offer = document.getElementById('step-offer');
+    var account = document.getElementById('step-account');
+    var offerEmail = document.getElementById('offer-email');
+    var accEmail = document.getElementById('acc-email');
+    var accName = document.getElementById('acc-name');
+    var pw = document.getElementById('acc-password');
+    var next = document.getElementById('acc-next');
+    var label = document.getElementById('pw-label');
+    var bars = document.querySelectorAll('.v2-strength-bars span');
+    var rulesEls = document.querySelectorAll('#pw-rules li');
+
+    // Same three rules as the server; the bar also rewards length and variety.
+    function check(v) {
+      return { len: v.length >= 8, upper: /[A-Z]/.test(v), num: /[0-9]/.test(v) };
     }
+    function strength(v) {
+      var s = 0;
+      if (v.length >= 8) s++;
+      if (v.length >= 12) s++;
+      if (/[A-Z]/.test(v) && /[a-z]/.test(v)) s++;
+      if (/[0-9]/.test(v)) s++;
+      if (/[^A-Za-z0-9]/.test(v)) s++;
+      return s;
+    }
+    var NAMES = ['', 'Very weak', 'Weak', 'Okay', 'Good', 'Strong'];
+    var COLOURS = ['#E5E2DB', '#C2410C', '#D97706', '#CA8A04', '#0E8A7E', '#0E8A7E'];
+
+    function update() {
+      var v = pw.value;
+      var c = check(v);
+      var allOk = c.len && c.upper && c.num;
+      rulesEls.forEach(function (li) {
+        var ok = c[li.getAttribute('data-rule')];
+        li.className = v ? (ok ? 'ok' : 'bad') : '';
+      });
+      var s = v ? Math.max(1, strength(v)) : 0; // anything typed is at least "Very weak"
+      label.textContent = v ? NAMES[s] : '';
+      label.style.color = COLOURS[s];
+      bars.forEach(function (b, i) { b.style.background = i < s ? COLOURS[s] : ''; });
+      next.disabled = !(allOk && EMAIL_RE.test(accEmail.value.trim()) && accName.value.trim());
+    }
+    [pw, accEmail, accName].forEach(function (el) { el.addEventListener('input', update); });
+
+    document.getElementById('offer-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var v = offerEmail.value.trim();
+      var err = document.getElementById('offer-error');
+      if (!EMAIL_RE.test(v)) { err.textContent = 'Please enter a valid email address.'; err.hidden = false; return; }
+      err.hidden = true;
+      accEmail.value = v;
+      offer.hidden = true; account.hidden = false;
+      accName.focus();
+      update();
+    });
+    document.getElementById('acc-back').addEventListener('click', function () {
+      offerEmail.value = accEmail.value;
+      account.hidden = true; offer.hidden = false;
+      offerEmail.focus();
+    });
+    document.getElementById('pw-eye').addEventListener('click', function () {
+      var show = pw.type === 'password';
+      pw.type = show ? 'text' : 'password';
+      this.setAttribute('aria-pressed', String(show));
+      this.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    });
+    document.getElementById('use-code').addEventListener('click', function () {
+      var email = accEmail.value.trim();
+      var name = accName.value.trim();
+      if (!EMAIL_RE.test(email) || !name) {
+        (name ? accEmail : accName).focus();
+        return;
+      }
+      document.getElementById('code-email').value = email;
+      document.getElementById('code-name').value = name;
+      document.getElementById('code-form').submit();
+    });
+    update();
+  })();
   </script>
 </body>
 </html>

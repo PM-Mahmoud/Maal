@@ -30,7 +30,7 @@ const base = { session, user, profile, pageTitle: 'Test' };
 // React app at /app) and intentionally no longer rendered here.
 const cases = {
   'auth-login': { error: null, email: '' },
-  'auth-signup': { error: null, email: '', name: '' },
+  'auth-signup': { error: null, email: '', name: '', membership: require('../lib/membership') },
   'pricing': { analyticsSnippet: '', user: null, membership: require('../lib/membership') },
   'about': { analyticsSnippet: '', user: null },
   'security': { analyticsSnippet: '', user: null },

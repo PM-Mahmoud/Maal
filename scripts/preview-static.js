@@ -36,6 +36,7 @@ app.get('/signup', (req, res, next) => {
   ejs.renderFile(path.join(VIEWS, 'auth-signup.ejs'), {
     // ?ref=1 previews arriving through a friend's referral link.
     referred: req.query.ref === '1', gated: req.query.ref !== '1',
+    membership: require('../lib/membership'),
     error: null, email: '', name: '',
   }).then(html => res.send(html)).catch(next);
 });
@@ -196,7 +197,9 @@ app.get('/api/v1/alerts', (_req, res) => res.json({
 app.get('/api/v1/notifications', (_req, res) => res.json([]));
 app.get('/api/v1/notification-prefs', (_req, res) => res.json({}));
 app.get('/api/v1/advisor/memory', (_req, res) => res.json({ memory: null, customInstructions: null }));
-app.get('/api/v1/basiq/status', (_req, res) => res.json({ connected: false, live: false }));
+// ?banks=live on the page URL previews the live Basiq connect step.
+app.get('/api/v1/basiq/status', (req, res) => res.json({ connected: false, live: /banks=live/.test(req.headers.referer || '') }));
+app.patch('/api/v1/profile', express.json(), (req, res) => res.json({ ...req.body, ok: true }));
 app.get('/api/v1/transaction-categories', (_req, res) => res.json([]));
 app.get('/api/v1/transaction-rules', (_req, res) => res.json([]));
 app.get('/api/v1/radar-templates', (_req, res) => res.json([]));
