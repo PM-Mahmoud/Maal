@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { CreditCard, Check, Sparkles, Clock } from "lucide-react";
 import { z } from "zod";
 import { getUsage, type Usage } from "@/lib/usage.functions";
+import { InviteFriendsCard } from "@/components/maal/app/InviteFriendsCard";
 
 const searchSchema = z.object({
   billing: z.enum([
@@ -118,6 +119,12 @@ function BillingPage() {
       <section>
         <h2 className="text-[15px] font-bold tracking-display mb-3">Membership</h2>
         {usage && <MembershipCard usage={usage} />}
+      </section>
+
+      {/* Referrals */}
+      <section className="mt-8">
+        <h2 className="text-[15px] font-bold tracking-display mb-3">Invite friends</h2>
+        <InviteFriendsCard />
       </section>
     </div>
   );
