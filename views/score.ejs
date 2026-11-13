@@ -139,7 +139,7 @@
     var inputs = Object.assign({}, DEFAULT_INPUTS);
     var params = new URLSearchParams(window.location.search);
     var KIOSK = <%= locals.kiosk ? 'true' : 'false' %>;
-    // ?src=<tag> marks where the signup came from (e.g. the Wholesum stall).
+    // ?src=<tag> marks where the signup came from (e.g. an event stall).
     var SOURCE = params.get('src') || (KIOSK ? 'kiosk' : 'website');
     var IDLE_RESET_MS = 90 * 1000;      // kiosk: untouched this long → back to start
     var DONE_RESET_SECONDS = 15;        // kiosk: after sending, reset for the next person

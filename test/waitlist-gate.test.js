@@ -62,7 +62,7 @@ test('email, consent, status and source inputs are normalised safely', () => {
   assert.strictEqual(gate.parseConsent(undefined), false);
   assert.strictEqual(gate.normaliseStatus('Invited'), 'invited');
   assert.strictEqual(gate.normaliseStatus('admin'), null);
-  assert.strictEqual(gate.normaliseSource('Wholesum Expo 2026!'), 'wholesum-expo-2026');
+  assert.strictEqual(gate.normaliseSource('Spring Expo 2026!'), 'spring-expo-2026');
   assert.strictEqual(gate.normaliseSource('<script>'), 'script');
   assert.strictEqual(gate.normaliseSource(''), 'website');
   assert.ok(gate.normaliseSource('x'.repeat(100)).length <= 40);
