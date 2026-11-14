@@ -47,6 +47,7 @@ import { Route as AuthenticatedAppWealthLiabilitiesRouteImport } from './routes/
 import { Route as AuthenticatedAppWealthInvestmentsRouteImport } from './routes/_authenticated/app.wealth.investments'
 import { Route as AuthenticatedAppWealthCashRouteImport } from './routes/_authenticated/app.wealth.cash'
 import { Route as AuthenticatedAppAdvisorThreadIdRouteImport } from './routes/_authenticated/app.advisor.$threadId'
+import { Route as AuthenticatedAppAccountsConnectRouteImport } from './routes/_authenticated/app.accounts.connect'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -260,6 +261,12 @@ const AuthenticatedAppAdvisorThreadIdRoute =
     path: '/advisor/$threadId',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppAccountsConnectRoute =
+  AuthenticatedAppAccountsConnectRouteImport.update({
+    id: '/accounts/connect',
+    path: '/accounts/connect',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -291,6 +298,7 @@ export interface FileRoutesByFullPath {
   '/app/vault': typeof AuthenticatedAppVaultRoute
   '/app/zakat': typeof AuthenticatedAppZakatRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/accounts/connect': typeof AuthenticatedAppAccountsConnectRoute
   '/app/advisor/$threadId': typeof AuthenticatedAppAdvisorThreadIdRoute
   '/app/wealth/cash': typeof AuthenticatedAppWealthCashRoute
   '/app/wealth/investments': typeof AuthenticatedAppWealthInvestmentsRoute
@@ -329,6 +337,7 @@ export interface FileRoutesByTo {
   '/app/vault': typeof AuthenticatedAppVaultRoute
   '/app/zakat': typeof AuthenticatedAppZakatRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/app/accounts/connect': typeof AuthenticatedAppAccountsConnectRoute
   '/app/advisor/$threadId': typeof AuthenticatedAppAdvisorThreadIdRoute
   '/app/wealth/cash': typeof AuthenticatedAppWealthCashRoute
   '/app/wealth/investments': typeof AuthenticatedAppWealthInvestmentsRoute
@@ -370,6 +379,7 @@ export interface FileRoutesById {
   '/_authenticated/app/vault': typeof AuthenticatedAppVaultRoute
   '/_authenticated/app/zakat': typeof AuthenticatedAppZakatRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/accounts/connect': typeof AuthenticatedAppAccountsConnectRoute
   '/_authenticated/app/advisor/$threadId': typeof AuthenticatedAppAdvisorThreadIdRoute
   '/_authenticated/app/wealth/cash': typeof AuthenticatedAppWealthCashRoute
   '/_authenticated/app/wealth/investments': typeof AuthenticatedAppWealthInvestmentsRoute
@@ -411,6 +421,7 @@ export interface FileRouteTypes {
     | '/app/vault'
     | '/app/zakat'
     | '/app/'
+    | '/app/accounts/connect'
     | '/app/advisor/$threadId'
     | '/app/wealth/cash'
     | '/app/wealth/investments'
@@ -449,6 +460,7 @@ export interface FileRouteTypes {
     | '/app/vault'
     | '/app/zakat'
     | '/app'
+    | '/app/accounts/connect'
     | '/app/advisor/$threadId'
     | '/app/wealth/cash'
     | '/app/wealth/investments'
@@ -489,6 +501,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/vault'
     | '/_authenticated/app/zakat'
     | '/_authenticated/app/'
+    | '/_authenticated/app/accounts/connect'
     | '/_authenticated/app/advisor/$threadId'
     | '/_authenticated/app/wealth/cash'
     | '/_authenticated/app/wealth/investments'
@@ -774,6 +787,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdvisorThreadIdRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/accounts/connect': {
+      id: '/_authenticated/app/accounts/connect'
+      path: '/accounts/connect'
+      fullPath: '/app/accounts/connect'
+      preLoaderRoute: typeof AuthenticatedAppAccountsConnectRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
   }
 }
 
@@ -803,6 +823,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppVaultRoute: typeof AuthenticatedAppVaultRoute
   AuthenticatedAppZakatRoute: typeof AuthenticatedAppZakatRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+  AuthenticatedAppAccountsConnectRoute: typeof AuthenticatedAppAccountsConnectRoute
   AuthenticatedAppAdvisorThreadIdRoute: typeof AuthenticatedAppAdvisorThreadIdRoute
   AuthenticatedAppWealthCashRoute: typeof AuthenticatedAppWealthCashRoute
   AuthenticatedAppWealthInvestmentsRoute: typeof AuthenticatedAppWealthInvestmentsRoute
@@ -841,6 +862,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppVaultRoute: AuthenticatedAppVaultRoute,
   AuthenticatedAppZakatRoute: AuthenticatedAppZakatRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+  AuthenticatedAppAccountsConnectRoute: AuthenticatedAppAccountsConnectRoute,
   AuthenticatedAppAdvisorThreadIdRoute: AuthenticatedAppAdvisorThreadIdRoute,
   AuthenticatedAppWealthCashRoute: AuthenticatedAppWealthCashRoute,
   AuthenticatedAppWealthInvestmentsRoute:

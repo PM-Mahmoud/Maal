@@ -4,6 +4,9 @@
 // GET /basiq/connect   -> create (or reuse) the Basiq user, redirect to consent UI
 // GET /basiq/callback  -> after consent: pull accounts into linked_accounts
 // GET /basiq/sync      -> re-pull balances on demand
+// GET /basiq/institutions -> JSON institution catalogue for the React
+//                         "Connect your accounts" picker (static AU list
+//                         when BASIQ_API_KEY is not set)
 
 const express = require('express');
 const router = express.Router();
@@ -11,6 +14,33 @@ const router = express.Router();
 const basiq = require('../services/basiq');
 const { findUserById, setBasiqUserId } = require('../db/users');
 const importRuns = require('../db/import-runs');
+
+const institutions = require('../services/basiq-institutions');
+
+// JSON endpoint — registered before the redirecting auth guard so fetch()
+// callers get a 401 instead of the login page.
+router.get('/institutions', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const live = basiq.hasBasiq();
+  let list = institutions.STATIC_INSTITUTIONS;
+  let source = 'static';
+  if (live) {
+    try {
+      const fromBasiq = await basiq.listInstitutions();
+      if (fromBasiq.length) { list = fromBasiq; source = 'basiq'; }
+    } catch (err) {
+      // Never log keys/tokens — the message only carries status + path.
+      console.error('Basiq institutions error:', String(err.message || '').slice(0, 160));
+    }
+  }
+  res.set('Cache-Control', 'private, max-age=3600');
+  res.json({
+    live,
+    source,
+    popular: institutions.pickPopular(list),
+    institutions: list,
+  });
+});
 
 function requireAuth(req, res, next) {
   if (!req.session.userId) return res.redirect('/login');
@@ -32,7 +62,9 @@ router.get('/connect', async (req, res) => {
   }
   try {
     const basiqUserId = await ensureBasiqUser(req);
-    const url = await basiq.getConsentUrl(basiqUserId);
+    // ?institution=AU00000 (from the React picker) preselects that bank.
+    const institutionId = institutions.isBasiqInstitutionId(req.query.institution) ? req.query.institution : undefined;
+    const url = await basiq.getConsentUrl(basiqUserId, 'connect', { institutionId });
     res.redirect(url);
   } catch (err) {
     console.error('Basiq connect error:', err.message);
