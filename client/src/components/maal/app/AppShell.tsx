@@ -101,13 +101,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="mh-shell min-h-screen flex">
-      <aside className="mh-side hidden md:flex w-[250px] lg:w-[272px] shrink-0 flex-col sticky top-0 h-screen">
-        <Link to="/app" className="flex items-center gap-2.5 px-6 pt-7 pb-4 text-[var(--mh-ink)] no-underline">
+      <aside className="mh-side hidden md:flex shrink-0 flex-col sticky top-0 h-screen">
+        <Link to="/app" className="mh-side-brand flex items-center gap-2.5 text-[var(--mh-ink)] no-underline">
           <MaalMark size={24} />
           <span className="mh-brand">Maal</span>
         </Link>
 
-        <nav aria-label="Main navigation" className="flex-1 px-2.5 pb-4 overflow-y-auto">
+        <nav aria-label="Main navigation" className="mh-side-nav flex-1 min-h-0 overflow-y-auto">
           <Section label="Track" items={TOP} />
           <Section label="Services" items={SERVICE_ITEMS} open={servicesOpen} onToggle={() => setServicesOpen((v) => !v)} />
           <Section label="Calculators" items={TOOLS} open={toolsOpen} onToggle={() => setToolsOpen((v) => !v)} />
@@ -123,7 +123,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
 
-        <div className="px-5 pb-5 pt-3 space-y-3">
+        <div className="mh-side-foot space-y-3">
           <button type="button" onClick={() => openAdvisorPopup()} className="mh-ask"><Sparkles className="size-4" aria-hidden /> Ask anything</button>
           <div className="flex items-center justify-between gap-2">
             <p className="text-[11px] text-[var(--mh-muted)] truncate">{email}</p>
@@ -140,11 +140,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex-1 min-w-0 flex flex-col">
         {!isHome && (
-          <header className="mh-topbar hidden md:flex sticky top-0 z-30 h-12 items-center justify-end px-6 gap-2">
+          <header className="mh-topbar mh-gutter-x hidden md:flex sticky top-0 z-30 h-12 items-center justify-end gap-2">
             <NotificationBell />
           </header>
         )}
-        <header className="mh-topbar md:hidden sticky top-0 z-30 h-14 flex items-center justify-between px-4">
+        <header className="mh-topbar mh-gutter-x md:hidden sticky top-0 z-30 h-14 flex items-center justify-between">
           <Link to="/app" className="flex items-center gap-2 text-[var(--mh-ink)] no-underline">
             <MaalMark size={18} /><span className="mh-brand" style={{ fontSize: 22 }}>Maal</span>
           </Link>
@@ -156,9 +156,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </header>
-        <main className="flex-1"><SectionTabs />{children}</main>
+        <main className="mh-main flex-1 min-w-0"><SectionTabs />{children}</main>
         <AdvisorPopup />
-        <footer className="border-t border-[var(--mh-line)] px-6 py-4">
+        <footer className="mh-gutter-x border-t border-[var(--mh-line)] py-4">
           <Disclaimer variant="inline" />
         </footer>
       </div>

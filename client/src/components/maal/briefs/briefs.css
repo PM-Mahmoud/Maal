@@ -234,9 +234,11 @@
 .mb-retry { border: 1px solid var(--mb-hair); background: #fff; border-radius: 8px; height: 38px; padding: 0 14px; cursor: pointer; font: inherit; color: var(--mb-ink); }
 
 /* ── Home entry cards ──────────────────────────────────────── */
-.mb-entries { display: grid; gap: 20px; }
+/* minmax(0, 1fr): the one-line subtitle must ellipsis, not widen the column
+   past the Home insights column (caused a sideways scroll at 1280 and 375). */
+.mb-entries { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
 .mb-entry {
-  position: relative; display: block; width: 100%; text-align: left;
+  position: relative; display: block; width: 100%; min-width: 0; text-align: left;
   background: #FFFFFF; border: 1px solid #69C7E6; border-radius: 20px;
   padding: 0; color: #131A0F; font-family: var(--mb-sans);
   transition: box-shadow .15s, transform .15s;

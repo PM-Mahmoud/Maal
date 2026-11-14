@@ -83,7 +83,8 @@ html[data-theme="dark"] .mx-adv, .dark .mx-adv {
 @media (max-width: 767px) { .mx-adv-shell--page { height: calc(100dvh - 56px); } }
 .mx-adv-shell--page .mx-adv-frame {
   background: var(--a-surface); border: 1px solid var(--a-hair); border-radius: 20px;
-  margin: 16px; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+  /* Horizontal inset follows the app shell gutter so the card lines up with other pages. */
+  margin: 16px var(--mh-gutter, 16px); flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
 }
 .mx-adv-shell--popup .mx-adv-frame { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
