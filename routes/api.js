@@ -65,6 +65,8 @@ router.post('/auth/login', authLimiter, async (req, res) => {
 router.post('/auth/signup', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  const strengthError = require('../lib/password-rules').passwordStrengthError(password);
+  if (strengthError) return res.status(400).json({ error: strengthError });
   try {
     const { findUserByEmail } = require('../db/users');
     const existing = await findUserByEmail(email.toLowerCase().trim());

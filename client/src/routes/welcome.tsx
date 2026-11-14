@@ -1,9 +1,10 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { Wallet, Gauge, Landmark, Sprout, Sparkles, Ellipsis, Check } from "lucide-react";
 import { supabase } from "@/integrations/api";
 import { MaalMark } from "@/components/maal/MaalMark";
 import { ReferFriendsStep } from "@/components/maal/onboarding/ReferFriendsStep";
+import { ConnectAccountsFlow } from "@/components/maal/connect/ConnectAccountsFlow";
 import { LinkedAccountsStep, type LinkedAccount } from "@/components/maal/onboarding/LinkedAccountsStep";
 import "../v2-landing.css";
 
@@ -58,7 +59,6 @@ async function saveProfile(patch: Record<string, unknown>) {
 }
 
 function Welcome() {
-  const navigate = useNavigate();
   const [step, setStep] = useState<Step>("referral");
   const [firstName, setFirstName] = useState("");
   const [goals, setGoals] = useState<string[]>([]);
@@ -92,7 +92,9 @@ function Welcome() {
   };
   const finish = async () => {
     await saveProfile({ heard_from: heard, welcome_completed: true });
-    navigate({ to: "/app" });
+    // Subscribe screen (Figma "Subscribing to a plan from onboarding"); its
+    // "Maybe later" and close both continue to the dashboard.
+    window.location.assign("/subscribe?from=onboarding");
   };
 
   const dark = step === "connect";
@@ -134,14 +136,19 @@ function Welcome() {
           </div>
         )}
 
-        {/* INTEGRATION: ConnectAccountsFlow — agent A2's redesigned bank-connect
-            screens (components/maal/connect/) replace <ConnectStep> below. Keep
-            the contract: call onLinked(accounts, syncedCount) after a successful
-            Basiq import (goes to the "linked" step) and onSkip() to jump to "heard". */}
         {step === "connect" && (
-          <ConnectStep
-            onLinked={(accounts, count) => { setLinked(accounts); setSyncedCount(count); go("linked"); }}
+          <ConnectAccountsFlow
+            mode="onboarding"
+            chrome={false}
+            firstName={firstName || undefined}
             onSkip={() => go("heard")}
+            onDone={(r) => {
+              setLinked(r.linked);
+              setSyncedCount(r.count);
+              // The connect flow ends on its own "account connected" page, so
+              // go straight on to the last question (Back still shows "linked").
+              go("heard");
+            }}
           />
         )}
 
@@ -167,10 +174,6 @@ function Welcome() {
                 </button>
               ))}
             </div>
-            {/* INTEGRATION: SubscribeFlow — agent A3's subscribe/payment screens
-                (components/maal/subscribe/) slot in after this question: route
-                finish() through <SubscribeFlow onDone={() => navigate({ to: "/app" })} />
-                instead of going straight to the dashboard. */}
             <button type="button" className="v2-btn v2-btn-ink v2-btn-lg v2-btn-block wl-cta" disabled={!heard} onClick={finish}>Next</button>
             <button type="button" className="wl-skip-link" onClick={finish}>Skip and go to my dashboard</button>
           </div>
@@ -183,78 +186,6 @@ function Welcome() {
         </footer>
       )}
       <p className="wl-disclaimer">Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.</p>
-    </div>
-  );
-}
-
-function ConnectStep({ onLinked, onSkip }: { onLinked: (a: LinkedAccount[], count: number) => void; onSkip: () => void }) {
-  const [live, setLive] = useState<boolean | null>(null);
-  const [opened, setOpened] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/v1/basiq/status", { credentials: "include" })
-      .then((r) => r.json()).then((s) => setLive(!!s.live)).catch(() => setLive(false));
-  }, []);
-
-  // Basiq's consent screen doesn't send people back, so it opens in a new tab
-  // and we sync when they say they're done.
-  const connect = () => { window.open("/basiq/connect", "_blank", "noopener"); setOpened(true); setMsg(null); };
-
-  const finished = async () => {
-    setBusy(true);
-    setMsg("Securely importing your accounts…");
-    try {
-      const r = await fetch("/api/v1/basiq/sync", { method: "POST", credentials: "include", headers: { "Idempotency-Key": crypto.randomUUID() } });
-      const j = await r.json();
-      if (!r.ok || !j.import_run_id) throw new Error(j.error || "We couldn't start the import.");
-      let count = 0;
-      for (let i = 0; i < 90; i++) {
-        await new Promise((res) => setTimeout(res, 1000));
-        const s = await fetch(`/api/v1/import-runs/${encodeURIComponent(j.import_run_id)}`, { credentials: "include" });
-        if (!s.ok) continue;
-        const { import_run: run } = await s.json();
-        if (run.status === "succeeded") { count = Number(run.summary?.accounts ?? 0); break; }
-        if (run.status === "dead") throw new Error(run.last_error || "Your bank didn't respond. Try again in a moment.");
-      }
-      const la = await fetch("/api/v1/linked_accounts", { credentials: "include" }).then((x) => (x.ok ? x.json() : [])).catch(() => []);
-      const accounts: LinkedAccount[] = Array.isArray(la) ? la : (la?.data ?? []);
-      if (!accounts.length && !count) { setMsg("We didn't find any connected accounts yet. Finish connecting in the other tab, then try again."); return; }
-      onLinked(accounts, count);
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Something went wrong. Please try again.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="wl-col" style={{ textAlign: "center" }}>
-      <h1 className="wl-h1">Connect your accounts</h1>
-      <p className="wl-sub" style={{ color: "rgba(255,255,255,.75)" }}>Add your everyday accounts to see every dollar in and out. Read-only, through Australia’s Consumer Data Right.</p>
-      {/* Round bank badges with initials (names on hover / for screen readers) — no bank logos. */}
-      <div className="wl-banks" role="list" aria-label="Supported Australian banks include">
-        {BANKS.map(([name, short], i) => (
-          <span key={name} role="listitem" title={name} aria-label={name} className={`wl-bank${i === 8 ? " wl-bank-hero" : ""}`}>{short}</span>
-        ))}
-      </div>
-      <p className="wl-bank-names">{BANKS.slice(0, 8).map(([n]) => n).join(" · ")} and 100+ more</p>
-      {live === false ? (
-        <>
-          <p className="wl-note">Bank connections are switching on soon. You can add your accounts by hand from the dashboard in the meantime.</p>
-          <button className="v2-btn v2-btn-light v2-btn-lg v2-btn-block wl-cta" onClick={onSkip}>Continue</button>
-        </>
-      ) : !opened ? (
-        <button className="v2-btn v2-btn-light v2-btn-lg v2-btn-block wl-cta" onClick={connect} disabled={live === null}>Connect my accounts</button>
-      ) : (
-        <>
-          <p className="wl-note">Finish connecting in the tab that just opened, then come back here.</p>
-          <button className="v2-btn v2-btn-light v2-btn-lg v2-btn-block wl-cta" onClick={finished} disabled={busy}>{busy ? "Importing…" : "I’ve finished connecting"}</button>
-          <button className="wl-skip-link" style={{ color: "rgba(255,255,255,.75)" }} onClick={connect} disabled={busy}>Open the bank connection again</button>
-        </>
-      )}
-      {msg && <p className="wl-note" role="status">{msg}</p>}
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { InstitutionLogo } from "@/components/maal/InstitutionLogo";
 // "Link another account", and Continue pinned near the bottom with a short
 // note about read-only access.
 
-export type LinkedAccount = { id: string | number; institution_name?: string; institution_type?: string };
+export type LinkedAccount = { id: string | number; institution_name?: string | null; institution_type?: string | null };
 
 type Group = { name: string; types: string[] };
 
