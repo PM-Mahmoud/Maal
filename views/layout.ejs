@@ -62,7 +62,7 @@
         <a href="/login" class="rf-login">Log in</a>
         <a href="<%= locals.waitlistGated !== false ? '/waitlist' : '/signup' %>" class="rf-btn rf-btn-ghost rf-signup"><%= locals.waitlistGated !== false ? 'Join waitlist' : 'Sign up' %></a>
         <a href="/score" class="rf-btn rf-btn-ink">Get your free score</a>
-        <button class="rf-hamburger" onclick="rfToggleNav()" aria-label="Toggle menu">
+        <button class="rf-hamburger" id="rf-hamburger" aria-label="Toggle menu">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
       </div>
@@ -355,6 +355,9 @@
     function rfToggleNav() {
       document.getElementById('rf-mobile-nav').classList.toggle('open');
     }
+    // Bound here, not via onclick="" (Helmet CSP: script-src-attr 'none').
+    var rfBurger = document.getElementById('rf-hamburger');
+    if (rfBurger) rfBurger.addEventListener('click', rfToggleNav);
     // Score fill
     requestAnimationFrame(function(){ requestAnimationFrame(function(){
       var f = document.getElementById('rf-fill'); if (f) f.style.width = '82%';

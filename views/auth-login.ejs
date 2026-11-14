@@ -67,7 +67,7 @@
           </form>
 
           <p class="rf-switch">
-            <button type="button" id="method-toggle" onclick="toggleMethod()">Sign in with password instead</button>
+            <button type="button" id="method-toggle">Sign in with password instead</button>
           </p>
 
           <p class="rf-auth-toggle">Don't have an account? <a href="/signup">Sign up</a></p>
@@ -114,6 +114,8 @@
       pass.classList.toggle('active', !usingPassword);
       btn.textContent = usingPassword ? 'Sign in with password instead' : 'Continue with email code instead';
     }
+    // Bound here, not via onclick="", because Helmet's CSP sets script-src-attr 'none'.
+    document.getElementById('method-toggle').addEventListener('click', toggleMethod);
   </script>
 </body>
 </html>
