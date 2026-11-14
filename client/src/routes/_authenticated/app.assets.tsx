@@ -125,7 +125,7 @@ const WEALTH_SECTIONS: Record<Exclude<WealthSection, "overview">, { title: strin
   investments: { title: "Investments", description: "Listed investments, managed funds and crypto holdings.", keys: ["public", "crypto"] },
   property: { title: "Property", description: "Property values, mortgages and the equity you own.", keys: ["real_estate", "property_mortgage"] },
   super: { title: "Super", description: "Your superannuation funds and retirement savings.", keys: ["super"] },
-  liabilities: { title: "Liabilities", description: "Credit cards, mortgages, loans and other obligations.", keys: ["property_mortgage", "credit_card", "loan", "other_liability"] },
+  liabilities: { title: "Debts", description: "Credit cards, mortgages, loans and other obligations.", keys: ["property_mortgage", "credit_card", "loan", "other_liability"] },
   other: { title: "Other Assets", description: "Private investments, metals, vehicles, collectibles and other valuables.", keys: ["private", "metal", "vehicle", "collectible", "other_asset"] },
 };
 
@@ -155,7 +155,7 @@ export function WealthPortfolioPage({ section = "overview", initialAdd }: { sect
       <div className="flex items-center justify-between mb-8">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground mb-1">My Wealth</p>
-          <h1 className="text-[28px] tracking-display font-bold leading-tight">{sectionConfig?.title ?? "Overview"}</h1>
+          <h1 className="text-[28px] tracking-display font-bold leading-tight">{sectionConfig?.title ?? "Net worth"}</h1>
           <p className="mt-1 text-[12px] text-muted-foreground">{sectionConfig?.description ?? "One reconciled view of everything you own and owe."}</p>
         </div>
         <ViewToggle view={view} onChange={setView} />

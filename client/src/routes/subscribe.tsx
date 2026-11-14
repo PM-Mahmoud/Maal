@@ -2,6 +2,7 @@ import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import { supabase } from "@/integrations/api";
 import { SubscribeFlow, type SubscribePhase } from "@/components/maal/subscribe/SubscribeFlow";
+import { snoozeDashboardOffer } from "@/components/maal/subscribe/offer";
 
 // /subscribe — full-screen membership checkout (no app sidebar), and the page
 // Stripe Checkout returns to (routes/billing.js, return_to=subscribe):
@@ -38,7 +39,10 @@ function SubscribePage() {
   const initialPhase: SubscribePhase =
     search.status === "processing" ? "processing" : search.status === "cancel" ? "cancel" : search.status === "error" ? "error" : "offer";
 
+  // "Maybe later" / ✕ counts as declining the offer: snooze the dashboard
+  // offer overlay too, so Home doesn't ask again straight away.
   const leave = () => {
+    snoozeDashboardOffer();
     if (search.from === "billing") window.location.assign("/app/billing");
     else navigate({ to: "/app" });
   };

@@ -8,6 +8,7 @@ import { AskSparkButton, HomeCard } from "./HomeCard";
 import { CONNECT_PATH } from "./NetWorthCard";
 import type { Txn } from "./useHomeData";
 import { aud, audCompact, signedCents, shortDate } from "./format";
+import { usePrivacy } from "./prefs";
 
 function iconFor(t: Txn) {
   const c = `${t.category || ""} ${(t as any).category_group || ""} ${t.description || ""}`.toLowerCase();
@@ -27,6 +28,7 @@ function iconFor(t: Txn) {
 /** "Spent in <month>": daily spending calendar + recent transactions. */
 export function SpendingCard({ transactions, loading, error }: { transactions: Txn[]; loading: boolean; error?: boolean }) {
   const router = useRouter();
+  const privacy = usePrivacy();
   const now = new Date();
   const monthName = now.toLocaleDateString("en-AU", { month: "long" });
   const { total, byDay } = useMemo(
@@ -56,7 +58,7 @@ export function SpendingCard({ transactions, loading, error }: { transactions: T
         <div className="mh-spend">
           <div>
             {loading ? <div className="mh-skel" style={{ width: 110, height: 38 }} /> : (
-              <p className="mh-big">{error ? "—" : aud(total)}</p>
+              <p className={error ? "mh-big" : "mh-big mh-amount"}>{error ? "—" : aud(total)}</p>
             )}
             <div className="mh-cal" role="list" aria-label={`Daily spending in ${monthName}`}>
               {byDay.map((v, i) => {
@@ -65,9 +67,9 @@ export function SpendingCard({ transactions, loading, error }: { transactions: T
                 const future = v === null;
                 return (
                   <div key={day} role="listitem" className="mh-day" data-today={isToday} data-future={future} data-past={!future && !isToday}
-                    aria-label={`${day} ${monthName}: ${future ? "upcoming" : aud(v ?? 0)}`}>
+                    aria-label={`${day} ${monthName}: ${future ? "upcoming" : privacy ? "amount hidden" : aud(v ?? 0)}`}>
                     <span>{day}</span>
-                    <b>{future ? "–" : (v ?? 0) >= 1000 ? audCompact(v ?? 0) : aud(v ?? 0)}</b>
+                    <b className={future ? undefined : "mh-amount"}>{future ? "–" : (v ?? 0) >= 1000 ? audCompact(v ?? 0) : aud(v ?? 0)}</b>
                   </div>
                 );
               })}
@@ -91,7 +93,7 @@ export function SpendingCard({ transactions, loading, error }: { transactions: T
                         <span className="mh-txn-name block">{t.merchant || t.description || "Transaction"}</span>
                         <span className="mh-txn-date block">{shortDate(t.post_date)}</span>
                       </span>
-                      <span className="mh-txn-amt" data-in={amt > 0}>
+                      <span className="mh-txn-amt mh-amount" data-in={amt > 0}>
                         {amt > 0 ? signedCents(amt) : signedCents(Math.abs(amt)).replace("+", "")}
                       </span>
                     </li>

@@ -364,3 +364,8 @@ html:not(.dark) .mh-bar { background: #EDEEEA; }
 /* ---------- Privacy mode ---------- */
 html[data-privacy="on"] .mh-amount { filter: blur(9px); user-select: none; }
 html[data-privacy="on"] .mh-amount:hover { filter: blur(9px); }
+/* Small figures (calendar days, transaction rows, deltas) get a lighter blur so
+   it doesn't bleed into neighbouring cells. */
+html[data-privacy="on"] .mh-day .mh-amount,
+html[data-privacy="on"] .mh-txn-amt.mh-amount,
+html[data-privacy="on"] .mh-delta.mh-amount { filter: blur(6px); }

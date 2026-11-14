@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { getUsage, type Usage } from "@/lib/usage.functions";
-import { FALLBACK_OFFER, fetchOffer, type Offer } from "./offer";
+import { FALLBACK_OFFER, fetchOffer, isDashboardOfferSnoozed, snoozeDashboardOffer, type Offer } from "./offer";
 import { TermsNote } from "./SubscribeFlow";
 import "./subscribe.css";
 
@@ -12,13 +12,10 @@ import "./subscribe.css";
 // Self-contained: by default it loads /api/v1/usage and only shows for a user
 // who is NOT a paying member and whose trial is still running (the expired-
 // trial paywall is MembershipGate's job, so the two never stack). Dismissing
-// hides it for SNOOZE_DAYS (per browser).
+// hides it for OFFER_SNOOZE_DAYS (per browser; see offer.ts).
 //
 // Usage (dashboard): <DashboardOffer />
 // Controlled:        <DashboardOffer open={show} onClose={() => setShow(false)} />
-
-const SNOOZE_KEY = "maal_offer_snoozed_until";
-const SNOOZE_DAYS = 3;
 
 export type DashboardOfferProps = {
   /** Force open/closed. When omitted, the component decides from usage + snooze. */
@@ -42,10 +39,7 @@ export function DashboardOffer({ open, onClose, onJoin, usage: usageProp }: Dash
   useEffect(() => {
     void fetchOffer().then(setOffer);
     if (controlled) return;
-    try {
-      const until = Number(localStorage.getItem(SNOOZE_KEY) || 0);
-      setSnoozed(until > Date.now());
-    } catch { setSnoozed(false); }
+    setSnoozed(isDashboardOfferSnoozed());
     if (usageProp === undefined) getUsage().then(setUsage).catch(() => setUsage(null));
   }, [controlled, usageProp]);
 
@@ -65,7 +59,7 @@ export function DashboardOffer({ open, onClose, onJoin, usage: usageProp }: Dash
   function close() {
     if (!controlled) {
       setClosed(true);
-      try { localStorage.setItem(SNOOZE_KEY, String(Date.now() + SNOOZE_DAYS * 86400000)); } catch { /* ignore */ }
+      snoozeDashboardOffer();
     }
     onClose?.();
   }

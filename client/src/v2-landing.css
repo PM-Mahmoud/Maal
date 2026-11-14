@@ -116,8 +116,16 @@ html[data-theme="dark"] .v2 .v2-btn-ink { color: #020109; }
 .v2-header-right { display: flex; align-items: center; gap: .6rem; }
 .v2-login { display: inline; font-family: var(--v2-sans); font-size: 14px; letter-spacing: .02em; text-transform: uppercase; color: #fff; opacity: .92; padding: 0 .6rem; white-space: nowrap; }
 .v2-login:hover { color: #fff; }
-.v2-signup { display: none; }
-@media (min-width: 640px) { .v2-signup { display: inline-flex; } }
+/* Phones (< 640px): logo + Log in + Sign up/Join only. Sign up becomes the
+   primary (light) button and the free-score CTA drops out of the header — it
+   is still the first button in the hero. */
+.v2-signup { display: inline-flex; }
+.v2-btn-cta { display: none; }
+@media (max-width: 639.98px) {
+  .v2-header .v2-signup { background: #fff; color: #101010; border-color: transparent; }
+  .v2-header .v2-signup:hover { background: #F1F1EF; }
+}
+@media (min-width: 640px) { .v2-btn-cta { display: inline-flex; } }
 @media (min-width: 900px) { .v2-nav { display: flex; } }
 
 /* ---------- Hero (dusk sky, made in CSS) ---------- */
@@ -256,15 +264,24 @@ html[data-theme="dark"] .v2 .v2-btn-ink { color: #020109; }
 @media (max-width: 520px) {
   .v2-hero { padding: 120px 0 190px; }
   .v2-header { padding: 12px 12px 0; }
-  /* Logo + "Log in" + CTA must fit in 375px without the CTA spilling out of the pill. */
-  .v2-header-inner { padding: 10px 10px 10px 14px; gap: .5rem; }
-  .v2-header-right { gap: .25rem; }
-  .v2-login { padding: 0 .3rem; font-size: 13px; }
+  /* Logo + "Log in" + Sign up/Join must fit 320–520px on one line, with
+     tap targets of at least 40px. */
+  .v2-header-inner { padding: 6px 6px 6px 14px; gap: .5rem; }
+  .v2-header-right { gap: .25rem; flex-shrink: 0; }
+  .v2-login { display: inline-flex; align-items: center; min-height: 40px; padding: 0 .5rem; font-size: 13px; }
   .v2-header.is-scrolled { padding-top: 8px; }
   .v2-wrap, .v2-hero-inner { padding: 0 16px; }
-  .v2-btn-cta { height: 40px; padding: 0 .85rem; font-size: 11.5px; }
+  .v2-header .v2-signup { height: 40px; padding: 0 .85rem; font-size: 12.5px; }
   .v2-section { padding: 80px 0; }
   .v2-price { padding: 24px; }
+}
+@media (max-width: 359.98px) {
+  .v2-header { padding: 10px 8px 0; }
+  .v2-header-inner { padding-left: 10px; gap: .25rem; }
+  .v2-brand { gap: .4rem; }
+  .v2-brand-name { font-size: 21px; }
+  .v2-login { padding: 0 .4rem; font-size: 12px; }
+  .v2-header .v2-signup { padding: 0 .65rem; font-size: 11.5px; }
 }
 
 /* ============================================================
