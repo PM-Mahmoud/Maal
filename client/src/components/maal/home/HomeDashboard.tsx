@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { AskMaalTile } from "@/components/maal/dashboard/AskMaalTile";
-import { SetupChecklist } from "@/components/maal/dashboard/SetupChecklist";
+import { CompleteOnboardingCard, DashboardOffer } from "@/components/maal/subscribe";
+import { HomeBriefCards } from "@/components/maal/briefs";
 import { filteredTotals } from "../../../../../shared/home-accounts.mjs";
 import { HomeHeader } from "./HomeHeader";
 import { NetWorthCard } from "./NetWorthCard";
@@ -21,6 +22,8 @@ export function HomeDashboard() {
 
   return (
     <div className="mh">
+      {/* Membership offer overlay (trial users only; never stacks with the paywall). */}
+      <DashboardOffer />
       <div className="mh-page">
         <HomeHeader name={data.name} />
         <div className="mh-grid">
@@ -37,9 +40,9 @@ export function HomeDashboard() {
             <AskMaalTile />
           </div>
           <aside className="mh-col" aria-label="Insights">
-            <SetupChecklist />
-            {/* INTEGRATION: DashboardOffer */}
-            {/* INTEGRATION: HomeBriefCards */}
+            {/* Figma "Complete onboarding": the green setup card + its dialog. */}
+            <CompleteOnboardingCard />
+            <HomeBriefCards />
             <MaalScoreCard score={data.score} error={data.errors.score} />
             <MarketWatchCard />
           </aside>

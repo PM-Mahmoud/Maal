@@ -1,3 +1,4 @@
+import { AdvisorPopup, openAdvisorPopup } from "@/components/maal/advisor/AdvisorPopup";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
@@ -146,7 +147,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="px-5 pb-5 pt-3 space-y-3">
-          <Link to="/app/advisor" className="mh-ask"><Sparkles className="size-4" aria-hidden /> Ask anything</Link>
+          <button type="button" onClick={() => openAdvisorPopup()} className="mh-ask"><Sparkles className="size-4" aria-hidden /> Ask anything</button>
           <div className="flex items-center justify-between gap-2">
             <p className="text-[11px] text-[var(--mh-muted)] truncate">{email}</p>
             <div className="flex items-center gap-1.5">
@@ -179,6 +180,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main className="flex-1">{children}</main>
+        <AdvisorPopup />
         <footer className="border-t border-[var(--mh-line)] px-6 py-4">
           <Disclaimer variant="inline" />
         </footer>
@@ -219,7 +221,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <button onClick={() => { setMobileNavOpen(false); setSupportOpen(true); }} className="mh-nav w-full bg-transparent border-0 text-left">
                   <LifeBuoy aria-hidden /> Support
                 </button>
-                <Link to="/app/advisor" onClick={() => setMobileNavOpen(false)} className="mh-ask mt-3"><Sparkles className="size-4" aria-hidden /> Ask anything</Link>
+                <button type="button" onClick={() => { setMobileNavOpen(false); openAdvisorPopup(); }} className="mh-ask mt-3"><Sparkles className="size-4" aria-hidden /> Ask anything</button>
                 <div className="mt-2 flex items-center justify-between px-1 py-2">
                   <span className="truncate text-[11px] text-[var(--mh-muted)]">{email}</span>
                   <ThemeToggle />
