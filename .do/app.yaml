@@ -14,7 +14,9 @@ region: syd
 # Shared by every component (web, worker, jobs). Values are set in the dashboard.
 envs:
   - { key: NODE_ENV, value: production, scope: RUN_AND_BUILD_TIME }
-  - { key: BASE_URL, value: "https://hellomaal.com", scope: RUN_TIME }
+  # www is the canonical host: GoDaddy DNS can't point the bare domain at App
+  # Platform, so hellomaal.com is forwarded to www at GoDaddy (see runbook).
+  - { key: BASE_URL, value: "https://www.hellomaal.com", scope: RUN_TIME }
   # Core
   - { key: DATABASE_URL, type: SECRET, scope: RUN_TIME }
   - { key: SESSION_SECRET, type: SECRET, scope: RUN_TIME }
@@ -69,8 +71,8 @@ services:
       http_path: /health
       initial_delay_seconds: 20
     domains:
-      - { domain: hellomaal.com, type: PRIMARY }
-      - { domain: www.hellomaal.com, type: ALIAS }
+      # Bare hellomaal.com is NOT listed: it is forwarded to www at GoDaddy.
+      - { domain: www.hellomaal.com, type: PRIMARY }
 
 workers:
   - name: import-worker
