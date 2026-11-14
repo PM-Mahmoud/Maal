@@ -1,6 +1,9 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { EmptyPage } from "@/components/maal/nav/EmptyPage";
 
-// Kept so old links and bookmarks still work (Track/Services nav, 2026-11-15).
-export const Route = createFileRoute("/_authenticated/app/spending")({
-  beforeLoad: () => { throw redirect({ to: "/app/transactions" }); },
-});
+// Left empty until the Figma designs are finalised (2026-11-15).
+export const Route = createFileRoute("/_authenticated/app/spending")({ component: Spending });
+
+function Spending() {
+  return <EmptyPage title="Spending" />;
+}
