@@ -409,6 +409,7 @@ app.post('/contact', async (req, res) => {
 
 // ─── JSON API for React SPA ──────────────────────────────────────────────
 app.use('/api', require('./routes/extensibility'));
+app.use('/api', require('./routes/advisor-threads'));
 app.use('/api', require('./routes/api'));
 
 // ─── Server-side gate for the React app shell ─────────────────────────────
