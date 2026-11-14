@@ -245,3 +245,105 @@ html[data-theme="dark"] .v2 .v2-btn-ink { color: #020109; }
   .v2-section { padding: 80px 0; }
   .v2-price { padding: 24px; }
 }
+
+/* ============================================================
+   /welcome onboarding flow (client/src/routes/welcome.tsx +
+   components/maal/onboarding/). Matched to Figma
+   lYCk0dAcbGQGZt96GzU9ui frames 08–14 and GHaUsikdoHV310Ao6IjyMO
+   frames 3:2 / 3:6, scaled 1920 → 1400 like the rest of v2.
+   ============================================================ */
+.wl { background: #fff; display: flex; flex-direction: column; }
+.wl.is-dark { background: #000; color: #fff; }
+.wl-top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; height: 82px; padding: 0 44px; border-bottom: 1px solid #D8D8D8; background: #fff; }
+.wl.is-dark .wl-top { background: #000; border-color: transparent; color: #fff; }
+.wl-logo { display: inline-flex; align-items: center; gap: .5rem; font-family: var(--v2-serif); font-size: 24px; line-height: 1; color: inherit; }
+.wl-chip { font: inherit; font-size: 15px; line-height: 1; padding: .7rem .8rem; border-radius: 10px; border: 1px solid #8A8A8A; background: transparent; color: #151515; cursor: pointer; transition: border-color .15s, background .15s; }
+.wl-chip:hover { border-color: #151515; }
+.wl-chip:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 2px; }
+.wl.is-dark .wl-chip { color: #fff; border-color: rgba(255,255,255,.55); }
+.wl-main { flex: 1; display: flex; justify-content: center; padding: 110px 16px 48px; background: #fff; }
+.wl-step-referral .wl-main, .wl-step-linked .wl-main { padding-top: 15px; }
+.wl-step-heard .wl-main { padding-top: 60px; }
+.wl.is-dark .wl-main { color: #fff; padding-top: 64px; background:
+  radial-gradient(60% 70% at 108% 92%, rgba(80,150,210,.55) 0%, rgba(40,90,150,.35) 35%, rgba(0,0,0,0) 62%),
+  radial-gradient(45% 55% at 96% 100%, rgba(220,235,255,.18), rgba(0,0,0,0) 60%),
+  #000; }
+.wl-col { width: 100%; max-width: 370px; }
+.wl-col-wide { max-width: 341px; }
+.wl-h1 { font-family: var(--v2-serif); font-weight: 400; font-size: clamp(1.65rem, 5vw, 1.95rem); line-height: 1.2; margin: 0 -24px; letter-spacing: -0.01em; text-align: center; color: #000; }
+.wl.is-dark .wl-h1 { color: #fff; }
+.wl-sub { text-align: center; color: #666; margin-top: .65rem; font-size: 15px; line-height: 1.5; }
+.wl-options { margin-top: 1.4rem; display: grid; gap: 15px; }
+.wl-options-tight { gap: 12px; }
+.wl-option { display: flex; align-items: center; gap: .8rem; width: 100%; text-align: left; padding: 0 1rem; height: 54px; border-radius: 16px;
+  border: 1px solid #CACACA; background: #fff; color: #000; font: inherit; font-size: 15px; cursor: pointer; transition: border-color .15s, background .15s; }
+.wl-option:hover { border-color: #8C8C8C; }
+.wl-option.on { background: #F5F5F5; border-color: #7A7A7A; }
+.wl-option:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 2px; }
+.wl-option-plain { height: 49px; border-radius: 14px; font-size: 14px; }
+.wl-option-icon { color: #000; display: inline-flex; }
+.wl-tick { margin-left: auto; color: #000; }
+.wl-cta { margin-top: 22px; }
+.wl-col .v2-btn { border-radius: 8px; text-transform: none; font-size: 15px; height: 41px; }
+.wl .v2-btn:disabled { opacity: .35; cursor: not-allowed; }
+.wl-skip-link { display: block; margin: 1rem auto 0; background: none; border: 0; font: inherit; font-size: 13px; color: #111; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+
+/* Refer your friends (frame 08, copy link 3:2 → 3:6) */
+.wl-offer { border-radius: 15px; padding: 15px 16px 20px; color: #fff; text-align: center;
+  background: linear-gradient(155deg, #0091A1 7.7%, #4FADB8 50%, #CCC2FF 84.6%); }
+.wl-offer-badge { display: inline-block; padding: 3px 10px; border-radius: 9px; background: rgba(255,255,255,.08); font-size: 13px; line-height: 1.4; }
+.wl-offer-h { font-family: var(--v2-serif); font-weight: 400; font-size: 31px; line-height: 1.17; letter-spacing: -0.04em; margin: 12px 0 10px; color: #fff; }
+.wl-offer-sub { font-size: 13px; line-height: 1.4; max-width: 300px; margin: 0 auto; color: #fff; }
+.wl-howto { margin-top: 15px; font-family: var(--v2-sans); font-size: 13px; line-height: 1.55; color: #020206; }
+.wl-timeline { list-style: none; padding: 0 0 0 15px; margin: 12px 0 0; display: grid; gap: 11px; position: relative; }
+.wl-timeline::before { content: ""; position: absolute; left: 29px; top: 18px; bottom: 44px; width: 2px; background: #020206; }
+.wl-timeline li { position: relative; min-height: 66px; padding-left: 43px; display: flex; flex-direction: column; font-size: 13px; line-height: 1.55; color: #020206; }
+.wl-timeline li b { font-weight: 400; }
+.wl-timeline li span:not(.wl-step-dot) { color: #666; font-size: 11.5px; line-height: 1.55; }
+.wl-step-dot { position: absolute; left: 0; top: 0; width: 30px; height: 30px; border-radius: 50%; background: #020206; color: #fff; display: grid; place-items: center; }
+.wl-ref-actions { margin-top: 15px; display: grid; gap: 8px; }
+.wl-col .wl-ref-btn { font-size: 15px; height: 41px; }
+.wl-col .wl-copy { gap: 10px; border-color: #7A7A7A; color: #020206; }
+.wl-col .wl-copy.is-copied { border-color: #020206; }
+.wl-ref-progress { margin-top: 12px; text-align: center; font-size: 12.5px; color: #666; }
+.wl-terms-link { margin-top: 18px; color: #020206; font-size: 13px; }
+.wl-terms { margin: 10px 0 0; padding-left: 1.1rem; display: grid; gap: .35rem; font-size: 12px; line-height: 1.5; color: #666; }
+
+/* Account linked (frame 12) */
+.wl-linked-col { display: flex; flex-direction: column; justify-content: space-between; min-height: min(720px, calc(100vh - 180px)); }
+.wl-linked { list-style: none; margin: 1.3rem 0 0; padding: 0; border: 1px solid #E6E6E6; border-radius: 15px; background: #fff; }
+.wl-linked-row { display: flex; align-items: center; gap: .8rem; padding: 14px 16px; border-bottom: 1px solid #E6E6E6; font-size: 14px; color: #000; }
+.wl-linked-row:last-child { border-bottom: 0; }
+.wl-linked-name { display: flex; align-items: center; gap: .45rem; font-size: 14px; }
+.wl-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--v2-good); flex-shrink: 0; }
+.wl-muted { color: #666; font-size: 11.5px; line-height: 1.4; overflow-wrap: anywhere; }
+.wl-linked-foot { margin-top: 2.5rem; }
+.wl-fine { text-align: center; font-size: 10.5px; line-height: 1.6; color: #666; margin-bottom: 18px; }
+
+/* Connect (frame 11) — dark step, kept until ConnectAccountsFlow lands */
+.wl-banks { margin: 1.6rem auto 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; max-width: 380px; }
+.wl-bank { aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 600; letter-spacing: .02em;
+  color: #fff; background: radial-gradient(circle at 35% 30%, #2A3442, #10151C); border: 1px solid rgba(255,255,255,.16);
+  box-shadow: 0 0 0 4px rgba(255,255,255,.04); }
+.wl-bank-hero { transform: scale(1.18); background: radial-gradient(circle at 35% 30%, #2E7FD0, #164A86); box-shadow: 0 0 0 5px rgba(80,150,230,.25), 0 0 26px rgba(80,150,230,.55); }
+.wl-bank-names { margin-top: 1rem; font-size: 12.5px; color: rgba(255,255,255,.65); }
+.wl-note { margin-top: 1.2rem; font-size: 14px; color: rgba(255,255,255,.82); }
+.wl.is-dark .v2-btn-light { color: #151515; text-transform: none; }
+
+.wl-foot { text-align: center; padding: 18px 16px; border-top: 1px solid #EBEBEB; font-size: 11.5px; background: #fff; }
+.wl-foot a { text-decoration: underline; text-underline-offset: 2px; color: #111; }
+.wl.is-dark .wl-foot { border-color: transparent; background: #000; }
+.wl.is-dark .wl-foot a { color: #fff; }
+.wl-disclaimer { margin: 0; padding: 10px 16px 18px; text-align: center; font-size: 10.5px; line-height: 1.55; color: #8A8A8A; }
+
+@media (max-width: 640px) {
+  .wl-top { height: 64px; padding: 0 16px; }
+  .wl-logo { font-size: 21px; }
+  .wl-chip { font-size: 14px; padding: .55rem .7rem; }
+  .wl-main { padding-top: 40px; }
+  .wl-step-heard .wl-main { padding-top: 32px; }
+  .wl-col-wide { max-width: 370px; }
+  .wl-h1 { margin: 0; }
+  .wl-linked-col { min-height: 0; }
+}
+@media (max-width: 420px) { .wl-banks { grid-template-columns: repeat(5, 1fr); } }
