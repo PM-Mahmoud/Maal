@@ -1,0 +1,24 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { ServicePage } from "@/components/maal/nav/ServicePage";
+
+export const Route = createFileRoute("/_authenticated/app/services/estate-planning")({ component: EstatePlanning });
+
+function EstatePlanning() {
+  return (
+    <ServicePage
+      title="Estate planning"
+      lead="Make sure the people you love are looked after. Prepare a valid will and the documents that go with it through a licensed Australian partner."
+      points={[
+        "A will that's valid in your state or territory",
+        "Enduring power of attorney and guardianship documents",
+        "A reminder to check your super binding death benefit nomination",
+      ]}
+      interestKey="estate-planning"
+      today={[
+        { to: "/app/vault", title: "Keep documents safe", text: "Store your will, insurance and super statements in your Vault." },
+        { to: "/app/wealth/super", title: "Review your super", text: "Check your super balances and who your nominated beneficiaries are." },
+        { to: "/app/assets", title: "See your full picture", text: "Your net worth shows everything your estate would include." },
+      ]}
+    />
+  );
+}

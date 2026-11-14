@@ -10,15 +10,12 @@ import { NotificationBell } from "@/components/maal/app/NotificationBell";
 import { initPrivacy } from "@/components/maal/home/prefs";
 import "@/components/maal/home/home.css";
 import {
-  MessageCircle, FileSearch, Radar as RadarIcon,
-  Wallet, FolderLock, ArrowLeftRight, Target, UserCircle2, Landmark, Home, Building2,
-  MessageSquarePlus, Map, LifeBuoy, ChevronDown, LogOut,
-  X, Lightbulb, CreditCard, Menu, Sparkles,
-  PiggyBank, Receipt, Calculator, TrendingDown, Dices,
-  BarChart3, BriefcaseBusiness,
-  HandCoins, ShieldCheck, Store,
+  FolderLock, ArrowLeftRight, UserCircle2, Home, MessageSquarePlus, Map, LifeBuoy, ChevronDown, LogOut,
+  X, Lightbulb, CreditCard, Menu, Sparkles, BarChart3, BriefcaseBusiness, HandCoins,
+  TrendingUp, PieChart, ScrollText, Receipt, UserRound,
 } from "lucide-react";
-import { ClipboardList, ListChecks } from "lucide-react";
+import { TRACK, SERVICES, CALCULATORS, ACCOUNT, areaFor } from "@/components/maal/nav/sections";
+import { SectionTabs } from "@/components/maal/nav/SectionTabs";
 
 // Single source for the two contact details users see in-app. The old
 // support@maal.app address had no MX record, so every mail sent to it bounced.
@@ -28,53 +25,27 @@ export const FOUNDER_CALENDAR_URL = "https://calendar.app.google/oh9aghBVTuQ4fvC
 /** Any page can open the shell's support dialog: window.dispatchEvent(new Event(OPEN_SUPPORT_EVENT)). */
 export const OPEN_SUPPORT_EVENT = "maal:open-support";
 
-type Item = { to: string; label: string; icon: any; soon?: boolean };
+type Item = { to: string; label: string; icon: any; area?: string };
 
-const TOP: Item[] = [
-  { to: "/app", label: "Home", icon: Home },
-  { to: "/app/advisor", label: "Ask Maal", icon: MessageCircle },
-  { to: "/app/research", label: "Research", icon: FileSearch },
-  { to: "/app/radar", label: "Radar", icon: RadarIcon },
-];
+// Track · Services · Calculators · Account (2026-11-15). Pages inside each
+// Track area are shown as tabs by <SectionTabs/> — see nav/sections.ts.
+const TRACK_ICONS: Record<string, any> = { home: Home, spending: ArrowLeftRight, invest: BarChart3, forecast: TrendingUp, equity: PieChart };
+const TOP: Item[] = TRACK.map((a) => ({ to: a.to, label: a.label, icon: TRACK_ICONS[a.key], area: a.key }));
 
-const PORTFOLIO: Item[] = [
-  { to: "/app/assets", label: "Net worth", icon: Wallet },
-  { to: "/app/wealth/cash", label: "Cash", icon: Landmark },
-  { to: "/app/wealth/investments", label: "Investments", icon: BarChart3 },
-  { to: "/app/wealth/property", label: "Property", icon: Building2 },
-  { to: "/app/wealth/super", label: "Super", icon: PiggyBank },
-  { to: "/app/wealth/liabilities", label: "Liabilities", icon: TrendingDown },
-  { to: "/app/wealth/other", label: "Other Assets", icon: BriefcaseBusiness },
-  { to: "/app/vault", label: "Vault", icon: FolderLock },
-  { to: "/app/transactions", label: "Transactions", icon: ArrowLeftRight },
-  { to: "/app/goals", label: "Goals", icon: Target },
-  { to: "/app/planning", label: "Financial Plan", icon: ClipboardList },
-  { to: "/app/action-plan", label: "Action Plan", icon: ListChecks },
-  { to: "/app/onboarding", label: "Profile", icon: UserCircle2 },
-];
+const SERVICE_ICONS = [BriefcaseBusiness, ScrollText, Receipt, UserRound];
+const SERVICE_ITEMS: Item[] = SERVICES.map((s, i) => ({ ...s, icon: SERVICE_ICONS[i] }));
 
-const TOOLS: Item[] = [
-  { to: "/app/zakat", label: "Zakat", icon: HandCoins },
-  { to: "/app/purification", label: "Purification", icon: ShieldCheck },
-  { to: "/app/marketplace", label: "Partner Services", icon: Store },
-  { to: "/app/super-optimizer", label: "Super Optimiser", icon: PiggyBank },
-  { to: "/app/tax-optimizer", label: "Tax Optimiser", icon: Receipt },
-  { to: "/app/tax-bracket-visualizer", label: "Tax Brackets", icon: Calculator },
-  { to: "/app/debt-payoff", label: "Debt Payoff", icon: TrendingDown },
-  { to: "/app/scenarios-simulator", label: "Scenarios", icon: Dices },
-];
+const TOOLS: Item[] = CALCULATORS.map((c) => ({ ...c, icon: HandCoins }));
 
-const BOTTOM: Item[] = [
-  { label: "Plan & Usage", to: "/app/billing", icon: CreditCard },
-  { label: "Roadmap", to: "/app/roadmap", icon: Map },
-];
+const ACCOUNT_ICONS = [FolderLock, UserCircle2, CreditCard, Map];
+const BOTTOM: Item[] = ACCOUNT.map((a, i) => ({ ...a, icon: ACCOUNT_ICONS[i] }));
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [email, setEmail] = useState<string>("");
-  const [portfolioOpen, setPortfolioOpen] = useState(true);
-  const [toolsOpen, setToolsOpen] = useState(false);
+  const [servicesOpen, setServicesOpen] = useState(true);
+  const [toolsOpen, setToolsOpen] = useState(true);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -89,15 +60,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener(OPEN_SUPPORT_EVENT, openSupport);
   }, []);
 
-  function isActive(to: string) {
-    return location.pathname === to || (to !== "/app" && location.pathname.startsWith(to));
+  const currentArea = areaFor(location.pathname)?.key;
+  function isActive(to: string, area?: string) {
+    if (area) return currentArea === area;
+    return location.pathname === to || (to !== "/app" && location.pathname.startsWith(to + "/"));
   }
 
   function NavLink({ item, onClick }: { item: Item; onClick?: () => void }) {
     const Icon = item.icon;
     return (
-      <Link to={item.to} onClick={onClick} className="mh-nav" data-active={isActive(item.to)}
-        aria-current={isActive(item.to) ? "page" : undefined}>
+      <Link to={item.to} onClick={onClick} className="mh-nav" data-active={isActive(item.to, item.area)}
+        aria-current={isActive(item.to, item.area) ? "page" : undefined}>
         <Icon aria-hidden />
         <span className="truncate">{item.label}</span>
       </Link>
@@ -132,7 +105,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <nav aria-label="Main navigation" className="flex-1 px-2.5 pb-4 overflow-y-auto">
           <Section label="Track" items={TOP} />
-          <Section label="My wealth" items={PORTFOLIO} open={portfolioOpen} onToggle={() => setPortfolioOpen((v) => !v)} />
+          <Section label="Services" items={SERVICE_ITEMS} open={servicesOpen} onToggle={() => setServicesOpen((v) => !v)} />
           <Section label="Calculators" items={TOOLS} open={toolsOpen} onToggle={() => setToolsOpen((v) => !v)} />
           <p className="mh-side-label">Account</p>
           <div className="space-y-0.5">
@@ -179,7 +152,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </header>
-        <main className="flex-1">{children}</main>
+        <main className="flex-1"><SectionTabs />{children}</main>
         <AdvisorPopup />
         <footer className="border-t border-[var(--mh-line)] px-6 py-4">
           <Disclaimer variant="inline" />
@@ -203,7 +176,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <nav aria-label="Mobile dashboard navigation">
               {[
                 { label: "Track", items: TOP },
-                { label: "My wealth", items: PORTFOLIO },
+                { label: "Services", items: SERVICE_ITEMS },
                 { label: "Calculators", items: TOOLS },
                 { label: "Account", items: BOTTOM },
               ].map((group) => (

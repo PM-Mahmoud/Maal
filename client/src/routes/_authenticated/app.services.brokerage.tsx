@@ -1,0 +1,24 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { ServicePage } from "@/components/maal/nav/ServicePage";
+
+export const Route = createFileRoute("/_authenticated/app/services/brokerage")({ component: Brokerage });
+
+function Brokerage() {
+  return (
+    <ServicePage
+      title="Brokerage"
+      lead="Buy and hold Australian and global shares and ETFs through a licensed Australian broker, right next to the rest of your money in Maal."
+      points={[
+        "ASX and global shares and ETFs, held through a licensed partner broker",
+        "Profit-based and interest-free options shown first",
+        "Holdings flow straight into your net worth and Invest page",
+      ]}
+      interestKey="brokerage"
+      today={[
+        { to: "/app/wealth/investments", title: "Track your investments", text: "Add holdings from any broker and see them in your net worth." },
+        { to: "/app/research", title: "Research a company", text: "Get a sourced summary of an ASX or global company before you decide." },
+        { to: "/app/radar", title: "Set a radar", text: "Get an alert when news or prices move on something you hold." },
+      ]}
+    />
+  );
+}

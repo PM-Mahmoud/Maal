@@ -1,0 +1,29 @@
+/* Section tabs + service pages (Track / Services nav, 2026-11-15). Uses the
+   Home tokens (--mh-*) defined in home/home.css, which AppShell loads. */
+.mn-tabs { position: sticky; top: 0; z-index: 20; background: var(--mh-bg, #F8F9F6); border-bottom: 1px solid var(--mh-line, #E4E5E2); padding: 14px 24px 0; }
+@media (min-width: 768px) { .mn-tabs { top: 48px; } }
+.mn-tabs-title { display: block; font-family: var(--mh-serif, Lora, serif); font-size: 22px; color: var(--mh-ink, #121313); margin-bottom: 8px; }
+.mn-tabs-row { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin: 0 -4px; }
+.mn-tabs-row::-webkit-scrollbar { display: none; }
+.mn-tab { flex: 0 0 auto; padding: 8px 12px 10px; font-size: 14px; color: var(--mh-muted, #686969); text-decoration: none; border-bottom: 2px solid transparent; white-space: nowrap; }
+.mn-tab:hover { color: var(--mh-ink, #121313); }
+.mn-tab[data-active="true"] { color: var(--mh-ink, #121313); border-bottom-color: var(--mh-btn, #020109); font-weight: 500; }
+
+.mn-page { max-width: 1100px; margin: 0 auto; padding: 28px 20px 56px; color: var(--mh-ink, #121313); }
+.mn-kicker { display: inline-block; font-size: 12px; letter-spacing: .02em; padding: 4px 10px; border-radius: 999px; background: var(--mh-badge, #D6F7FF); color: var(--mh-badge-ink, #006B87); }
+.mn-h1 { font-family: var(--mh-serif, Lora, serif); font-weight: 400; font-size: clamp(28px, 4vw, 40px); line-height: 1.15; margin: 12px 0 8px; }
+.mn-lead { color: var(--mh-muted, #686969); font-size: 16px; line-height: 1.55; max-width: 680px; }
+.mn-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 24px; }
+.mn-card { background: var(--mh-card, #fff); border: 1px solid var(--mh-line, #E4E5E2); border-radius: 14px; padding: 20px; }
+.mn-card h2, .mn-card h3 { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+.mn-card p { color: var(--mh-muted, #686969); font-size: 14px; line-height: 1.5; margin: 0; }
+.mn-card a.mn-link { display: inline-block; margin-top: 12px; font-size: 14px; color: var(--mh-ink, #121313); font-weight: 500; }
+.mn-section { margin-top: 36px; }
+.mn-section > h2 { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+.mn-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: 8px; border: 0; background: var(--mh-btn, #020109); color: var(--mh-btn-ink, #fff); font-size: 15px; font-weight: 500; cursor: pointer; text-decoration: none; }
+.mn-btn[disabled] { opacity: .6; cursor: default; }
+.mn-btn-outline { background: transparent; color: var(--mh-ink, #121313); border: 1px solid var(--mh-btn-line, #777875); }
+.mn-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; align-items: center; }
+.mn-note { font-size: 13px; color: var(--mh-muted, #686969); }
+.mn-list { margin: 10px 0 0; padding-left: 18px; color: var(--mh-muted, #686969); font-size: 14px; line-height: 1.6; }
+.mn-disclaimer { margin-top: 40px; font-size: 12px; color: var(--mh-faint, #999A97); text-align: center; }
