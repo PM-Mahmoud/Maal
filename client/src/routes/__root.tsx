@@ -25,7 +25,6 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="fixed top-0 inset-x-0 h-[3px] bg-[var(--mint)] z-[60]" />
       <Outlet />
       <Toaster richColors position="top-right" />
     </QueryClientProvider>
