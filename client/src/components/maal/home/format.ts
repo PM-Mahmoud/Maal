@@ -26,6 +26,15 @@ export function audCompact(n: number) {
 function trim(x: number) {
   return x >= 100 ? Math.round(x).toString() : x.toFixed(1).replace(/\.0$/, "");
 }
+/** Axis tick label with enough precision that neighbouring ticks differ. */
+export function audTick(n: number, span: number) {
+  const a = Math.abs(n);
+  const sign = n < 0 ? "-" : "";
+  const [div, unit] = a >= 1_000_000 ? [1_000_000, "M"] : a >= 1_000 ? [1_000, "K"] : [1, ""];
+  const s = span / div;
+  const digits = div === 1 ? 0 : s >= 4 ? 0 : s >= 0.4 ? 1 : 2;
+  return `${sign}$${(a / div).toFixed(digits)}${unit}`;
+}
 export function pctText(p: number | null) {
   return p === null ? "" : ` (${Math.abs(p).toFixed(2)}%)`;
 }

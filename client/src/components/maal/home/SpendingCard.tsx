@@ -7,7 +7,7 @@ import { monthSpending } from "../../../../../shared/home-accounts.mjs";
 import { AskSparkButton, HomeCard } from "./HomeCard";
 import { CONNECT_PATH } from "./NetWorthCard";
 import type { Txn } from "./useHomeData";
-import { aud, signedCents, shortDate } from "./format";
+import { aud, audCompact, signedCents, shortDate } from "./format";
 
 function iconFor(t: Txn) {
   const c = `${t.category || ""} ${(t as any).category_group || ""} ${t.description || ""}`.toLowerCase();
@@ -67,7 +67,7 @@ export function SpendingCard({ transactions, loading, error }: { transactions: T
                   <div key={day} role="listitem" className="mh-day" data-today={isToday} data-future={future} data-past={!future && !isToday}
                     aria-label={`${day} ${monthName}: ${future ? "upcoming" : aud(v ?? 0)}`}>
                     <span>{day}</span>
-                    <b>{future ? "–" : aud(v ?? 0)}</b>
+                    <b>{future ? "–" : (v ?? 0) >= 1000 ? audCompact(v ?? 0) : aud(v ?? 0)}</b>
                   </div>
                 );
               })}

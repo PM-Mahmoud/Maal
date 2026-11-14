@@ -138,7 +138,7 @@ export function NetWorthCard({
             ) : privacy ? (
               // Privacy mode: the balance is hidden; only the movement shows.
               <>
-                <p className="mh-big mh-delta" data-tone={tone} style={{ marginTop: 0 }}>{deltaText}</p>
+                <p className="mh-big mh-delta" data-tone={tone} style={{ marginTop: 0, fontSize: 32 }}>{deltaText}</p>
                 <p className="sr-only">Net worth hidden while privacy mode is on.</p>
               </>
             ) : (

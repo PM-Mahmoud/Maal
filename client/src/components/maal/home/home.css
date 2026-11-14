@@ -57,6 +57,47 @@ html.dark .mh, html.dark .mh-shell {
   --mh-today: #3AA5EC;
 }
 
+/* ---------- No cream inside the app ----------
+   globals.css still defines the legacy cream palette (--background #F3E9D2,
+   --surface/--card #FBF5E7, beige secondary/border). While the app shell is
+   mounted, re-point those shared tokens at the v2 page palette so the body,
+   gutters, every Tailwind bg-background/bg-[var(--surface)] surface inside
+   pages (trial banner, widgets, modals portalled to <body>) render on #F8F9F6
+   / white. Light theme only; .dark keeps its own tokens. */
+html:not(.dark):has(.mh-shell) {
+  --background: #F8F9F6;
+  --surface: #FFFFFF;
+  --card: #FFFFFF;
+  --popover: #FFFFFF;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F1F2EF;
+  --muted: #F1F2EF;
+  --accent: #F1F2EF;
+  --border: #E4E5E2;
+  --input: #E4E5E2;
+  --sidebar: #F8F9F6;
+  --sidebar-border: #E4E5E2;
+  --sidebar-accent: #F1F2EF;
+  --destructive-foreground: #FFFFFF;
+}
+html:not(.dark):has(.mh-shell), html:not(.dark):has(.mh-shell) body { background: #F8F9F6; }
+/* Dark: swap the warm-brown legacy dark palette for the neutral v2 night tones. */
+html.dark:has(.mh-shell) {
+  --background: #0B0D12;
+  --surface: #13161B;
+  --card: #13161B;
+  --popover: #13161B;
+  --secondary: #1D2127;
+  --muted: #1D2127;
+  --accent: #1D2127;
+  --border: #262A31;
+  --input: #262A31;
+  --sidebar: #0B0D12;
+  --sidebar-border: #262A31;
+  --sidebar-accent: #1D2127;
+}
+html.dark:has(.mh-shell), html.dark:has(.mh-shell) body { background: #0B0D12; }
+
 /* ---------- App shell ---------- */
 .mh-shell { background: var(--mh-bg); color: var(--mh-ink); font-family: var(--mh-sans); }
 .mh-side { background: var(--mh-bg); border-right: 1px solid var(--mh-line); }
@@ -221,7 +262,14 @@ html:not(.dark) .mh-range[aria-pressed="true"] { background: #F5F5F4; }
 .mh-day[data-today="true"] { background: var(--mh-today); border-color: var(--mh-today); color: rgba(255,255,255,.85); }
 .mh-day[data-today="true"] b { color: #fff; }
 .mh-day[data-future="true"] b { color: var(--mh-faint); }
-@media (max-width: 480px) { .mh-day { min-height: 46px; padding: 4px; font-size: 11px; } .mh-day b { font-size: 11px; } }
+@media (max-width: 480px) {
+  .mh-page { padding-left: 14px; padding-right: 14px; }
+  .mh-card-body { padding: 16px; }
+  .mh-card-head { padding: 14px 16px; min-height: 68px; }
+  .mh-cal { gap: 3px; }
+  .mh-day { min-height: 44px; padding: 3px; font-size: 10px; }
+  .mh-day b { font-size: 10.5px; letter-spacing: -.02em; text-overflow: clip; }
+}
 .mh-section-label { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--mh-muted); margin: 0 0 10px; }
 .mh-txn { display: flex; align-items: center; gap: 14px; padding: 14px 4px; border-top: 1px solid var(--mh-line); }
 .mh-txn:first-of-type { border-top: 0; }

@@ -20,7 +20,8 @@ function initials(name: string) {
 /** Greeting, Overview / Net worth tabs and the round action buttons. */
 export function HomeHeader({ name }: { name: string }) {
   const router = useRouter();
-  const first = name ? name.split(/\s+/)[0] : "";
+  // display_name, or the email local part ("sam.lee") as a fallback.
+  const first = name ? name.trim().split(/[\s._-]+/)[0] : "";
   const display = first ? first.charAt(0).toUpperCase() + first.slice(1) : "";
   return (
     <header>
