@@ -84,8 +84,9 @@ const sessionMiddleware = require('express-session')({
 // bundle's JS chunks, favicons and images after the session middleware fired a
 // Postgres session SELECT for each one — dozens of needless Neon round-trips per
 // page load. Static files never need a session, so short-circuit them here.
-app.use(express.static(path.join(__dirname, 'public'), { index: false }));
-app.use('/assets', express.static(path.join(__dirname, 'public', 'app', 'assets')));
+// redirect:false — folder paths such as /app/assets (a SPA route that is also a
+// folder under public/) fall through to the SPA instead of 301-ing to a slash.
+require('./lib/static-assets').mountStatic(app, path.join(__dirname, 'public'));
 
 app.use(sessionMiddleware);
 
