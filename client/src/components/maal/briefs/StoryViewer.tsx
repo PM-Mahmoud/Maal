@@ -67,7 +67,7 @@ export function StoryViewer({
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="mb-stage">
-        <button type="button" className="mb-nav" onClick={() => go(-1)} disabled={safeIndex === 0} aria-label="Previous">
+        <button type="button" className="mb-nav" onClick={() => go(-1)} disabled={safeIndex === 0} aria-label="Previous slide">
           <ChevronLeft size={30} strokeWidth={1.6} />
         </button>
 
@@ -93,7 +93,7 @@ export function StoryViewer({
             <div className="mb-progress" aria-hidden="true">
               {slides.map((s, i) => <span key={s.key} className={i <= safeIndex ? "on" : ""} />)}
             </div>
-            <button type="button" className="mb-icon-btn" onClick={onClose} aria-label="Close">
+            <button type="button" className="mb-icon-btn" onClick={onClose} aria-label={`Close ${label}`}>
               <X size={20} strokeWidth={1.6} />
             </button>
           </div>
@@ -104,7 +104,7 @@ export function StoryViewer({
           )}
         </div>
 
-        <button type="button" className="mb-nav" onClick={() => go(1)} disabled={safeIndex >= count - 1} aria-label="Next">
+        <button type="button" className="mb-nav" onClick={() => go(1)} disabled={safeIndex >= count - 1} aria-label="Next slide">
           <ChevronRight size={30} strokeWidth={1.6} />
         </button>
       </div>

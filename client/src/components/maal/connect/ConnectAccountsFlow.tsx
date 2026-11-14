@@ -374,16 +374,17 @@ export function ConnectAccountsFlow({
             {(["bank", "super", "investment"] as InstitutionCategory[]).map((c) => {
               const logos = byCategory(c);
               return (
-                <button key={c} type="button" className="cx-cat" onClick={() => setCategory(c)}>
-                  <span className="cx-cat-logos">{logos.map((i) => <Logo key={i.id ?? i.slug ?? i.name} inst={i} size={40} />)}</span>
+                <button key={c} type="button" className="cx-cat" onClick={() => setCategory(c)}
+                  aria-label={c === "bank" ? "Connect bank accounts and credit cards" : c === "super" ? "Connect your super" : "Connect investment accounts"}>
+                  <span className="cx-cat-logos" aria-hidden="true">{logos.map((i) => <Logo key={i.id ?? i.slug ?? i.name} inst={i} size={40} />)}</span>
                   <span className="cx-cat-title">
                     {c === "bank" ? "Connect bank accounts and credit cards" : c === "super" ? "Connect your super" : "Connect investment accounts"}
                   </span>
                 </button>
               );
             })}
-            <button type="button" className="cx-cat" onClick={() => setStep("manual")}>
-              <span className="cx-cat-logos"><span className="cx-plus" style={{ width: 40, height: 40, borderRadius: "50%", background: "#EEE", display: "grid", placeItems: "center" }}><Plus className="size-5" strokeWidth={1.5} /></span></span>
+            <button type="button" className="cx-cat" onClick={() => setStep("manual")} aria-label="Add an account or asset manually">
+              <span className="cx-cat-logos" aria-hidden="true"><span className="cx-plus" style={{ width: 40, height: 40, borderRadius: "50%", background: "#EEE", display: "grid", placeItems: "center" }}><Plus className="size-5" strokeWidth={1.5} /></span></span>
               <span className="cx-cat-title">Add an account or asset manually</span>
             </button>
           </>
@@ -501,8 +502,8 @@ export function ConnectAccountsFlow({
             <span className="cx-mtile-title">Import from a bank statement or .csv</span>
           </a>
           {MANUAL_TILES.map((t) => (
-            <button key={t.kind} type="button" className="cx-mtile" onClick={() => { setManualKind(t.kind); setStep("manual-form"); }}>
-              <span className="cx-micon">{t.icon}</span>
+            <button key={t.kind} type="button" className="cx-mtile" onClick={() => { setManualKind(t.kind); setStep("manual-form"); }} aria-label={t.label}>
+              <span className="cx-micon" aria-hidden="true">{t.icon}</span>
               <span className="cx-mtile-title">{t.label}</span>
             </button>
           ))}

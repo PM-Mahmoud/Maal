@@ -31,7 +31,7 @@ function EntryCard({
 }) {
   return (
     <div className="mb-entry">
-      <button type="button" onClick={onOpen} className="mb-entry-open">
+      <button type="button" onClick={onOpen} className="mb-entry-open" aria-label={`Open ${title}: ${subtitle}`}>
         <div className="mb-entry-head"><span>{kicker}</span></div>
         <div className="mb-entry-body">
           <p className="mb-entry-title">{title}</p>
@@ -58,7 +58,7 @@ export function HomeBriefCards({ show = ["recap", "market"], className }: { show
   const recap = useQuery({ queryKey: briefKeys.recap, queryFn: getWeeklyRecap, staleTime: 10 * 60 * 1000, enabled: show.includes("recap") });
   const market = useQuery({ queryKey: briefKeys.market, queryFn: getMarketBrief, staleTime: 30 * 60 * 1000, enabled: show.includes("market") });
 
-  const recapPeriod = recap.data?.period.start;
+  const recapPeriod = recap.data?.period?.start;
   const marketPeriod = market.data?.date;
 
   function dismiss(id: BriefId, period: string | undefined) {
@@ -74,7 +74,7 @@ export function HomeBriefCards({ show = ["recap", "market"], className }: { show
         key="recap"
         kicker="Personal recap"
         title="Your weekly recap"
-        subtitle={recap.data ? recap.data.period.longLabel : recap.isError ? "Your last seven days, summarised" : "Loading your week…"}
+        subtitle={recap.data?.period?.longLabel ? recap.data.period.longLabel : recap.isError ? "Your last seven days, summarised" : "Loading your week…"}
         onOpen={() => setOpen("recap")}
         onDismiss={recapPeriod ? () => dismiss("recap", recapPeriod) : undefined}
       />,
@@ -86,7 +86,7 @@ export function HomeBriefCards({ show = ["recap", "market"], className }: { show
         key="market"
         kicker="Market brief"
         title="Daily market brief"
-        subtitle={market.data ? market.data.headline : "ASX, the Aussie dollar and global markets, explained"}
+        subtitle={market.data?.headline ? market.data.headline : "ASX, the Aussie dollar and global markets, explained"}
         onOpen={() => setOpen("market")}
         onDismiss={marketPeriod ? () => dismiss("market", marketPeriod) : undefined}
       />,
