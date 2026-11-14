@@ -1,17 +1,30 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
 import { createThread } from "@/lib/advisor.functions";
+import { supabase } from "@/integrations/api";
 import { MANDATORY_DISCLAIMER, sendBriefFeedback, type BriefKind } from "./api";
 
 /** "More like this" / "Less like this" (Figma: Giving feedback from Weekly
  *  recap). The selected chip turns black; the vote is saved to the feedback
  *  table. Picking the other chip records the change. */
 export function FeedbackButtons({ brief, slide, period }: { brief: BriefKind; slide: string; period: string }) {
-  const storageKey = `maal_brief_fb:${brief}:${period}:${slide}`;
-  const [vote, setVote] = useState<"more" | "less" | null>(() => {
-    try { const v = localStorage.getItem(storageKey); return v === "more" || v === "less" ? v : null; } catch { return null; }
-  });
+  // The remembered vote is scoped to the signed-in user, so someone else on
+  // the same browser doesn't see it. No user id → nothing is read or stored.
+  const [userId, setUserId] = useState<string | null>(null);
+  const storageKey = userId ? `maal_brief_fb:${userId}:${brief}:${period}:${slide}` : null;
+  const [vote, setVote] = useState<"more" | "less" | null>(null);
+  useEffect(() => {
+    let alive = true;
+    supabase.auth.getUser()
+      .then(({ data }) => { if (alive) setUserId(data.user?.id ? String(data.user.id) : null); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  useEffect(() => {
+    if (!storageKey) return;
+    try { const v = localStorage.getItem(storageKey); setVote(v === "more" || v === "less" ? v : null); } catch { /* ignore */ }
+  }, [storageKey]);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const statusId = useId();
 
@@ -22,7 +35,7 @@ export function FeedbackButtons({ brief, slide, period }: { brief: BriefKind; sl
     setStatus("idle");
     try {
       await sendBriefFeedback({ brief, slide, vote: next, period });
-      try { localStorage.setItem(storageKey, next); } catch { /* ignore */ }
+      if (storageKey) { try { localStorage.setItem(storageKey, next); } catch { /* ignore */ } }
       setStatus("saved");
     } catch {
       setVote(previous);
@@ -68,7 +81,9 @@ export function TrendChart({
   const W = 522;
   const H = height;
   const pad = 8;
-  const pts = values.length === 1 ? [values[0], values[0]] : values;
+  // Tolerate a missing/odd series from the API: chart only finite numbers.
+  const clean = Array.isArray(values) ? values.filter((v) => typeof v === "number" && Number.isFinite(v)) : [];
+  const pts = clean.length === 1 ? [clean[0], clean[0]] : clean;
   if (!pts.length) return null;
   const min = Math.min(...pts);
   const max = Math.max(...pts);

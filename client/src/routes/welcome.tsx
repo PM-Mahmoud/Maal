@@ -123,9 +123,9 @@ function Welcome() {
               {GOALS.map((g) => {
                 const on = goals.includes(g.id);
                 return (
-                  <button key={g.id} type="button" className={`wl-option${on ? " on" : ""}`} aria-pressed={on}
+                  <button key={g.id} type="button" className={`wl-option${on ? " on" : ""}`} aria-pressed={on} aria-label={g.label}
                     onClick={() => setGoals((cur) => (on ? cur.filter((x) => x !== g.id) : [...cur, g.id]))}>
-                    <span className="wl-option-icon">{g.icon}</span>{g.label}
+                    <span className="wl-option-icon" aria-hidden="true">{g.icon}</span>{g.label}
                     {on && <Check className="size-4 wl-tick" aria-hidden="true" />}
                   </button>
                 );

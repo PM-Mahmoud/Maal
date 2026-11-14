@@ -256,6 +256,14 @@
 .mb-entry-sub { margin-top: 2px !important; font-size: 15px; line-height: 1.35; color: #62705A; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mb-badge { display: inline-block; margin-left: 10px; padding: 2px 8px; border-radius: 999px; background: var(--mb-badge); color: var(--mb-badge-ink); font-size: 10px; letter-spacing: 1.2px; vertical-align: middle; }
 
+/* Dark mode (html.dark) — matches the Home card tokens in home.css. */
+html.dark .mb-entry { background: #13161B; border-color: #262A31; color: #F2F3F1; }
+html.dark .mb-entry:hover { box-shadow: 0 6px 22px rgba(0, 0, 0, .35); }
+html.dark .mb-entry-head { border-bottom-color: #262A31; color: #A3A6A9; }
+html.dark .mb-entry-title, html.dark .mb-entry-close { color: #F2F3F1; }
+html.dark .mb-entry-sub { color: #A3A6A9; }
+html.dark .mb-entry-open:focus-visible, html.dark .mb-entry-close:focus-visible { outline-color: #4DB0F0; }
+
 /* ── Full-page route wrapper ───────────────────────────────── */
 .mb-page { min-height: 100dvh; background: var(--mb-page); }
 

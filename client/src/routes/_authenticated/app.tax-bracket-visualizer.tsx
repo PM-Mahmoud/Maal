@@ -140,7 +140,7 @@ function TaxBracketVisualizer() {
         <Reveal className="max-w-2xl">
           <div className="flex items-center gap-3">
             <span className="section-number">🧾</span>
-            <span className="eyebrow-bullet">Tax Bracket Visualizer</span>
+            <span className="eyebrow-bullet">Tax Bracket Visualiser</span>
           </div>
           <h2 className="mt-3 tracking-display text-3xl sm:text-4xl">
             See exactly where your <span className="text-gradient-mint">tax dollars go.</span>

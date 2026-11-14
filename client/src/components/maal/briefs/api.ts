@@ -62,12 +62,43 @@ async function getJson<T>(url: string): Promise<T> {
   return r.json() as Promise<T>;
 }
 
-export function getWeeklyRecap() {
-  return getJson<WeeklyRecap>("/api/v1/briefs/weekly-recap");
+// Shape checks: an unexpected payload (e.g. `[]`, or a missing `period`) is
+// turned into a query error so the Home cards and stories show their error
+// state instead of throwing during render and taking the page down.
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+const isStr = (v: unknown): v is string => typeof v === "string";
+const isCopy = (v: unknown) => isObj(v) && isStr(v.title) && Array.isArray(v.body);
+
+export function isWeeklyRecap(v: unknown): v is WeeklyRecap {
+  if (!isObj(v)) return false;
+  const p = v.period;
+  if (!isObj(p) || !isStr(p.start) || !isStr(p.label) || !isStr(p.longLabel)) return false;
+  const { netWorth: nw, spending: sp, cashFlow: cf, goals: g } = v;
+  return (
+    isObj(nw) && isCopy(nw.copy) && Array.isArray(nw.series) &&
+    isObj(sp) && isCopy(sp.copy) && Array.isArray(sp.categories) &&
+    isObj(cf) && isCopy(cf.copy) &&
+    isObj(g) && isCopy(g.copy) && Array.isArray(g.items)
+  );
 }
 
-export function getMarketBrief() {
-  return getJson<MarketBrief>("/api/v1/briefs/market-brief");
+export function isMarketBrief(v: unknown): v is MarketBrief {
+  return (
+    isObj(v) && isStr(v.date) && isStr(v.headline) &&
+    Array.isArray(v.story) && Array.isArray(v.indices) && Array.isArray(v.sources)
+  );
+}
+
+export async function getWeeklyRecap(): Promise<WeeklyRecap> {
+  const data: unknown = await getJson("/api/v1/briefs/weekly-recap");
+  if (!isWeeklyRecap(data)) throw new Error("Unexpected weekly recap response");
+  return data;
+}
+
+export async function getMarketBrief(): Promise<MarketBrief> {
+  const data: unknown = await getJson("/api/v1/briefs/market-brief");
+  if (!isMarketBrief(data)) throw new Error("Unexpected market brief response");
+  return data;
 }
 
 export type BriefKind = "weekly_recap" | "market_brief";

@@ -107,6 +107,7 @@ const usageDb = require('../db/usage');
 // Effective plan = stored plan + 14-day trial (services/access.js). Trial users
 // get member limits; an expired trial without a paid plan is 'free' (paywall).
 const access = require('../services/access');
+const { unknownColumnMessage } = require('../lib/db-errors');
 async function effectivePlanFor(user) {
   return (await access.forUser(user)).plan;
 }
@@ -1637,6 +1638,10 @@ router.all('/v1/:table', async (req, res) => {
   } catch (e) {
     console.error(`api /v1/${table} ${req.method} error:`, e.message);
     if (req.method === 'GET') return res.json([]);
+    if (req.method === 'POST') {
+      const badField = unknownColumnMessage(e, table);
+      if (badField) return res.status(400).json({ error: badField });
+    }
     res.status(500).json({ error: 'An internal error occurred' });
   }
 });
