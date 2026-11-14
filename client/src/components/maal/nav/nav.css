@@ -1,15 +1,15 @@
 /* Section tabs + service pages (Track / Services nav, 2026-11-15). Uses the
    Home tokens (--mh-*) defined in home/home.css, which AppShell loads. */
-.mn-tabs { position: sticky; top: 0; z-index: 20; background: var(--mh-bg, #F8F9F6); border-bottom: 1px solid var(--mh-line, #E4E5E2); padding: 14px 24px 0; }
+.mn-tabs { position: sticky; top: 0; z-index: 20; background: var(--mh-bg, #F8F9F6); border-bottom: 1px solid var(--mh-line, #E4E5E2); padding: 14px var(--mh-gutter, 16px) 0; }
 @media (min-width: 768px) { .mn-tabs { top: 48px; } }
 .mn-tabs-title { display: block; font-family: var(--mh-serif, Lora, serif); font-size: 22px; color: var(--mh-ink, #121313); margin-bottom: 8px; }
-.mn-tabs-row { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin: 0 -4px; }
+.mn-tabs-row { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; }
 .mn-tabs-row::-webkit-scrollbar { display: none; }
 .mn-tab { flex: 0 0 auto; padding: 8px 12px 10px; font-size: 14px; color: var(--mh-muted, #686969); text-decoration: none; border-bottom: 2px solid transparent; white-space: nowrap; }
 .mn-tab:hover { color: var(--mh-ink, #121313); }
 .mn-tab[data-active="true"] { color: var(--mh-ink, #121313); border-bottom-color: var(--mh-btn, #020109); font-weight: 500; }
 
-.mn-page { max-width: 1100px; margin: 0 auto; padding: 28px 20px 56px; color: var(--mh-ink, #121313); }
+.mn-page { max-width: 1100px; margin: 0 auto 0 0; padding: 28px var(--mh-gutter, 16px) 56px; box-sizing: content-box; color: var(--mh-ink, #121313); }
 .mn-kicker { display: inline-block; font-size: 12px; letter-spacing: .02em; padding: 4px 10px; border-radius: 999px; background: var(--mh-badge, #D6F7FF); color: var(--mh-badge-ink, #006B87); }
 .mn-h1 { font-family: var(--mh-serif, Lora, serif); font-weight: 400; font-size: clamp(28px, 4vw, 40px); line-height: 1.15; margin: 12px 0 8px; }
 .mn-lead { color: var(--mh-muted, #686969); font-size: 16px; line-height: 1.55; max-width: 680px; }
@@ -29,9 +29,9 @@
 .mn-disclaimer { margin-top: 40px; font-size: 12px; color: var(--mh-faint, #999A97); text-align: center; }
 
 /* Empty placeholder pages (awaiting final Figma designs, 2026-11-15). */
-.mn-empty { display: flex; flex-direction: column; min-height: calc(100vh - 48px); background: #F8F9F6; color: var(--mh-ink, #121313); padding: 28px 16px 24px; box-sizing: border-box; }
-@media (min-width: 768px) { .mn-empty { padding: 40px 24px 28px; } }
-.mn-empty-inner { flex: 1; width: 100%; max-width: 1100px; margin: 0 auto; }
+.mn-empty { display: flex; flex-direction: column; min-height: calc(100vh - 48px); background: #F8F9F6; color: var(--mh-ink, #121313); padding: 28px var(--mh-gutter, 16px) 24px; box-sizing: border-box; }
+@media (min-width: 768px) { .mn-empty { padding-top: 40px; padding-bottom: 28px; } }
+.mn-empty-inner { flex: 1; width: 100%; max-width: var(--mh-max, 1600px); margin: 0; }
 .mn-empty-title { font-family: var(--mh-serif, Lora, serif); font-weight: 400; font-size: clamp(28px, 4vw, 40px); line-height: 1.15; margin: 0 0 8px; overflow-wrap: anywhere; }
 .mn-empty-text { margin: 0; color: var(--mh-muted, #686969); font-size: 15px; line-height: 1.55; }
-.mn-empty-disclaimer { width: 100%; max-width: 680px; margin: 40px auto 0; font-size: 12px; line-height: 1.5; color: var(--mh-faint, #999A97); text-align: center; }
+.mn-empty-disclaimer { width: 100%; max-width: 680px; margin: 40px 0 0; font-size: 12px; line-height: 1.5; color: var(--mh-faint, #999A97); text-align: left; }
