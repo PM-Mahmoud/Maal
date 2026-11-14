@@ -321,7 +321,7 @@ export function ConnectAccountsFlow({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={category ? `Search ${CATEGORY_COPY[category].toLowerCase()}` : "Search Australian banks, super and brokers"}
+            placeholder={category ? `Search ${CATEGORY_COPY[category].toLowerCase()}` : "Search banks, super funds and brokers"}
             aria-label="Search institutions"
             autoComplete="off"
           />
