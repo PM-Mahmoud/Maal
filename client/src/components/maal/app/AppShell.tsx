@@ -6,11 +6,13 @@ import { Disclaimer } from "@/components/maal/Disclaimer";
 import { MaalMark } from "@/components/maal/MaalMark";
 import { ThemeToggle } from "@/components/maal/ThemeToggle";
 import { NotificationBell } from "@/components/maal/app/NotificationBell";
+import { initPrivacy } from "@/components/maal/home/prefs";
+import "@/components/maal/home/home.css";
 import {
-  LayoutDashboard, MessageCircle, FileSearch, Radar as RadarIcon,
-  Wallet, FolderLock, ArrowLeftRight, Target, UserCircle2, Landmark, Home,
+  MessageCircle, FileSearch, Radar as RadarIcon,
+  Wallet, FolderLock, ArrowLeftRight, Target, UserCircle2, Landmark, Home, Building2,
   MessageSquarePlus, Map, LifeBuoy, ChevronDown, LogOut,
-  X, Lightbulb, CreditCard, Menu,
+  X, Lightbulb, CreditCard, Menu, Sparkles,
   PiggyBank, Receipt, Calculator, TrendingDown, Dices,
   BarChart3, BriefcaseBusiness,
   HandCoins, ShieldCheck, Store,
@@ -22,20 +24,23 @@ import { ClipboardList, ListChecks } from "lucide-react";
 export const SUPPORT_EMAIL = "hello@hellomaal.com";
 export const FOUNDER_CALENDAR_URL = "https://calendar.app.google/oh9aghBVTuQ4fvCH7";
 
+/** Any page can open the shell's support dialog: window.dispatchEvent(new Event(OPEN_SUPPORT_EVENT)). */
+export const OPEN_SUPPORT_EVENT = "maal:open-support";
+
 type Item = { to: string; label: string; icon: any; soon?: boolean };
 
 const TOP: Item[] = [
-  { to: "/app", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/app", label: "Home", icon: Home },
   { to: "/app/advisor", label: "Ask Maal", icon: MessageCircle },
   { to: "/app/research", label: "Research", icon: FileSearch },
   { to: "/app/radar", label: "Radar", icon: RadarIcon },
 ];
 
 const PORTFOLIO: Item[] = [
-  { to: "/app/assets", label: "Overview", icon: Wallet },
+  { to: "/app/assets", label: "Net worth", icon: Wallet },
   { to: "/app/wealth/cash", label: "Cash", icon: Landmark },
   { to: "/app/wealth/investments", label: "Investments", icon: BarChart3 },
-  { to: "/app/wealth/property", label: "Property", icon: Home },
+  { to: "/app/wealth/property", label: "Property", icon: Building2 },
   { to: "/app/wealth/super", label: "Super", icon: PiggyBank },
   { to: "/app/wealth/liabilities", label: "Liabilities", icon: TrendingDown },
   { to: "/app/wealth/other", label: "Other Assets", icon: BriefcaseBusiness },
@@ -68,117 +73,113 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState<string>("");
   const [portfolioOpen, setPortfolioOpen] = useState(true);
-  const [toolsOpen, setToolsOpen] = useState(true);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // Home renders its own header (greeting + actions + notifications).
+  const isHome = location.pathname === "/app" || location.pathname === "/app/";
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
+    initPrivacy();
+    const openSupport = () => setSupportOpen(true);
+    window.addEventListener(OPEN_SUPPORT_EVENT, openSupport);
+    return () => window.removeEventListener(OPEN_SUPPORT_EVENT, openSupport);
   }, []);
 
   function isActive(to: string) {
     return location.pathname === to || (to !== "/app" && location.pathname.startsWith(to));
   }
 
-  function NavLink({ item, indent = false }: { item: Item; indent?: boolean }) {
-    const active = isActive(item.to);
+  function NavLink({ item, onClick }: { item: Item; onClick?: () => void }) {
     const Icon = item.icon;
     return (
-      <Link
-        to={item.to}
-        className={`flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-[13px] font-medium transition-colors ${indent ? "pl-8" : ""} ${
-          active ? "bg-mint/15 text-mint" : "text-muted-foreground hover:bg-[var(--secondary)] hover:text-foreground"
-        }`}
-      >
-        <Icon className="size-4 shrink-0" />
+      <Link to={item.to} onClick={onClick} className="mh-nav" data-active={isActive(item.to)}
+        aria-current={isActive(item.to) ? "page" : undefined}>
+        <Icon aria-hidden />
         <span className="truncate">{item.label}</span>
       </Link>
     );
   }
 
+  function Section({ label, open, onToggle, items }: { label: string; open?: boolean; onToggle?: () => void; items: Item[] }) {
+    return (
+      <>
+        <p className="mh-side-label">
+          {onToggle ? (
+            <button onClick={onToggle} aria-expanded={open}>
+              {label}
+              <ChevronDown className={`size-3 transition-transform ${open ? "" : "-rotate-90"}`} />
+            </button>
+          ) : label}
+        </p>
+        {(open ?? true) && <div className="space-y-0.5">{items.map((n) => <NavLink key={n.to} item={n} />)}</div>}
+      </>
+    );
+  }
+
+  async function signOut() { await supabase.auth.signOut(); navigate({ to: "/" }); }
+
   return (
-    <div className="min-h-screen bg-background flex">
-      <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-border bg-[var(--surface)] sticky top-0 h-screen">
-        <div className="px-5 h-14 flex items-center gap-2 border-b border-border">
-          <MaalMark size={18} />
-          <Link to="/app" className="text-[16px] font-bold tracking-display">Maal</Link>
-        </div>
+    <div className="mh-shell min-h-screen flex">
+      <aside className="mh-side hidden md:flex w-[250px] lg:w-[272px] shrink-0 flex-col sticky top-0 h-screen">
+        <Link to="/app" className="flex items-center gap-2.5 px-6 pt-7 pb-4 text-[var(--mh-ink)] no-underline">
+          <MaalMark size={24} />
+          <span className="mh-brand">Maal</span>
+        </Link>
 
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          {TOP.map((n) => <NavLink key={n.to} item={n} />)}
-
-          <button
-            onClick={() => setPortfolioOpen((v) => !v)}
-            className="mt-3 w-full flex items-center justify-between px-3 py-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground hover:text-foreground"
-            aria-expanded={portfolioOpen}
-          >
-            My Wealth
-            <ChevronDown className={`size-3 transition-transform ${portfolioOpen ? "" : "-rotate-90"}`} />
-          </button>
-          {portfolioOpen && PORTFOLIO.map((n) => <NavLink key={n.to} item={n} indent />)}
-
-          <button
-            onClick={() => setToolsOpen((v) => !v)}
-            className="mt-3 w-full flex items-center justify-between px-3 py-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground hover:text-foreground"
-            aria-expanded={toolsOpen}
-          >
-            Calculators
-            <ChevronDown className={`size-3 transition-transform ${toolsOpen ? "" : "-rotate-90"}`} />
-          </button>
-          {toolsOpen && TOOLS.map((n) => <NavLink key={n.to} item={n} indent />)}
-
-          <div className="mt-5 pt-3 border-t border-border space-y-0.5">
-            <button
-              onClick={() => setFeedbackOpen(true)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-[13px] font-medium text-muted-foreground hover:bg-[var(--secondary)] hover:text-foreground"
-            >
-              <MessageSquarePlus className="size-4 shrink-0" />
-              <span className="truncate">Share Feedback</span>
-            </button>
-            <button
-              onClick={() => setSupportOpen(true)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-[13px] font-medium text-muted-foreground hover:bg-[var(--secondary)] hover:text-foreground"
-            >
-              <LifeBuoy className="size-4 shrink-0" />
-              <span className="truncate">Support</span>
-            </button>
+        <nav aria-label="Main navigation" className="flex-1 px-2.5 pb-4 overflow-y-auto">
+          <Section label="Track" items={TOP} />
+          <Section label="My wealth" items={PORTFOLIO} open={portfolioOpen} onToggle={() => setPortfolioOpen((v) => !v)} />
+          <Section label="Calculators" items={TOOLS} open={toolsOpen} onToggle={() => setToolsOpen((v) => !v)} />
+          <p className="mh-side-label">Account</p>
+          <div className="space-y-0.5">
             {BOTTOM.map((b) => <NavLink key={b.to} item={b} />)}
+            <button onClick={() => setFeedbackOpen(true)} className="mh-nav w-full bg-transparent border-0 cursor-pointer text-left">
+              <MessageSquarePlus aria-hidden /> <span className="truncate">Share feedback</span>
+            </button>
+            <button onClick={() => setSupportOpen(true)} className="mh-nav w-full bg-transparent border-0 cursor-pointer text-left">
+              <LifeBuoy aria-hidden /> <span className="truncate">Support</span>
+            </button>
           </div>
         </nav>
 
-        <div className="p-3 border-t border-border space-y-2">
-          <div className="flex items-center justify-between px-2">
-            <p className="text-[11px] text-muted-foreground truncate">{email}</p>
-            <ThemeToggle />
+        <div className="px-5 pb-5 pt-3 space-y-3">
+          <Link to="/app/advisor" className="mh-ask"><Sparkles className="size-4" aria-hidden /> Ask anything</Link>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] text-[var(--mh-muted)] truncate">{email}</p>
+            <div className="flex items-center gap-1.5">
+              <ThemeToggle />
+              <button onClick={signOut} aria-label="Sign out" title="Sign out"
+                className="grid size-7 place-items-center rounded-full text-[var(--mh-muted)] hover:text-[var(--mh-ink)] hover:bg-[var(--mh-chip)]">
+                <LogOut className="size-3.5" />
+              </button>
+            </div>
           </div>
-          <button
-            onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-[8px] text-[12px] text-muted-foreground hover:bg-[var(--secondary)] hover:text-foreground"
-          >
-            <LogOut className="size-4" /> Sign out
-          </button>
         </div>
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="hidden md:flex sticky top-0 z-30 h-12 bg-background/90 backdrop-blur border-b border-border items-center justify-end px-6 gap-2">
-          <NotificationBell />
-        </header>
-        <header className="md:hidden sticky top-0 z-30 h-14 bg-background/90 backdrop-blur border-b border-border flex items-center justify-between px-4">
-          <Link to="/app" className="text-[15px] font-bold tracking-display">
-            <span className="flex items-center gap-2"><MaalMark size={16} />Maal</span>
+        {!isHome && (
+          <header className="mh-topbar hidden md:flex sticky top-0 z-30 h-12 items-center justify-end px-6 gap-2">
+            <NotificationBell />
+          </header>
+        )}
+        <header className="mh-topbar md:hidden sticky top-0 z-30 h-14 flex items-center justify-between px-4">
+          <Link to="/app" className="flex items-center gap-2 text-[var(--mh-ink)] no-underline">
+            <MaalMark size={18} /><span className="mh-brand" style={{ fontSize: 22 }}>Maal</span>
           </Link>
           <div className="flex items-center gap-2">
             <NotificationBell />
             <button onClick={() => setMobileNavOpen(true)} aria-label="Open navigation"
-              className="grid size-9 place-items-center rounded-[8px] border border-border bg-[var(--surface)]">
+              className="grid size-9 place-items-center rounded-[8px] border border-[var(--mh-line)] bg-[var(--mh-card)]">
               <Menu className="size-4" />
             </button>
           </div>
         </header>
         <main className="flex-1">{children}</main>
-        <footer className="border-t border-border px-6 py-4">
+        <footer className="border-t border-[var(--mh-line)] px-6 py-4">
           <Disclaimer variant="inline" />
         </footer>
       </div>
@@ -187,55 +188,44 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <DialogPrimitive.Root open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 md:hidden" />
-          <DialogPrimitive.Content className="fixed inset-y-0 right-0 z-50 w-[min(88vw,360px)] overflow-y-auto border-l border-border bg-[var(--surface)] p-4 shadow-xl md:hidden">
-            <div className="mb-4 flex items-center justify-between">
-              <DialogPrimitive.Title className="flex items-center gap-2 text-[16px] font-bold">
-                <MaalMark size={17} /> Menu
+          <DialogPrimitive.Content className="mh-shell fixed inset-y-0 right-0 z-50 w-[min(88vw,360px)] overflow-y-auto border-l border-[var(--mh-line)] p-4 shadow-xl md:hidden">
+            <div className="mb-2 flex items-center justify-between">
+              <DialogPrimitive.Title className="flex items-center gap-2">
+                <MaalMark size={18} /> <span className="mh-brand" style={{ fontSize: 22 }}>Maal</span>
               </DialogPrimitive.Title>
-              <DialogPrimitive.Close aria-label="Close navigation" className="grid size-8 place-items-center text-muted-foreground">
+              <DialogPrimitive.Close aria-label="Close navigation" className="grid size-8 place-items-center text-[var(--mh-muted)]">
                 <X className="size-4" />
               </DialogPrimitive.Close>
             </div>
             <DialogPrimitive.Description className="sr-only">Navigate to any Maal dashboard feature or account action.</DialogPrimitive.Description>
-            <nav aria-label="Mobile dashboard navigation" className="space-y-5">
+            <nav aria-label="Mobile dashboard navigation">
               {[
-                { label: "Main", items: TOP },
-                { label: "My Wealth", items: PORTFOLIO },
+                { label: "Track", items: TOP },
+                { label: "My wealth", items: PORTFOLIO },
                 { label: "Calculators", items: TOOLS },
                 { label: "Account", items: BOTTOM },
               ].map((group) => (
                 <section key={group.label}>
-                  <h2 className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{group.label}</h2>
+                  <h2 className="mh-side-label font-normal">{group.label}</h2>
                   <div className="space-y-0.5">
-                    {group.items.map((item) => {
-                      const Icon = item.icon;
-                      const active = isActive(item.to);
-                      return (
-                        <Link key={item.to} to={item.to} onClick={() => setMobileNavOpen(false)}
-                          className={`flex items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13px] font-medium ${active ? "bg-mint/15 text-mint" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
-                          <Icon className="size-4" /> {item.label}
-                        </Link>
-                      );
-                    })}
+                    {group.items.map((item) => <NavLink key={item.to} item={item} onClick={() => setMobileNavOpen(false)} />)}
                   </div>
                 </section>
               ))}
-              <section className="border-t border-border pt-3">
-                <button onClick={() => { setMobileNavOpen(false); setFeedbackOpen(true); }}
-                  className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13px] text-muted-foreground hover:bg-secondary">
-                  <MessageSquarePlus className="size-4" /> Share Feedback
+              <section className="mt-4 border-t border-[var(--mh-line)] pt-3 space-y-0.5">
+                <button onClick={() => { setMobileNavOpen(false); setFeedbackOpen(true); }} className="mh-nav w-full bg-transparent border-0 text-left">
+                  <MessageSquarePlus aria-hidden /> Share feedback
                 </button>
-                <button onClick={() => { setMobileNavOpen(false); setSupportOpen(true); }}
-                  className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13px] text-muted-foreground hover:bg-secondary">
-                  <LifeBuoy className="size-4" /> Support
+                <button onClick={() => { setMobileNavOpen(false); setSupportOpen(true); }} className="mh-nav w-full bg-transparent border-0 text-left">
+                  <LifeBuoy aria-hidden /> Support
                 </button>
-                <div className="mt-2 flex items-center justify-between rounded-[8px] px-3 py-2">
-                  <span className="truncate text-[11px] text-muted-foreground">{email}</span>
+                <Link to="/app/advisor" onClick={() => setMobileNavOpen(false)} className="mh-ask mt-3"><Sparkles className="size-4" aria-hidden /> Ask anything</Link>
+                <div className="mt-2 flex items-center justify-between px-1 py-2">
+                  <span className="truncate text-[11px] text-[var(--mh-muted)]">{email}</span>
                   <ThemeToggle />
                 </div>
-                <button onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}
-                  className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13px] text-muted-foreground hover:bg-secondary">
-                  <LogOut className="size-4" /> Sign out
+                <button onClick={signOut} className="mh-nav w-full bg-transparent border-0 text-left">
+                  <LogOut aria-hidden /> Sign out
                 </button>
               </section>
             </nav>

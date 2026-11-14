@@ -35,20 +35,19 @@ export function SavedWidgets() {
   if (!loaded || widgets.length === 0) return null;
 
   return (
-    <section className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-10 pb-10">
+    <section className="mh-page" style={{ paddingTop: 0 }} aria-labelledby="mh-saved-label">
       <div className="flex items-center gap-2 mb-3">
-        <MessageCircle className="size-4 text-muted-foreground" />
-        <h2 className="text-[15px] font-bold tracking-display">Saved from Ask Maal</h2>
-        <Link to="/app/advisor" className="ml-auto text-[12px] text-muted-foreground hover:text-foreground">Open Ask Maal →</Link>
+        <MessageCircle className="size-4 mh-muted" aria-hidden />
+        <h2 id="mh-saved-label" className="mh-card-label m-0 font-normal">Saved from Ask Maal</h2>
+        <Link to="/app/advisor" className="ml-auto mh-small mh-muted hover:underline">Open Ask Maal →</Link>
       </div>
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-2 gap-5">
         {widgets.map((w) => (
           <WidgetRenderer
             key={w.id}
             widget={w}
             action={
-              <button onClick={() => onRemove(w.id)} aria-label="Remove widget"
-                className="text-muted-foreground hover:text-foreground">
+              <button onClick={() => onRemove(w.id)} aria-label="Remove widget" className="mh-close">
                 <X className="size-3.5" />
               </button>
             }
