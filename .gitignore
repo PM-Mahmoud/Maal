@@ -20,3 +20,4 @@ npm-debug.log*
 # as an extra migration. Never commit these — see DEPLOY.md "Migration gotchas".
 * [0-9].*
 * [0-9][0-9].*
+docs/batch-1-screens/
