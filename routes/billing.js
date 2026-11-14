@@ -61,6 +61,85 @@ async function ensureFirstYearCoupon(stripe) {
   }
 }
 
+
+// ─── Subscribe flow (onboarding v2 redesign) ────────────────────────────────
+// The full-screen /subscribe page (client/src/routes/subscribe.tsx) posts to
+// /billing/checkout with return_to=subscribe. Stripe then sends the user back
+// to /subscribe?status=processing&session_id=…, which polls GET /billing/status
+// until the plan is active (Payment processing → Payment success). Anything
+// else keeps the original /app/billing redirects, unchanged.
+//
+// The return target is a WHITELIST key, never a URL, so it can't be turned
+// into an open redirect.
+const RETURN_TARGETS = Object.freeze(['billing', 'subscribe']);
+function resolveReturnTarget(value) {
+  const v = String(value || '').toLowerCase();
+  return RETURN_TARGETS.includes(v) ? v : 'billing';
+}
+
+// Stripe Checkout redirect URLs for a target. baseUrl must already be the
+// trusted configured origin (no trailing slash).
+function checkoutUrls(baseUrl, planKey, target) {
+  if (resolveReturnTarget(target) === 'subscribe') {
+    return {
+      success_url: `${baseUrl}/subscribe?status=processing&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/subscribe?status=cancel`,
+    };
+  }
+  return {
+    success_url: `${baseUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}&plan=${planKey}`,
+    cancel_url: `${baseUrl}/app/billing?billing=cancel`,
+  };
+}
+
+// Where a no-Stripe checkout lands (demo grant, or a config error).
+function noStripeRedirect(target, outcome, planKey) {
+  if (resolveReturnTarget(target) === 'subscribe') {
+    return outcome === 'demo' ? '/subscribe?status=processing&demo=1' : '/subscribe?status=error&reason=config';
+  }
+  return outcome === 'demo' ? `/app/billing?billing=demo&plan=${planKey}` : '/app/billing?billing=error_config';
+}
+
+// GST: Australian prices are quoted GST-inclusive, so the GST inside a price
+// is 1/11 of it (10% on the ex-GST amount). Rounded to the nearest cent.
+function gstIncludedCents(cents) {
+  return Math.round(Number(cents) / 11);
+}
+
+// Everything the subscribe screens print about the price, computed here so the
+// copy can never drift from what Stripe charges. Integer cents throughout.
+function offerSummary() {
+  const first = membership.MEMBERSHIP.firstYearCents;
+  const renewal = membership.MEMBERSHIP.yearCents;
+  return {
+    currency: 'AUD',
+    gstInclusive: true,
+    firstYearCents: first,
+    renewalCents: renewal,
+    firstYear: membership.formatAud(first),
+    renewal: membership.formatAud(renewal),
+    firstYearGstCents: gstIncludedCents(first),
+    renewalGstCents: gstIncludedCents(renewal),
+    // Rounded DOWN so the badge never overstates the saving.
+    discountPercent: Math.floor((membership.FIRST_YEAR_DISCOUNT_CENTS / renewal) * 100),
+    trialDays: membership.TRIAL_DAYS,
+  };
+}
+
+// Classify a retrieved Checkout session for the current user.
+//   'paid'     → payment confirmed and the session is this user's
+//   'pending'  → this user's session, payment not confirmed yet (keep polling)
+//   'invalid'  → not this user's, unknown plan, or expired — stop polling
+function classifySession(stripeSession, userId) {
+  if (!stripeSession || !stripeSession.metadata) return 'invalid';
+  if (String(stripeSession.metadata.userId) !== String(userId)) return 'invalid';
+  const planKey = String(stripeSession.metadata.plan || '').toLowerCase();
+  if (!PLANS[planKey]) return 'invalid';
+  if (stripeSession.payment_status === 'paid' || stripeSession.payment_status === 'no_payment_required') return 'paid';
+  if (stripeSession.status === 'expired') return 'invalid';
+  return 'pending';
+}
+
 function requireAuth(req, res, next) {
   if (!req.session.userId) return res.redirect('/login');
   next();
@@ -188,6 +267,7 @@ function demoModeAllowed() {
 
 router.post('/checkout', requireAuth, async (req, res) => {
   const planKey = (req.body.plan || 'member').toLowerCase();
+  const returnTarget = resolveReturnTarget(req.body.return_to);
   const priced = resolvePrice(planKey);
   if (!priced) return res.redirect('/app/billing');
   const { plan, interval, amount, discount } = priced;
@@ -198,10 +278,10 @@ router.post('/checkout', requireAuth, async (req, res) => {
   if (!stripe) {
     if (!demoModeAllowed()) {
       console.warn('[billing] checkout with no Stripe configured and demo mode off — refusing. Set STRIPE_SECRET_KEY in the host env.');
-      return res.redirect('/app/billing?billing=error_config');
+      return res.redirect(noStripeRedirect(returnTarget, 'error', planKey));
     }
     await setUserPlan(req.session.userId, planKey);
-    return res.redirect(`/app/billing?billing=demo&plan=${planKey}`);
+    return res.redirect(noStripeRedirect(returnTarget, 'demo', planKey));
   }
 
   // Build redirect URLs only from a trusted configured origin — Host/proto are
@@ -209,7 +289,7 @@ router.post('/checkout', requireAuth, async (req, res) => {
   const baseUrl = (process.env.BASE_URL || '').replace(/\/+$/, '');
   if (!baseUrl) {
     console.error('[billing] BASE_URL not configured — cannot build Stripe redirect URLs. Set BASE_URL (e.g. https://www.hellomaal.com) in the host env.');
-    return res.redirect('/app/billing?billing=error_config');
+    return res.redirect(noStripeRedirect(returnTarget, 'error', planKey));
   }
 
   try {
@@ -237,8 +317,7 @@ router.post('/checkout', requireAuth, async (req, res) => {
           },
         },
       }],
-      success_url: `${baseUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}&plan=${planKey}`,
-      cancel_url: `${baseUrl}/app/billing?billing=cancel`,
+      ...checkoutUrls(baseUrl, planKey, returnTarget),
       metadata: { userId: String(req.session.userId), plan: planKey, interval },
     });
     // Save Stripe customer ID for webhook lookups
@@ -249,7 +328,7 @@ router.post('/checkout', requireAuth, async (req, res) => {
     return res.redirect(303, session.url);
   } catch (err) {
     console.error('Stripe checkout error:', err.message);
-    return res.redirect('/app/billing?billing=error_stripe');
+    return res.redirect(returnTarget === 'subscribe' ? '/subscribe?status=error&reason=stripe' : '/app/billing?billing=error_stripe');
   }
 });
 
@@ -281,6 +360,49 @@ router.get('/success', requireAuth, async (req, res) => {
     res.redirect('/app/billing?billing=error');
   }
 });
+
+
+// ─── GET /billing/status — JSON for the Payment processing screen ───────────
+// Polled by /subscribe?status=processing. With a session_id (real Checkout)
+// it verifies the session server-side exactly like /billing/success (plan from
+// metadata, session must belong to this user) and activates the plan, so the
+// page resolves even if the webhook is slow. Without one (demo) it reports the
+// stored plan. Nothing from the query is trusted except the session id.
+router.get('/status', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const offer = offerSummary();
+  try {
+    const { rows } = await pool.query('SELECT plan FROM users WHERE id = $1', [req.session.userId]);
+    const plan = String((rows[0] && rows[0].plan) || 'free').toLowerCase();
+    const active = membership.isPaidPlan(plan);
+    const stripe = getStripe();
+    const sessionId = typeof req.query.session_id === 'string' ? req.query.session_id : '';
+
+    if (active || !stripe || !sessionId) {
+      return res.json({ state: active ? 'active' : 'pending', plan, demo: !stripe, offer });
+    }
+
+    const stripeSession = await stripe.checkout.sessions.retrieve(sessionId);
+    const verdict = classifySession(stripeSession, req.session.userId);
+    if (verdict === 'paid') {
+      const planKey = String(stripeSession.metadata.plan).toLowerCase();
+      await setUserPlan(req.session.userId, planKey);
+      if (stripeSession.customer) {
+        await pool.query('UPDATE users SET stripe_customer_id = $1 WHERE id = $2 AND (stripe_customer_id IS NULL OR stripe_customer_id != $1)', [stripeSession.customer, req.session.userId]);
+      }
+      await referrals.onPaid(req.session.userId, stripe, stripeSession.subscription || undefined);
+      return res.json({ state: 'active', plan: planKey, demo: false, offer });
+    }
+    return res.json({ state: verdict === 'pending' ? 'pending' : 'failed', plan, demo: false, offer });
+  } catch (err) {
+    console.error('[billing] status check error:', err.message);
+    // Transient: let the client keep polling rather than declare failure.
+    return res.json({ state: 'pending', plan: null, demo: false, offer, retry: true });
+  }
+});
+
+// ─── GET /billing/offer — the price the subscribe screens print ─────────────
+router.get('/offer', (req, res) => res.json(offerSummary()));
 
 // ─── POST /billing/downgrade — back to free (demo-friendly) ──────────────────
 
@@ -339,3 +461,9 @@ module.exports = router;
 module.exports.PLANS = PLANS;
 module.exports.resolvePrice = resolvePrice;
 module.exports.FIRST_YEAR_COUPON_ID = FIRST_YEAR_COUPON_ID;
+module.exports.resolveReturnTarget = resolveReturnTarget;
+module.exports.checkoutUrls = checkoutUrls;
+module.exports.noStripeRedirect = noStripeRedirect;
+module.exports.gstIncludedCents = gstIncludedCents;
+module.exports.offerSummary = offerSummary;
+module.exports.classifySession = classifySession;

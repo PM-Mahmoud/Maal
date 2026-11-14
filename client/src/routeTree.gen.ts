@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
+import { Route as SubscribeRouteImport } from './routes/subscribe'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -52,6 +53,11 @@ import { Route as AuthenticatedAppAccountsConnectRouteImport } from './routes/_a
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
   path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SubscribeRoute = SubscribeRouteImport.update({
+  id: '/subscribe',
+  path: '/subscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -271,6 +277,7 @@ const AuthenticatedAppAccountsConnectRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/subscribe': typeof SubscribeRoute
   '/welcome': typeof WelcomeRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/app/action-plan': typeof AuthenticatedAppActionPlanRoute
@@ -311,6 +318,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/subscribe': typeof SubscribeRoute
   '/welcome': typeof WelcomeRoute
   '/app/action-plan': typeof AuthenticatedAppActionPlanRoute
   '/app/assets': typeof AuthenticatedAppAssetsRoute
@@ -352,6 +360,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/subscribe': typeof SubscribeRoute
   '/welcome': typeof WelcomeRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/_authenticated/app/action-plan': typeof AuthenticatedAppActionPlanRoute
@@ -394,6 +403,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/subscribe'
     | '/welcome'
     | '/app'
     | '/app/action-plan'
@@ -434,6 +444,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/subscribe'
     | '/welcome'
     | '/app/action-plan'
     | '/app/assets'
@@ -474,6 +485,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/subscribe'
     | '/welcome'
     | '/_authenticated/app'
     | '/_authenticated/app/action-plan'
@@ -516,6 +528,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  SubscribeRoute: typeof SubscribeRoute
   WelcomeRoute: typeof WelcomeRoute
 }
 
@@ -526,6 +539,13 @@ declare module '@tanstack/react-router' {
       path: '/welcome'
       fullPath: '/welcome'
       preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/subscribe': {
+      id: '/subscribe'
+      path: '/subscribe'
+      fullPath: '/subscribe'
+      preLoaderRoute: typeof SubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -893,6 +913,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  SubscribeRoute: SubscribeRoute,
   WelcomeRoute: WelcomeRoute,
 }
 export const routeTree = rootRouteImport
