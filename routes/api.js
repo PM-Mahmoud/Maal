@@ -17,7 +17,7 @@ router.get('/me', async (req, res) => {
   try {
     const user = await findUserById(req.session.userId);
     if (!user) return res.status(401).json({ error: 'Not found' });
-    res.json({ id: user.id, email: user.email, plan: user.plan || 'free' });
+    res.json({ id: user.id, email: user.email, name: user.name || null, plan: user.plan || 'free' });
   } catch (e) {
     console.error('/api/me error:', e.message);
     res.status(500).json({ error: 'An internal error occurred' });
@@ -65,6 +65,8 @@ router.post('/auth/login', authLimiter, async (req, res) => {
 router.post('/auth/signup', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  const strengthError = require('../lib/password-rules').passwordStrengthError(password);
+  if (strengthError) return res.status(400).json({ error: strengthError });
   try {
     const { findUserByEmail } = require('../db/users');
     const existing = await findUserByEmail(email.toLowerCase().trim());
@@ -105,6 +107,7 @@ const usageDb = require('../db/usage');
 // Effective plan = stored plan + 14-day trial (services/access.js). Trial users
 // get member limits; an expired trial without a paid plan is 'free' (paywall).
 const access = require('../services/access');
+const { unknownColumnMessage } = require('../lib/db-errors');
 async function effectivePlanFor(user) {
   return (await access.forUser(user)).plan;
 }
@@ -205,8 +208,11 @@ router.post('/v1/advisor/message', async (req, res) => {
     const { message, history = [] } = req.body;
     if (!message) return res.status(400).json({ error: 'message required' });
     if (!advisor.hasAdvisor()) {
+      // Env-var names stay in the server log; members see a plain message
+      // (the reply renders as markdown, which mangled the underscored names).
+      console.warn('[advisor] no model configured — set AZURE_OPENAI_API_KEY or GROQ_API_KEY in the host env');
       return res.json({
-        reply: "I'm not able to respond right now — the AI advisor isn't configured. Ask your admin to set an API key (AZURE_OPENAI_API_KEY or GROQ_API_KEY) in the server environment.",
+        reply: "I'm not able to answer right now because Maal's advisor is offline. Please try again a little later.",
         live: false,
       });
     }
@@ -1632,6 +1638,10 @@ router.all('/v1/:table', async (req, res) => {
   } catch (e) {
     console.error(`api /v1/${table} ${req.method} error:`, e.message);
     if (req.method === 'GET') return res.json([]);
+    if (req.method === 'POST') {
+      const badField = unknownColumnMessage(e, table);
+      if (badField) return res.status(400).json({ error: badField });
+    }
     res.status(500).json({ error: 'An internal error occurred' });
   }
 });

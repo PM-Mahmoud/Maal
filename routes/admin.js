@@ -41,14 +41,9 @@ function requireAdmin(req, res, next) {
   }
 
   // Show password form
-  res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Admin — Maal</title>
-<style>body{background:#0A0F0D;color:#F0EFE9;font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
-.box{background:#0F2E24;border:1px solid rgba(201,168,76,0.15);border-radius:16px;padding:2.5rem;width:360px}
-h2{color:#C9A84C;margin:0 0 1.5rem;font-size:1.2rem}
-input{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:0.7rem 0.9rem;color:#F0EFE9;font-size:0.95rem;outline:none;box-sizing:border-box;margin-bottom:1rem}
-button{width:100%;background:#C9A84C;color:#0A0F0D;font-weight:600;padding:0.75rem;border:none;border-radius:8px;cursor:pointer;font-size:0.95rem}
-.err{color:#E07070;font-size:0.85rem;margin-bottom:0.75rem}</style></head>
-<body><div class="box"><h2>◈ Maal Admin</h2>
+  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin — Maal</title>
+<link rel="stylesheet" href="/css/v2-admin.css"></head>
+<body class="adm adm-login"><div class="box"><h2><svg class="maal-mark" width="18" height="18" viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true"><g fill="currentColor"><rect x="0" y="0" width="1" height="7"/><rect x="6" y="0" width="1" height="7"/><rect x="1" y="1" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/></g></svg>Maal Admin</h2>
 ${req.query.error ? '<div class="err">Incorrect password.</div>' : ''}
 <form method="POST" action="/admin/login"><input type="password" name="password" placeholder="Admin password" autofocus><button>Enter</button></form>
 </div></body></html>`);
@@ -111,36 +106,9 @@ router.get('/admin', requireAdmin, async (req, res) => {
   res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Admin — Maal</title>
-<style>
-:root{--bg:#0A0F0D;--fg:#F0EFE9;--fg-muted:#8A8D83;--accent:#C9A84C;--green-deep:#0F2E24;--border:rgba(201,168,76,0.15)}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--fg);font-family:'DM Sans',system-ui,sans-serif;min-height:100vh}
-.topbar{background:rgba(15,46,36,0.9);border-bottom:1px solid var(--border);padding:0 2rem;height:56px;display:flex;align-items:center;gap:1rem}
-.topbar-logo{font-size:1.1rem;font-weight:600;color:var(--accent)}
-.topbar-title{font-size:0.85rem;color:var(--fg-muted)}
-.topbar-logout{margin-left:auto;font-size:0.8rem;color:var(--fg-muted);text-decoration:none}
-.topbar-logout:hover{color:var(--fg)}
-.main{padding:2rem}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2rem}
-.stat{background:var(--green-deep);border:1px solid var(--border);border-radius:12px;padding:1.25rem}
-.stat-val{font-size:2rem;font-weight:700;color:var(--accent);line-height:1}
-.stat-label{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--fg-muted);margin-top:0.35rem}
-table{width:100%;border-collapse:collapse;background:var(--green-deep);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-thead tr{background:rgba(201,168,76,0.06)}
-th{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--fg-muted);padding:0.75rem 1rem;text-align:left;border-bottom:1px solid var(--border)}
-td{padding:0.85rem 1rem;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.875rem;vertical-align:middle}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:rgba(255,255,255,0.02)}
-.badge{font-size:0.7rem;font-weight:600;padding:0.2rem 0.5rem;border-radius:4px;display:inline-block}
-.badge.ok{background:rgba(126,212,166,0.12);color:#7ED4A6;border:1px solid rgba(126,212,166,0.25)}
-.badge.warn{background:rgba(201,168,76,0.1);color:var(--accent);border:1px solid rgba(201,168,76,0.2)}
-.badge.danger{background:rgba(224,112,112,0.12);color:#E07070;border:1px solid rgba(224,112,112,0.25)}
-.badge.google{background:rgba(66,133,244,0.12);color:#4285F4;border:1px solid rgba(66,133,244,0.25)}
-.badge.creds{background:rgba(255,255,255,0.06);color:var(--fg-muted);border:1px solid var(--border)}
-.section-title{font-size:0.85rem;font-weight:600;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:1rem}
-</style></head><body>
+<link rel="stylesheet" href="/css/v2-admin.css"></head><body class="adm">
 <div class="topbar">
-  <span class="topbar-logo">◈ Maal</span>
+  <span class="topbar-logo"><svg class="maal-mark" width="18" height="18" viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true"><g fill="currentColor"><rect x="0" y="0" width="1" height="7"/><rect x="6" y="0" width="1" height="7"/><rect x="1" y="1" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/></g></svg>Maal</span>
   <span class="topbar-title">Admin</span>
   <a href="/admin/waitlist" class="topbar-logout" style="margin-left:1.5rem">Waitlist</a>
   <a href="/admin/logout" class="topbar-logout" style="margin-left:auto">Sign out</a>
@@ -153,16 +121,16 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <div class="stat"><div class="stat-val">${locked}</div><div class="stat-label">Locked accounts</div></div>
   </div>
   <div class="section-title">All users</div>
-  <table>
+  <div class="table-wrap"><table>
     <thead><tr><th>#</th><th>User</th><th>Auth</th><th>Email</th><th>Onboarding</th><th>Signed up</th><th>Last login</th><th>Security</th></tr></thead>
     <tbody>${rows}</tbody>
-  </table>
+  </table></div>
 
   <div class="section-title" style="margin-top:2.5rem">Feedback &amp; support</div>
-  <table>
+  <div class="table-wrap"><table>
     <thead><tr><th>Type</th><th>From</th><th>Message</th><th>Page</th><th>When</th></tr></thead>
     <tbody>${feedbackRows}</tbody>
-  </table>
+  </table></div>
 </div></body></html>`);
 });
 
@@ -197,27 +165,8 @@ router.get('/admin/waitlist', requireAdmin, async (req, res) => {
 
   res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Waitlist — Maal Admin</title>
-<style>
-:root{--bg:#0A0F0D;--fg:#F0EFE9;--fg-muted:#8A8D83;--accent:#C9A84C;--green-deep:#0F2E24;--border:rgba(201,168,76,0.15)}
-*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif}
-.topbar{background:rgba(15,46,36,.9);border-bottom:1px solid var(--border);padding:0 2rem;height:56px;display:flex;align-items:center;gap:1.25rem}
-.topbar a{color:var(--fg-muted);text-decoration:none;font-size:.85rem}.topbar a:hover{color:var(--fg)}.logo{color:var(--accent)!important;font-weight:600;font-size:1.05rem!important}
-.main{padding:2rem}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem}
-.stat{background:var(--green-deep);border:1px solid var(--border);border-radius:12px;padding:1.1rem}.stat-val{font-size:1.8rem;font-weight:700;color:var(--accent)}
-.stat-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--fg-muted);margin-top:.3rem}
-.bar{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin-bottom:1rem}.tab{padding:.4rem .8rem;border:1px solid var(--border);border-radius:999px;color:var(--fg-muted);text-decoration:none;font-size:.8rem}
-.tab.on{background:var(--accent);color:#0A0F0D;border-color:var(--accent)}.spacer{flex:1}
-.btn{background:var(--accent);color:#0A0F0D;font-weight:600;border:none;border-radius:8px;padding:.55rem 1rem;cursor:pointer;font-size:.85rem;text-decoration:none}
-.btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--border)}
-table{width:100%;border-collapse:collapse;background:var(--green-deep);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-th{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--fg-muted);padding:.7rem 1rem;text-align:left;border-bottom:1px solid var(--border)}
-td{padding:.75rem 1rem;border-bottom:1px solid rgba(255,255,255,.04);font-size:.86rem;vertical-align:middle}.muted{color:var(--fg-muted);font-size:.8rem}
-.badge{font-size:.7rem;font-weight:600;padding:.2rem .5rem;border-radius:4px}.badge.ok{background:rgba(126,212,166,.12);color:#7ED4A6}
-.badge.warn{background:rgba(201,168,76,.1);color:var(--accent)}.badge.creds{background:rgba(255,255,255,.06);color:var(--fg-muted)}
-.flash{background:rgba(126,212,166,.12);color:#7ED4A6;border:1px solid rgba(126,212,166,.25);padding:.7rem 1rem;border-radius:8px;margin-bottom:1rem;font-size:.85rem}
-.note{font-size:.8rem;color:var(--fg-muted);margin-bottom:1.25rem}
-</style></head><body>
-<div class="topbar"><a class="logo" href="/admin">◈ Maal</a><a href="/admin">Users</a><a href="/admin/waitlist" style="color:var(--fg)">Waitlist</a><a href="/admin/logout" style="margin-left:auto">Sign out</a></div>
+<link rel="stylesheet" href="/css/v2-admin.css"></head><body class="adm">
+<div class="topbar"><a class="logo" href="/admin"><svg class="maal-mark" width="18" height="18" viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true"><g fill="currentColor"><rect x="0" y="0" width="1" height="7"/><rect x="6" y="0" width="1" height="7"/><rect x="1" y="1" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/></g></svg>Maal</a><a href="/admin">Users</a><a href="/admin/waitlist" style="color:var(--fg)">Waitlist</a><a href="/admin/logout" style="margin-left:auto">Sign out</a></div>
 <div class="main">
   ${flash}
   <p class="note">Signups are <strong>${waitlistGate.isGateOn() ? 'invite-only' : 'open to everyone'}</strong> (WAITLIST_GATE ${waitlistGate.isGateOn() ? 'on' : 'off'}). Inviting someone emails them a link to create their account.</p>
@@ -235,10 +184,10 @@ td{padding:.75rem 1rem;border-bottom:1px solid rgba(255,255,255,.04);font-size:.
       <button class="btn" type="submit">Invite selected</button>
     </form>
   </div>
-  <table>
+  <div class="table-wrap"><table>
     <thead><tr><th><input type="checkbox" aria-label="Select all waiting" onclick="document.querySelectorAll('input[name=ids]').forEach(c=>c.checked=this.checked)"></th><th>Person</th><th>Status</th><th>Source</th><th>Consent</th><th>Score</th><th>Joined list</th><th>Invited</th></tr></thead>
     <tbody>${body}</tbody>
-  </table>
+  </table></div>
 </div></body></html>`);
 });
 

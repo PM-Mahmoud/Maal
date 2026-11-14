@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#020109">
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
   <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
@@ -77,12 +78,12 @@
 
     <div class="resend-row">
       <span id="resendTimer">Resend code in <span id="countdown">60</span>s</span>
-      <button id="btnResend" style="display:none" onclick="resendEmail()">Resend to email</button>
+      <button id="btnResend" style="display:none">Resend to email</button>
     </div>
 
     <div class="divider">or</div>
 
-    <button class="btn-sms" id="btnSms" onclick="resendSms()">
+    <button class="btn-sms" id="btnSms">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.09 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"></path></svg>
       Send code via SMS instead
     </button>
@@ -186,6 +187,10 @@
         smsBtn.disabled = false;
       }
     }
+
+    // Bound here, not via onclick="" (Helmet CSP: script-src-attr 'none').
+    document.getElementById('btnResend').addEventListener('click', resendEmail);
+    document.getElementById('btnSms').addEventListener('click', resendSms);
 
     digits[0].focus();
   </script>

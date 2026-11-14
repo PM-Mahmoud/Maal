@@ -13,10 +13,10 @@
 
 /* ---- 1. Warm retro tokens ---- */
 :root, html[data-theme="light"] {
-  --bg: #F3E9D2;
-  --surface: #FBF5E7;
-  --surface-2: #EFE3CC;
-  --surface-3: #E4D3AF;
+  --bg: #F8F9F6;
+  --surface: #FFFFFF;
+  --surface-2: #F1F2EF;
+  --surface-3: #E4E5E2;
   --fg: #221C15;
   --fg-muted: #6B6152;
   --fg-faint: #9A8E7A;
@@ -26,10 +26,10 @@
   --accent-strong: #B8410F;
   --accent-soft: #F6DCC8;
   --accent-softer: #F8EEE0;
-  --accent-bar: #E7A937;
+  --accent-bar: var(--bg);
   --mint: #D9531F;
   --ink: #221C15;
-  --on-ink: #FBF5E7;
+  --on-ink: #FFFFFF;
   --gold: #B0740F;
   --gold-soft: #F1E2C4;
   --danger: #C0341A;
@@ -51,7 +51,7 @@ html[data-theme="dark"] {
   --accent-strong: #E4572E;
   --accent-soft: #3A2A20;
   --accent-softer: #2C221A;
-  --accent-bar: #E7A937;
+  --accent-bar: var(--bg);
   --mint: #F0754B;
   --ink: #F3E9D2;
   --on-ink: #1C1710;
@@ -60,7 +60,7 @@ html[data-theme="dark"] {
 
 body { font-family: var(--font-body); }
 
-/* film grain (body::before is theme.css's accent bar — leave it) */
+/* film grain */
 body::after {
   content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
   opacity: 0.045; mix-blend-mode: multiply;

@@ -34,13 +34,13 @@ export function SetupChecklist() {
   if (dismissed) return null;
   if (error) {
     return (
-      <div role="alert" className="flex items-center gap-3 rounded-[14px] border border-[var(--gold)]/30 bg-[var(--surface)] p-4 text-[12px]">
+      <div role="alert" className="mh-card mh-card-body flex items-center gap-3 mh-small">
         <div className="flex-1">
-          <p className="font-semibold">Setup progress couldn’t be refreshed</p>
-          <p className="text-muted-foreground">Your existing financial data has not been replaced.</p>
+          <p className="m-0 font-medium">Setup progress couldn’t be refreshed</p>
+          <p className="m-0 mh-muted">Your existing financial data has not been replaced.</p>
         </div>
-        <button onClick={() => void load()} className="inline-flex items-center gap-1 font-semibold text-mint">
-          <RefreshCw className="size-3" /> Retry
+        <button onClick={() => void load()} className="mh-btn-outline" style={{ height: 34 }}>
+          <RefreshCw aria-hidden /> Retry
         </button>
       </div>
     );
@@ -48,63 +48,40 @@ export function SetupChecklist() {
   if (!act || act.completed === act.total) return null;
 
   return (
-    <div className="rounded-[14px] border border-border bg-[var(--surface)] p-5">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-3">
-          <ProgressRing done={act.completed} total={act.total} />
-          <div>
-            <p className="text-[10.5px] font-mono uppercase tracking-[.14em] text-muted-foreground">Your guide</p>
-            <h2 className="text-[20px] leading-tight" style={{ fontFamily: "Lora, Georgia, serif" }}>Make the most of Maal</h2>
-          </div>
+    <section className="mh-card mh-guide" aria-labelledby="mh-guide-title">
+      <div className="mh-card-head">
+        <p className="mh-card-label m-0">Your guide</p>
+        <div className="mh-card-actions">
+          <button onClick={dismiss} aria-label="Dismiss setup guide" className="mh-close"><X className="size-5" /></button>
         </div>
-        <button onClick={dismiss} aria-label="Dismiss" className="text-muted-foreground hover:text-foreground">
-          <X className="size-3.5" />
-        </button>
       </div>
-
-      {act.lowData && (
-        <div className="flex items-start gap-2 mb-3 px-3 py-2 rounded-[10px] bg-[var(--secondary)]">
-          <Sparkles className="size-3.5 mt-0.5 shrink-0 text-mint" />
-          <p className="text-[12px] text-muted-foreground">
-            Maal can only give you real answers once it knows your finances. Add an asset or liability to get a personalised score and advice.
-          </p>
+      <div className="mh-card-body" style={{ paddingTop: 0 }}>
+        <h2 id="mh-guide-title" className="mh-serif-title">Make the most of Maal</h2>
+        <div className="mh-segs" role="progressbar" aria-valuemin={0} aria-valuemax={act.total} aria-valuenow={act.completed}
+          aria-label={`${act.completed} of ${act.total} setup steps done`}>
+          {act.steps.map((s) => <span key={s.id} className="mh-seg" data-done={s.done} />)}
         </div>
-      )}
+        <p className="m-0" style={{ fontSize: 15, opacity: .9 }}>{act.pct}% complete</p>
 
+        {act.lowData && (
+          <p className="flex items-start gap-2 mt-3 mb-0 mh-small" style={{ opacity: .85 }}>
+            <Sparkles className="size-3.5 mt-0.5 shrink-0" aria-hidden />
+            Add an account, asset or loan so Maal can give you a real score and answers about your money.
+          </p>
+        )}
 
-      <ul className="space-y-1">
-        {act.steps.map((s) => (
-          <li key={s.id}>
-            {s.done ? (
-              <div className="flex items-center gap-2.5 px-2 py-1.5 text-[13px] text-muted-foreground">
-                <Check className="size-4 text-mint shrink-0" />
-                <span className="line-through">{s.label}</span>
-              </div>
-            ) : (
-              <Link to={s.to} className="flex items-center gap-2.5 px-2 py-1.5 rounded-[8px] text-[13px] hover:bg-[var(--secondary)] transition-colors">
-                <Circle className="size-4 text-muted-foreground shrink-0" />
-                <span>{s.label}</span>
-              </Link>
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-// "1/5" progress ring for the setup guide.
-function ProgressRing({ done, total }: { done: number; total: number }) {
-  const r = 20;
-  const c = 2 * Math.PI * r;
-  const pct = total > 0 ? done / total : 0;
-  return (
-    <div className="relative size-[52px] shrink-0" aria-label={`${done} of ${total} steps done`}>
-      <svg viewBox="0 0 52 52" className="size-full -rotate-90" aria-hidden>
-        <circle cx="26" cy="26" r={r} fill="none" stroke="var(--secondary)" strokeWidth="5" />
-        <circle cx="26" cy="26" r={r} fill="none" stroke="var(--mint, #12B5A6)" strokeWidth="5" strokeLinecap="round" strokeDasharray={`${c * pct} ${c}`} />
-      </svg>
-      <span className="absolute inset-0 grid place-items-center text-[12px] font-semibold tabular-nums">{done}/{total}</span>
-    </div>
+        <ul className="mh-guide-steps">
+          {act.steps.map((s) => (
+            <li key={s.id}>
+              {s.done ? (
+                <span><Check aria-hidden /> {s.label}</span>
+              ) : (
+                <Link to={s.to}><Circle aria-hidden /> {s.label}</Link>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   );
 }

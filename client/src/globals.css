@@ -71,26 +71,26 @@
 
 :root {
   --radius: 0.5rem;
-  /* Maal palette - light · retro-futurist (matches hellomaal.com landing) */
-  --background: #F3E9D2;
-  --surface: #FBF5E7;
+  /* Maal palette - light · v2 neutrals (page #F8F9F6, white cards) — no cream (2026-11-15) */
+  --background: #F8F9F6;
+  --surface: #FFFFFF;
   --foreground: #221C15;
-  --card: #FBF5E7;
+  --card: #FFFFFF;
   --card-foreground: #221C15;
-  --popover: #FBF5E7;
+  --popover: #FFFFFF;
   --popover-foreground: #221C15;
   --primary: #E4572E;
-  --primary-foreground: #FBF5E7;
-  --secondary: #EEE0C4;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F1F2EF;
   --secondary-foreground: #221C15;
-  --muted: #EEE0C4;
+  --muted: #F1F2EF;
   --muted-foreground: #6B6152;
-  --accent: #EEE0C4;
+  --accent: #F1F2EF;
   --accent-foreground: #221C15;
   --destructive: #C0341A;
-  --destructive-foreground: #FBF5E7;
-  --border: #E0D2B4;
-  --input: #E0D2B4;
+  --destructive-foreground: #FFFFFF;
+  --border: #E4E5E2;
+  --input: #E4E5E2;
   --ring: #E4572E;
   --mint: #2E8B84;
   --gold: #E7A937;
@@ -99,37 +99,37 @@
   --chart-3: #E7A937;
   --chart-4: #C43F1B;
   --chart-5: #34281E;
-  --sidebar: #F3E9D2;
+  --sidebar: #F8F9F6;
   --sidebar-foreground: #221C15;
   --sidebar-primary: #E4572E;
-  --sidebar-primary-foreground: #FBF5E7;
-  --sidebar-accent: #EEE0C4;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F1F2EF;
   --sidebar-accent-foreground: #221C15;
-  --sidebar-border: #E0D2B4;
+  --sidebar-border: #E4E5E2;
   --sidebar-ring: #E4572E;
 }
 
 .dark {
   /* Retro-dark (derived from the retro auth pages' dark scheme) */
-  --background: #1C1710;
-  --surface: #26201A;
-  --foreground: #F3E9D2;
-  --card: #26201A;
-  --card-foreground: #F3E9D2;
-  --popover: #26201A;
-  --popover-foreground: #F3E9D2;
+  --background: #0B0D12;
+  --surface: #13161B;
+  --foreground: #F4F4F2;
+  --card: #13161B;
+  --card-foreground: #F4F4F2;
+  --popover: #13161B;
+  --popover-foreground: #F4F4F2;
   --primary: #F0754B;
   --primary-foreground: #1C1710;
-  --secondary: #302A22;
-  --secondary-foreground: #F3E9D2;
-  --muted: #302A22;
+  --secondary: #1D2127;
+  --secondary-foreground: #F4F4F2;
+  --muted: #1D2127;
   --muted-foreground: #C3B79E;
-  --accent: #302A22;
-  --accent-foreground: #F3E9D2;
+  --accent: #1D2127;
+  --accent-foreground: #F4F4F2;
   --destructive: #F0754B;
   --destructive-foreground: #1C1710;
-  --border: #3B3329;
-  --input: #3B3329;
+  --border: #262A31;
+  --input: #262A31;
   --ring: #F0754B;
   --mint: #4DB6AC;
   --gold: #E7A937;
@@ -138,13 +138,13 @@
   --chart-3: #E7A937;
   --chart-4: #E4572E;
   --chart-5: #C3B79E;
-  --sidebar: #1C1710;
-  --sidebar-foreground: #F3E9D2;
+  --sidebar: #0B0D12;
+  --sidebar-foreground: #F4F4F2;
   --sidebar-primary: #F0754B;
   --sidebar-primary-foreground: #1C1710;
-  --sidebar-accent: #302A22;
-  --sidebar-accent-foreground: #F3E9D2;
-  --sidebar-border: #3B3329;
+  --sidebar-accent: #1D2127;
+  --sidebar-accent-foreground: #F4F4F2;
+  --sidebar-border: #262A31;
   --sidebar-ring: #F0754B;
 }
 
@@ -153,7 +153,16 @@
     border-color: var(--color-border);
   }
 
+  /* Overscroll (rubber-band) area: the canvas behind the page is v2 ink,
+     not the page colour. Giving <html> its own background stops the body
+     background propagating to the canvas; the body still paints the page
+     and fills at least the viewport, so black only shows on overscroll. */
+  html {
+    background-color: #020109;
+  }
+
   body {
+    min-height: 100vh;
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);

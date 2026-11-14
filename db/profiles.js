@@ -100,7 +100,9 @@ function normalizeProfile(row, user) {
   const emailName = user && user.email ? String(user.email).split('@')[0] : '';
   const num = (v) => Number(v) || 0;
   return {
-    display_name: od.display_name || emailName || '',
+    // The account name given at sign-up beats the email local-part, so the
+    // welcome flow greets "Mahmoud", not "mahmoud.test".
+    display_name: od.display_name || (user && user.name ? String(user.name).trim() : '') || emailName || '',
     age_band: od.age_band || null,
     risk: od.risk || null,
     age: deriveAge(od.age_band, r),

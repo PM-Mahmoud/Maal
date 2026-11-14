@@ -5,11 +5,11 @@
    ============================================================ */
 
 :root {
-  /* Warm paper palette */
-  --rf-cream:    #F3E9D2;
-  --rf-cream-2:  #EEE0C4;
-  --rf-cream-3:  #E7D6B4;
-  --rf-paper:    #FBF5E7;
+  /* Page palette — v2 neutrals, no cream (2026-11-15) */
+  --rf-cream:    #F8F9F6;
+  --rf-cream-2:  #F1F2EF;
+  --rf-cream-3:  #E4E5E2;
+  --rf-paper:    #FFFFFF;
 
   /* Warm ink */
   --rf-ink:      #221C15;
@@ -567,3 +567,11 @@ select:focus:not(:focus-visible), textarea:focus:not(:focus-visible), [tabindex]
   .rf-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
   .rf-score-fill { transition-duration: .01ms !important; }
 }
+
+/* ─── Overscroll canvas + no top ribbon (landing polish) ─────
+   <html> gets its own background (v2 ink #020109) so the body background no
+   longer propagates to the canvas: rubber-band overscroll on macOS/iOS shows
+   black instead of the page colour. The body keeps painting the page and
+   fills at least the viewport, so black never appears as a gap. */
+html { background: #020109; }
+body { min-height: 100vh; }

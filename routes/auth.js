@@ -37,12 +37,9 @@ function getIp(req) {
   return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 }
 
-function passwordStrengthError(password) {
-  if (password.length < 8) return 'Password must be at least 8 characters.';
-  if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter.';
-  if (!/[0-9]/.test(password)) return 'Password must contain at least one number.';
-  return null;
-}
+// New-account password rules (8–64 chars, upper, lower, number, special) —
+// shared with the sign-up page's live checklist.
+const { passwordStrengthError } = require('../lib/password-rules');
 
 async function sendOtpEmail(email, name, otp) {
   const firstName = (name || '').split(' ')[0] || 'there';
@@ -190,11 +187,11 @@ router.get('/signup', (req, res) => {
 router.post('/signup', authLimiter,
   body('name').trim().isLength({ min: 1, max: 100 }),
   body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 8 }),
+  body('password').isLength({ min: 8, max: 64 }),
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.render('auth-signup', { layout: false, error: 'Please fill in all fields. Password must be at least 8 characters.', email: req.body.email, name: req.body.name });
+      return res.render('auth-signup', { layout: false, error: 'Please fill in all fields. Password must be 8 to 64 characters.', email: req.body.email, name: req.body.name });
     }
 
     const { name, email, password } = req.body;

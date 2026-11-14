@@ -8,6 +8,7 @@ const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 
 const { findUserByResetToken, setPasswordHash } = require('../db/users');
+const { passwordStrengthError } = require('../lib/password-rules');
 
 router.get('/reset-password', async (req, res) => {
   const { token } = req.query;
@@ -17,13 +18,16 @@ router.get('/reset-password', async (req, res) => {
 });
 
 router.post('/reset-password', authLimiter,
-  body('password').isLength({ min: 8 }),
+  body('password').isString(),
   async (req, res) => {
     const { token, password } = req.body;
     const errors = validationResult(req);
-    if (!errors.isEmpty() || !token) {
+    // Same rules as sign-up (lib/password-rules.js), so a reset can't set a
+    // password that sign-up would reject.
+    const strengthError = errors.isEmpty() ? passwordStrengthError(password) : 'Please enter a new password.';
+    if (strengthError || !token) {
       return res.render('auth-reset-password', { layout: false,
-        error: 'Password must be at least 8 characters.',
+        error: strengthError || 'This link is invalid or expired.',
         success: null,
         token
       });

@@ -21,7 +21,7 @@
       <a href="/login" class="lv-header-login">Log in</a>
       <a href="<%= navGated ? '/waitlist' : '/signup' %>" class="lv-header-signup"><%= navGated ? 'Join waitlist' : 'Sign up' %></a>
       <a href="/score" class="lv-header-cta">Get your free score</a>
-      <button class="lv-hamburger" onclick="toggleMobileNav()" aria-label="Toggle menu">
+      <button class="lv-hamburger" id="lv-hamburger" aria-label="Toggle menu">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <line x1="3" y1="6" x2="21" y2="6"/>
           <line x1="3" y1="12" x2="21" y2="12"/>
@@ -42,4 +42,6 @@
 function toggleMobileNav() {
   document.getElementById('lv-mobile-nav').classList.toggle('open');
 }
+// Bound here, not via onclick="" (Helmet CSP: script-src-attr 'none').
+document.getElementById('lv-hamburger').addEventListener('click', toggleMobileNav);
 </script>

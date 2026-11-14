@@ -1,0 +1,300 @@
+/* ============================================================
+   Connect accounts flow — onboarding + in-app "Add account".
+   Matched to the Figma reference frames (connect flow 01–07,
+   add-account flow 02–10) at ~0.78 of the 1920px canvas, on the
+   v2 tokens (Lora headings, Inter, #F8F9F6, #020109 buttons,
+   #D6F7FF / #006B87 badges). Everything is scoped under .cx.
+   ============================================================ */
+.cx {
+  --cx-bg: #F8F9F6;
+  --cx-surface: #FFFFFF;
+  --cx-ink: #141416;
+  --cx-ink-2: #222222;
+  --cx-muted: #666666;
+  --cx-label: #555555;
+  --cx-hair: #E5E5E5;
+  --cx-tile-line: #E8E8E8;
+  --cx-field-line: #B5B5B5;
+  --cx-btn: #020109;
+  --cx-badge: #D6F7FF;
+  --cx-badge-ink: #006B87;
+  --cx-good: #009C68;
+  --cx-good-bar: #59B38B;
+  --cx-good-track: #D7EBDD;
+  --cx-chip: #F0F0ED;
+  --cx-serif: 'Lora', Georgia, 'Times New Roman', serif;
+  --cx-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: var(--cx-sans);
+  color: var(--cx-ink);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.45;
+}
+.cx *, .cx *::before, .cx *::after { box-sizing: border-box; }
+:where(.cx) button { font: inherit; color: inherit; }
+.cx p, .cx h1, .cx h2 { margin: 0; }
+.cx h1, .cx h2 { font-weight: 400; }
+.cx :focus-visible { outline: 2px solid #0F8FA6; outline-offset: 2px; }
+
+/* ---------- Buttons ---------- */
+.cx-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  height: 46px; padding: 0 1.25rem; border-radius: 10px; border: 1px solid transparent;
+  font-size: 16px; cursor: pointer; transition: opacity .15s, background .15s, border-color .15s; white-space: nowrap;
+}
+.cx-btn:disabled { opacity: .4; cursor: not-allowed; }
+.cx-btn-ink { background: var(--cx-btn); color: #fff !important; }
+.cx-btn-ink:hover:not(:disabled) { opacity: .88; }
+.cx-btn-light { background: #fff; color: #000 !important; }
+.cx-btn-light:hover:not(:disabled) { background: #F1F1EF; }
+.cx-btn-line { background: #fff; color: #000 !important; border-color: #777; }
+.cx-btn-line:hover:not(:disabled) { border-color: #000; }
+.cx-btn-block { width: 100%; }
+.cx-chip-btn {
+  height: 40px; padding: 0 .9rem; border-radius: 10px; border: 1px solid #888; background: transparent;
+  font-size: 15px; cursor: pointer;
+}
+.cx-link { background: none; border: 0; padding: 0; font-size: 13px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+
+/* ---------- Page chrome (onboarding) ---------- */
+.cx-page { min-height: 100vh; display: flex; flex-direction: column; background: #fff; }
+.cx-page.is-dark { background: #000; color: #fff; }
+.cx-top { display: flex; align-items: center; justify-content: space-between; padding: 22px 48px; border-bottom: 1px solid #BBB; background: #fff; }
+.cx-page.is-dark .cx-top { background: transparent; border-color: transparent; }
+.cx-page.is-dark .cx-chip-btn { color: #fff; }
+.cx-logo { display: inline-flex; align-items: center; gap: .45rem; font-family: var(--cx-serif); font-size: 25px; line-height: 1; }
+.cx-top .cx-spacer { width: 66px; }
+.cx-main { flex: 1; display: flex; justify-content: center; padding: 24px 16px 40px; }
+.cx-foot { text-align: center; padding: 16px; font-size: 13px; }
+.cx-foot a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.cx-disclaimer { max-width: 560px; margin: 0 auto; padding: 0 16px 18px; text-align: center; font-size: 11.5px; color: #8A8A8A; line-height: 1.5; }
+.cx-page.is-dark .cx-disclaimer { color: rgba(255,255,255,.55); }
+
+/* ---------- 01 · Connect your accounts (dark intro) ---------- */
+.cx-intro {
+  position: relative; overflow: hidden;
+  background:
+    radial-gradient(62% 72% at 108% 96%, rgba(86,152,214,.58) 0%, rgba(42,94,152,.36) 36%, rgba(0,0,0,0) 63%),
+    radial-gradient(46% 56% at 98% 104%, rgba(222,236,255,.22), rgba(0,0,0,0) 60%),
+    #000;
+}
+.cx-intro-col { width: 100%; max-width: 560px; text-align: center; padding-top: clamp(24px, 9vh, 110px); }
+.cx-h1 { font-family: var(--cx-serif); font-size: clamp(1.9rem, 4.6vw, 2.25rem); line-height: 1.2; letter-spacing: -.01em; }
+.cx-sub { margin-top: .55rem; font-size: 15px; color: var(--cx-muted); }
+.cx-intro-col .cx-sub { color: #fff; opacity: .92; }
+.cx-constellation { margin: 26px auto 0; width: min(100%, 494px); display: grid; gap: 6px; position: relative; }
+.cx-orbit-row { display: flex; gap: 4px; justify-content: center; }
+.cx-orbit-row.is-offset { transform: translateX(35px); }
+.cx-orbit {
+  width: 71px; height: 71px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,.14); background: radial-gradient(circle, rgba(255,255,255,.05), rgba(255,255,255,0) 70%);
+}
+.cx-orbit .cx-logo-circle { width: 44px; height: 44px; }
+.cx-orbit.is-ghost { opacity: .45; }
+.cx-featured {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 131px; height: 131px; border-radius: 50%; display: grid; place-items: center; background: #000;
+  border: 1px solid #33576B; box-shadow: 0 0 12px rgba(26,128,204,.45), 0 0 38px rgba(26,128,204,.25);
+}
+.cx-featured .cx-logo-circle { width: 100px; height: 100px; }
+.cx-intro-cta { margin-top: 54px; }
+.cx-intro-note { margin-top: 1rem; font-size: 13.5px; color: rgba(255,255,255,.78); }
+@media (max-width: 560px) {
+  .cx-top { padding: 14px 16px; }
+  .cx-orbit { width: 50px; height: 50px; }
+  .cx-orbit .cx-logo-circle { width: 32px; height: 32px; }
+  .cx-orbit-row { gap: 3px; }
+  .cx-orbit-row.is-offset { transform: translateX(24px); }
+  .cx-featured { width: 98px; height: 98px; }
+  .cx-featured .cx-logo-circle { width: 74px; height: 74px; }
+  .cx-intro-cta { margin-top: 36px; }
+}
+
+/* ---------- Logos ---------- */
+.cx-logo-circle {
+  border-radius: 50%; overflow: hidden; display: grid; place-items: center; flex-shrink: 0; background: #fff;
+}
+.cx-logo-circle > img { width: 100% !important; height: 100% !important; border-radius: 0 !important; object-fit: cover !important; }
+.cx-logo-circle > span { width: 100% !important; height: 100% !important; border-radius: 50% !important; }
+.cx-initial {
+  border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; background: #DADADA; color: var(--cx-label); font-size: 17px;
+}
+
+/* ---------- Modal ---------- */
+.cx-scrim {
+  position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.55);
+  display: flex; align-items: flex-start; justify-content: center; padding: 64px 16px 24px; overflow-y: auto;
+  animation: cx-fade .16s ease-out;
+}
+.cx-dialog {
+  position: relative; width: 100%; max-width: 594px; max-height: calc(100vh - 88px); color: var(--cx-ink);
+  display: flex; flex-direction: column; background: var(--cx-surface); border-radius: 24px; overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0,0,0,.18); animation: cx-rise .2s ease-out;
+}
+.cx-dialog.is-short { max-width: 594px; }
+.cx-dialog.is-centred { margin-top: max(0px, calc(50vh - 260px)); }
+.cx-dhead { flex-shrink: 0; height: 64px; display: flex; align-items: center; gap: 8px; padding: 0 14px 0 14px; border-bottom: 1px solid var(--cx-hair); }
+.cx-dlabel { font-size: 11px; letter-spacing: .17em; text-transform: uppercase; color: var(--cx-label); padding-left: 2px; }
+.cx-dhead .cx-dlabel:first-child { padding-left: 2px; }
+.cx-icon-btn { width: 36px; height: 36px; border-radius: 8px; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; color: #222; flex-shrink: 0; }
+.cx-icon-btn:hover { background: #F4F4F2; }
+.cx-dhead .cx-close { margin-left: auto; }
+.cx-dbody { overflow-y: auto; padding: 20px 20px 24px; overscroll-behavior: contain; }
+.cx-section-label { font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: var(--cx-label); margin: 0 0 10px; }
+.cx-divider { height: 1px; background: #E6E6E6; margin: 18px 0; }
+
+@keyframes cx-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cx-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 640px) {
+  .cx-scrim { padding: 0; align-items: stretch; }
+  .cx-dialog, .cx-dialog.is-short { max-width: none; max-height: none; min-height: 100%; border-radius: 0; }
+  .cx-dialog.is-centred { margin-top: 0; }
+  .cx-dbody { padding: 16px 16px 24px; }
+}
+
+/* ---------- 02 · Choose an institution ---------- */
+.cx-search {
+  display: flex; align-items: center; gap: 12px; height: 57px; padding: 0 14px; border: 1px solid #BBB; border-radius: 10px; background: #fff;
+}
+.cx-search:focus-within { border-color: #555; }
+.cx-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 16px; color: #000; }
+.cx-search input::placeholder { color: #999; }
+/* We draw our own clear button; hide the browser's native one so there aren't two X icons. */
+.cx-search input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }
+.cx-search .cx-search-icon { color: #444; flex-shrink: 0; }
+.cx-clear { border: 0; background: transparent; padding: 4px; border-radius: 50%; cursor: pointer; color: #222; display: grid; place-items: center; }
+.cx-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 9px; }
+.cx-tile {
+  aspect-ratio: 1 / 1.01; border: 1px solid var(--cx-tile-line); border-radius: 16px; background: #fff;
+  display: grid; place-items: center; cursor: pointer; padding: 0; transition: border-color .15s, background .15s;
+}
+.cx-tile:hover { border-color: #BDBDBD; background: #FCFCFB; }
+.cx-tile .cx-logo-circle { width: 58%; height: 58%; }
+.cx-cat {
+  width: 100%; text-align: left; border: 1px solid var(--cx-tile-line); border-radius: 16px; background: #fff; cursor: pointer;
+  padding: 24px 24px 20px; display: flex; flex-direction: column; gap: 16px; transition: border-color .15s;
+}
+.cx-cat + .cx-cat { margin-top: 9px; }
+.cx-cat:hover { border-color: #BDBDBD; }
+.cx-cat-logos { display: flex; align-items: center; height: 42px; }
+.cx-cat-logos .cx-logo-circle { width: 40px; height: 40px; margin-right: -10px; box-shadow: 0 0 0 2px #fff; }
+.cx-cat-title { font-size: 15.5px; color: #000; }
+.cx-cat-sub { font-size: 13px; color: var(--cx-muted); margin-top: -10px; }
+@media (max-width: 640px) {
+  .cx-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ---------- 03/04 · Search results ---------- */
+.cx-results { list-style: none; margin: 0; padding: 0; }
+.cx-row {
+  width: 100%; display: flex; align-items: center; gap: 16px; padding: 14px 8px; border: 0; background: transparent; text-align: left;
+  cursor: pointer; border-radius: 12px;
+}
+.cx-row:hover { background: #F7F7F5; }
+.cx-row .cx-logo-circle, .cx-row .cx-initial { width: 40px; height: 40px; }
+.cx-row-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.cx-row-name { font-size: 15px; color: #000; line-height: 1.35; }
+.cx-row-meta { font-size: 12.5px; color: var(--cx-muted); line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cx-row-chev { color: #888; flex-shrink: 0; }
+.cx-add-manual .cx-plus { width: 40px; height: 40px; border-radius: 50%; background: #EEE; display: grid; place-items: center; color: #222; flex-shrink: 0; }
+.cx-add-manual .cx-dlabel { padding: 0; }
+.cx-empty { padding: 20px 8px; color: var(--cx-muted); font-size: 14px; }
+
+/* ---------- 05 · Select account owner ---------- */
+.cx-prompt { font-size: 16px; color: #000; margin: 4px 0 18px; }
+.cx-owner {
+  width: 100%; display: flex; align-items: center; gap: 14px; height: 82px; padding: 0 16px 0 24px; border: 1px solid var(--cx-tile-line);
+  border-radius: 16px; background: #fff; cursor: pointer; text-align: left; transition: border-color .15s;
+}
+.cx-owner + .cx-owner { margin-top: 9px; }
+.cx-owner:hover { border-color: #BDBDBD; }
+.cx-owner-av { width: 32px; height: 32px; border-radius: 16px; display: grid; place-items: center; font-size: 11.5px; flex-shrink: 0; }
+.cx-owner-av.is-me { background: var(--cx-badge); color: var(--cx-badge-ink); }
+.cx-owner-av.is-joint { background: var(--cx-chip); color: #222; }
+.cx-owner-name { flex: 1; font-size: 14px; color: #000; }
+.cx-owner-sub { display: block; font-size: 12.5px; color: var(--cx-muted); }
+.cx-check { display: flex; align-items: center; gap: 12px; margin-top: 24px; font-size: 16px; color: #000; cursor: pointer; user-select: none; }
+.cx-check input { width: 17px; height: 17px; margin: 0; accent-color: #020109; }
+
+/* ---------- 06 · Connecting ---------- */
+.cx-connecting { text-align: center; padding: 48px 24px 52px; }
+.cx-connecting .cx-h1 { color: var(--cx-ink-2); }
+.cx-handshake { margin: 52px auto 0; display: flex; align-items: center; justify-content: center; gap: 26px; }
+.cx-handshake .cx-logo-circle { width: 40px; height: 40px; }
+.cx-dots { display: flex; align-items: center; gap: 22px; }
+.cx-dots span { border-radius: 8px; background: #DDD; animation: cx-pulse 1.2s ease-in-out infinite; }
+.cx-dots span:nth-child(1) { width: 5px; height: 5px; background: #EEE; animation-delay: 0s; }
+.cx-dots span:nth-child(2) { width: 6px; height: 6px; background: #EBEBEB; animation-delay: .15s; }
+.cx-dots span:nth-child(3) { width: 8px; height: 8px; background: #E5E5E5; animation-delay: .3s; }
+.cx-dots span:nth-child(4) { width: 9px; height: 9px; background: #DDD; animation-delay: .45s; }
+.cx-dots.is-still span { animation: none; }
+@keyframes cx-pulse { 0%, 100% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.35); filter: brightness(.82); } }
+.cx-maal-dest { width: 40px; height: 40px; border-radius: 50%; background: #F4F4F2; display: grid; place-items: center; color: #020109; flex-shrink: 0; }
+.cx-connecting-actions { margin: 34px auto 0; max-width: 340px; display: grid; gap: 10px; justify-items: center; }
+.cx-note { font-size: 13.5px; color: var(--cx-muted); }
+.cx-error { font-size: 13.5px; color: #B42318; }
+@media (prefers-reduced-motion: reduce) { .cx-dots span, .cx-scrim, .cx-dialog { animation: none; } }
+
+/* ---------- 07 · Account connected ---------- */
+.cx-done { width: 100%; max-width: 396px; text-align: center; padding-top: 18px; }
+.cx-done .cx-h1 { color: #000; }
+.cx-linked { margin-top: 26px; text-align: left; border: 1px solid #E5E5E5; border-radius: 16px; background: #fff; }
+.cx-linked-row { display: flex; align-items: center; gap: 13px; padding: 18px 20px; }
+.cx-linked-row + .cx-linked-row { border-top: 1px solid #EFEFEF; }
+.cx-linked-row .cx-logo-circle { width: 33px; height: 33px; }
+.cx-linked-name { display: flex; align-items: center; gap: 7px; font-size: 14.5px; color: #000; }
+.cx-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cx-good); flex-shrink: 0; }
+.cx-linked-sub { font-size: 12px; color: var(--cx-muted); margin-top: 1px; }
+.cx-done-actions { margin-top: 26px; display: grid; gap: 10px; }
+.cx-demo-note { margin-top: 14px; font-size: 12.5px; color: var(--cx-badge-ink); background: var(--cx-badge); border-radius: 8px; padding: 8px 12px; }
+
+/* Toast — "Your account is now connected" */
+.cx-toast {
+  position: fixed; top: 30px; right: 30px; z-index: 95; width: min(498px, calc(100vw - 32px)); background: #fff; color: #000;
+  border: 1px solid #E2E2E2; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.08);
+  display: flex; gap: 12px; padding: 16px 14px 22px 18px; animation: cx-rise .2s ease-out;
+}
+.cx-toast-icon { color: var(--cx-good-bar); margin-top: 2px; flex-shrink: 0; }
+.cx-toast-title { font-size: 15.5px; }
+.cx-toast-sub { font-size: 13px; color: var(--cx-muted); margin-top: 3px; }
+.cx-toast .cx-icon-btn { margin-left: auto; margin-top: -6px; width: 32px; height: 32px; }
+.cx-toast-track { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: var(--cx-good-track); }
+.cx-toast-bar { height: 100%; background: var(--cx-good-bar); transform-origin: left; animation: cx-countdown linear forwards; }
+@keyframes cx-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (max-width: 640px) { .cx-toast { top: 12px; right: 16px; } }
+
+/* ---------- Manual add (add-account flow 03–09) ---------- */
+.cx-manual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.cx-mtile {
+  text-align: left; border: 1px solid var(--cx-tile-line); border-radius: 16px; background: #fff; cursor: pointer;
+  padding: 24px 24px 22px; display: flex; flex-direction: column; gap: 20px; min-height: 128px; transition: border-color .15s;
+}
+.cx-mtile:hover { border-color: #BDBDBD; }
+.cx-mtile.is-wide { grid-column: 1 / -1; }
+.cx-micon { width: 40px; height: 40px; border-radius: 50%; background: var(--cx-chip); display: grid; place-items: center; color: #555; }
+.cx-mtile-title { font-size: 14.5px; color: #000; }
+.cx-mtile-sub { font-size: 12.5px; color: var(--cx-muted); margin-top: -14px; }
+.cx-form { display: grid; gap: 16px; }
+.cx-field {
+  position: relative; display: block; border: 1px solid var(--cx-field-line); border-radius: 10px; background: #fff; padding: 8px 12px 9px;
+}
+.cx-field:focus-within { border-color: #141416; }
+.cx-field-label { display: block; font-size: 12px; color: #656565; }
+.cx-field input, .cx-field select {
+  width: 100%; border: 0; outline: 0; background: transparent; font: inherit; font-size: 16px; color: var(--cx-ink); padding: 2px 0 0;
+  appearance: none; -webkit-appearance: none;
+}
+.cx-field select { padding-right: 28px; cursor: pointer; }
+.cx-field .cx-field-chev { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #333; pointer-events: none; }
+.cx-money { display: flex; align-items: baseline; gap: 6px; font-size: 16px; }
+.cx-summary { background: var(--cx-bg); border-radius: 10px; padding: 18px 16px; }
+.cx-summary-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid #DEDEDE; }
+.cx-summary-top span:first-child { font-size: 16px; }
+.cx-summary-total { font-size: 21px; }
+.cx-summary-foot { padding-top: 14px; }
+.cx-summary-foot p:first-child { font-size: 14.5px; }
+.cx-summary-foot p + p { font-size: 13px; color: var(--cx-muted); }
+.cx-form-actions { display: flex; justify-content: flex-end; border-top: 1px solid #CCC; padding-top: 20px; margin-top: 8px; }
+.cx-form-actions .cx-btn { min-width: 100px; height: 46px; }
+.cx-disclaimer p { color: inherit !important; }
+.cx-field input:focus-visible, .cx-field select:focus-visible, .cx-search input:focus-visible { outline: none; }

@@ -38,40 +38,34 @@ export function AskMaalTile() {
   }
 
   return (
-    <div className="rounded-[14px] border border-border bg-[var(--surface)] p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <Sparkles className="size-4 text-mint" />
-        <h2 className="text-[14px] font-bold tracking-display">Ask Maal</h2>
+    <section className="mh-card" aria-labelledby="mh-ask-label">
+      <div className="mh-card-head">
+        <h2 id="mh-ask-label" className="mh-card-label m-0 font-normal">Ask Maal</h2>
+        <div className="mh-card-actions"><Sparkles className="size-5" style={{ color: "var(--mh-spark)" }} aria-hidden /></div>
       </div>
-      <form
-        onSubmit={(e) => { e.preventDefault(); ask(q); }}
-        className="flex gap-2 border border-border rounded-[10px] bg-background p-1.5"
-      >
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Ask anything about your money…"
-          aria-label="Ask Maal a question"
-          className="flex-1 bg-transparent px-2.5 py-1.5 text-[13px] outline-none"
-        />
-        <button type="submit" disabled={busy || !q.trim()} aria-label="Ask"
-          className="bg-foreground text-background px-3 rounded-[7px] disabled:opacity-40 inline-flex items-center">
-          <ArrowRight className="size-4" />
-        </button>
-      </form>
-      {err && (
-        <p role="alert" className="mt-2 text-[11px] text-[var(--gold)]">
-          {err} Your question is still above — hit ask again to retry.
-        </p>
-      )}
-      <div className="flex flex-wrap gap-2 mt-3">
-        {CHIPS.map((c) => (
-          <button key={c} onClick={() => ask(c)} disabled={busy}
-            className="text-[11.5px] px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground/40 disabled:opacity-40 transition-colors">
-            {c}
+      <div className="mh-card-body">
+        <form onSubmit={(e) => { e.preventDefault(); ask(q); }} className="mh-ask-form">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Ask anything about your money…"
+            aria-label="Ask Maal a question"
+          />
+          <button type="submit" disabled={busy || !q.trim()} aria-label="Ask" className="mh-btn-ink" style={{ height: 40, padding: "0 14px" }}>
+            <ArrowRight className="size-4" />
           </button>
-        ))}
+        </form>
+        {err && (
+          <p role="alert" className="mt-2 mb-0 mh-small" style={{ color: "var(--mh-bad)" }}>
+            {err} Your question is still above, so just ask again.
+          </p>
+        )}
+        <div className="flex flex-wrap gap-2 mt-3">
+          {CHIPS.map((c) => (
+            <button key={c} onClick={() => ask(c)} disabled={busy} className="mh-chip-btn disabled:opacity-40">{c}</button>
+          ))}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

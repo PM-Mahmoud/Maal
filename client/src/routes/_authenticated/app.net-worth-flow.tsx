@@ -132,8 +132,8 @@ function NetWorthFlow() {
   const savingNodes = flow.nodes.filter((n) => ["super", "investments", "savings"].includes(n.id));
 
   return (
-    <section id="net-worth-flow" className="scroll-mt-20 border-t border-hairline">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
+    <div id="net-worth-flow" className="max-w-6xl mx-auto px-6 md:px-10 py-10">
+      <div>
         <Reveal className="max-w-2xl">
           <div className="flex items-center gap-3">
             <span className="section-number">📊</span>
@@ -375,6 +375,6 @@ function NetWorthFlow() {
           </Reveal>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

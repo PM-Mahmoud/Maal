@@ -44,6 +44,11 @@ test('null row + user email → display_name falls back to email local-part', ()
   assert.strictEqual(out.retirement_age, 67);
 });
 
+test('account name beats the email local-part when no display_name is saved', () => {
+  const out = normalizeProfile(null, { email: 'mahmoud.test@example.com', name: 'Mahmoud Abumarzouq' });
+  assert.strictEqual(out.display_name, 'Mahmoud Abumarzouq');
+});
+
 test('reads display_name/age_band/risk out of onboarding_data JSONB', () => {
   const row = {
     onboarding_data: { display_name: 'Sam', age_band: '40-49', risk: 'growth' },

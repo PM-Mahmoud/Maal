@@ -1,0 +1,130 @@
+/* ============================================================
+   Maal v2 — admin pages (/admin, /admin/waitlist, password screen).
+   Visual layer only: the markup lives in routes/admin.js and every
+   class it uses is styled here. Same tokens as public/css/v2.css.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap');
+
+html { background: #020109; }
+body.adm {
+  --bg: #F8F9F6; --surface: #FFFFFF; --surface-2: #F6F6F4;
+  --fg: #202120; --fg-muted: #666666; --hair: #E4E5E2; --hair-strong: #BDBDBD;
+  --btn: #020109; --accent: #006B87; --accent-soft: #D6F7FF;
+  --good: #00805C; --good-soft: #E3F6EE; --bad: #B42318; --bad-soft: #FDECEA;
+  --warn: #8A4B0F; --warn-soft: #FBEFE2;
+  --serif: 'Lora', Georgia, 'Times New Roman', serif;
+  --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  margin: 0; min-height: 100vh; background: var(--bg); color: var(--fg);
+  font-family: var(--sans); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+}
+body.adm *, body.adm *::before, body.adm *::after { box-sizing: border-box; }
+body.adm .maal-mark { display: inline-block; vertical-align: -2px; margin-right: .4rem; color: var(--fg); }
+
+/* ---------- Top bar ---------- */
+body.adm .topbar {
+  position: sticky; top: 0; z-index: 10; height: 60px; padding: 0 2rem;
+  display: flex; align-items: center; gap: 1.25rem;
+  background: var(--surface); border-bottom: 1px solid var(--hair);
+}
+body.adm .topbar a { color: var(--fg-muted); text-decoration: none; font-size: 14px; }
+body.adm .topbar a:hover { color: var(--fg); }
+body.adm .topbar-logo, body.adm .topbar .logo {
+  display: inline-flex; align-items: center; font-family: var(--serif); font-size: 20px !important;
+  font-weight: 400; color: var(--fg) !important;
+}
+body.adm .topbar-title {
+  font-size: 12px; padding: .2rem .55rem; border-radius: 6px; background: var(--accent-soft); color: var(--accent);
+}
+body.adm .topbar-logout { font-size: 14px; color: var(--fg-muted); text-decoration: none; }
+
+/* ---------- Layout ---------- */
+body.adm .main { max-width: 1280px; margin: 0 auto; padding: 2rem; }
+body.adm .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+body.adm .stat { background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; padding: 1.25rem; }
+body.adm .stat-val { font-family: var(--serif); font-size: 2.2rem; font-weight: 400; line-height: 1.1; color: var(--fg); }
+body.adm .stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--fg-muted); margin-top: .35rem; }
+body.adm .section-title {
+  font-family: var(--serif); font-size: 22px; font-weight: 400; color: var(--fg); margin-bottom: 1rem;
+  text-transform: none; letter-spacing: 0;
+}
+body.adm .note { font-size: 14px; color: var(--fg-muted); margin: 0 0 1.25rem; }
+body.adm .note strong { color: var(--fg); font-weight: 600; }
+body.adm .muted { color: var(--fg-muted); font-size: 13px; }
+body.adm a.muted { text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---------- Tables ---------- */
+body.adm .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; }
+body.adm table { width: 100%; border-collapse: collapse; background: var(--surface); }
+body.adm .table-wrap table { border: 0; border-radius: 0; min-width: 760px; }
+body.adm thead tr { background: var(--surface-2); }
+body.adm th {
+  font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; color: var(--fg-muted);
+  padding: .8rem 1rem; text-align: left; border-bottom: 1px solid var(--hair); white-space: nowrap;
+}
+body.adm td { padding: .85rem 1rem; border-bottom: 1px solid var(--hair); font-size: 14px; vertical-align: middle; }
+body.adm td strong { font-weight: 600; }
+body.adm tr:last-child td { border-bottom: none; }
+body.adm tbody tr:hover td { background: #FAFAF8; }
+body.adm input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--btn); cursor: pointer; }
+
+/* ---------- Badges ---------- */
+body.adm .badge { display: inline-block; font-size: 12px; font-weight: 500; padding: .2rem .55rem; border-radius: 6px; border: 0; white-space: nowrap; }
+body.adm .badge.ok { background: var(--good-soft); color: var(--good); }
+body.adm .badge.warn { background: var(--warn-soft); color: var(--warn); }
+body.adm .badge.danger { background: var(--bad-soft); color: var(--bad); }
+body.adm .badge.google, body.adm .badge.creds { background: var(--accent-soft); color: var(--accent); }
+
+/* ---------- Waitlist toolbar ---------- */
+body.adm .bar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: 1rem; }
+body.adm .bar form { margin: 0; }
+body.adm .tab {
+  display: inline-flex; align-items: center; height: 36px; padding: 0 .9rem; border-radius: 8px;
+  border: 1px solid var(--hair); background: var(--surface); color: var(--fg-muted); text-decoration: none; font-size: 14px;
+}
+body.adm .tab:hover { color: var(--fg); border-color: var(--hair-strong); }
+body.adm .tab.on { background: var(--btn); color: #fff; border-color: var(--btn); }
+body.adm .spacer { flex: 1; }
+body.adm .btn {
+  display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 1.1rem;
+  border-radius: 8px; border: 1px solid var(--btn); background: var(--btn); color: #fff;
+  font-family: var(--sans); font-size: 14px; font-weight: 500; text-decoration: none; cursor: pointer;
+}
+body.adm .btn:hover { opacity: .88; }
+body.adm .btn.ghost { background: var(--surface); color: var(--btn); border-color: #999; }
+body.adm .btn.ghost:hover { opacity: 1; border-color: var(--fg); }
+body.adm .flash {
+  background: var(--good-soft); color: var(--good); border: 1px solid #BFE6D5; padding: .75rem 1rem;
+  border-radius: 10px; margin-bottom: 1rem; font-size: 14px;
+}
+body.adm a:focus-visible, body.adm button:focus-visible, body.adm input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- Password screen ---------- */
+body.adm-login { display: flex; align-items: center; justify-content: center; padding: 16px; }
+body.adm-login .box {
+  width: 100%; max-width: 400px; background: var(--surface); border: 1px solid var(--hair);
+  border-radius: 20px; padding: 2.5rem 2rem;
+}
+body.adm-login h2 {
+  display: flex; align-items: center; justify-content: center; margin: 0 0 1.5rem;
+  font-family: var(--serif); font-size: 24px; font-weight: 400; color: var(--fg);
+}
+body.adm-login input {
+  width: 100%; height: 54px; padding: 0 12px; margin-bottom: 1rem; border-radius: 8px;
+  border: 1px solid var(--hair-strong); background: var(--surface); color: var(--fg);
+  font-family: var(--sans); font-size: 16px; outline: none;
+}
+body.adm-login input:focus { border-color: var(--fg); }
+body.adm-login button {
+  width: 100%; height: 48px; border: 0; border-radius: 8px; background: var(--btn); color: #fff;
+  font-family: var(--sans); font-size: 16px; font-weight: 400; cursor: pointer;
+}
+body.adm-login button:hover { opacity: .88; }
+body.adm-login .err {
+  margin-bottom: .75rem; padding: .6rem .8rem; border-radius: 8px; background: var(--bad-soft); color: var(--bad); font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  body.adm .topbar { padding: 0 16px; gap: .9rem; overflow-x: auto; }
+  body.adm .main { padding: 1.25rem 16px; }
+  body.adm .bar .spacer { flex-basis: 100%; height: 0; }
+}
