@@ -135,19 +135,16 @@ export function NetWorthCard({
                   Balances couldn’t load. <button className="mh-link-btn" onClick={onRefresh} style={{ fontSize: 15 }}>Try again</button>
                 </p>
               </>
-            ) : privacy ? (
-              // Privacy mode: the balance is hidden; only the movement shows.
-              <>
-                <p className="mh-big mh-delta" data-tone={tone} style={{ marginTop: 0, fontSize: 32 }}>{deltaText}</p>
-                <p className="sr-only">Net worth hidden while privacy mode is on.</p>
-              </>
             ) : (
+              // Privacy mode blurs the balance AND the change ($ and %) — both
+              // carry .mh-amount (home.css) and are hidden from screen readers.
               <>
-                <p className="mh-big mh-amount" aria-live="polite">{aud(totals.netWorth)}</p>
-                <p className="mh-delta" data-tone={tone}>
+                <p className="mh-big mh-amount" aria-live="polite" aria-hidden={privacy || undefined}>{aud(totals.netWorth)}</p>
+                <p className="mh-delta mh-amount" data-tone={tone} aria-hidden={privacy || undefined}>
                   {deltaText}
                   <span className="sr-only"> over {range === "ALL" ? "all time" : range}</span>
                 </p>
+                {privacy && <p className="sr-only">Net worth hidden while privacy mode is on.</p>}
               </>
             )}
           </div>

@@ -46,8 +46,8 @@ export function InvestmentsCard({
               <p className="mh-big mh-amount">{aud(total)}</p>
             )}
             {points.length > 1 && (
-              <span className="mh-delta" data-tone={tone} style={{ marginTop: 0 }}>
-                <span className="mh-amount">{signedCents(change)}</span>{pctText(pct)}
+              <span className="mh-delta mh-amount" data-tone={tone} style={{ marginTop: 0 }}>
+                {signedCents(change)}{pctText(pct)}
               </span>
             )}
           </div>

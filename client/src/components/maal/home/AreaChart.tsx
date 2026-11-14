@@ -1,5 +1,6 @@
 import { useId, useMemo } from "react";
 import { audTick, aud, shortDate } from "./format";
+import { usePrivacy } from "./prefs";
 
 type Point = { date: string; value: number };
 
@@ -23,6 +24,7 @@ export function AreaChart({
   label: string;
 }) {
   const gid = useId().replace(/:/g, "");
+  const privacy = usePrivacy();
   const H = height;
   const pad = 8;
 
@@ -52,7 +54,9 @@ export function AreaChart({
 
   const first = points[0];
   const last = points[points.length - 1];
-  const summary = geo && first && last
+  const summary = geo && first && last && privacy
+    ? `${label}: amounts hidden while privacy mode is on`
+    : geo && first && last
     ? `${label}: ${aud(first.value)} on ${shortDate(first.date)} to ${aud(last.value)} on ${shortDate(last.date)}`
     : `${label}: not enough history yet`;
 

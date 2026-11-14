@@ -30,6 +30,20 @@ export const FALLBACK_OFFER: Offer = {
   trialDays: 14,
 };
 
+// Dashboard-offer snooze (per browser). Closing the DashboardOffer sets it, and
+// so does leaving /subscribe via "Maybe later" / ✕ — otherwise the user lands on
+// Home and is immediately asked again by the offer overlay.
+export const OFFER_SNOOZE_KEY = "maal_offer_snoozed_until";
+export const OFFER_SNOOZE_DAYS = 3;
+
+export function snoozeDashboardOffer(days = OFFER_SNOOZE_DAYS): void {
+  try { localStorage.setItem(OFFER_SNOOZE_KEY, String(Date.now() + days * 86400000)); } catch { /* ignore */ }
+}
+
+export function isDashboardOfferSnoozed(): boolean {
+  try { return Number(localStorage.getItem(OFFER_SNOOZE_KEY) || 0) > Date.now(); } catch { return false; }
+}
+
 export async function fetchOffer(): Promise<Offer> {
   try {
     const r = await fetch("/billing/offer", { credentials: "include" });
