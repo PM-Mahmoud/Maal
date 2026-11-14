@@ -29,10 +29,14 @@ const CARD_DISMISS_KEY = "maal_onboarding_card_dismissed";
 const DIALOG_SEEN_KEY = "maal_onboarding_dialog_seen";
 
 async function loadTasks(): Promise<OnboardingTask[]> {
-  const [accounts, goals, usage, refs] = await Promise.all([
+  const [accounts, wealth, goals, usage, refs] = await Promise.all([
     fetch("/api/v1/linked_accounts", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : []))
       .catch(() => []) as Promise<unknown[]>,
+    // Balances added by hand count too ("or add balances yourself").
+    fetch("/api/v1/wealth-summary", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null) as Promise<{ assetTotal?: number; liabilityTotal?: number } | null>,
     listGoals().catch(() => [] as unknown[]),
     getUsage().catch(() => null),
     getReferrals().catch(() => null),
@@ -41,7 +45,8 @@ async function loadTasks(): Promise<OnboardingTask[]> {
     {
       id: "accounts", label: "Link your accounts", cta: "Link accounts", href: "/app/assets",
       blurb: "Connect your Australian bank accounts read-only through open banking, or add balances yourself.",
-      done: Array.isArray(accounts) && accounts.length > 0,
+      done: (Array.isArray(accounts) && accounts.length > 0)
+        || Number(wealth?.assetTotal || 0) > 0 || Number(wealth?.liabilityTotal || 0) > 0,
     },
     {
       id: "goal", label: "Set a money goal", cta: "Get started", href: "/app/goals",
