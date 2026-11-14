@@ -188,7 +188,7 @@ function SkyPanel({ onBack }: { onBack?: () => void }) {
         </button>
       )}
       <h2>See every dollar clearly.<br />Grow it with confidence.</h2>
-      <p className="ms-trust"><span>Australian-built</span><i /><span>Read-only open banking</span></p>
+      <p className="ms-trust"><span>Read-only open banking</span><i /><span>Cancel anytime</span></p>
       <SampleSpendCard />
     </aside>
   );

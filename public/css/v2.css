@@ -119,8 +119,10 @@
 /* ---------- Figma pass 2 (frames 02–07) ---------- */
 /* Desktop: two equal panels with page margins, like the reference (card ~716px tall at 1400w). */
 @media (min-width: 960px) {
-  .v2-auth { gap: 16px; padding: 79px 22px 40px; align-content: start; }
-  .v2-auth-card, .v2-sky { min-height: min(718px, calc(100vh - 120px)); }
+  /* Vertical padding scales with screen height so the form starts near the
+     top on 768px-tall laptops instead of below an 80px gap. */
+  .v2-auth { gap: 16px; padding: clamp(20px, 7vh, 79px) clamp(16px, 1.6vw, 32px) clamp(20px, 4vh, 40px); align-content: start; }
+  .v2-auth-card, .v2-sky { min-height: min(718px, calc(100vh - clamp(40px, 11vh, 120px))); }
 }
 /* Offer badge sits over the top of the big price. */
 .v2-offer .v2-pill { position: relative; z-index: 1; }
@@ -130,12 +132,10 @@
 .v2-field label { transition: top .12s ease, font-size .12s ease; }
 .v2-input:placeholder-shown:not(:focus) + label { top: 17px; font-size: 15px; color: var(--v2-ink); }
 .v2-rules li.ok::before, .v2-rules li.bad::before { font-size: 13px; }
-/* Right panel: shooting star, laurel, spending card */
+/* Right panel: shooting star, spending card */
 .v2-sky-streak { position: absolute; top: 18%; left: 50%; width: 84px; height: 1px; transform: rotate(28deg); transform-origin: left;
   background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.75)); }
 .v2-sky h2 { font-size: clamp(26px, 2.3vw, 32px); max-width: 560px; line-height: 1.15; }
-.v2-laurel { position: relative; display: flex; align-items: center; gap: .6rem; margin-top: 1.6rem; color: rgba(255,255,255,.9); }
-.v2-laurel span { font-family: var(--v2-sans); font-size: 10.5px; line-height: 1.35; letter-spacing: .14em; text-transform: uppercase; text-align: center; }
 .v2-spend { max-width: 316px; padding: 0; overflow: hidden; }
 .v2-spend-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 16px 0; }
 .v2-spend .v2-kicker { font-size: 10.5px; color: rgba(255,255,255,.75); }
@@ -153,3 +153,11 @@
 .v2-disclaimer-line { margin-top: 1.6rem; font-size: 11px; line-height: 1.6; color: var(--v2-muted); text-align: center; }
 [hidden] { display: none !important; }
 @media (prefers-reduced-motion: reduce) { .v2-btn { transition: none; } }
+
+/* ─── Overscroll canvas + no top ribbon (landing polish) ─────
+   <html> gets its own background (v2 ink #020109) so the body background no
+   longer propagates to the canvas: rubber-band overscroll on macOS/iOS shows
+   black instead of the page colour. The body keeps painting the page and
+   fills at least the viewport, so black never appears as a gap. */
+html { background: #020109; }
+body { min-height: 100vh; }

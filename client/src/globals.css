@@ -153,7 +153,16 @@
     border-color: var(--color-border);
   }
 
+  /* Overscroll (rubber-band) area: the canvas behind the page is v2 ink,
+     not the page colour. Giving <html> its own background stops the body
+     background propagating to the canvas; the body still paints the page
+     and fills at least the viewport, so black only shows on overscroll. */
+  html {
+    background-color: #020109;
+  }
+
   body {
+    min-height: 100vh;
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);

@@ -80,7 +80,7 @@ async function sendWaitlistConfirmation(email) {
         <tr><td style="padding:40px 40px 32px;">
           <p style="margin:0 0 24px;font-size:1.5rem;font-weight:600;color:#C9A84C;"><img src="https://hellomaal.com/images/apple-touch-icon.png" width="28" height="28" alt="" style="display:inline-block;vertical-align:-6px;border-radius:6px;margin-right:6px;">Maal</p>
           <h1 style="margin:0 0 16px;font-size:1.5rem;font-weight:600;color:#F0EFE9;">You're on the Maal waitlist.</h1>
-          <p style="margin:0 0 20px;font-size:0.95rem;color:#8A8D83;line-height:1.7;">Early access is coming for everyday Australians. When your spot is ready, you'll be the first to know.</p>
+          <p style="margin:0 0 20px;font-size:0.95rem;color:#8A8D83;line-height:1.7;">We're opening access in stages. When your spot is ready, you'll be the first to know.</p>
           <p style="margin:0;font-size:0.85rem;color:rgba(138,141,131,0.6);line-height:1.5;">Maal is for informational purposes only and does not constitute personal financial advice.</p>
         </td></tr>
       </table>
@@ -92,7 +92,7 @@ async function sendWaitlistConfirmation(email) {
     to: email,
     subject: "You're on the Maal waitlist",
     html,
-    text: `You're on the Maal waitlist.\n\nEarly access is coming for everyday Australians. When your spot is ready, you'll be the first to know.`,
+    text: `You're on the Maal waitlist.\n\nWe're opening access in stages. When your spot is ready, you'll be the first to know.`,
   });
 }
 

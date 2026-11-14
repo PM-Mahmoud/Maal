@@ -427,11 +427,7 @@ a { color: var(--accent); }
 
 body { line-height: 1.6; }
 
-/* Signature 3px mint-teal accent bar across the very top */
-body::before {
-  content: ''; position: fixed; top: 0; left: 0; right: 0; height: 3px;
-  background: var(--accent-bar); z-index: 200;
-}
+/* (The 3px accent bar that used to sit across the very top was removed.) */
 
 /* Nav */
 .navbar { background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(16px); }
@@ -723,12 +719,12 @@ body::before {
 
 /* ─── Site Header ─────────────────────────────────────── */
 .lv-header {
-  position: sticky; top: 3px; z-index: 40;
+  position: sticky; top: 0; z-index: 40;
   background: rgba(251,251,251,.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
 .lv-header-inner {
-  max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; height: 72px;
+  max-width: 1440px; margin: 0 auto; padding: 0 clamp(1.25rem, 4vw, 3rem); height: 72px;
   display: flex; align-items: center; justify-content: space-between;
 }
 .lv-header-left { display: flex; align-items: center; gap: 2.5rem; }
@@ -756,7 +752,7 @@ body::before {
 .lv-header-cta:active { transform: scale(.98); }
 .lv-hamburger { display: none; background: none; border: none; cursor: pointer; padding: .25rem; color: var(--fg); }
 .lv-mobile-menu {
-  display: none; position: fixed; inset: 0; top: 75px;
+  display: none; position: fixed; inset: 0; top: 72px;
   background: rgba(251,251,251,.97); backdrop-filter: blur(16px);
   z-index: 39; padding: 1.5rem; flex-direction: column; gap: 0;
 }
@@ -909,7 +905,7 @@ body::before {
 
 /* ─── Footer v2 ───────────────────────────────────────── */
 .lv-footer { border-top: 1px solid var(--border); }
-.lv-footer-main { max-width: 1440px; margin: 0 auto; padding: 4rem 1.5rem; display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 3rem; }
+.lv-footer-main { max-width: 1440px; margin: 0 auto; padding: 4rem clamp(1.25rem, 4vw, 3rem); display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 3rem; }
 @media (max-width: 768px) { .lv-footer-main { grid-template-columns: 1fr 1fr; gap: 2rem; } }
 @media (max-width: 480px) { .lv-footer-main { grid-template-columns: 1fr; } }
 .lv-footer-brand-desc { font-size: 13px; color: var(--fg-muted); max-width: 34ch; line-height: 1.65; margin-top: 1rem; }
@@ -920,7 +916,7 @@ body::before {
 .lv-disclaimer { border-top: 1px solid var(--border); padding: 1.5rem; max-width: 1440px; margin: 0 auto; }
 .lv-disclaimer p { font-size: 11px; color: var(--fg-muted); line-height: 1.7; margin-bottom: .5rem; }
 .lv-disclaimer p:last-child { margin-bottom: 0; }
-.lv-footer-bottom { border-top: 1px solid var(--border); padding: 1.5rem; }
+.lv-footer-bottom { border-top: 1px solid var(--border); padding: 1.5rem clamp(1.25rem, 4vw, 3rem); }
 .lv-footer-bottom-inner { max-width: 1440px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--fg-muted); }
 
 /* Dark mode — .dark class compat */
@@ -1011,3 +1007,14 @@ select:focus:not(:focus-visible), textarea:focus:not(:focus-visible), [tabindex]
   .lv-score-bar-fill, .score-fill { transition-duration: .01ms !important; }
 }
 html.dark .lv-cta-block, html[data-theme="dark"] .lv-cta-block { border: 1px solid var(--border); }
+
+/* ─── Overscroll canvas + no top ribbon (landing polish) ─────
+   <html> gets its own background (v2 ink #020109) so the body background no
+   longer propagates to the canvas: rubber-band overscroll on macOS/iOS shows
+   black instead of the page colour. The body keeps painting the page and
+   fills at least the viewport, so black never appears as a gap. */
+html { background: #020109; }
+body { min-height: 100vh; }
+
+/* Sticky site header: in-page anchors land below it, not under it. */
+[id] { scroll-margin-top: 88px; }

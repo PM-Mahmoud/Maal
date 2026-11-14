@@ -613,11 +613,7 @@ html[data-theme="dark"] .tile-edit-btn--remove:hover { background:rgba(185,28,28
 
 body.app-body { background: var(--bg); }
 
-/* Signature 3px mint-teal accent bar across the very top of every page */
-body.app-body::before {
-  content: ''; position: fixed; top: 0; left: 0; right: 0; height: 3px;
-  background: var(--accent-bar); z-index: 200;
-}
+/* (The 3px accent bar that used to sit across the very top was removed.) */
 
 /* Headings: bold, tight, near-black (Sahha display) */
 .page-head h1 { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.03em; }
@@ -994,3 +990,11 @@ select:focus:not(:focus-visible), textarea:focus:not(:focus-visible), [tabindex]
 
 /* radius fix — unify with the 8px button system */
 .btn-icon, .vote-btn { border-radius: var(--radius-sm); }
+
+/* ─── Overscroll canvas + no top ribbon (landing polish) ─────
+   <html> gets its own background (v2 ink #020109) so the body background no
+   longer propagates to the canvas: rubber-band overscroll on macOS/iOS shows
+   black instead of the page colour. The body keeps painting the page and
+   fills at least the viewport, so black never appears as a gap. */
+html { background: #020109; }
+body { min-height: 100vh; }
