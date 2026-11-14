@@ -110,10 +110,11 @@
     body.sc-kiosk .sc-kiosk-brand { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; width: 100%; max-width: 720px; box-sizing: border-box; margin: 0 auto; padding: 1.5rem 1.5rem 0; font-weight: 800; font-size: 22px; }
     body.sc-kiosk .sc-kiosk-brand small { font-weight: 600; font-size: 13px; color: var(--fg-muted); }
   </style>
+  <link rel="stylesheet" href="/css/v2-kiosk.css">
 </head>
-<body<%= locals.kiosk ? ' class=sc-kiosk' : '' %>>
+<body class="v2-score<%= locals.kiosk ? ' sc-kiosk' : '' %>">
   <% if (locals.kiosk) { %>
-    <div class="sc-kiosk-brand"><span>Maal</span><small>Free Maal Score · 2 minutes</small></div>
+    <div class="sc-kiosk-brand"><span><svg class="maal-mark" width="20" height="20" viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true"><g fill="currentColor"><rect x="0" y="0" width="1" height="7"/><rect x="6" y="0" width="1" height="7"/><rect x="1" y="1" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/></g></svg>Maal</span><small>Free Maal Score · 2 minutes</small></div>
   <% } else { %>
     <%- include('partials/navbar') %>
   <% } %>
