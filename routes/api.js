@@ -207,8 +207,11 @@ router.post('/v1/advisor/message', async (req, res) => {
     const { message, history = [] } = req.body;
     if (!message) return res.status(400).json({ error: 'message required' });
     if (!advisor.hasAdvisor()) {
+      // Env-var names stay in the server log; members see a plain message
+      // (the reply renders as markdown, which mangled the underscored names).
+      console.warn('[advisor] no model configured — set AZURE_OPENAI_API_KEY or GROQ_API_KEY in the host env');
       return res.json({
-        reply: "I'm not able to respond right now — the AI advisor isn't configured. Ask your admin to set an API key (AZURE_OPENAI_API_KEY or GROQ_API_KEY) in the server environment.",
+        reply: "I'm not able to answer right now because Maal's advisor is offline. Please try again a little later.",
         live: false,
       });
     }
