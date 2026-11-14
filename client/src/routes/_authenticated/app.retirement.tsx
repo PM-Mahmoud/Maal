@@ -164,17 +164,17 @@ function RetirementPage() {
       </div>
 
       <div className="mt-6 p-6 border border-border rounded-[12px] bg-[var(--surface)]">
-        <div className="flex items-end justify-between mb-4 gap-3">
+        <div className="flex flex-wrap items-end justify-between mb-4 gap-3">
           <div>
             <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Saved scenarios</p>
             <p className="text-[12px] text-muted-foreground mt-1">Snapshot the current sliders to compare strategies later.</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             <input
               value={scenarioName}
               onChange={(e) => setScenarioName(e.target.value)}
               placeholder="Name (optional)"
-              className="bg-transparent border border-border rounded-[8px] px-3 py-2 text-[12px] w-56"
+              className="bg-transparent border border-border rounded-[8px] px-3 py-2 text-[12px] flex-1 min-w-0 sm:flex-none sm:w-56"
             />
             <button onClick={onSave} className="bg-foreground text-background px-4 py-2 rounded-[8px] text-[12px] font-semibold">
               Save scenario
