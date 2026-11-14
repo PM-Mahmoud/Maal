@@ -166,9 +166,6 @@ html[data-theme="dark"] .v2 .v2-btn-ink { color: #020109; }
 .v2-ask button { width: 52px; height: 52px; border-radius: 999px; border: 0; background: rgba(255,255,255,.25); color: #fff; display: grid; place-items: center; cursor: pointer; flex-shrink: 0; }
 .v2-ask button:hover { background: rgba(255,255,255,.35); }
 .v2-ask-note { margin-top: clamp(.7rem, 1.4vh, 1.1rem); font-size: 16px; color: #A4B4BE; }
-.v2-facts { margin-top: clamp(1.2rem, 2.8vh, 2rem); display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem 1.4rem; }
-.v2-fact { display: inline-flex; align-items: center; gap: .45rem; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.75); }
-.v2-fact::before { content: "✦"; font-size: 10px; color: rgba(255,255,255,.7); }
 
 /* ---------- Product preview card (overlaps the hero) ---------- */
 .v2-preview { position: relative; z-index: 5; margin-top: -150px; }
