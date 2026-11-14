@@ -159,6 +159,8 @@
 .cx-search:focus-within { border-color: #555; }
 .cx-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 16px; color: #000; }
 .cx-search input::placeholder { color: #999; }
+/* We draw our own clear button; hide the browser's native one so there aren't two X icons. */
+.cx-search input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }
 .cx-search .cx-search-icon { color: #444; flex-shrink: 0; }
 .cx-clear { border: 0; background: transparent; padding: 4px; border-radius: 50%; cursor: pointer; color: #222; display: grid; place-items: center; }
 .cx-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 9px; }

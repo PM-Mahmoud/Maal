@@ -97,7 +97,7 @@ html[data-theme="dark"] .v2 .v2-btn-ink { color: #020109; }
 .v2-nav a { font-family: var(--v2-sans); font-size: 14px; letter-spacing: .02em; text-transform: uppercase; color: #fff; opacity: .92; }
 .v2-nav a:hover { color: #fff; }
 .v2-header-right { display: flex; align-items: center; gap: .6rem; }
-.v2-login { display: inline; font-family: var(--v2-sans); font-size: 14px; letter-spacing: .02em; text-transform: uppercase; color: #fff; opacity: .92; padding: 0 .6rem; }
+.v2-login { display: inline; font-family: var(--v2-sans); font-size: 14px; letter-spacing: .02em; text-transform: uppercase; color: #fff; opacity: .92; padding: 0 .6rem; white-space: nowrap; }
 .v2-login:hover { color: #fff; }
 .v2-signup { display: none; }
 @media (min-width: 640px) { .v2-signup { display: inline-flex; } }
@@ -239,7 +239,11 @@ html[data-theme="dark"] .v2 .v2-btn-ink { color: #020109; }
 }
 @media (max-width: 520px) {
   .v2-hero { padding: 120px 0 190px; }
-  .v2-header-inner { padding: 14px 16px; }
+  .v2-header { padding: 12px 12px 0; }
+  /* Logo + "Log in" + CTA must fit in 375px without the CTA spilling out of the pill. */
+  .v2-header-inner { padding: 10px 10px 10px 14px; gap: .5rem; }
+  .v2-header-right { gap: .25rem; }
+  .v2-login { padding: 0 .4rem; font-size: 13px; }
   .v2-wrap, .v2-hero-inner { padding: 0 16px; }
   .v2-btn-cta { height: 40px; padding: 0 .85rem; font-size: 11.5px; }
   .v2-section { padding: 80px 0; }
