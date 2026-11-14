@@ -26,6 +26,7 @@ import { Route as AuthenticatedAppResearchRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppReportRouteImport } from './routes/_authenticated/app.report'
 import { Route as AuthenticatedAppRecapRouteImport } from './routes/_authenticated/app.recap'
 import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
+import { Route as AuthenticatedAppPurificationRouteImport } from './routes/_authenticated/app.purification'
 import { Route as AuthenticatedAppPortfolioPlanRouteImport } from './routes/_authenticated/app.portfolio-plan'
 import { Route as AuthenticatedAppPlanningRouteImport } from './routes/_authenticated/app.planning'
 import { Route as AuthenticatedAppOnboardingRouteImport } from './routes/_authenticated/app.onboarding'
@@ -141,6 +142,12 @@ const AuthenticatedAppRadarRoute = AuthenticatedAppRadarRouteImport.update({
   path: '/radar',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppPurificationRoute =
+  AuthenticatedAppPurificationRouteImport.update({
+    id: '/purification',
+    path: '/purification',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppPortfolioPlanRoute =
   AuthenticatedAppPortfolioPlanRouteImport.update({
     id: '/portfolio-plan',
@@ -312,6 +319,7 @@ export interface FileRoutesByFullPath {
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/planning': typeof AuthenticatedAppPlanningRoute
   '/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
+  '/app/purification': typeof AuthenticatedAppPurificationRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/recap': typeof AuthenticatedAppRecapRoute
   '/app/report': typeof AuthenticatedAppReportRoute
@@ -355,6 +363,7 @@ export interface FileRoutesByTo {
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/planning': typeof AuthenticatedAppPlanningRoute
   '/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
+  '/app/purification': typeof AuthenticatedAppPurificationRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/recap': typeof AuthenticatedAppRecapRoute
   '/app/report': typeof AuthenticatedAppReportRoute
@@ -401,6 +410,7 @@ export interface FileRoutesById {
   '/_authenticated/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/_authenticated/app/planning': typeof AuthenticatedAppPlanningRoute
   '/_authenticated/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
+  '/_authenticated/app/purification': typeof AuthenticatedAppPurificationRoute
   '/_authenticated/app/radar': typeof AuthenticatedAppRadarRoute
   '/_authenticated/app/recap': typeof AuthenticatedAppRecapRoute
   '/_authenticated/app/report': typeof AuthenticatedAppReportRoute
@@ -447,6 +457,7 @@ export interface FileRouteTypes {
     | '/app/onboarding'
     | '/app/planning'
     | '/app/portfolio-plan'
+    | '/app/purification'
     | '/app/radar'
     | '/app/recap'
     | '/app/report'
@@ -490,6 +501,7 @@ export interface FileRouteTypes {
     | '/app/onboarding'
     | '/app/planning'
     | '/app/portfolio-plan'
+    | '/app/purification'
     | '/app/radar'
     | '/app/recap'
     | '/app/report'
@@ -535,6 +547,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/onboarding'
     | '/_authenticated/app/planning'
     | '/_authenticated/app/portfolio-plan'
+    | '/_authenticated/app/purification'
     | '/_authenticated/app/radar'
     | '/_authenticated/app/recap'
     | '/_authenticated/app/report'
@@ -688,6 +701,13 @@ declare module '@tanstack/react-router' {
       path: '/radar'
       fullPath: '/app/radar'
       preLoaderRoute: typeof AuthenticatedAppRadarRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/purification': {
+      id: '/_authenticated/app/purification'
+      path: '/purification'
+      fullPath: '/app/purification'
+      preLoaderRoute: typeof AuthenticatedAppPurificationRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/portfolio-plan': {
@@ -889,6 +909,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppOnboardingRoute: typeof AuthenticatedAppOnboardingRoute
   AuthenticatedAppPlanningRoute: typeof AuthenticatedAppPlanningRoute
   AuthenticatedAppPortfolioPlanRoute: typeof AuthenticatedAppPortfolioPlanRoute
+  AuthenticatedAppPurificationRoute: typeof AuthenticatedAppPurificationRoute
   AuthenticatedAppRadarRoute: typeof AuthenticatedAppRadarRoute
   AuthenticatedAppRecapRoute: typeof AuthenticatedAppRecapRoute
   AuthenticatedAppReportRoute: typeof AuthenticatedAppReportRoute
@@ -929,6 +950,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppOnboardingRoute: AuthenticatedAppOnboardingRoute,
   AuthenticatedAppPlanningRoute: AuthenticatedAppPlanningRoute,
   AuthenticatedAppPortfolioPlanRoute: AuthenticatedAppPortfolioPlanRoute,
+  AuthenticatedAppPurificationRoute: AuthenticatedAppPurificationRoute,
   AuthenticatedAppRadarRoute: AuthenticatedAppRadarRoute,
   AuthenticatedAppRecapRoute: AuthenticatedAppRecapRoute,
   AuthenticatedAppReportRoute: AuthenticatedAppReportRoute,

@@ -12,7 +12,7 @@ import "@/components/maal/home/home.css";
 import {
   FolderLock, ArrowLeftRight, UserCircle2, Home, MessageSquarePlus, Map, LifeBuoy, ChevronDown, LogOut,
   X, Lightbulb, CreditCard, Menu, Sparkles, BarChart3, BriefcaseBusiness, HandCoins,
-  TrendingUp, PieChart, ScrollText, Receipt, UserRound,
+  TrendingUp, PieChart, ScrollText, Receipt, UserRound, Target, ListChecks, Sprout,
 } from "lucide-react";
 import { TRACK, SERVICES, CALCULATORS, ACCOUNT, areaFor } from "@/components/maal/nav/sections";
 import { SectionTabs } from "@/components/maal/nav/SectionTabs";
@@ -29,15 +29,19 @@ type Item = { to: string; label: string; icon: any; area?: string };
 
 // Track · Services · Calculators · Account (2026-11-15). Pages inside each
 // Track area are shown as tabs by <SectionTabs/> — see nav/sections.ts.
-const TRACK_ICONS: Record<string, any> = { home: Home, spending: ArrowLeftRight, invest: BarChart3, forecast: TrendingUp, equity: PieChart };
+const TRACK_ICONS: Record<string, any> = {
+  home: Home, spending: ArrowLeftRight, invest: BarChart3, equity: PieChart, forecast: TrendingUp,
+  goals: Target, "action-plan": ListChecks, vault: FolderLock,
+};
 const TOP: Item[] = TRACK.map((a) => ({ to: a.to, label: a.label, icon: TRACK_ICONS[a.key], area: a.key }));
 
 const SERVICE_ICONS = [BriefcaseBusiness, ScrollText, Receipt, UserRound];
 const SERVICE_ITEMS: Item[] = SERVICES.map((s, i) => ({ ...s, icon: SERVICE_ICONS[i] }));
 
-const TOOLS: Item[] = CALCULATORS.map((c) => ({ ...c, icon: HandCoins }));
+const CALCULATOR_ICONS = [HandCoins, Sprout];
+const TOOLS: Item[] = CALCULATORS.map((c, i) => ({ ...c, icon: CALCULATOR_ICONS[i] ?? HandCoins }));
 
-const ACCOUNT_ICONS = [FolderLock, UserCircle2, CreditCard, Map];
+const ACCOUNT_ICONS = [UserCircle2, CreditCard, Map];
 const BOTTOM: Item[] = ACCOUNT.map((a, i) => ({ ...a, icon: ACCOUNT_ICONS[i] }));
 
 export function AppShell({ children }: { children: React.ReactNode }) {

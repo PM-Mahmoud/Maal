@@ -62,7 +62,7 @@ export function MarketWatchCard() {
   }, []);
 
   return (
-    <HomeCard label="Market watch" to="/app/research" labelId="mh-mkt-label"
+    <HomeCard label="Market watch" to="/app/invest" labelId="mh-mkt-label"
       actions={<AskSparkButton label="Ask Maal about today’s markets" question="What's moving markets today and does any of it matter for my portfolio?" />}>
       {error ? (
         <p className="mh-muted mh-small m-0">Market data is unavailable right now. Check back shortly.</p>

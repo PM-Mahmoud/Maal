@@ -1,4 +1,6 @@
 // App navigation (2026-11-15): Track · Services · Calculators · Account.
+// Research and Radar are deliberately not in nav (they will fold into the
+// Maal AI advisor); their routes still exist.
 // Each Track area groups the existing pages that belong to it; the shell shows
 // those pages as tabs at the top of the content (SectionTabs).
 
@@ -8,8 +10,9 @@ export type Area = { key: string; label: string; to: string; pages: SubPage[] };
 export const TRACK: Area[] = [
   { key: "home", label: "Home", to: "/app", pages: [] },
   {
-    key: "spending", label: "Spending", to: "/app/transactions",
+    key: "spending", label: "Spending", to: "/app/spending",
     pages: [
+      { to: "/app/spending", label: "Overview" },
       { to: "/app/transactions", label: "Transactions" },
       { to: "/app/wealth/cash", label: "Cash" },
       { to: "/app/wealth/liabilities", label: "Debts" },
@@ -25,22 +28,22 @@ export const TRACK: Area[] = [
       { to: "/app/wealth/other", label: "Other assets" },
       { to: "/app/assets", label: "Net worth" },
       { to: "/app/portfolio-plan", label: "Portfolio plan" },
-      { to: "/app/research", label: "Research" },
-      { to: "/app/radar", label: "Radar" },
     ],
   },
+  { key: "equity", label: "Equity", to: "/app/equity", pages: [] },
   {
-    key: "forecast", label: "Forecast", to: "/app/retirement",
+    key: "forecast", label: "Forecast", to: "/app/forecast",
     pages: [
+      { to: "/app/forecast", label: "Overview" },
       { to: "/app/retirement", label: "Retirement" },
       { to: "/app/planning", label: "Financial plan" },
-      { to: "/app/goals", label: "Goals" },
-      { to: "/app/action-plan", label: "Action plan" },
       { to: "/app/net-worth-flow", label: "Net worth flow" },
       { to: "/app/report", label: "Report" },
     ],
   },
-  { key: "equity", label: "Equity", to: "/app/equity", pages: [] },
+  { key: "goals", label: "Goals", to: "/app/goals", pages: [] },
+  { key: "action-plan", label: "Action plan", to: "/app/action-plan", pages: [] },
+  { key: "vault", label: "Vault", to: "/app/vault", pages: [] },
 ];
 
 export const SERVICES: SubPage[] = [
@@ -50,10 +53,12 @@ export const SERVICES: SubPage[] = [
   { to: "/app/services/financial-planner", label: "Financial planner" },
 ];
 
-export const CALCULATORS: SubPage[] = [{ to: "/app/zakat", label: "Zakat" }];
+export const CALCULATORS: SubPage[] = [
+  { to: "/app/zakat", label: "Zakat" },
+  { to: "/app/purification", label: "Purification" },
+];
 
 export const ACCOUNT: SubPage[] = [
-  { to: "/app/vault", label: "Vault" },
   { to: "/app/onboarding", label: "Profile" },
   { to: "/app/billing", label: "Plan & Usage" },
   { to: "/app/roadmap", label: "Roadmap" },
