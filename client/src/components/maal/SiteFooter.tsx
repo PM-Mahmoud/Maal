@@ -13,7 +13,7 @@ export function SiteFooter() {
               <span className="text-[17px] font-bold tracking-display">Maal</span>
             </div>
             <p className="text-[13px] text-muted-foreground max-w-[34ch] leading-relaxed">
-              The financial wellbeing score for every Australian. One score. One plan. No spreadsheets.
+              A 0–100 financial wellbeing score across savings, debt, super, wealth and protection, with a plan to improve it.
             </p>
           </div>
           <div>
@@ -43,7 +43,7 @@ export function SiteFooter() {
       <Disclaimer />
       <div className="border-t border-border">
         <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between text-[11px] text-muted-foreground">
-          <span>© {new Date().getFullYear()} Maal Pty Ltd. Built in Australia.</span>
+          <span>© {new Date().getFullYear()} Maal Pty Ltd.</span>
           <span className="tracking-wider uppercase">All amounts in AUD</span>
         </div>
       </div>

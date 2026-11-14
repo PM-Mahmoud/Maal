@@ -11,9 +11,9 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Maal: Your interest-free ecosystem" },
-      { name: "description", content: "Maal brings your accounts, super, debt and net worth into one place, with a Maal Score, a plan and AI chat, built for Australians and interest-free by default." },
+      { name: "description", content: "Maal brings your accounts, super, debt and net worth into one place, with a Maal Score, a plan and AI chat. Interest-free by default." },
       { property: "og:title", content: "Maal: Your interest-free ecosystem" },
-      { property: "og:description", content: "Your accounts, super, debt and net worth in one place, with a Maal Score, a plan and AI chat. Built for Australians." },
+      { property: "og:description", content: "Your accounts, super, debt and net worth in one place, with a Maal Score, a plan and AI chat." },
     ],
   }),
   component: Index,
@@ -128,7 +128,7 @@ function Index() {
 
           <div className="v2-facts">
             <span className="v2-fact">Read-only open banking (CDR)</span>
-            <span className="v2-fact">Built for Australians</span>
+            <span className="v2-fact">Current ATO, super &amp; HECS rules</span>
             <span className="v2-fact">Interest-free by default</span>
             <span className="v2-fact">Education, not advice</span>
           </div>
@@ -267,10 +267,10 @@ function Index() {
       <section className="v2-section">
         <div className="v2-wrap v2-reveal">
           <span className="v2-kicker">Why Maal</span>
-          <h2 className="v2-h2">Built for the financial life<br />Australians actually have.</h2>
+          <h2 className="v2-h2">Super, HECS and tax,<br />worked into every number.</h2>
           <div className="v2-why">
             <div className="v2-why-item"><h3>Interest-free by default</h3><p>Maal analyses the debts you already have honestly, and points you to profit-based alternatives rather than new interest-bearing products.</p></div>
-            <div className="v2-why-item"><h3>Australian to the core</h3><p>Super, HECS-HELP, EOFY and the ATO, with tax and super figures kept up to date for each financial year.</p></div>
+            <div className="v2-why-item"><h3>Tax and super, kept current</h3><p>Super, HECS-HELP, EOFY and the ATO, with tax and super figures kept up to date for each financial year.</p></div>
             <div className="v2-why-item"><h3>Secure and read-only</h3><p>Bank connections run through Basiq under the Consumer Data Right. Maal can never move your money, never stores your bank password and never sells your data.</p></div>
             <div className="v2-why-item"><h3>Not a credit score</h3><p>A credit score exists for lenders. The Maal Score measures your whole financial wellbeing, and it exists for you.</p></div>
           </div>
@@ -352,7 +352,7 @@ function Index() {
             <p>Maal Pty Ltd is not an Australian Financial Services Licensee. Information provided is general in nature and does not take into account your individual objectives, financial situation, or needs. Always consider seeking advice from a qualified financial adviser before making investment decisions. Past performance is not a reliable indicator of future performance.</p>
           </div>
           <div className="v2-footer-bottom">
-            <span>© {new Date().getFullYear()} Maal Pty Ltd. Built in Australia.</span>
+            <span>© {new Date().getFullYear()} Maal Pty Ltd.</span>
             <span>All amounts in AUD</span>
           </div>
         </div>
