@@ -94,9 +94,9 @@ function Line({ data }: { data: any }) {
 /** Renders an Ask Maal generative-UI widget (or a saved dashboard widget). */
 export function WidgetRenderer({ widget, action }: { widget: WidgetSpec; action?: React.ReactNode }) {
   return (
-    <div className="rounded-[12px] border border-border bg-[var(--surface)] p-4 my-2">
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <h4 className="text-[13px] font-semibold tracking-display">{widget.title}</h4>
+    <div className="maal-widget rounded-[14px] border border-border bg-[var(--surface)] p-4 my-2">
+      <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+        <h4 className="maal-widget-title text-[13px] font-semibold tracking-display">{widget.title}</h4>
         {action}
       </div>
       {widget.type === "donut" && <Donut data={widget.data} />}
