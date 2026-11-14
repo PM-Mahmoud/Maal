@@ -20,6 +20,7 @@ const { sendEmail } = require('../services/email');
 const { sendOtpSms } = require('../services/sms');
 const waitlistAccess = require('../services/waitlist-access');
 const { isGateOn } = require('../lib/waitlist-gate');
+const { appUrl } = require('../lib/app-host');
 
 const RESET_TOKEN_TTL  = 3600 * 1000;       // 1 hour
 const OTP_TTL          = 10 * 60 * 1000;    // 10 minutes
@@ -71,7 +72,7 @@ async function sendOtpEmail(email, name, otp) {
 // ─── Page: /login ─────────────────────────────────────────────────────────────
 
 router.get('/login', (req, res) => {
-  if (req.session.userId) return res.redirect('/app');
+  if (req.session.userId) return res.redirect(appUrl('/'));
   res.render('auth-login', { layout: false, error: null, email: '' });
 });
 
@@ -170,7 +171,7 @@ router.post('/login', authLimiter,
           typeof req.query.redirect === 'string' &&
           req.query.redirect.startsWith('/') &&
           !req.query.redirect.startsWith('//')
-        ) ? req.query.redirect : '/app';
+        ) ? req.query.redirect : appUrl('/');
         res.redirect(redir);
       });
     });
@@ -180,7 +181,7 @@ router.post('/login', authLimiter,
 // ─── Page: /signup ────────────────────────────────────────────────────────────
 
 router.get('/signup', (req, res) => {
-  if (req.session.userId) return res.redirect('/app');
+  if (req.session.userId) return res.redirect(appUrl('/'));
   const error = req.query.invite === 'required' ? waitlistAccess.NOT_INVITED_MESSAGE : null;
   // Arrived through a friend's referral link: no invite-only notice.
   const referred = !!req.session.referralCode;
@@ -363,7 +364,7 @@ router.post('/verify-email', otpLimiter, async (req, res) => {
       // React app owns both destinations now: the EJS /dashboard is retired and
       // the EJS /onboarding wizard is legacy — new users get the React flow.
       // New accounts go through the welcome flow (onboarding v2, PR 4).
-      res.redirect(isPasswordlessLogin ? '/app' : '/welcome');
+      res.redirect(isPasswordlessLogin ? appUrl('/') : '/welcome');
     });
   });
 });

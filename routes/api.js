@@ -90,7 +90,9 @@ router.post('/auth/signup', async (req, res) => {
 
 router.post('/auth/logout', (req, res) => {
   req.session.destroy(() => {
-    res.clearCookie('connect.sid');
+    // Must match the cookie's name AND domain or the browser keeps it (lib/app-host.js).
+    const { name, domain } = require('../lib/app-host').sessionCookieConfig();
+    res.clearCookie(name, domain ? { domain } : undefined);
     res.json({ ok: true });
   });
 });

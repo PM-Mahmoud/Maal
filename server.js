@@ -6,6 +6,7 @@ const expressLayouts = require('express-ejs-layouts');
 const path = require('path');
 const { buildLandingContext } = require('./lib/landing-context');
 const { sessionStore } = require('./db/auth');
+const appHost = require('./lib/app-host');
 
 // ─── Process-level error handlers ─────────────────────────────────────────
 process.on('unhandledRejection', (reason) => console.error('Unhandled rejection:', reason));
@@ -66,18 +67,41 @@ const _sessionSecret = process.env.SESSION_SECRET || (() => {
   console.warn('[WARN] SESSION_SECRET not set — using ephemeral secret. Sessions will not survive restarts. Set SESSION_SECRET env var.');
   return s;
 })();
+// Cookie name/domain: unset SESSION_COOKIE_DOMAIN = exactly the old host-only
+// "connect.sid". Set it to ".hellomaal.com" to share the login between the site
+// and the app subdomain (lib/app-host.js sessionCookieConfig, docs/app-subdomain.md).
+const _sessionCookie = appHost.sessionCookieConfig();
 const sessionMiddleware = require('express-session')({
   store: sessionStore,
   secret: _sessionSecret,
   resave: false,
   saveUninitialized: false,
+  ...(_sessionCookie.name !== 'connect.sid' ? { name: _sessionCookie.name } : {}),
   cookie: {
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
+    ...(_sessionCookie.domain ? { domain: _sessionCookie.domain } : {}),
   },
 });
+// ─── Optional app subdomain (APP_HOST) ─────────────────────────────────────
+// Installed only when APP_HOST is set — with it unset nothing here runs and the
+// routing is exactly as before. On APP_HOST the React app is served at "/";
+// /app/* on the site 301s there, and marketing/auth paths on APP_HOST 301 to
+// the site (BASE_URL). Registered before express.static so /app never reaches
+// the static directory redirect. See docs/app-subdomain.md.
+if (appHost.isEnabled()) {
+  app.use((req, res, next) => {
+    if (appHost.isAppHostRequest(req.hostname)) res.set('X-Robots-Tag', 'noindex'); // keep the app out of search results
+    const r = appHost.hostRedirect({
+      hostname: req.hostname, path: req.path, originalUrl: req.originalUrl, method: req.method,
+    });
+    if (r) return res.redirect(r.status, r.location);
+    next();
+  });
+}
+
 // ─── Static assets (BEFORE session) ────────────────────────────────────────
 // Served ahead of the session middleware on purpose: a logged-in browser sends
 // the session cookie with every same-origin request, so serving the React
@@ -85,7 +109,11 @@ const sessionMiddleware = require('express-session')({
 // Postgres session SELECT for each one — dozens of needless Neon round-trips per
 // page load. Static files never need a session, so short-circuit them here.
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
-app.use('/assets', express.static(path.join(__dirname, 'public', 'app', 'assets')));
+// With APP_HOST set, "/assets" is also a React page on the app host (the Assets
+// screen), so the directory's trailing-slash redirect is switched off and the
+// bare path falls through to the SPA. Real bundle files are served as before.
+app.use('/assets', express.static(path.join(__dirname, 'public', 'app', 'assets'),
+  appHost.isEnabled() ? { redirect: false } : undefined));
 
 app.use(sessionMiddleware);
 
@@ -297,22 +325,34 @@ app.use(require('./routes/feedback'));
 // else to /app. Unauthenticated users then hit the /app auth gate → /auth.
 // (The EJS dashboard views/routes/*.ejs remain on disk as dead code for now;
 // deleting them is a separate cleanup.)
+// Values are app-relative; appUrl() turns them into '/app/...' (APP_HOST unset —
+// the original strings) or 'https://APP_HOST/...'.
 const DASHBOARD_REDIRECTS = {
-  '/': '/app',
-  '/assets': '/app/assets',
-  '/vault': '/app/vault',
-  '/transactions': '/app/transactions',
-  '/goals': '/app/goals',
-  '/ask': '/app/advisor',
-  '/research': '/app/research',
-  '/radar': '/app/radar',
-  '/profile': '/app/onboarding',
-  '/portfolio': '/app/portfolio-plan',
+  '/': '/',
+  '/assets': '/assets',
+  '/vault': '/vault',
+  '/transactions': '/transactions',
+  '/goals': '/goals',
+  '/ask': '/advisor',
+  '/research': '/research',
+  '/radar': '/radar',
+  '/profile': '/onboarding',
+  '/portfolio': '/portfolio-plan',
 };
 app.use('/dashboard', (req, res) => {
   const sub = (req.path.replace(/\/+$/, '') || '/');
-  res.redirect(301, DASHBOARD_REDIRECTS[sub] || '/app');
+  res.redirect(301, appHost.appUrl(DASHBOARD_REDIRECTS[sub] || '/'));
 });
+
+// On APP_HOST, /billing and /onboarding are React pages, but Express routers of
+// the same name are mounted below (/billing has no GET /, /onboarding renders
+// the old EJS wizard). Serve the SPA for exactly those paths on the app host.
+if (appHost.isEnabled()) {
+  app.get(['/billing', '/onboarding'], (req, res, next) => {
+    if (!appHost.isAppHostRequest(req.hostname) || !appHost.isShadowedAppPath(req.path)) return next();
+    return serveSpa(req, res);
+  });
+}
 
 app.use('/billing', require('./routes/billing'));
 app.use('/basiq', require('./routes/basiq'));
@@ -433,12 +473,27 @@ app.get(/^\/app(\/.*)?$/, (req, res, next) => {
 // Serve React app for all routes not already handled by Express
 const reactBuild = path.join(__dirname, 'public', 'app', 'index.html');
 const fs = require('fs');
+
+// Sends the React shell. With APP_HOST unset: plain sendFile, as always. With
+// it set: index.html gets the maal-app-host meta tag (read by
+// client/src/lib/app-host.ts), and on the app host every page is an app page,
+// so the same logged-out gate as /app/* above applies.
+function serveSpa(req, res) {
+  if (!appHost.isEnabled()) return res.sendFile(reactBuild);
+  if (appHost.isAppHostRequest(req.hostname) && !req.session.userId) return res.redirect('/login');
+  fs.readFile(reactBuild, 'utf8', (err, html) => {
+    if (err) return res.status(500).render('error', { layout: false, message: 'Something went wrong. Please try again.' });
+    res.set('Cache-Control', 'no-cache');
+    res.type('html').send(appHost.injectIntoIndexHtml(html));
+  });
+}
+
 app.use('*', (req, res, next) => {
   // Skip API, dashboard (EJS), billing, basiq, score, onboarding, admin paths
   const skip = ['/api/', '/dashboard', '/billing', '/basiq', '/onboarding', '/score', '/login', '/signup', '/logout', '/forgot-password', '/reset-password', '/verify-email', '/admin', '/health', '/feedback', '/internal'];
   if (skip.some(p => req.originalUrl.startsWith(p))) return next();
   if (fs.existsSync(reactBuild)) {
-    return res.sendFile(reactBuild);
+    return serveSpa(req, res);
   }
   // Fallback: render EJS landing if no React build
   res.render('layout', { layout: false, ...buildLandingContext() });

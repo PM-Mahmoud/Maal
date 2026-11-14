@@ -15,6 +15,7 @@
  */
 
 const https = require('https');
+const { appUrl } = require('../lib/app-host');
 
 // attachments: optional [{ filename, content }] where content is base64 (Resend's
 // attachment shape). Used by the AI-generated-files feature (PR 11).
@@ -212,10 +213,10 @@ async function sendPortfolioDigest(user, model) {
     <p style="margin:0 0 16px;color:${m.direction === 'down' ? '#C0392B' : '#12B5A6'};font-size:0.9rem;">${esc(changeLine)}</p>
     <p style="margin:0 0 6px;color:#6B6F76;font-size:0.85rem;">Cash ${AUD(m.cash)} · Investments ${AUD(m.investments)} · Super ${AUD(m.superBalance)} · Debts ${AUD(m.debts)}</p>
     ${scoreLine}${runwayLine}
-    <p style="margin:20px 0;"><a href="${BASE_URL}/app" style="background:#0E0E10;color:#fff;padding:0.6rem 1.2rem;border-radius:8px;text-decoration:none;font-size:0.9rem;">Open Maal</a></p>
+    <p style="margin:20px 0;"><a href="${appUrl('/', { absolute: true })}" style="background:#0E0E10;color:#fff;padding:0.6rem 1.2rem;border-radius:8px;text-decoration:none;font-size:0.9rem;">Open Maal</a></p>
     <p style="font-size:0.72rem;color:#888;">Education only — not financial advice. You can turn off this digest in Settings.</p>
   </div>`;
-  const text = `Maal — your daily snapshot\nNet worth: ${AUD(m.netWorth)}\n${changeLine}\nCash ${AUD(m.cash)} · Investments ${AUD(m.investments)} · Super ${AUD(m.superBalance)} · Debts ${AUD(m.debts)}\n${BASE_URL}/app\n\nEducation only — not financial advice.`;
+  const text = `Maal — your daily snapshot\nNet worth: ${AUD(m.netWorth)}\n${changeLine}\nCash ${AUD(m.cash)} · Investments ${AUD(m.investments)} · Super ${AUD(m.superBalance)} · Debts ${AUD(m.debts)}\n${appUrl('/', { absolute: true })}\n\nEducation only — not financial advice.`;
   return sendEmail({ to: user.email, subject: 'Your Maal daily snapshot', html, text });
 }
 
@@ -223,7 +224,7 @@ async function sendPortfolioDigest(user, model) {
 async function sendResearchComplete(user, report) {
   if (!user || !user.email || !report) return;
   const title = report.question || report.topic || 'Your research report';
-  const link = `${BASE_URL}/app/research`;
+  const link = `${appUrl('/research', { absolute: true })}`;
   const html = `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:auto;">
     <p style="font-size:1.2rem;font-weight:700;color:#12B5A6;margin:0 0 4px;"><img src="https://hellomaal.com/images/apple-touch-icon.png" width="28" height="28" alt="" style="display:inline-block;vertical-align:-6px;border-radius:6px;margin-right:6px;">Maal</p>
     <h1 style="font-size:1.2rem;font-weight:700;color:#0E0E10;margin:0 0 12px;">Your research is ready</h1>
@@ -243,10 +244,10 @@ async function sendGeneratedFile(user, file) {
     <p style="font-size:1.2rem;font-weight:700;color:#12B5A6;margin:0 0 4px;"><img src="https://hellomaal.com/images/apple-touch-icon.png" width="28" height="28" alt="" style="display:inline-block;vertical-align:-6px;border-radius:6px;margin-right:6px;">Maal</p>
     <h1 style="font-size:1.2rem;font-weight:700;color:#0E0E10;margin:0 0 12px;">${esc(title)}</h1>
     <p style="margin:0 0 16px;color:#333;font-size:0.95rem;line-height:1.6;">Your file is attached (<b>${esc(file.filename)}</b>), generated from your own Maal data.</p>
-    <p style="margin:0 0 20px;"><a href="${BASE_URL}/app" style="background:#0E0E10;color:#fff;padding:0.6rem 1.2rem;border-radius:8px;text-decoration:none;font-size:0.9rem;">Open Maal</a></p>
+    <p style="margin:0 0 20px;"><a href="${appUrl('/', { absolute: true })}" style="background:#0E0E10;color:#fff;padding:0.6rem 1.2rem;border-radius:8px;text-decoration:none;font-size:0.9rem;">Open Maal</a></p>
     <p style="font-size:0.72rem;color:#888;">Education only — not financial advice.</p>
   </div>`;
-  const text = `${title}\nYour file is attached (${file.filename}), generated from your own Maal data.\n${BASE_URL}/app\n\nEducation only — not financial advice.`;
+  const text = `${title}\nYour file is attached (${file.filename}), generated from your own Maal data.\n${appUrl('/', { absolute: true })}\n\nEducation only — not financial advice.`;
   return sendEmail({
     to: user.email,
     subject: title,

@@ -4,6 +4,8 @@
  * with calls to our Express/Neon backend.
  */
 
+import { inAppArea } from "@/lib/app-host";
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface ApiUser {
@@ -36,7 +38,7 @@ let _redirecting = false;
 export function handleUnauthenticated() {
   _session = null;
   notifyListeners("SIGNED_OUT");
-  if (!_redirecting && window.location.pathname.startsWith("/app")) {
+  if (!_redirecting && inAppArea()) {
     _redirecting = true;
     window.location.assign("/login");
   }

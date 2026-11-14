@@ -8,6 +8,7 @@ const users = require('../db/users');
 const providerTokenCrypto = require('../services/provider-token-crypto');
 const importRuns = require('../db/import-runs');
 const connectionHealth = require('../db/connection-health');
+const { appUrl } = require('../lib/app-host');
 
 function callbackUri() {
   if ((process.env.LUNCHFLOW_REDIRECT_URI || '').trim()) {
@@ -35,7 +36,7 @@ function createHandlers(dependencies = {}) {
   return {
     connect: async (req, res) => {
     if (!provider.isConfigured() || !tokenProtection.isConfigured()) {
-      return res.redirect('/app/assets?lunchflow=not_configured');
+      return res.redirect(appUrl('/assets?lunchflow=not_configured'));
     }
     try {
       const user = await userStore.findUserById(req.session.userId);
@@ -49,7 +50,7 @@ function createHandlers(dependencies = {}) {
       return res.redirect(url);
     } catch (error) {
       console.error('Lunch Flow connect error:', error.message);
-      return res.redirect('/app/assets?lunchflow=error');
+      return res.redirect(appUrl('/assets?lunchflow=error'));
     }
     },
 
@@ -57,9 +58,9 @@ function createHandlers(dependencies = {}) {
     const expectedState = req.session.lunchflowOAuthState;
     delete req.session.lunchflowOAuthState;
     if (!stateMatches(expectedState, req.query.state)) {
-      return res.redirect('/app/assets?lunchflow=invalid_state');
+      return res.redirect(appUrl('/assets?lunchflow=invalid_state'));
     }
-    if (!req.query.code) return res.redirect('/app/assets?lunchflow=missing_code');
+    if (!req.query.code) return res.redirect(appUrl('/assets?lunchflow=missing_code'));
     try {
       const tokens = await provider.exchangeAuthorizationCode({
         code: String(req.query.code),
@@ -67,10 +68,10 @@ function createHandlers(dependencies = {}) {
       });
       await connectionStore.upsertConnection(req.session.userId, 'lunchflow', tokens);
       await connectionStore.recordEvent?.(req.session.userId, 'lunchflow', 'connected', { scopes: tokens.scope || null });
-      return res.redirect('/app/assets?lunchflow=connected');
+      return res.redirect(appUrl('/assets?lunchflow=connected'));
     } catch (error) {
       console.error('Lunch Flow callback error:', error.message);
-      return res.redirect('/app/assets?lunchflow=error');
+      return res.redirect(appUrl('/assets?lunchflow=error'));
     }
     },
     status: async (req, res) => {

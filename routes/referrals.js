@@ -7,13 +7,14 @@ const express = require('express');
 const router = express.Router();
 const { authLimiter } = require('../lib/rate-limiters');
 const referrals = require('../services/referrals');
+const { appUrl } = require('../lib/app-host');
 
 // A friend opens a member's link. Valid code → remember it in the session and
 // send them to sign-up (where it acts as their invite). Unknown or used-up
 // code → the waitlist, so a bad link never dead-ends.
 router.get('/r/:code', authLimiter, async (req, res) => {
   try {
-    if (req.session.userId) return res.redirect('/app');
+    if (req.session.userId) return res.redirect(appUrl('/'));
     const invite = await referrals.validInvite(req.params.code);
     if (!invite) return res.redirect('/waitlist?src=referral');
     req.session.referralCode = invite.code;

@@ -4,6 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const https = require('https');
+const { appUrl } = require('../lib/app-host');
 const { createUser, findUserByEmail, findUserByProvider, recordLogin } = require('../db/users');
 
 function getIp(req) {
@@ -155,7 +156,7 @@ router.get('/auth/google/callback', async (req, res) => {
         if (err) console.error('[oauth] Session save error:', err.message);
         // New Google accounts go through the welcome flow; returning users
         // land straight on the React app.
-        res.redirect(isNewUser ? '/welcome' : '/app');
+        res.redirect(isNewUser ? '/welcome' : appUrl('/'));
       });
     });
   } catch (err) {
