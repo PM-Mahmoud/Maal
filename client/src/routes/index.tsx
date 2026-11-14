@@ -39,6 +39,16 @@ function Index() {
   const signup = signupLink(gated);
   const [promptIdx, setPromptIdx] = useState(0);
   const [question, setQuestion] = useState("");
+  const [scrolled, setScrolled] = useState(false);
+
+  // The header is fixed; once the page leaves the very top it switches from
+  // glass-over-hero to a solid bar (see .v2-header.is-scrolled).
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setPromptIdx((i) => (i + 1) % ASK_PROMPTS.length), 3200);
@@ -64,8 +74,8 @@ function Index() {
 
   return (
     <div className="v2">
-      {/* Header (sits on the hero) */}
-      <header className="v2-header">
+      {/* Header (fixed; sits on the hero until the page scrolls) */}
+      <header className={`v2-header${scrolled ? " is-scrolled" : ""}`}>
         <div className="v2-header-inner">
           <div style={{ display: "flex", alignItems: "center", gap: "2.5rem" }}>
             <a href="/" className="v2-brand" aria-label="Maal home">

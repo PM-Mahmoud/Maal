@@ -719,7 +719,7 @@ body { line-height: 1.6; }
 
 /* ─── Site Header ─────────────────────────────────────── */
 .lv-header {
-  position: sticky; top: 3px; z-index: 40;
+  position: sticky; top: 0; z-index: 40;
   background: rgba(251,251,251,.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
@@ -752,7 +752,7 @@ body { line-height: 1.6; }
 .lv-header-cta:active { transform: scale(.98); }
 .lv-hamburger { display: none; background: none; border: none; cursor: pointer; padding: .25rem; color: var(--fg); }
 .lv-mobile-menu {
-  display: none; position: fixed; inset: 0; top: 75px;
+  display: none; position: fixed; inset: 0; top: 72px;
   background: rgba(251,251,251,.97); backdrop-filter: blur(16px);
   z-index: 39; padding: 1.5rem; flex-direction: column; gap: 0;
 }
@@ -1015,3 +1015,6 @@ html.dark .lv-cta-block, html[data-theme="dark"] .lv-cta-block { border: 1px sol
    fills at least the viewport, so black never appears as a gap. */
 html { background: #020109; }
 body { min-height: 100vh; }
+
+/* Sticky site header: in-page anchors land below it, not under it. */
+[id] { scroll-margin-top: 88px; }
