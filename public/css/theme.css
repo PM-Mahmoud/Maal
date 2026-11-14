@@ -427,11 +427,7 @@ a { color: var(--accent); }
 
 body { line-height: 1.6; }
 
-/* Signature 3px mint-teal accent bar across the very top */
-body::before {
-  content: ''; position: fixed; top: 0; left: 0; right: 0; height: 3px;
-  background: var(--accent-bar); z-index: 200;
-}
+/* (The 3px accent bar that used to sit across the very top was removed.) */
 
 /* Nav */
 .navbar { background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(16px); }
@@ -1011,3 +1007,11 @@ select:focus:not(:focus-visible), textarea:focus:not(:focus-visible), [tabindex]
   .lv-score-bar-fill, .score-fill { transition-duration: .01ms !important; }
 }
 html.dark .lv-cta-block, html[data-theme="dark"] .lv-cta-block { border: 1px solid var(--border); }
+
+/* ─── Overscroll canvas + no top ribbon (landing polish) ─────
+   <html> gets its own background (v2 ink #020109) so the body background no
+   longer propagates to the canvas: rubber-band overscroll on macOS/iOS shows
+   black instead of the page colour. The body keeps painting the page and
+   fills at least the viewport, so black never appears as a gap. */
+html { background: #020109; }
+body { min-height: 100vh; }

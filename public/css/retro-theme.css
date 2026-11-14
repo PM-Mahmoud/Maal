@@ -60,7 +60,7 @@ html[data-theme="dark"] {
 
 body { font-family: var(--font-body); }
 
-/* film grain (body::before is theme.css's accent bar — leave it) */
+/* film grain */
 body::after {
   content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
   opacity: 0.045; mix-blend-mode: multiply;

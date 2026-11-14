@@ -153,3 +153,11 @@
 .v2-disclaimer-line { margin-top: 1.6rem; font-size: 11px; line-height: 1.6; color: var(--v2-muted); text-align: center; }
 [hidden] { display: none !important; }
 @media (prefers-reduced-motion: reduce) { .v2-btn { transition: none; } }
+
+/* ─── Overscroll canvas + no top ribbon (landing polish) ─────
+   <html> gets its own background (v2 ink #020109) so the body background no
+   longer propagates to the canvas: rubber-band overscroll on macOS/iOS shows
+   black instead of the page colour. The body keeps painting the page and
+   fills at least the viewport, so black never appears as a gap. */
+html { background: #020109; }
+body { min-height: 100vh; }
