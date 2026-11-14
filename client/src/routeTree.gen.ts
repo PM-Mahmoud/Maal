@@ -28,6 +28,7 @@ import { Route as AuthenticatedAppRoadmapRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAppRetirementRouteImport } from './routes/_authenticated/app.retirement'
 import { Route as AuthenticatedAppResearchRouteImport } from './routes/_authenticated/app.research'
 import { Route as AuthenticatedAppReportRouteImport } from './routes/_authenticated/app.report'
+import { Route as AuthenticatedAppRecapRouteImport } from './routes/_authenticated/app.recap'
 import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
 import { Route as AuthenticatedAppPurificationRouteImport } from './routes/_authenticated/app.purification'
 import { Route as AuthenticatedAppPortfolioPlanRouteImport } from './routes/_authenticated/app.portfolio-plan'
@@ -35,6 +36,7 @@ import { Route as AuthenticatedAppPlanningRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppOnboardingRouteImport } from './routes/_authenticated/app.onboarding'
 import { Route as AuthenticatedAppNetWorthFlowRouteImport } from './routes/_authenticated/app.net-worth-flow'
 import { Route as AuthenticatedAppMarketplaceRouteImport } from './routes/_authenticated/app.marketplace'
+import { Route as AuthenticatedAppMarketBriefRouteImport } from './routes/_authenticated/app.market-brief'
 import { Route as AuthenticatedAppGoalsRouteImport } from './routes/_authenticated/app.goals'
 import { Route as AuthenticatedAppDebtPayoffRouteImport } from './routes/_authenticated/app.debt-payoff'
 import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated/app.billing'
@@ -151,6 +153,11 @@ const AuthenticatedAppReportRoute = AuthenticatedAppReportRouteImport.update({
   path: '/report',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppRecapRoute = AuthenticatedAppRecapRouteImport.update({
+  id: '/recap',
+  path: '/recap',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
 const AuthenticatedAppRadarRoute = AuthenticatedAppRadarRouteImport.update({
   id: '/radar',
   path: '/radar',
@@ -190,6 +197,12 @@ const AuthenticatedAppMarketplaceRoute =
   AuthenticatedAppMarketplaceRouteImport.update({
     id: '/marketplace',
     path: '/marketplace',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppMarketBriefRoute =
+  AuthenticatedAppMarketBriefRouteImport.update({
+    id: '/market-brief',
+    path: '/market-brief',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppGoalsRoute = AuthenticatedAppGoalsRouteImport.update({
@@ -285,6 +298,7 @@ export interface FileRoutesByFullPath {
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
   '/app/goals': typeof AuthenticatedAppGoalsRoute
+  '/app/market-brief': typeof AuthenticatedAppMarketBriefRoute
   '/app/marketplace': typeof AuthenticatedAppMarketplaceRoute
   '/app/net-worth-flow': typeof AuthenticatedAppNetWorthFlowRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
@@ -292,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
   '/app/purification': typeof AuthenticatedAppPurificationRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
+  '/app/recap': typeof AuthenticatedAppRecapRoute
   '/app/report': typeof AuthenticatedAppReportRoute
   '/app/research': typeof AuthenticatedAppResearchRoute
   '/app/retirement': typeof AuthenticatedAppRetirementRoute
@@ -325,6 +340,7 @@ export interface FileRoutesByTo {
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
   '/app/goals': typeof AuthenticatedAppGoalsRoute
+  '/app/market-brief': typeof AuthenticatedAppMarketBriefRoute
   '/app/marketplace': typeof AuthenticatedAppMarketplaceRoute
   '/app/net-worth-flow': typeof AuthenticatedAppNetWorthFlowRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
@@ -332,6 +348,7 @@ export interface FileRoutesByTo {
   '/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
   '/app/purification': typeof AuthenticatedAppPurificationRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
+  '/app/recap': typeof AuthenticatedAppRecapRoute
   '/app/report': typeof AuthenticatedAppReportRoute
   '/app/research': typeof AuthenticatedAppResearchRoute
   '/app/retirement': typeof AuthenticatedAppRetirementRoute
@@ -368,6 +385,7 @@ export interface FileRoutesById {
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
   '/_authenticated/app/debt-payoff': typeof AuthenticatedAppDebtPayoffRoute
   '/_authenticated/app/goals': typeof AuthenticatedAppGoalsRoute
+  '/_authenticated/app/market-brief': typeof AuthenticatedAppMarketBriefRoute
   '/_authenticated/app/marketplace': typeof AuthenticatedAppMarketplaceRoute
   '/_authenticated/app/net-worth-flow': typeof AuthenticatedAppNetWorthFlowRoute
   '/_authenticated/app/onboarding': typeof AuthenticatedAppOnboardingRoute
@@ -375,6 +393,7 @@ export interface FileRoutesById {
   '/_authenticated/app/portfolio-plan': typeof AuthenticatedAppPortfolioPlanRoute
   '/_authenticated/app/purification': typeof AuthenticatedAppPurificationRoute
   '/_authenticated/app/radar': typeof AuthenticatedAppRadarRoute
+  '/_authenticated/app/recap': typeof AuthenticatedAppRecapRoute
   '/_authenticated/app/report': typeof AuthenticatedAppReportRoute
   '/_authenticated/app/research': typeof AuthenticatedAppResearchRoute
   '/_authenticated/app/retirement': typeof AuthenticatedAppRetirementRoute
@@ -411,6 +430,7 @@ export interface FileRouteTypes {
     | '/app/billing'
     | '/app/debt-payoff'
     | '/app/goals'
+    | '/app/market-brief'
     | '/app/marketplace'
     | '/app/net-worth-flow'
     | '/app/onboarding'
@@ -418,6 +438,7 @@ export interface FileRouteTypes {
     | '/app/portfolio-plan'
     | '/app/purification'
     | '/app/radar'
+    | '/app/recap'
     | '/app/report'
     | '/app/research'
     | '/app/retirement'
@@ -451,6 +472,7 @@ export interface FileRouteTypes {
     | '/app/billing'
     | '/app/debt-payoff'
     | '/app/goals'
+    | '/app/market-brief'
     | '/app/marketplace'
     | '/app/net-worth-flow'
     | '/app/onboarding'
@@ -458,6 +480,7 @@ export interface FileRouteTypes {
     | '/app/portfolio-plan'
     | '/app/purification'
     | '/app/radar'
+    | '/app/recap'
     | '/app/report'
     | '/app/research'
     | '/app/retirement'
@@ -493,6 +516,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/billing'
     | '/_authenticated/app/debt-payoff'
     | '/_authenticated/app/goals'
+    | '/_authenticated/app/market-brief'
     | '/_authenticated/app/marketplace'
     | '/_authenticated/app/net-worth-flow'
     | '/_authenticated/app/onboarding'
@@ -500,6 +524,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/portfolio-plan'
     | '/_authenticated/app/purification'
     | '/_authenticated/app/radar'
+    | '/_authenticated/app/recap'
     | '/_authenticated/app/report'
     | '/_authenticated/app/research'
     | '/_authenticated/app/retirement'
@@ -667,6 +692,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppReportRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/recap': {
+      id: '/_authenticated/app/recap'
+      path: '/recap'
+      fullPath: '/app/recap'
+      preLoaderRoute: typeof AuthenticatedAppRecapRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/radar': {
       id: '/_authenticated/app/radar'
       path: '/radar'
@@ -714,6 +746,13 @@ declare module '@tanstack/react-router' {
       path: '/marketplace'
       fullPath: '/app/marketplace'
       preLoaderRoute: typeof AuthenticatedAppMarketplaceRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/market-brief': {
+      id: '/_authenticated/app/market-brief'
+      path: '/market-brief'
+      fullPath: '/app/market-brief'
+      preLoaderRoute: typeof AuthenticatedAppMarketBriefRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/goals': {
@@ -823,6 +862,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
   AuthenticatedAppDebtPayoffRoute: typeof AuthenticatedAppDebtPayoffRoute
   AuthenticatedAppGoalsRoute: typeof AuthenticatedAppGoalsRoute
+  AuthenticatedAppMarketBriefRoute: typeof AuthenticatedAppMarketBriefRoute
   AuthenticatedAppMarketplaceRoute: typeof AuthenticatedAppMarketplaceRoute
   AuthenticatedAppNetWorthFlowRoute: typeof AuthenticatedAppNetWorthFlowRoute
   AuthenticatedAppOnboardingRoute: typeof AuthenticatedAppOnboardingRoute
@@ -830,6 +870,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppPortfolioPlanRoute: typeof AuthenticatedAppPortfolioPlanRoute
   AuthenticatedAppPurificationRoute: typeof AuthenticatedAppPurificationRoute
   AuthenticatedAppRadarRoute: typeof AuthenticatedAppRadarRoute
+  AuthenticatedAppRecapRoute: typeof AuthenticatedAppRecapRoute
   AuthenticatedAppReportRoute: typeof AuthenticatedAppReportRoute
   AuthenticatedAppResearchRoute: typeof AuthenticatedAppResearchRoute
   AuthenticatedAppRetirementRoute: typeof AuthenticatedAppRetirementRoute
@@ -860,6 +901,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
   AuthenticatedAppDebtPayoffRoute: AuthenticatedAppDebtPayoffRoute,
   AuthenticatedAppGoalsRoute: AuthenticatedAppGoalsRoute,
+  AuthenticatedAppMarketBriefRoute: AuthenticatedAppMarketBriefRoute,
   AuthenticatedAppMarketplaceRoute: AuthenticatedAppMarketplaceRoute,
   AuthenticatedAppNetWorthFlowRoute: AuthenticatedAppNetWorthFlowRoute,
   AuthenticatedAppOnboardingRoute: AuthenticatedAppOnboardingRoute,
@@ -867,6 +909,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppPortfolioPlanRoute: AuthenticatedAppPortfolioPlanRoute,
   AuthenticatedAppPurificationRoute: AuthenticatedAppPurificationRoute,
   AuthenticatedAppRadarRoute: AuthenticatedAppRadarRoute,
+  AuthenticatedAppRecapRoute: AuthenticatedAppRecapRoute,
   AuthenticatedAppReportRoute: AuthenticatedAppReportRoute,
   AuthenticatedAppResearchRoute: AuthenticatedAppResearchRoute,
   AuthenticatedAppRetirementRoute: AuthenticatedAppRetirementRoute,

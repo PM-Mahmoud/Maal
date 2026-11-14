@@ -1,0 +1,284 @@
+/* ============================================================
+   Maal briefs — weekly recap + daily market brief (story viewer,
+   Home entry cards). Matched to the Figma story frames: 608×1080
+   card on a dimmed backdrop, round prev/next buttons outside the
+   card, segmented progress, Lora headings + Inter body on #F9F9F6.
+   Tokens mirror the v2 system (client/src/v2-landing.css) but are
+   scoped to .mb so nothing outside the briefs is affected.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap');
+
+.mb, .mb-overlay {
+  --mb-page: #F8F9F6;
+  --mb-card: #F9F9F6;
+  --mb-surface: #FFFFFF;
+  --mb-ink: #20211E;
+  --mb-ink-strong: #111111;
+  --mb-body: #63665F;
+  --mb-label: #565656;
+  --mb-faint: #999999;
+  --mb-hair: #EAEAE7;
+  --mb-chip: #E7E7E5;
+  --mb-btn: #020109;
+  --mb-badge: #D6F7FF;
+  --mb-badge-ink: #006B87;
+  --mb-line: #2C9CDB;
+  --mb-up: #139E7D;
+  --mb-down: #ED555B;
+  --mb-serif: 'Lora', Georgia, 'Times New Roman', serif;
+  --mb-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: var(--mb-sans);
+  -webkit-font-smoothing: antialiased;
+}
+.mb *, .mb-overlay *, .mb *::before, .mb-overlay *::before, .mb *::after, .mb-overlay *::after { box-sizing: border-box; }
+.mb p, .mb-overlay p, .mb h2, .mb-overlay h2, .mb h3, .mb-overlay h3 { margin: 0; }
+
+/* ── Story overlay ─────────────────────────────────────────── */
+.mb-overlay {
+  position: fixed; inset: 0; z-index: 80;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(10, 11, 10, 0.55);
+  animation: mb-fade .18s ease-out;
+}
+@keyframes mb-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mb-rise { from { opacity: 0; transform: translateY(12px) scale(.985); } to { opacity: 1; transform: none; } }
+
+.mb-stage { position: relative; display: flex; align-items: center; gap: 15px; }
+
+.mb-card {
+  position: relative;
+  height: min(1080px, calc(100dvh - 80px));
+  width: min(608px, calc((100dvh - 80px) * 0.563), calc(100vw - 180px));
+  border-radius: 31px;
+  background: var(--mb-card);
+  color: var(--mb-ink);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  box-shadow: 0 30px 80px rgba(0,0,0,.25);
+  animation: mb-rise .22s ease-out;
+}
+.mb-card.is-dark { color: #fff; }
+.mb-card:focus { outline: none; }
+
+.mb-nav {
+  flex: none; width: 61px; height: 61px; border-radius: 999px; border: 0;
+  display: grid; place-items: center;
+  background: #FFFFFF; color: #111; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0,0,0,.18);
+  transition: opacity .15s, transform .15s;
+}
+.mb-nav:hover:not(:disabled) { transform: scale(1.04); }
+.mb-nav:disabled { background: rgba(255,255,255,.35); color: rgba(255,255,255,.8); cursor: default; box-shadow: none; }
+.mb-nav:focus-visible, .mb-icon-btn:focus-visible, .mb-chip:focus-visible, .mb-cta:focus-visible {
+  outline: 2px solid var(--mb-badge-ink); outline-offset: 2px;
+}
+
+/* Top bar: mark · progress · close */
+.mb-top {
+  position: relative; flex: none; height: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px 0 35px;
+  z-index: 2;
+}
+.mb-progress { position: absolute; left: 50%; top: 33px; transform: translateX(-50%); display: flex; gap: 5px; }
+.mb-progress span { display: block; width: 20px; height: 5px; border-radius: 2px; background: rgba(9,11,11,.16); transition: background .2s; }
+.mb-progress span.on { background: #090B0B; }
+.is-dark .mb-progress span { background: rgba(255,255,255,.32); }
+.is-dark .mb-progress span.on { background: #FFFFFF; }
+.mb-icon-btn {
+  border: 0; background: transparent; color: inherit; padding: 6px; margin: -6px; cursor: pointer;
+  display: grid; place-items: center; border-radius: 8px;
+}
+
+/* Scrollable slide body */
+.mb-body {
+  position: relative; z-index: 1;
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 12px 21px 28px;
+  scrollbar-width: thin;
+}
+
+.mb-meta {
+  display: flex; justify-content: space-between; gap: 12px;
+  font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--mb-label);
+  line-height: 1.4;
+}
+.mb-title {
+  margin-top: 18px !important;
+  font-family: var(--mb-serif); font-weight: 400;
+  font-size: 40px; line-height: 49px; letter-spacing: -1.6px; color: var(--mb-ink);
+  text-wrap: balance;
+}
+.mb-title.sm { font-size: 34px; line-height: 1.25; letter-spacing: -1.4px; }
+.mb-text { margin-top: 20px !important; font-size: 17.2px; line-height: 25.5px; color: var(--mb-body); }
+.mb-text + .mb-text { margin-top: 20px !important; }
+
+.mb-panel {
+  margin-top: 24px; background: var(--mb-surface);
+  border: 1px solid var(--mb-hair); border-radius: 20px;
+  padding: 34px 20px 22px;
+}
+.mb-panel-label { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--mb-label); }
+.mb-figure { display: flex; align-items: baseline; gap: 10px; margin-top: 40px; }
+.mb-figure strong { font-weight: 400; font-size: 32px; color: var(--mb-ink-strong); letter-spacing: -0.5px; }
+.mb-figure span { font-size: 20px; color: #686868; }
+.mb-figure span.up { color: var(--mb-up); } .mb-figure span.down { color: var(--mb-down); }
+.mb-chart { margin-top: 18px; width: 100%; height: 128px; display: block; overflow: visible; }
+
+/* Category bars */
+.mb-cats { margin-top: 26px; display: grid; gap: 16px; }
+.mb-cat-row { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 15px; color: var(--mb-ink-strong); }
+.mb-cat-row .amt { color: var(--mb-ink-strong); font-variant-numeric: tabular-nums; }
+.mb-cat-bar { grid-column: 1 / -1; height: 8px; border-radius: 4px; background: #F0F0EC; overflow: hidden; }
+.mb-cat-bar i { display: block; height: 100%; border-radius: 4px; background: var(--mb-ink-strong); }
+.mb-cat-row:first-child .mb-cat-bar i { background: var(--mb-line); }
+
+/* Money in / out */
+.mb-flow { margin-top: 30px; display: grid; gap: 18px; }
+.mb-flow-row { display: grid; grid-template-columns: 96px 1fr auto; align-items: center; gap: 12px; font-size: 15px; color: var(--mb-ink-strong); }
+.mb-flow-row .bar { height: 26px; border-radius: 6px; background: #F0F0EC; overflow: hidden; }
+.mb-flow-row .bar i { display: block; height: 100%; border-radius: 6px; }
+.mb-flow-row .bar i.in { background: #9ED8F2; } .mb-flow-row .bar i.out { background: var(--mb-ink-strong); }
+.mb-flow-row .amt { font-variant-numeric: tabular-nums; min-width: 84px; text-align: right; }
+
+/* Goals */
+.mb-goal { padding: 16px 0; border-top: 1px solid var(--mb-hair); }
+.mb-goal:first-of-type { border-top: 0; padding-top: 26px; }
+.mb-goal-head { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; color: var(--mb-ink-strong); }
+.mb-goal-head span { color: var(--mb-label); font-variant-numeric: tabular-nums; }
+.mb-goal .mb-cat-bar { margin-top: 10px; }
+.mb-goal .mb-cat-bar i.done { background: var(--mb-up); }
+
+/* Market index rows */
+.mb-index { padding: 8px 0 18px; }
+.mb-index + .mb-index { border-top: 1px solid #F2F2EF; padding-top: 18px; }
+.mb-index .mb-chart { height: 46px; margin-top: 0; }
+.mb-index-row { margin-top: 22px; display: flex; align-items: baseline; gap: 8px; font-size: 16.7px; color: #171719; }
+.mb-index-row .sub { font-size: 14.7px; color: var(--mb-faint); }
+.mb-index-row .chg { margin-left: auto; font-size: 14.7px; white-space: nowrap; }
+.mb-index-row .chg.up { color: var(--mb-up); } .mb-index-row .chg.down { color: var(--mb-down); } .mb-index-row .chg.na { color: var(--mb-faint); }
+.mb-note { margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--mb-faint); }
+
+/* Looking ahead */
+.mb-event { margin-top: 26px; }
+.mb-event h3 { font-weight: 500; font-size: 19.3px; line-height: 1.4; color: #171719; }
+.mb-event p { margin-top: 12px !important; font-size: 17.6px; line-height: 1.4; color: #777878; }
+
+/* Feedback chips */
+.mb-feedback { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 20px; }
+.mb-chip {
+  display: inline-flex; align-items: center; gap: 9px;
+  height: 40px; padding: 0 14px 0 9px; border: 0; border-radius: 8px;
+  background: #E9EAE8; color: #101410; font-family: var(--mb-sans); font-size: 14px; cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.mb-chip:hover { background: #DFE0DD; }
+.mb-chip[aria-pressed="true"] { background: #05050A; color: #FFFFFF; }
+.mb-thanks { margin-top: 12px !important; font-size: 13px; color: var(--mb-label); min-height: 18px; }
+
+.mb-sources { margin-top: 22px; font-size: 12px; line-height: 1.6; color: var(--mb-faint); }
+.mb-sources a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.mb-disclaimer { margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--mb-hair); font-size: 11px; line-height: 1.55; color: var(--mb-faint); }
+.is-dark .mb-disclaimer { border-top-color: rgba(255,255,255,.18); color: rgba(255,255,255,.7); }
+
+/* Covers + closing slide */
+.mb-cover {
+  position: absolute; inset: 0; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 0 32px; gap: 0;
+}
+.mb-cover-mark { opacity: .92; margin-bottom: 14px; }
+.mb-cover h2 { font-family: var(--mb-sans); font-weight: 400; font-size: 24px; line-height: 1.4; }
+.mb-cover p { font-size: 17.3px; line-height: 1.4; opacity: .85; }
+.mb-cover .mb-cta-wrap { margin-top: 22px; }
+.mb-cover .mb-disclaimer { position: absolute; left: 24px; right: 24px; bottom: 18px; text-align: left; font-size: 10.5px; }
+.mb-cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 42px; padding: 0 14px; border: 0; border-radius: 8px;
+  background: #FFFFFF; color: #111; font-family: var(--mb-sans); font-size: 15px; cursor: pointer;
+}
+.mb-cta:disabled { opacity: .7; cursor: progress; }
+
+/* Weekly recap cover: deep green with soft blurred light bands */
+.mb-bg-recap { background: #1E3427; overflow: hidden; }
+.mb-bg-recap::before, .mb-bg-recap::after {
+  content: ""; position: absolute; z-index: 0; border-radius: 50%; filter: blur(46px); pointer-events: none;
+}
+.mb-bg-recap::before {
+  width: 70%; height: 125%; left: -18%; top: -8%;
+  background: linear-gradient(170deg, #4F8549 0%, #3F7240 55%, rgba(63,114,64,0) 100%);
+  transform: rotate(14deg);
+}
+.mb-bg-recap::after {
+  width: 120%; height: 22%; left: 8%; top: 30%;
+  background: linear-gradient(90deg, rgba(79,133,73,0) 0%, #4F8549 35%, #57904F 100%);
+  transform: rotate(-8deg);
+}
+/* Market brief cover: night-to-teal gradient with a low glow */
+.mb-bg-market { background: linear-gradient(180deg, #00152B 0%, #022240 50%, #043B51 84%, #78949A 100%); }
+.mb-bg-market::after {
+  content: ""; position: absolute; z-index: 0; left: -22%; right: -22%; bottom: -60px; height: 240px; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(203,210,206,.8), rgba(105,133,141,.4) 50%, rgba(7,55,76,0));
+  filter: blur(23px);
+}
+.mb-bg-market .mb-cover h2 { color: #E2EDF5; }
+.mb-bg-market .mb-cover p { color: #BACEDE; opacity: 1; }
+.mb-bg-market .mb-cover-mark { color: #8FA9BC; }
+
+/* Loading + error */
+.mb-state { display: grid; place-items: center; gap: 14px; height: 100%; padding: 40px; text-align: center; color: var(--mb-label); font-size: 15px; }
+.mb-skel { width: 100%; display: grid; gap: 14px; }
+.mb-skel i { display: block; height: 16px; border-radius: 6px; background: linear-gradient(90deg, #EEEEEA, #F6F6F3, #EEEEEA); background-size: 200% 100%; animation: mb-shimmer 1.2s infinite linear; }
+.mb-skel i.big { height: 40px; width: 80%; }
+@keyframes mb-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.mb-retry { border: 1px solid var(--mb-hair); background: #fff; border-radius: 8px; height: 38px; padding: 0 14px; cursor: pointer; font: inherit; color: var(--mb-ink); }
+
+/* ── Home entry cards ──────────────────────────────────────── */
+.mb-entries { display: grid; gap: 20px; }
+.mb-entry {
+  position: relative; display: block; width: 100%; text-align: left;
+  background: #FFFFFF; border: 1px solid #69C7E6; border-radius: 20px;
+  padding: 0; color: #131A0F; font-family: var(--mb-sans);
+  transition: box-shadow .15s, transform .15s;
+}
+.mb-entry:hover { box-shadow: 0 6px 22px rgba(0, 107, 135, .10); }
+.mb-entry-open { all: unset; box-sizing: border-box; display: block; width: 100%; cursor: pointer; border-radius: 20px; }
+.mb-entry-open:focus-visible { outline: 2px solid var(--mb-badge-ink); outline-offset: 2px; }
+.mb-entry-head {
+  height: 82px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 31px 0 19px; border-bottom: 1px solid #E6E7E2;
+  font-size: 11px; letter-spacing: 2.4px; text-transform: uppercase; color: #5E655B;
+}
+.mb-entry-close { position: absolute; top: 26px; right: 22px; border: 0; background: transparent; color: #131A0F; padding: 6px; border-radius: 8px; cursor: pointer; display: grid; place-items: center; }
+.mb-entry-close:focus-visible { outline: 2px solid var(--mb-badge-ink); outline-offset: 1px; }
+.mb-entry-body { padding: 24px 19px 25px; }
+.mb-entry-title { font-family: var(--mb-serif); font-weight: 400; font-size: 31px; line-height: 1.3; letter-spacing: -0.4px; color: #131A0F; }
+.mb-entry-sub { margin-top: 2px !important; font-size: 15px; line-height: 1.35; color: #62705A; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mb-badge { display: inline-block; margin-left: 10px; padding: 2px 8px; border-radius: 999px; background: var(--mb-badge); color: var(--mb-badge-ink); font-size: 10px; letter-spacing: 1.2px; vertical-align: middle; }
+
+/* ── Full-page route wrapper ───────────────────────────────── */
+.mb-page { min-height: 100dvh; background: var(--mb-page); }
+
+/* ── Phone ─────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .mb-overlay { background: #000; }
+  .mb-stage { width: 100%; height: 100%; }
+  .mb-nav { display: none; }
+  .mb-card { width: 100vw; height: 100dvh; border-radius: 0; box-shadow: none; }
+  .mb-top { padding: 0 20px; }
+  .mb-body { padding: 8px 16px 24px; }
+  .mb-title { font-size: 31px; line-height: 38px; letter-spacing: -1.1px; }
+  .mb-title.sm { font-size: 28px; }
+  .mb-text { font-size: 16px; line-height: 24px; }
+  .mb-meta { font-size: 11px; letter-spacing: 1.5px; }
+  .mb-panel { padding: 24px 16px 18px; }
+  .mb-figure { margin-top: 26px; }
+  .mb-figure strong { font-size: 28px; }
+  .mb-event h3 { font-size: 17.5px; }
+  .mb-event p { font-size: 16px; }
+  .mb-flow-row { grid-template-columns: 80px 1fr auto; }
+  .mb-entry-title { font-size: 27px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mb-overlay, .mb-card { animation: none; }
+}
