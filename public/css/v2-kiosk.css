@@ -1,0 +1,177 @@
+/* ============================================================
+   Maal v2 — free score calculator (/score) and its event kiosk
+   mode (/score?kiosk=1). Visual layer only: loads after the
+   page's inline <style> (and theme.css / retro-theme.css), so it
+   restyles the existing .sc-* markup the page's JS renders without
+   touching any behaviour. Scoped to body.v2-score; the shared
+   navbar/footer partials are left alone. !important is needed
+   only where retro-theme.css already uses it.
+   Tokens match public/css/v2.css.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap');
+
+html { background: #020109; }
+body.v2-score { background: #F8F9F6 !important; }
+/* No top accent ribbon or film grain on v2 pages. */
+body.v2-score::before, body.v2-score::after { display: none !important; }
+
+/* Tokens are set on <main> (and the kiosk brand bar) so the JS-rendered
+   inline colours (var(--fg), var(--gold), var(--surface-2)) pick them up
+   without retoning the shared nav/footer. */
+body.v2-score main, body.v2-score .sc-kiosk-brand {
+  --bg: #F8F9F6; --surface: #FFFFFF; --surface-2: #EFF0ED;
+  --fg: #202120; --fg-muted: #666666; --border: #E4E5E2; --hair-strong: #BDBDBD;
+  --ink: #020109; --mint: #006B87; --accent: #006B87; --accent-strong: #006B87;
+  --accent-soft: #D6F7FF; --gold: #B4541A; --gold-soft: #FBEFE2;
+  --v2-serif: 'Lora', Georgia, 'Times New Roman', serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: var(--font-body); color: var(--fg); -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Card ---------- */
+body.v2-score .sc-wrap {
+  max-width: 700px; margin: 2.5rem auto 4rem; padding: 2.5rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+}
+@media (max-width: 760px) {
+  body.v2-score .sc-wrap { margin: 16px; padding: 1.75rem 1.25rem; }
+}
+
+/* ---------- Type ---------- */
+body.v2-score .sc-kicker {
+  display: inline-block; margin-bottom: .9rem; padding: .3rem .7rem; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 400;
+  letter-spacing: 0; text-transform: none;
+}
+body.v2-score .sc-h1, body.v2-score .sc-result-box .sc-h1 {
+  font-family: var(--v2-serif) !important; font-weight: 400 !important; letter-spacing: -.01em !important;
+  font-size: clamp(1.9rem, 4.2vw, 2.5rem); line-height: 1.2; color: var(--fg);
+}
+body.v2-score .sc-ring-num {
+  font-family: var(--v2-serif) !important; font-weight: 400 !important; letter-spacing: 0 !important; font-size: 3rem;
+}
+body.v2-score .sc-intro-body, body.v2-score .sc-result-desc { font-size: 16px; line-height: 1.6; }
+body.v2-score .sc-result-desc strong { color: var(--fg); font-weight: 600; }
+body.v2-score .sc-label-text { font-size: 14px; font-weight: 500; }
+body.v2-score .sc-label-hint-inline, body.v2-score .sc-hint { font-size: 13px; }
+body.v2-score .sc-disclaimer { margin-top: 2.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border); font-size: 12px; line-height: 1.6; }
+
+/* ---------- Progress ---------- */
+body.v2-score .sc-progress { height: 6px; border: 0 !important; background: var(--surface-2); }
+body.v2-score .sc-progress-fill { background: var(--ink) !important; }
+
+/* ---------- Inputs ---------- */
+body.v2-score .sc-input, body.v2-score .sc-email-input {
+  border: 1px solid var(--hair-strong) !important; border-radius: 8px !important; background: var(--surface) !important;
+  box-shadow: none !important; font-family: var(--font-body); color: var(--fg);
+}
+body.v2-score .sc-input { height: 56px; font-weight: 500; font-size: 20px; letter-spacing: 0; }
+body.v2-score .sc-email-input { height: 48px; font-size: 16px; }
+body.v2-score .sc-input:focus, body.v2-score .sc-email-input:focus {
+  border-color: var(--ink) !important; box-shadow: none !important; outline: none;
+}
+
+/* ---------- Buttons (primary = ink, 8px radius) ---------- */
+body.v2-score .sc-next, body.v2-score .sc-intro-start, body.v2-score .sc-email-btn {
+  background: var(--ink) !important; color: #fff !important; border: 1px solid var(--ink) !important;
+  border-radius: 8px !important; box-shadow: none !important; transform: none !important;
+  font-family: var(--font-body); font-weight: 400 !important; font-size: 16px; text-transform: none !important; letter-spacing: 0 !important;
+  height: 48px; padding: 0 1.4rem;
+}
+body.v2-score .sc-next:hover, body.v2-score .sc-intro-start:hover, body.v2-score .sc-email-btn:hover {
+  background: var(--ink) !important; opacity: .88 !important; box-shadow: none !important; transform: none !important;
+}
+body.v2-score .sc-next:active, body.v2-score .sc-intro-start:active, body.v2-score .sc-email-btn:active {
+  transform: translateY(1px) !important; box-shadow: none !important;
+}
+body.v2-score .sc-email-btn:disabled { background: #D8D6D2 !important; border-color: #D8D6D2 !important; opacity: 1 !important; cursor: default; }
+body.v2-score .sc-back, body.v2-score .sc-restart {
+  height: 48px; padding: 0 1.1rem; border-radius: 8px; border: 1px solid #999; background: var(--surface);
+  color: var(--ink); font-family: var(--font-body); font-size: 15px; font-weight: 400;
+}
+body.v2-score .sc-back:hover, body.v2-score .sc-restart:hover { border-color: var(--fg); color: var(--ink); }
+body.v2-score .sc-result-nav a { color: var(--ink) !important; font-weight: 500 !important; text-decoration: underline !important; text-underline-offset: 3px; }
+body.v2-score main :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- Result ---------- */
+body.v2-score .sc-result-box, body.v2-score .sc-email-box {
+  border: 1px solid var(--border) !important; border-radius: 14px !important; box-shadow: none !important;
+  background: var(--surface) !important;
+}
+body.v2-score .sc-email-box { background: var(--bg) !important; }
+body.v2-score .sc-band-pill {
+  border: 0 !important; background: var(--accent-soft) !important; border-radius: 8px; padding: .3rem .7rem;
+}
+body.v2-score .sc-band-dot { background: var(--accent); }
+body.v2-score .sc-band-text { color: var(--accent); font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+body.v2-score .sc-signal-title { font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+body.v2-score .sc-signal-row { font-size: 15px; }
+body.v2-score .sc-pillar-bar-bg { border: 0 !important; background: var(--surface-2); }
+body.v2-score .sc-pillar-row { font-size: 14px; }
+body.v2-score .sc-next-title, body.v2-score .sc-email-title, body.v2-score .sc-email-sent-title {
+  font-family: var(--v2-serif); font-size: 20px; font-weight: 400; line-height: 1.3;
+}
+body.v2-score .sc-next-list li { font-size: 15px; }
+body.v2-score .sc-email-body, body.v2-score .sc-email-sent-body { font-size: 14px; }
+body.v2-score .sc-email-sent { margin-top: 2rem; border: 1px solid var(--border); border-radius: 14px; background: var(--accent-soft); }
+body.v2-score .sc-email-sent-body, body.v2-score .sc-countdown { color: #24444F; }
+body.v2-score .sc-consent { font-size: 14px; }
+body.v2-score .sc-email-error { color: #B42318; font-size: 14px; }
+
+/* ============================================================
+   Event kiosk (?kiosk=1): tablet / laptop at a stall. Bigger tap
+   targets, a wider card, and a slim brand bar. Behaviour (idle
+   reset, countdown, src tag, consent) lives in the page's JS.
+   ============================================================ */
+body.v2-score.sc-kiosk main { padding-top: 0; }
+body.v2-score .sc-kiosk-brand {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  width: 100%; max-width: none; margin: 0; padding: 0 2rem; height: 72px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+}
+body.v2-score .sc-kiosk-brand span {
+  display: inline-flex; align-items: center; gap: .55rem;
+  font-family: var(--v2-serif); font-weight: 400; font-size: 26px; color: var(--fg);
+}
+body.v2-score .sc-kiosk-brand small {
+  padding: .35rem .8rem; border-radius: 8px; background: var(--accent-soft); color: var(--accent);
+  font-family: var(--font-body); font-size: 14px; font-weight: 400;
+}
+body.v2-score.sc-kiosk .sc-wrap { width: calc(100% - 48px); max-width: 820px; margin: 2rem auto; padding: 2.5rem 3rem; }
+@media (orientation: portrait) and (min-width: 601px) { body.v2-score.sc-kiosk .sc-wrap { margin-top: 3rem; } }
+body.v2-score.sc-kiosk .sc-h1 { font-size: clamp(2.1rem, 4.2vw, 2.9rem); }
+body.v2-score.sc-kiosk .sc-intro-body, body.v2-score.sc-kiosk .sc-result-desc { font-size: 18px; }
+body.v2-score.sc-kiosk .sc-intro-trust { font-size: 15px; }
+body.v2-score.sc-kiosk .sc-kicker { font-size: 15px; }
+body.v2-score.sc-kiosk .sc-label-text { font-size: 16px; }
+body.v2-score.sc-kiosk .sc-label-hint-inline, body.v2-score.sc-kiosk .sc-hint { font-size: 14px; }
+body.v2-score.sc-kiosk .sc-input { height: 64px; font-size: 24px; padding: 0 1.1rem; }
+body.v2-score.sc-kiosk .sc-email-input { height: 60px; font-size: 18px; }
+body.v2-score.sc-kiosk .sc-next, body.v2-score.sc-kiosk .sc-intro-start, body.v2-score.sc-kiosk .sc-email-btn,
+body.v2-score.sc-kiosk .sc-back, body.v2-score.sc-kiosk .sc-restart {
+  height: 60px; min-width: 160px; font-size: 18px; padding: 0 2rem;
+}
+body.v2-score.sc-kiosk .sc-intro-start { min-width: 240px; }
+body.v2-score.sc-kiosk .sc-consent { font-size: 16px; gap: .75rem; padding: .5rem 0; }
+body.v2-score.sc-kiosk .sc-consent input { width: 26px; height: 26px; margin-top: 0; }
+body.v2-score.sc-kiosk .sc-signal-row, body.v2-score.sc-kiosk .sc-next-list li { font-size: 16px; }
+body.v2-score.sc-kiosk .sc-countdown { font-size: 15px; }
+
+/* Short landscape screens (1024×768, 1366×768, 1280×800): keep a
+   wizard step on one screen without scrolling. */
+@media (min-width: 900px) and (max-height: 820px) {
+  body.v2-score.sc-kiosk .sc-kiosk-brand { height: 64px; }
+  body.v2-score.sc-kiosk .sc-wrap { margin: 1.25rem auto; padding: 2rem 2.75rem; }
+  body.v2-score.sc-kiosk .sc-fields { margin-top: 1.75rem; gap: 1.25rem; }
+  body.v2-score.sc-kiosk .sc-nav { margin-top: 1.75rem; }
+  body.v2-score.sc-kiosk .sc-disclaimer { margin-top: 1.5rem; padding-top: 1rem; }
+}
+@media (max-width: 600px) {
+  body.v2-score .sc-kiosk-brand { padding: 0 16px; height: 60px; }
+  body.v2-score .sc-kiosk-brand span { font-size: 22px; }
+  body.v2-score.sc-kiosk .sc-wrap { width: auto; margin: 16px; padding: 1.75rem 1.25rem; }
+  body.v2-score.sc-kiosk .sc-next, body.v2-score.sc-kiosk .sc-back { min-width: 0; padding: 0 1.4rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.v2-score .sc-progress-fill, body.v2-score .sc-pillar-bar-fill { transition: none !important; }
+}
