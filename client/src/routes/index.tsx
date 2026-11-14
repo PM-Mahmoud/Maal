@@ -125,13 +125,6 @@ function Index() {
             </button>
           </form>
           <p className="v2-ask-note">See everything. Ask anything.</p>
-
-          <div className="v2-facts">
-            <span className="v2-fact">Read-only open banking (CDR)</span>
-            <span className="v2-fact">Current ATO, super &amp; HECS rules</span>
-            <span className="v2-fact">Interest-free by default</span>
-            <span className="v2-fact">Education, not advice</span>
-          </div>
         </div>
       </section>
 
@@ -348,6 +341,7 @@ function Index() {
             </div>
           </div>
           <div className="v2-disclaimer">
+            <p>Read-only open banking through the Consumer Data Right (CDR). Interest-free by default. Education, not advice.</p>
             <p>DISCLAIMER: Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.</p>
             <p>Maal Pty Ltd is not an Australian Financial Services Licensee. Information provided is general in nature and does not take into account your individual objectives, financial situation, or needs. Always consider seeking advice from a qualified financial adviser before making investment decisions. Past performance is not a reliable indicator of future performance.</p>
           </div>
