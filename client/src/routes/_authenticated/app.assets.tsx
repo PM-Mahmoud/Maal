@@ -126,7 +126,7 @@ const WEALTH_SECTIONS: Record<Exclude<WealthSection, "overview">, { title: strin
   property: { title: "Property", description: "Property values, mortgages and the equity you own.", keys: ["real_estate", "property_mortgage"] },
   super: { title: "Super", description: "Your superannuation funds and retirement savings.", keys: ["super"] },
   liabilities: { title: "Debts", description: "Credit cards, mortgages, loans and other obligations.", keys: ["property_mortgage", "credit_card", "loan", "other_liability"] },
-  other: { title: "Other Assets", description: "Private investments, metals, vehicles, collectibles and other valuables.", keys: ["private", "metal", "vehicle", "collectible", "other_asset"] },
+  other: { title: "Other assets", description: "Private investments, metals, vehicles, collectibles and other valuables.", keys: ["private", "metal", "vehicle", "collectible", "other_asset"] },
 };
 
 /* ------------------------------------------------------------------ */
