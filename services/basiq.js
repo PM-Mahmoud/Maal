@@ -93,9 +93,47 @@ async function createBasiqUser(email) {
 }
 
 // Hosted consent UI URL — user picks their bank and approves read-only access.
-async function getConsentUrl(basiqUserId, action = 'connect') {
+// `institutionId` (optional, e.g. "AU00000") preselects the bank the user
+// picked in Maal's institution picker so they skip Basiq's own search.
+async function getConsentUrl(basiqUserId, action = 'connect', opts = {}) {
   const clientToken = await getClientToken(basiqUserId);
-  return `https://consent.basiq.io/home?token=${clientToken}&action=${encodeURIComponent(action)}`;
+  let url = `https://consent.basiq.io/home?token=${clientToken}&action=${encodeURIComponent(action)}`;
+  if (opts.institutionId && /^[A-Z]{2}\d{5}$/.test(opts.institutionId)) {
+    url += `&institutionId=${encodeURIComponent(opts.institutionId)}`;
+  }
+  return url;
+}
+
+// Public institution catalogue (logos at institution.logo.links). Not CDR
+// consumer data, but still mapped through a whitelist. Cached in memory for
+// 12h; a failed refresh keeps serving the last good copy.
+const INSTITUTIONS_TTL_MS = 12 * 60 * 60 * 1000;
+let cachedInstitutions = null;
+let cachedInstitutionsAt = 0;
+let institutionsInFlight = null;
+
+async function listInstitutions() {
+  const { mapInstitutions } = require('./basiq-institutions');
+  if (cachedInstitutions && Date.now() - cachedInstitutionsAt < INSTITUTIONS_TTL_MS) return cachedInstitutions;
+  if (institutionsInFlight) return institutionsInFlight;
+  institutionsInFlight = (async () => {
+    try {
+      const token = await getServerToken();
+      const json = await basiqFetch('/institutions', { method: 'GET' }, token);
+      const mapped = mapInstitutions(json.data || []);
+      if (mapped.length) {
+        cachedInstitutions = mapped;
+        cachedInstitutionsAt = Date.now();
+      }
+      return mapped.length ? mapped : (cachedInstitutions || []);
+    } catch (err) {
+      if (cachedInstitutions) return cachedInstitutions;
+      throw err;
+    } finally {
+      institutionsInFlight = null;
+    }
+  })();
+  return institutionsInFlight;
 }
 
 async function getAccounts(basiqUserId) {
@@ -161,4 +199,5 @@ async function getConnections(basiqUserId) {
 module.exports = {
   hasBasiq, createBasiqUser, getConsentUrl,
   getAccounts, getTransactions, getConnections,
+  listInstitutions,
 };
