@@ -341,7 +341,7 @@ function Index() {
             </div>
           </div>
           <div className="v2-disclaimer">
-            <p>Read-only open banking through the Consumer Data Right (CDR). Interest-free by default. Education, not advice.</p>
+            <p>Maal connects to your bank accounts on a read-only basis through the Consumer Data Right (CDR). Every product and option Maal shows is interest-free by default. Maal provides general education, not personal financial advice.</p>
             <p>DISCLAIMER: Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.</p>
             <p>Maal Pty Ltd is not an Australian Financial Services Licensee. Information provided is general in nature and does not take into account your individual objectives, financial situation, or needs. Always consider seeking advice from a qualified financial adviser before making investment decisions. Past performance is not a reliable indicator of future performance.</p>
           </div>
