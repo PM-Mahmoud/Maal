@@ -17,7 +17,7 @@ router.get('/me', async (req, res) => {
   try {
     const user = await findUserById(req.session.userId);
     if (!user) return res.status(401).json({ error: 'Not found' });
-    res.json({ id: user.id, email: user.email, plan: user.plan || 'free' });
+    res.json({ id: user.id, email: user.email, name: user.name || null, plan: user.plan || 'free' });
   } catch (e) {
     console.error('/api/me error:', e.message);
     res.status(500).json({ error: 'An internal error occurred' });
