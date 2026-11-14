@@ -1,0 +1,232 @@
+/* ============================================================
+   Subscribe flow + dashboard offer + complete-onboarding (redesign A3).
+   Figma: "Subscribing to a plan" (Subscribe / Payment processing /
+   Payment success / Dashboard offer) and "Complete onboarding".
+   Token values mirror client/src/v2-landing.css (.v2) — that file is
+   not edited; these components also render inside the app shell, where
+   .v2's full-page rules don't belong, so the tokens live on .msub.
+   All imagery is CSS/SVG made for Maal.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap');
+
+.msub {
+  --ms-bg: #F8F9F6;
+  --ms-surface: #FFFFFF;
+  --ms-ink: #202321;
+  --ms-ink-strong: #08090B;
+  --ms-muted: #646663;
+  --ms-faint: #929491;
+  --ms-hair: #E5E5E2;
+  --ms-list: #EFEFEC;
+  --ms-list-hair: #D7D8D4;
+  --ms-btn: #020109;
+  --ms-badge: #D6F7FF;
+  --ms-badge-ink: #006B87;
+  --ms-accent: #0F8FA6;
+  --ms-good: #00A274;
+  --ms-serif: 'Lora', Georgia, 'Times New Roman', serif;
+  --ms-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: var(--ms-sans);
+  color: var(--ms-ink);
+  -webkit-font-smoothing: antialiased;
+}
+.msub *, .msub *::before, .msub *::after { box-sizing: border-box; }
+:where(.msub) p, :where(.msub) h1, :where(.msub) h2, :where(.msub) h3 { margin: 0; font-weight: 400; }
+:where(.msub) a { color: inherit; }
+.msub button { font-family: inherit; }
+.msub :focus-visible { outline: 2px solid var(--ms-accent); outline-offset: 2px; }
+.ms-serif { font-family: var(--ms-serif); letter-spacing: -0.01em; }
+.ms-kicker { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; }
+
+/* ---------- Night sky (CSS stars, drawn for Maal) ---------- */
+.ms-sky {
+  position: relative; overflow: hidden; color: #fff;
+  background:
+    radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,.85), transparent 60%),
+    radial-gradient(1px 1px at 28% 62%, rgba(255,255,255,.6), transparent 60%),
+    radial-gradient(1.5px 1.5px at 41% 33%, rgba(255,255,255,.7), transparent 60%),
+    radial-gradient(1px 1px at 57% 12%, rgba(255,255,255,.75), transparent 60%),
+    radial-gradient(1.5px 1.5px at 66% 71%, rgba(255,255,255,.55), transparent 60%),
+    radial-gradient(1px 1px at 79% 27%, rgba(255,255,255,.8), transparent 60%),
+    radial-gradient(1px 1px at 88% 53%, rgba(255,255,255,.6), transparent 60%),
+    radial-gradient(1.5px 1.5px at 93% 84%, rgba(255,255,255,.5), transparent 60%),
+    radial-gradient(1px 1px at 7% 79%, rgba(255,255,255,.55), transparent 60%),
+    radial-gradient(1px 1px at 47% 90%, rgba(255,255,255,.45), transparent 60%),
+    radial-gradient(120% 70% at 50% 120%, rgba(150,196,220,.75), rgba(150,196,220,0) 70%),
+    linear-gradient(180deg, #0A1A24 0%, #12303F 38%, #2B5468 72%, #5F8EA4 100%);
+}
+.ms-sky::after { /* fine grain so the gradient doesn't band */
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .18;
+  background-image: radial-gradient(rgba(255,255,255,.35) .5px, transparent .6px);
+  background-size: 3px 3px;
+}
+.ms-sky > * { position: relative; z-index: 1; }
+
+/* ---------- Subscribe page (frame 02) ---------- */
+.ms-page { min-height: 100vh; background: var(--ms-bg); padding: clamp(16px, 2.1vw, 40px); }
+.ms-split { display: grid; gap: 20px; grid-template-columns: 1fr; max-width: 1840px; margin: 0 auto; min-height: calc(100vh - 2 * clamp(16px, 2.1vw, 40px)); }
+@media (min-width: 960px) { .ms-split { grid-template-columns: 975fr 845fr; } }
+
+.ms-plan {
+  position: relative; background: var(--ms-surface); border: 1px solid var(--ms-hair); border-radius: 22px;
+  padding: 40px 20px 36px; display: flex; flex-direction: column; align-items: center; text-align: center;
+}
+.ms-plan-close { position: absolute; top: 14px; right: 14px; width: 38px; height: 38px; border-radius: 10px; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; color: #3C3F3C; }
+.ms-plan-close:hover { background: #F2F2EF; }
+@media (min-width: 960px) { .ms-plan-close { display: none; } }
+.ms-logo { color: var(--ms-ink-strong); display: inline-flex; }
+.ms-badge {
+  display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 11px; margin-top: 20px;
+  background: var(--ms-badge); color: var(--ms-badge-ink); font-size: 15px; line-height: 1;
+}
+.ms-price { font-family: var(--ms-serif); font-size: clamp(76px, 6.9vw, 132px); line-height: 1.02; color: var(--ms-ink); margin-top: 6px; letter-spacing: -0.02em; }
+.ms-per { font-family: var(--ms-serif); font-size: clamp(36px, 3.75vw, 64px); line-height: 1.05; color: var(--ms-muted); }
+.ms-renews { margin-top: 10px; font-size: 15px; color: var(--ms-faint); max-width: 46ch; }
+
+.ms-benefits { list-style: none; margin: 24px 0 0; padding: 0; width: 100%; max-width: 508px; background: var(--ms-list); border-radius: 22px; overflow: hidden; text-align: left; }
+.ms-benefits li { display: flex; align-items: center; gap: 20px; min-height: 64px; padding: 0 28px; border-bottom: 1px solid var(--ms-list-hair); font-size: 17px; color: var(--ms-ink-strong); }
+.ms-benefits li:last-child { border-bottom: 0; }
+.ms-benefits svg { flex-shrink: 0; color: #4A4D4A; }
+
+.ms-link { background: none; border: 0; padding: 0; font-size: 15px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; color: #0A0A0A; }
+.ms-link-soft { color: #626562; }
+.ms-terms { margin-top: 20px; }
+.ms-actions { width: 100%; max-width: 371px; display: grid; gap: 10px; margin-top: 26px; }
+.ms-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .6rem; width: 100%;
+  height: 58px; border-radius: 6px; border: 1px solid transparent; cursor: pointer;
+  font-size: 20px; font-weight: 500; transition: opacity .15s, transform .12s, background .15s;
+}
+.ms-btn:active { transform: translateY(1px); }
+.ms-btn:disabled { opacity: .5; cursor: progress; }
+.ms-btn-ink { background: var(--ms-btn); color: #fff; border-color: #868983; }
+.ms-btn-ink:hover { opacity: .9; }
+.ms-btn-line { background: #fff; color: var(--ms-ink-strong); border-color: #BDBFBA; font-weight: 400; font-size: 17px; height: 52px; }
+.ms-btn-line:hover { border-color: var(--ms-ink-strong); }
+.ms-btn-light { background: #fff; color: #090C0F; height: 56px; width: auto; padding: 0 44px; border-radius: 10px; font-size: 19px; font-weight: 400; }
+.ms-btn-light:hover { background: #F1F1EF; }
+.ms-fine { margin-top: 18px; display: grid; gap: 12px; justify-items: center; font-size: 13px; color: var(--ms-faint); }
+.ms-alert { width: 100%; max-width: 508px; margin-top: 18px; padding: 12px 14px; border-radius: 12px; font-size: 14px; text-align: left; border: 1px solid #F0C7C2; background: #FFF4F2; color: #7A2318; }
+.ms-alert-info { border-color: #BFE7F0; background: #F0FBFE; color: #0B4F60; }
+.ms-disclaimer { margin-top: 26px; max-width: 60ch; font-size: 11.5px; line-height: 1.55; color: var(--ms-faint); }
+
+.ms-hero { border-radius: 22px; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 80px 40px; text-align: center; }
+@media (min-width: 960px) { .ms-hero { display: flex; } }
+.ms-hero-close {
+  position: absolute; top: 20px; right: 18px; width: 58px; height: 50px; border-radius: 14px; border: 0; cursor: pointer;
+  display: grid; place-items: center; color: #fff; background: rgba(255,255,255,.08);
+}
+.ms-hero-close:hover { background: rgba(255,255,255,.16); }
+.ms-hero h2 { font-family: var(--ms-serif); font-size: clamp(34px, 2.9vw, 54px); line-height: 1.2; color: #fff; }
+.ms-trust { margin-top: 20px; display: inline-flex; align-items: center; gap: 14px; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.85); }
+.ms-trust i { width: 4px; height: 4px; border-radius: 50%; background: #7FE3F5; display: inline-block; }
+.ms-chart-card {
+  margin-top: 36px; width: min(434px, 100%); border-radius: 16px; text-align: left; padding: 24px 0 18px;
+  background: linear-gradient(180deg, rgba(40,62,74,.92), rgba(48,76,90,.78)); border: 1px solid rgba(255,255,255,.22);
+  box-shadow: 0 20px 50px rgba(0,0,0,.25);
+}
+.ms-chart-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 0 22px; }
+.ms-chart-label { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.7); }
+.ms-chart-ai { width: 31px; height: 31px; border-radius: 8px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.5); color: #fff; }
+.ms-chart-value { padding: 0 22px; margin-top: 18px; font-size: 30px; color: #fff; }
+.ms-chart-legend { padding: 0 22px; font-size: 13px; color: rgba(255,255,255,.85); display: flex; align-items: center; gap: 6px; }
+.ms-chart-legend::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #fff; }
+.ms-chart-svg { display: block; width: 100%; height: 112px; margin-top: 4px; }
+.ms-chart-axis { display: flex; justify-content: space-between; padding: 12px 30px 0; border-top: 1px solid rgba(255,255,255,.35); font-size: 11px; letter-spacing: .1em; color: rgba(255,255,255,.75); }
+
+/* ---------- Payment processing / success (frames 03–04) ---------- */
+.ms-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(120,122,120,.42); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); display: grid; place-items: center; }
+.ms-loader { color: #0B0B0C; animation: ms-pulse 1.4s ease-in-out infinite; }
+.ms-loader-done { animation: none; }
+@keyframes ms-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.88); opacity: .7; } }
+.ms-toast {
+  position: fixed; z-index: 61; top: 38px; right: 38px; width: min(562px, calc(100vw - 32px));
+  background: #fff; border: 1px solid #D7DAD6; border-radius: 21px; overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,.15); padding: 22px 64px 26px 61px; text-align: left;
+}
+@media (max-width: 640px) { .ms-toast { top: 16px; right: 16px; padding: 18px 52px 22px 52px; } }
+.ms-toast-icon { position: absolute; left: 24px; top: 24px; width: 23px; height: 23px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid currentColor; font-family: var(--ms-serif); font-size: 15px; line-height: 1; }
+@media (max-width: 640px) { .ms-toast-icon { left: 18px; top: 20px; } }
+.ms-toast-info { color: #535CC9; }
+.ms-toast-ok { color: #07885F; }
+.ms-toast-err { color: #B4321F; }
+.ms-toast-title { font-size: 20px; color: var(--ms-ink-strong); }
+.ms-toast-body { margin-top: 10px; font-size: 16px; color: #666A66; }
+.ms-toast-close { position: absolute; top: 18px; right: 18px; width: 38px; height: 38px; border-radius: 10px; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; color: #3C3F3C; }
+.ms-toast-close:hover { background: #F2F2EF; }
+.ms-toast-track { position: absolute; left: 0; right: 0; bottom: 0; height: 7px; background: #DEDEF5; }
+.ms-toast-bar { height: 100%; background: #7374DA; transition: width .4s ease; }
+.ms-toast-ok .ms-toast-track, .ms-toast-track.is-ok { background: #DDF3EA; }
+.ms-toast-track.is-ok .ms-toast-bar { background: #2BAA7E; }
+.ms-toast-track.is-indeterminate .ms-toast-bar { width: 20%; animation: ms-indet 1.6s ease-in-out infinite; }
+@keyframes ms-indet { 0% { transform: translateX(-100%); } 100% { transform: translateX(500%); } }
+.ms-toast-actions { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+.ms-toast-actions .ms-btn { height: 40px; font-size: 15px; width: auto; padding: 0 16px; border-radius: 10px; font-weight: 400; }
+.ms-blur { filter: blur(4px); pointer-events: none; user-select: none; }
+
+/* ---------- Dashboard offer (frame 01) ---------- */
+.ms-modal { position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; padding: 16px; background: rgba(248,249,246,.55); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+.ms-offer {
+  position: relative; width: min(742px, 100%); border-radius: 21px; padding: 72px 24px 22px; text-align: center;
+  background-color: #052E41; box-shadow: 0 30px 80px rgba(5,46,65,.35);
+}
+.ms-offer.ms-sky { background-color: #052E41; }
+.ms-offer-kicker { font-size: 12px; letter-spacing: .17em; text-transform: uppercase; color: #fff; }
+.ms-offer-badge { display: inline-flex; align-items: center; height: 36px; padding: 0 16px; border-radius: 11px; margin-top: 30px; background: #07718A; color: #BCE6F0; font-size: 15px; }
+.ms-offer-price { font-family: var(--ms-serif); font-size: clamp(84px, 12vw, 132px); line-height: 1; color: #fff; margin-top: 8px; letter-spacing: -0.02em; }
+.ms-offer-per { font-family: var(--ms-serif); font-size: clamp(28px, 4vw, 38px); line-height: 1.1; color: #fff; margin-top: 4px; }
+.ms-offer-renew { margin-top: 18px; font-size: 16px; color: #fff; }
+.ms-offer-cta { margin-top: 28px; }
+.ms-offer-terms { margin-top: 34px; font-size: 14px; color: #C1DDE8; }
+.ms-offer-terms a, .ms-offer-terms button { color: #C1DDE8; }
+.ms-offer-close { position: absolute; top: 16px; right: 16px; width: 38px; height: 38px; border-radius: 10px; border: 0; background: rgba(255,255,255,.08); color: #fff; display: grid; place-items: center; cursor: pointer; }
+.ms-offer-close:hover { background: rgba(255,255,255,.18); }
+@media (max-width: 480px) { .ms-offer { padding-top: 56px; } .ms-offer-renew { font-size: 14.5px; } }
+
+/* ---------- Complete onboarding card + dialog ---------- */
+.ms-onb-card {
+  position: relative; border-radius: 21px; padding: 30px 21px 22px; color: #fff; cursor: pointer; text-align: left; width: 100%; border: 0;
+  background: linear-gradient(131deg, #4B660D 0%, #274200 33%, #3A5300 67%, #284200 83%);
+}
+.ms-onb-card:hover { filter: brightness(1.05); }
+.ms-mono { font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; letter-spacing: .13em; text-transform: uppercase; }
+.ms-onb-card h3 { font-family: var(--ms-serif); font-size: clamp(22px, 1.6vw, 28px); margin-top: 42px; }
+.ms-segs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 5px; margin-top: 14px; }
+.ms-seg { height: 10px; border-radius: 3px; background: #617741; }
+.ms-seg.on { background: #fff; }
+.ms-onb-pct { margin-top: 13px; font-size: 17px; color: #D2DCBD; }
+.ms-icon-btn { position: absolute; top: 26px; right: 22px; width: 30px; height: 30px; display: grid; place-items: center; border: 0; background: transparent; color: inherit; cursor: pointer; border-radius: 8px; }
+.ms-icon-btn:hover { background: rgba(255,255,255,.12); }
+
+.ms-dialog-wrap { position: fixed; inset: 0; z-index: 56; display: grid; place-items: center; padding: 16px; background: rgba(0,0,0,.5); }
+.ms-dialog { position: relative; width: min(762px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: #fff; border-radius: 31px; padding-bottom: 26px; color: #191919; }
+.ms-dialog-head { height: 82px; display: flex; align-items: center; padding: 0 21px; border-bottom: 1px solid #E2E2E0; color: #666; }
+.ms-dialog-head .ms-icon-btn { top: 26px; right: 26px; color: #111; }
+.ms-dialog-head .ms-icon-btn:hover { background: #F2F2EF; }
+.ms-dialog-body { padding: 24px 26px 0; }
+.ms-dialog h2 { font-family: var(--ms-serif); font-size: clamp(23px, 3vw, 28px); color: #191919; }
+.ms-dialog-lede { margin-top: 14px; font-size: 17px; line-height: 26px; color: #666; }
+.ms-dialog .ms-seg { height: 11px; border-radius: 4px; background: #F2F2EC; }
+.ms-dialog .ms-seg.on { background: #5F8E00; }
+.ms-dialog .ms-onb-pct { color: #666; font-size: 17px; }
+.ms-tasks { list-style: none; margin: 30px 0 0; padding: 0 10px; background: #F9F9F6; border-radius: 32px; }
+.ms-task { border-bottom: 1px solid #DDDDDA; }
+.ms-task:last-child { border-bottom: 0; }
+.ms-task-row { display: flex; align-items: center; gap: 13px; width: 100%; min-height: 66px; padding: 0 15px; border: 0; background: transparent; text-align: left; font-size: 17px; color: #111; cursor: pointer; }
+.ms-task-row:disabled { cursor: default; }
+.ms-task-status { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #111; flex-shrink: 0; display: grid; place-items: center; }
+.ms-task.done .ms-task-status { border-color: #9A9A9A; background: #9A9A9A; color: #fff; }
+.ms-task.done .ms-task-label { color: #999; }
+.ms-task-label { flex: 1; }
+.ms-done-badge { padding: 7px 11px; border-radius: 8px; background: #E5F7EF; color: #075940; font-size: 15px; }
+.ms-task-chev { color: #333; transition: transform .15s; }
+.ms-task.open .ms-task-chev { transform: rotate(180deg); }
+.ms-task-panel { padding: 0 15px 20px 44px; }
+.ms-task-panel p { font-size: 15px; color: #666; }
+.ms-task-go { margin-top: 12px; display: inline-flex; align-items: center; height: 41px; padding: 0 12px; border-radius: 10px; background: #030209; color: #fff; font-size: 15px; text-decoration: none; border: 0; cursor: pointer; }
+.ms-task-go:hover { opacity: .88; }
+@media (max-width: 480px) {
+  .ms-plan { padding: 32px 14px 28px; }
+  .ms-benefits li { gap: 14px; padding: 0 18px; min-height: 56px; font-size: 15.5px; }
+  .ms-btn { font-size: 18px; height: 54px; }
+}
