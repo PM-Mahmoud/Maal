@@ -724,7 +724,7 @@ body { line-height: 1.6; }
   border-bottom: 1px solid var(--border);
 }
 .lv-header-inner {
-  max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; height: 72px;
+  max-width: 1440px; margin: 0 auto; padding: 0 clamp(1.25rem, 4vw, 3rem); height: 72px;
   display: flex; align-items: center; justify-content: space-between;
 }
 .lv-header-left { display: flex; align-items: center; gap: 2.5rem; }
@@ -905,7 +905,7 @@ body { line-height: 1.6; }
 
 /* ─── Footer v2 ───────────────────────────────────────── */
 .lv-footer { border-top: 1px solid var(--border); }
-.lv-footer-main { max-width: 1440px; margin: 0 auto; padding: 4rem 1.5rem; display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 3rem; }
+.lv-footer-main { max-width: 1440px; margin: 0 auto; padding: 4rem clamp(1.25rem, 4vw, 3rem); display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 3rem; }
 @media (max-width: 768px) { .lv-footer-main { grid-template-columns: 1fr 1fr; gap: 2rem; } }
 @media (max-width: 480px) { .lv-footer-main { grid-template-columns: 1fr; } }
 .lv-footer-brand-desc { font-size: 13px; color: var(--fg-muted); max-width: 34ch; line-height: 1.65; margin-top: 1rem; }
@@ -916,7 +916,7 @@ body { line-height: 1.6; }
 .lv-disclaimer { border-top: 1px solid var(--border); padding: 1.5rem; max-width: 1440px; margin: 0 auto; }
 .lv-disclaimer p { font-size: 11px; color: var(--fg-muted); line-height: 1.7; margin-bottom: .5rem; }
 .lv-disclaimer p:last-child { margin-bottom: 0; }
-.lv-footer-bottom { border-top: 1px solid var(--border); padding: 1.5rem; }
+.lv-footer-bottom { border-top: 1px solid var(--border); padding: 1.5rem clamp(1.25rem, 4vw, 3rem); }
 .lv-footer-bottom-inner { max-width: 1440px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--fg-muted); }
 
 /* Dark mode — .dark class compat */

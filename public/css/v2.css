@@ -119,8 +119,10 @@
 /* ---------- Figma pass 2 (frames 02–07) ---------- */
 /* Desktop: two equal panels with page margins, like the reference (card ~716px tall at 1400w). */
 @media (min-width: 960px) {
-  .v2-auth { gap: 16px; padding: 79px 22px 40px; align-content: start; }
-  .v2-auth-card, .v2-sky { min-height: min(718px, calc(100vh - 120px)); }
+  /* Vertical padding scales with screen height so the form starts near the
+     top on 768px-tall laptops instead of below an 80px gap. */
+  .v2-auth { gap: 16px; padding: clamp(20px, 7vh, 79px) clamp(16px, 1.6vw, 32px) clamp(20px, 4vh, 40px); align-content: start; }
+  .v2-auth-card, .v2-sky { min-height: min(718px, calc(100vh - clamp(40px, 11vh, 120px))); }
 }
 /* Offer badge sits over the top of the big price. */
 .v2-offer .v2-pill { position: relative; z-index: 1; }
