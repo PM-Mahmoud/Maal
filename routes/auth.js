@@ -460,12 +460,76 @@ router.post('/api/account/delete', async (req, res) => {
     return res.status(400).json({ error: `Type ${DELETION_CONFIRMATION} to confirm permanent deletion.` });
   }
   try {
-    const { deleteUser } = require('../db/users');
-    await deleteUser(req.session.userId);
+    // Erasure (services/account-deletion.js): cancels Stripe billing first,
+    // cascades every per-user table, purges other devices' sessions and
+    // removes Vault files from object storage.
+    const { findUserById } = require('../db/users');
+    const user = await findUserById(req.session.userId);
+    const result = await require('../services/account-deletion').deleteAccount(req.session.userId);
+    if (!result.deleted) return req.session.destroy(() => res.status(404).json({ error: 'Account not found.' }));
+    if (user && user.email) {
+      sendEmail({
+        to: user.email,
+        subject: 'Your Maal account has been deleted',
+        text: 'Your Maal account and the financial data in it have been permanently deleted, and any active membership has been cancelled. If you did not ask for this, reply to this email straight away.',
+        html: '<p>Your Maal account and the financial data in it have been permanently deleted, and any active membership has been cancelled.</p><p>If you did not ask for this, reply to this email straight away.</p>',
+      }).catch((e) => console.error('[account-delete] confirmation email failed:', e.message));
+    }
     req.session.destroy(() => res.json({ ok: true }));
   } catch (err) {
+    if (err.code === 'billing_cancel_failed') {
+      return res.status(502).json({ error: "We couldn't cancel your membership, so nothing has been deleted. Please try again, or contact support." });
+    }
     console.error('Delete account error:', err.message);
     res.status(500).json({ error: 'Failed to delete account.' });
+  }
+});
+
+// ─── API: change phone number (Settings → Profile, SMS-verified) ──────────────
+// The new number is held in the session with a hashed 6-digit code; users.phone
+// only changes once the code is confirmed. Pure logic: lib/profile-details.js.
+
+router.post('/api/account/phone/send-code', otpLimiter, async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not signed in.' });
+  const pd = require('../lib/profile-details');
+  const phone = pd.normalisePhone(req.body && req.body.country, req.body && req.body.number);
+  if (!phone) {
+    return res.status(400).json({ error: 'Enter a valid mobile number, for example 0412 345 678.' });
+  }
+  const wait = pd.resendWaitSeconds(req.session.phoneVerify);
+  if (wait > 0 && req.session.phoneVerify.phone === phone) {
+    return res.status(429).json({ error: `Wait ${wait}s before requesting another code.`, retryAfter: wait });
+  }
+  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_PHONE_NUMBER) {
+    return res.status(503).json({ error: "Text messages aren't available right now, so your number can't be verified. Please try again later." });
+  }
+  const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+  try {
+    await sendOtpSms(phone, code);
+  } catch (e) {
+    console.error('[phone-verify] SMS send failed:', e.message);
+    return res.status(502).json({ error: "We couldn't send a text to that number. Check it and try again." });
+  }
+  req.session.phoneVerify = pd.createPhoneChallenge(phone, code);
+  req.session.save(() => res.json({ ok: true, phone: pd.formatPhone(phone), resendIn: Math.round(pd.PHONE_RESEND_MS / 1000) }));
+});
+
+router.post('/api/account/phone/verify', otpLimiter, async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not signed in.' });
+  const pd = require('../lib/profile-details');
+  const state = req.session.phoneVerify;
+  const result = pd.checkPhoneCode(state, req.body && req.body.code);
+  if (!result.ok) {
+    if (result.reason === 'expired' || result.reason === 'locked') delete req.session.phoneVerify;
+    return req.session.save(() => res.status(400).json({ error: result.error, reason: result.reason }));
+  }
+  try {
+    await setPhone(req.session.userId, result.phone);
+    delete req.session.phoneVerify;
+    req.session.save(() => res.json({ ok: true, phone: result.phone }));
+  } catch (e) {
+    console.error('[phone-verify] save failed:', e.message);
+    res.status(500).json({ error: 'Could not save your number. Please try again.' });
   }
 });
 

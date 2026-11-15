@@ -85,6 +85,8 @@ async function deleteProfile(userId) {
 // mapping seam between the two, and are deterministically tested.
 
 // Map an age_band bucket (or the legacy years_in_practice proxy) to a numeric age.
+const profileDetails = require('../lib/profile-details');
+
 function deriveAge(ageBand, row) {
   const map = { 'under-30': 27, '30-39': 35, '40-49': 45, '50-59': 55, '60+': 65 };
   if (ageBand && map[ageBand]) return map[ageBand];
@@ -105,7 +107,8 @@ function normalizeProfile(row, user) {
     display_name: od.display_name || (user && user.name ? String(user.name).trim() : '') || emailName || '',
     age_band: od.age_band || null,
     risk: od.risk || null,
-    age: deriveAge(od.age_band, r),
+    // A real date of birth (Settings → Profile) beats the coarse age band.
+    age: profileDetails.ageFromDob(od.date_of_birth) ?? deriveAge(od.age_band, r),
     annual_income: num(r.annual_income),
     super_balance: num(r.super_balance),
     investment_portfolio: num(r.investment_portfolio),
@@ -123,6 +126,11 @@ function normalizeProfile(row, user) {
     heard_from: od.heard_from || null,
     welcome_completed_at: od.welcome_completed_at || null,
     dashboard_layout_updated_at: od.dashboard_layout_updated_at || null,
+    // Settings → Profile (lib/profile-details.js). Email + phone come from the
+    // users row: email is read-only here, phone changes only via SMS verification.
+    ...profileDetails.detailsFromOnboardingData(od),
+    email: (user && user.email) || null,
+    phone: (user && user.phone) || null,
   };
 }
 
@@ -141,6 +149,9 @@ function profilePatchToColumns(patch) {
   if ('goals' in p) onboarding_data.goals = welcome.sanitizeGoals(p.goals);
   if ('heard_from' in p) onboarding_data.heard_from = welcome.sanitizeHeardFrom(p.heard_from);
   if ('welcome_completed' in p && p.welcome_completed) onboarding_data.welcome_completed_at = new Date().toISOString();
+  // Settings → Profile details. Invalid values are dropped here as a belt; the
+  // PATCH route rejects them with field errors before this runs.
+  Object.assign(onboarding_data, profileDetails.validateProfileDetails(p).details);
   const numCols = ['annual_income', 'super_balance', 'investment_portfolio', 'property_value',
     'total_debt', 'cash_savings', 'monthly_expenses', 'hecs_balance', 'retirement_age'];
   for (const k of numCols) {
