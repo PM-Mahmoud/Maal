@@ -7,7 +7,7 @@
    Scoped to .mh / .mh-shell so nothing else on the site changes.
    Light by default; html.dark flips the tokens.
    ============================================================ */
-@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap');
+/* Lora + Inter load from the single Google Fonts <link> in client/index.html. */
 
 .mh, .mh-shell {
   --mh-bg: #F8F9F6;

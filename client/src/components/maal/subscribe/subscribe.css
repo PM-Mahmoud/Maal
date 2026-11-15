@@ -7,7 +7,7 @@
    .v2's full-page rules don't belong, so the tokens live on .msub.
    All imagery is CSS/SVG made for Maal.
    ============================================================ */
-@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap');
+/* Lora + Inter load from the single Google Fonts <link> in client/index.html. */
 
 .msub {
   --ms-bg: #F8F9F6;

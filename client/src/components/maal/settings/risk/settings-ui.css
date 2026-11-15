@@ -6,7 +6,7 @@
    v2 tokens (Lora + Inter, #020109 buttons, #D6F7FF/#006B87 badges),
    scoped to .mst so nothing leaks into the app shell.
    ============================================================ */
-@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap');
+/* Lora + Inter load from the single Google Fonts <link> in client/index.html. */
 
 .mst {
   --mst-bg: #F8F9F6;
