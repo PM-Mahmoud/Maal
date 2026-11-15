@@ -727,6 +727,11 @@ router.patch('/v1/profile', async (req, res) => {
   try {
     const { patchProfile, normalizeProfile } = require('../db/profiles');
     const { findUserById } = require('../db/users');
+    // Settings → Profile details: reject invalid values with per-field errors.
+    const { errors } = require('../lib/profile-details').validateProfileDetails(req.body || {});
+    if (Object.keys(errors).length) {
+      return res.status(400).json({ error: Object.values(errors)[0], fields: errors });
+    }
     const row = await patchProfile(req.session.userId, req.body || {});
     const user = await findUserById(req.session.userId);
     res.json(normalizeProfile(row, user));
