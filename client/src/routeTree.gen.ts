@@ -47,8 +47,8 @@ import { Route as AuthenticatedAppWealthOtherRouteImport } from './routes/_authe
 import { Route as AuthenticatedAppWealthLiabilitiesRouteImport } from './routes/_authenticated/app.wealth.liabilities'
 import { Route as AuthenticatedAppWealthInvestmentsRouteImport } from './routes/_authenticated/app.wealth.investments'
 import { Route as AuthenticatedAppWealthCashRouteImport } from './routes/_authenticated/app.wealth.cash'
-import { Route as AuthenticatedAppSettingsSecurityRouteImport } from './routes/_authenticated/app.settings.security'
-import { Route as AuthenticatedAppSettingsRiskProfileRouteImport } from './routes/_authenticated/app.settings.risk-profile'
+import { Route as AuthenticatedAppSettingsNotificationsRouteImport } from './routes/_authenticated/app.settings.notifications'
+import { Route as AuthenticatedAppSettingsAppearanceRouteImport } from './routes/_authenticated/app.settings.appearance'
 import { Route as AuthenticatedAppServicesTaxRouteImport } from './routes/_authenticated/app.services.tax'
 import { Route as AuthenticatedAppServicesFinancialPlannerRouteImport } from './routes/_authenticated/app.services.financial-planner'
 import { Route as AuthenticatedAppServicesEstatePlanningRouteImport } from './routes/_authenticated/app.services.estate-planning'
@@ -265,16 +265,16 @@ const AuthenticatedAppWealthCashRoute =
     path: '/wealth/cash',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
-const AuthenticatedAppSettingsSecurityRoute =
-  AuthenticatedAppSettingsSecurityRouteImport.update({
-    id: '/settings/security',
-    path: '/settings/security',
+const AuthenticatedAppSettingsNotificationsRoute =
+  AuthenticatedAppSettingsNotificationsRouteImport.update({
+    id: '/settings/notifications',
+    path: '/settings/notifications',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
-const AuthenticatedAppSettingsRiskProfileRoute =
-  AuthenticatedAppSettingsRiskProfileRouteImport.update({
-    id: '/settings/risk-profile',
-    path: '/settings/risk-profile',
+const AuthenticatedAppSettingsAppearanceRoute =
+  AuthenticatedAppSettingsAppearanceRouteImport.update({
+    id: '/settings/appearance',
+    path: '/settings/appearance',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppServicesTaxRoute =
@@ -351,8 +351,8 @@ export interface FileRoutesByFullPath {
   '/app/services/estate-planning': typeof AuthenticatedAppServicesEstatePlanningRoute
   '/app/services/financial-planner': typeof AuthenticatedAppServicesFinancialPlannerRoute
   '/app/services/tax': typeof AuthenticatedAppServicesTaxRoute
-  '/app/settings/risk-profile': typeof AuthenticatedAppSettingsRiskProfileRoute
-  '/app/settings/security': typeof AuthenticatedAppSettingsSecurityRoute
+  '/app/settings/appearance': typeof AuthenticatedAppSettingsAppearanceRoute
+  '/app/settings/notifications': typeof AuthenticatedAppSettingsNotificationsRoute
   '/app/wealth/cash': typeof AuthenticatedAppWealthCashRoute
   '/app/wealth/investments': typeof AuthenticatedAppWealthInvestmentsRoute
   '/app/wealth/liabilities': typeof AuthenticatedAppWealthLiabilitiesRoute
@@ -397,8 +397,8 @@ export interface FileRoutesByTo {
   '/app/services/estate-planning': typeof AuthenticatedAppServicesEstatePlanningRoute
   '/app/services/financial-planner': typeof AuthenticatedAppServicesFinancialPlannerRoute
   '/app/services/tax': typeof AuthenticatedAppServicesTaxRoute
-  '/app/settings/risk-profile': typeof AuthenticatedAppSettingsRiskProfileRoute
-  '/app/settings/security': typeof AuthenticatedAppSettingsSecurityRoute
+  '/app/settings/appearance': typeof AuthenticatedAppSettingsAppearanceRoute
+  '/app/settings/notifications': typeof AuthenticatedAppSettingsNotificationsRoute
   '/app/wealth/cash': typeof AuthenticatedAppWealthCashRoute
   '/app/wealth/investments': typeof AuthenticatedAppWealthInvestmentsRoute
   '/app/wealth/liabilities': typeof AuthenticatedAppWealthLiabilitiesRoute
@@ -446,8 +446,8 @@ export interface FileRoutesById {
   '/_authenticated/app/services/estate-planning': typeof AuthenticatedAppServicesEstatePlanningRoute
   '/_authenticated/app/services/financial-planner': typeof AuthenticatedAppServicesFinancialPlannerRoute
   '/_authenticated/app/services/tax': typeof AuthenticatedAppServicesTaxRoute
-  '/_authenticated/app/settings/risk-profile': typeof AuthenticatedAppSettingsRiskProfileRoute
-  '/_authenticated/app/settings/security': typeof AuthenticatedAppSettingsSecurityRoute
+  '/_authenticated/app/settings/appearance': typeof AuthenticatedAppSettingsAppearanceRoute
+  '/_authenticated/app/settings/notifications': typeof AuthenticatedAppSettingsNotificationsRoute
   '/_authenticated/app/wealth/cash': typeof AuthenticatedAppWealthCashRoute
   '/_authenticated/app/wealth/investments': typeof AuthenticatedAppWealthInvestmentsRoute
   '/_authenticated/app/wealth/liabilities': typeof AuthenticatedAppWealthLiabilitiesRoute
@@ -495,8 +495,8 @@ export interface FileRouteTypes {
     | '/app/services/estate-planning'
     | '/app/services/financial-planner'
     | '/app/services/tax'
-    | '/app/settings/risk-profile'
-    | '/app/settings/security'
+    | '/app/settings/appearance'
+    | '/app/settings/notifications'
     | '/app/wealth/cash'
     | '/app/wealth/investments'
     | '/app/wealth/liabilities'
@@ -541,8 +541,8 @@ export interface FileRouteTypes {
     | '/app/services/estate-planning'
     | '/app/services/financial-planner'
     | '/app/services/tax'
-    | '/app/settings/risk-profile'
-    | '/app/settings/security'
+    | '/app/settings/appearance'
+    | '/app/settings/notifications'
     | '/app/wealth/cash'
     | '/app/wealth/investments'
     | '/app/wealth/liabilities'
@@ -589,8 +589,8 @@ export interface FileRouteTypes {
     | '/_authenticated/app/services/estate-planning'
     | '/_authenticated/app/services/financial-planner'
     | '/_authenticated/app/services/tax'
-    | '/_authenticated/app/settings/risk-profile'
-    | '/_authenticated/app/settings/security'
+    | '/_authenticated/app/settings/appearance'
+    | '/_authenticated/app/settings/notifications'
     | '/_authenticated/app/wealth/cash'
     | '/_authenticated/app/wealth/investments'
     | '/_authenticated/app/wealth/liabilities'
@@ -876,18 +876,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppWealthCashRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
-    '/_authenticated/app/settings/security': {
-      id: '/_authenticated/app/settings/security'
-      path: '/settings/security'
-      fullPath: '/app/settings/security'
-      preLoaderRoute: typeof AuthenticatedAppSettingsSecurityRouteImport
+    '/_authenticated/app/settings/notifications': {
+      id: '/_authenticated/app/settings/notifications'
+      path: '/settings/notifications'
+      fullPath: '/app/settings/notifications'
+      preLoaderRoute: typeof AuthenticatedAppSettingsNotificationsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
-    '/_authenticated/app/settings/risk-profile': {
-      id: '/_authenticated/app/settings/risk-profile'
-      path: '/settings/risk-profile'
-      fullPath: '/app/settings/risk-profile'
-      preLoaderRoute: typeof AuthenticatedAppSettingsRiskProfileRouteImport
+    '/_authenticated/app/settings/appearance': {
+      id: '/_authenticated/app/settings/appearance'
+      path: '/settings/appearance'
+      fullPath: '/app/settings/appearance'
+      preLoaderRoute: typeof AuthenticatedAppSettingsAppearanceRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/services/tax': {
@@ -967,8 +967,8 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppServicesEstatePlanningRoute: typeof AuthenticatedAppServicesEstatePlanningRoute
   AuthenticatedAppServicesFinancialPlannerRoute: typeof AuthenticatedAppServicesFinancialPlannerRoute
   AuthenticatedAppServicesTaxRoute: typeof AuthenticatedAppServicesTaxRoute
-  AuthenticatedAppSettingsRiskProfileRoute: typeof AuthenticatedAppSettingsRiskProfileRoute
-  AuthenticatedAppSettingsSecurityRoute: typeof AuthenticatedAppSettingsSecurityRoute
+  AuthenticatedAppSettingsAppearanceRoute: typeof AuthenticatedAppSettingsAppearanceRoute
+  AuthenticatedAppSettingsNotificationsRoute: typeof AuthenticatedAppSettingsNotificationsRoute
   AuthenticatedAppWealthCashRoute: typeof AuthenticatedAppWealthCashRoute
   AuthenticatedAppWealthInvestmentsRoute: typeof AuthenticatedAppWealthInvestmentsRoute
   AuthenticatedAppWealthLiabilitiesRoute: typeof AuthenticatedAppWealthLiabilitiesRoute
@@ -1013,9 +1013,10 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppServicesFinancialPlannerRoute:
     AuthenticatedAppServicesFinancialPlannerRoute,
   AuthenticatedAppServicesTaxRoute: AuthenticatedAppServicesTaxRoute,
-  AuthenticatedAppSettingsRiskProfileRoute:
-    AuthenticatedAppSettingsRiskProfileRoute,
-  AuthenticatedAppSettingsSecurityRoute: AuthenticatedAppSettingsSecurityRoute,
+  AuthenticatedAppSettingsAppearanceRoute:
+    AuthenticatedAppSettingsAppearanceRoute,
+  AuthenticatedAppSettingsNotificationsRoute:
+    AuthenticatedAppSettingsNotificationsRoute,
   AuthenticatedAppWealthCashRoute: AuthenticatedAppWealthCashRoute,
   AuthenticatedAppWealthInvestmentsRoute:
     AuthenticatedAppWealthInvestmentsRoute,

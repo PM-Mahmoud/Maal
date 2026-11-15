@@ -1,24 +1,22 @@
-import { useEffect, useState } from "react";
+import { Moon, Sun } from "lucide-react";
+import { useTheme } from "@/lib/theme";
 
+/**
+ * Quick light/dark switch. Flipping it sets an explicit preference; the full
+ * Light / Dark / Use device settings choice lives in Settings → Appearance.
+ */
 export function ThemeToggle() {
-  const [dark, setDark] = useState(false);
-  useEffect(() => {
-    const stored = typeof window !== "undefined" ? localStorage.getItem("maal-theme") : null;
-    const prefers = typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-    const isDark = stored ? stored === "dark" : !!prefers;
-    setDark(isDark);
-    document.documentElement.classList.toggle("dark", isDark);
-  }, []);
-  function toggle() {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    try { localStorage.setItem("maal-theme", next ? "dark" : "light"); } catch {}
-  }
+  const { resolved, setPref } = useTheme();
+  const dark = resolved === "dark";
   return (
-    <button onClick={toggle} aria-label="Toggle theme"
-      className="size-7 rounded-full border border-border flex items-center justify-center hover:bg-[var(--secondary)] transition-colors">
-      <span className="text-[12px]">{dark ? "☾" : "☀"}</span>
+    <button
+      type="button"
+      onClick={() => setPref(dark ? "light" : "dark")}
+      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+      title={dark ? "Light mode" : "Dark mode"}
+      className="size-7 rounded-full border border-border flex items-center justify-center hover:bg-[var(--secondary)] transition-colors"
+    >
+      {dark ? <Moon className="size-3.5" aria-hidden /> : <Sun className="size-3.5" aria-hidden />}
     </button>
   );
 }

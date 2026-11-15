@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Bell } from "lucide-react";
-import { listNotifications, markNotificationsRead } from "@/lib/notifications.functions";
+import { Link } from "@tanstack/react-router";
+import { listNotifications, markNotificationsRead, NOTIFICATIONS_READ_EVENT } from "@/lib/notifications.functions";
 
 function timeAgo(iso: string) {
   const ms = Date.now() - new Date(iso).getTime();
@@ -37,7 +38,11 @@ export function NotificationBell() {
     // could never fire. Refetch on window focus instead of pretending.
     function onFocus() { refresh(); }
     window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
+    window.addEventListener(NOTIFICATIONS_READ_EVENT, onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener(NOTIFICATIONS_READ_EVENT, onFocus);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -53,7 +58,7 @@ export function NotificationBell() {
     const next = !open;
     setOpen(next);
     if (next && unread > 0) {
-      await markRead();
+      await markRead(items.filter((n) => !n.read_at).map((n) => n.id));
       setItems((xs) => xs.map((n) => (n.read_at ? n : { ...n, read_at: new Date().toISOString() })));
     }
   }
@@ -76,6 +81,9 @@ export function NotificationBell() {
         <div className="absolute right-0 mt-2 w-[340px] bg-[var(--surface)] border border-border rounded-[12px] shadow-lg z-50 overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <p className="text-[13px] font-semibold">Notifications</p>
+            <Link to="/app/settings/notifications" onClick={() => setOpen(false)} className="text-[12px] text-muted-foreground hover:text-foreground underline underline-offset-2">
+              See all
+            </Link>
           </div>
           <div className="max-h-[420px] overflow-y-auto">
             {items.length === 0 ? (
