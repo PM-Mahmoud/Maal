@@ -111,16 +111,19 @@ export function CreateRuleFlow({ open, onClose, onCreated }: {
     getCategoryGroups().then(setGroups);
   }, [open, groups.length]);
 
-  // Escape steps back out of a sub-view, then closes.
+  // Escape steps back out of a sub-view, then closes. Listen on window in the
+  // capture phase and stop it there, so a parent Radix dialog (Spending settings
+  // drawer) doesn't also close on the same key press.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      e.stopPropagation();
       if (view === "main") onClose();
       else setView("main");
     };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [open, view, onClose]);
 
   // Move focus into the panel on open / view change for keyboard users.
