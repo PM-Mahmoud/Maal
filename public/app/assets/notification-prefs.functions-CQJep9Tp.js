@@ -1,0 +1,1 @@
+async function e(){const t=await fetch("/api/v1/notification-prefs",{credentials:"include"}),i=t.ok?await t.json():null;return{daily_digest:!!(i&&i.daily_digest)}}async function a(t,i){return(await fetch("/api/v1/notification-prefs",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:t,value:i})})).ok}export{e as g,a as s};
