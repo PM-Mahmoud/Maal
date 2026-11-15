@@ -1386,16 +1386,13 @@ router.get('/v1/transaction-rules', async (req, res) => {
 router.post('/v1/transaction-rules', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
-    const { isKnownGroup, isValidCategory } = require('../lib/transaction-categories');
+    const { normaliseRuleInput } = require('../services/transaction-rules');
     const txnDb = require('../db/transactions');
     const d = (req.body && req.body.data && typeof req.body.data === 'object') ? req.body.data : (req.body || {});
-    if (!String(d.match_text || '').trim()) return res.status(400).json({ error: 'Enter text to match.' });
-    if (!isKnownGroup(d.category_group)) return res.status(400).json({ error: 'Pick a category group.' });
-    if (!isValidCategory(d.category_group, d.category)) return res.status(400).json({ error: 'Pick a valid category.' });
-    if (!['contains', 'equals', 'starts_with'].includes(d.match_type || 'contains')) d.match_type = 'contains';
-    if (!['any', 'debit', 'credit'].includes(d.amount_direction || 'any')) d.amount_direction = 'any';
-    const id = await txnDb.createRule(req.session.userId, d);
-    res.json({ ok: true, id });
+    const parsed = normaliseRuleInput(d, { requireCategory: true });
+    if (!parsed.ok) return res.status(400).json({ error: parsed.error });
+    const id = await txnDb.createRule(req.session.userId, parsed.rule);
+    res.json({ ok: true, id, rule: { id, ...parsed.rule } });
   } catch (e) {
     console.error('/api/v1/transaction-rules POST error:', e.message);
     res.status(500).json({ error: 'Could not create rule' });
@@ -1420,19 +1417,62 @@ router.post('/v1/transaction-rules/apply', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
     const txnDb = require('../db/transactions');
-    const { computeAssignments } = require('../services/transaction-rules');
+    const { computeAssignments, withEffectiveCategory } = require('../services/transaction-rules');
     const [rules, rows] = await Promise.all([
       txnDb.listRules(req.session.userId),
       txnDb.getTransactionsWithCategory(req.session.userId, 2000),
     ]);
-    // Never let a rule overwrite a category the user set by hand.
-    const eligible = rows.filter((r) => r.category_source !== 'manual');
+    // Never let a rule overwrite a category the user set by hand. Rules see the
+    // effective (stored or auto) category, same as the preview endpoint.
+    const eligible = withEffectiveCategory(rows).filter((r) => r.category_source !== 'manual');
     const assignments = computeAssignments(rules, eligible);
     const applied = await txnDb.applyCategoryAssignments(req.session.userId, assignments);
     res.json({ ok: true, applied });
   } catch (e) {
     console.error('/api/v1/transaction-rules/apply error:', e.message);
     res.status(500).json({ error: 'Could not apply rules' });
+  }
+});
+
+// POST /v1/transaction-rules/preview — read-only: which of THIS user's
+// transactions an unsaved rule would update. Uses the same pure
+// selectRuleMatches as the apply endpoints, so preview == apply. Capped and
+// paginated ({ limit ≤ 200, offset }). Writes nothing.
+router.post('/v1/transaction-rules/preview', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const txnDb = require('../db/transactions');
+    const { normaliseRuleInput, previewRuleMatches } = require('../services/transaction-rules');
+    const body = req.body || {};
+    const d = (body.data && typeof body.data === 'object') ? body.data : body;
+    const parsed = normaliseRuleInput(d, { requireCategory: false });
+    if (!parsed.ok) return res.status(400).json({ error: parsed.error });
+    const rows = await txnDb.getTransactionsWithCategory(req.session.userId, 2000);
+    res.json(previewRuleMatches(parsed.rule, rows, { limit: body.limit, offset: body.offset }));
+  } catch (e) {
+    console.error('/api/v1/transaction-rules/preview error:', e.message);
+    res.status(500).json({ error: 'Could not preview matches' });
+  }
+});
+
+// POST /v1/transaction-rules/:id/apply — apply ONE saved rule to its current
+// matches, minus any the user unticked in the review step (exclude_ids), or
+// only the ones they ticked (include_ids).
+router.post('/v1/transaction-rules/:id/apply', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const txnDb = require('../db/transactions');
+    const { selectRuleMatches, filterSelection, computeAssignments } = require('../services/transaction-rules');
+    if (!/^\d+$/.test(String(req.params.id))) return res.status(404).json({ error: 'Rule not found.' });
+    const rule = await txnDb.getRule(req.session.userId, req.params.id);
+    if (!rule) return res.status(404).json({ error: 'Rule not found.' });
+    const rows = await txnDb.getTransactionsWithCategory(req.session.userId, 2000);
+    const matches = filterSelection(selectRuleMatches(rule, rows), req.body || {});
+    const applied = await txnDb.applyCategoryAssignments(req.session.userId, computeAssignments([rule], matches));
+    res.json({ ok: true, applied });
+  } catch (e) {
+    console.error('/api/v1/transaction-rules/:id/apply error:', e.message);
+    res.status(500).json({ error: 'Could not apply rule' });
   }
 });
 
