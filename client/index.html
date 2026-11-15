@@ -25,6 +25,14 @@
         } catch (e) {}
       })();
     </script>
+    <!-- Prefetch the server-rendered pages the landing page links to (sign in,
+         sign up, …) once a link is hovered. In-app /app routes are preloaded by
+         TanStack Router (defaultPreload: "intent") instead. Allowlist of
+         side-effect-free GET pages only; same list as
+         views/partials/speculation-rules.ejs. -->
+    <script type="speculationrules">
+      {"prefetch":[{"where":{"or":[{"href_matches":"/login"},{"href_matches":"/signup"},{"href_matches":"/waitlist"},{"href_matches":"/forgot-password"},{"href_matches":"/pricing"},{"href_matches":"/about"},{"href_matches":"/security"},{"href_matches":"/contact"},{"href_matches":"/score"}]},"eagerness":"moderate"}]}
+    </script>
   </head>
   <body>
     <div id="root"></div>
