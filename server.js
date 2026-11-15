@@ -14,22 +14,11 @@ process.on('uncaughtException', (err) => { console.error('Uncaught exception:', 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// ─── Security headers (Helmet) ─────────────────────────────────────────────
-const helmet = require('helmet');
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://js.stripe.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://api.stripe.com"],
-      frameSrc: ["'self'", "https://js.stripe.com", "https://hooks.stripe.com"],
-    },
-  },
-  crossOriginEmbedderPolicy: false, // needed for Stripe iframes
-}));
+// ─── Security headers (Helmet + report-only strict CSP + CSRF guard) ───────
+// See lib/security-headers.js for what each piece does and why.
+require('./lib/security-headers').applySecurityHeaders(app, {
+  reportLimiter: require('./lib/rate-limiters').cspReportLimiter,
+});
 
 // Trust Render's reverse proxy so req.secure is correct (needed for secure cookies)
 app.set('trust proxy', 1);
@@ -328,7 +317,7 @@ app.use(require('./routes/referrals'));
 app.get('/pricing', (req, res) => {
   const { buildAnalyticsSnippet } = require('./lib/landing-context');
   res.render('pricing', { layout: false,
-    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || ''),
+    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || '', res.locals.cspNonce),
     user: req.session && req.session.userId ? { id: req.session.userId } : null,
   });
 });
@@ -336,7 +325,7 @@ app.get('/pricing', (req, res) => {
 app.get('/waitlist', (req, res) => {
   const { buildAnalyticsSnippet } = require('./lib/landing-context');
   res.render('waitlist', { layout: false,
-    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || ''),
+    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || '', res.locals.cspNonce),
     user: req.session && req.session.userId ? { id: req.session.userId } : null,
   });
 });
@@ -344,7 +333,7 @@ app.get('/waitlist', (req, res) => {
 app.get('/about', (req, res) => {
   const { buildAnalyticsSnippet } = require('./lib/landing-context');
   res.render('about', { layout: false,
-    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || ''),
+    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || '', res.locals.cspNonce),
     user: req.session && req.session.userId ? { id: req.session.userId } : null,
   });
 });
@@ -352,7 +341,7 @@ app.get('/about', (req, res) => {
 app.get('/security', (req, res) => {
   const { buildAnalyticsSnippet } = require('./lib/landing-context');
   res.render('security', { layout: false,
-    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || ''),
+    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || '', res.locals.cspNonce),
     user: req.session && req.session.userId ? { id: req.session.userId } : null,
   });
 });
@@ -360,7 +349,7 @@ app.get('/security', (req, res) => {
 app.get('/financial-wellbeing-score', (req, res) => {
   const { buildAnalyticsSnippet } = require('./lib/landing-context');
   res.render('financial-wellbeing-score', { layout: false,
-    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || ''),
+    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || '', res.locals.cspNonce),
     user: req.session && req.session.userId ? { id: req.session.userId } : null,
   });
 });
@@ -368,7 +357,7 @@ app.get('/financial-wellbeing-score', (req, res) => {
 app.get('/contact', (req, res) => {
   const { buildAnalyticsSnippet } = require('./lib/landing-context');
   res.render('contact', { layout: false,
-    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || ''),
+    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || '', res.locals.cspNonce),
     user: req.session && req.session.userId ? { id: req.session.userId } : null,
     success: false, name: '', email: '', message: '',
   });
@@ -379,7 +368,7 @@ app.post('/contact', async (req, res) => {
   const { addFeedback } = require('./db/feedback');
   const { name, email, message } = req.body;
   const renderArgs = { layout: false,
-    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || ''),
+    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || '', res.locals.cspNonce),
     user: req.session && req.session.userId ? { id: req.session.userId } : null,
     success: false, name: name || '', email: email || '', message: message || '',
   };
@@ -444,10 +433,10 @@ app.use('*', (req, res, next) => {
   const skip = ['/api/', '/dashboard', '/billing', '/basiq', '/onboarding', '/score', '/login', '/signup', '/logout', '/forgot-password', '/reset-password', '/verify-email', '/admin', '/health', '/feedback', '/internal'];
   if (skip.some(p => req.originalUrl.startsWith(p))) return next();
   if (fs.existsSync(reactBuild)) {
-    return res.sendFile(reactBuild);
+    return require('./lib/security-headers').sendShell(res, reactBuild);
   }
   // Fallback: render EJS landing if no React build
-  res.render('layout', { layout: false, ...buildLandingContext() });
+  res.render('layout', { layout: false, ...buildLandingContext(res.locals.cspNonce) });
 });
 
 // ─── Start ─────────────────────────────────────────────────────────────────
