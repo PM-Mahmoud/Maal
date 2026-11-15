@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { z } from "zod";
+import { searchSchema as makeSearchSchema, optEnum } from "@/lib/search-params";
 import { ConnectAccountsFlow, type ConnectResult } from "@/components/maal/connect/ConnectAccountsFlow";
 
 // /app/accounts/connect — in-app "Add account" (Figma add-account flow).
@@ -8,8 +8,8 @@ import { ConnectAccountsFlow, type ConnectResult } from "@/components/maal/conne
 // ?start=manual to open straight on manual accounts and assets.
 // Closing or finishing returns to the dashboard.
 
-const searchSchema = z.object({
-  start: z.enum(["choose", "manual"]).optional(),
+const searchSchema = makeSearchSchema({
+  start: optEnum(["choose", "manual"]),
 });
 
 export const Route = createFileRoute("/_authenticated/app/accounts/connect")({

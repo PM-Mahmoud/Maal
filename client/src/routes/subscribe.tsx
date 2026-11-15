@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { z } from "zod";
+import { searchSchema as makeSearchSchema, optEnum, optString, optScalar } from "@/lib/search-params";
 import { supabase } from "@/integrations/api";
 import { SubscribeFlow, type SubscribePhase } from "@/components/maal/subscribe/SubscribeFlow";
 import { snoozeDashboardOffer } from "@/components/maal/subscribe/offer";
@@ -13,13 +13,13 @@ import { snoozeDashboardOffer } from "@/components/maal/subscribe/offer";
 //   /subscribe?preview=1                         → client-only walkthrough, no payment
 //   from=onboarding|dashboard                    → where ✕ / "Not now" go back to
 
-const searchSchema = z.object({
-  status: z.enum(["processing", "cancel", "error"]).optional(),
-  session_id: z.string().max(255).optional(),
-  reason: z.string().max(40).optional(),
-  demo: z.union([z.string(), z.number(), z.boolean()]).optional(),
-  preview: z.union([z.string(), z.number(), z.boolean()]).optional(),
-  from: z.enum(["onboarding", "dashboard", "billing"]).optional(),
+const searchSchema = makeSearchSchema({
+  status: optEnum(["processing", "cancel", "error"]),
+  session_id: optString(255),
+  reason: optString(40),
+  demo: optScalar(),
+  preview: optScalar(),
+  from: optEnum(["onboarding", "dashboard", "billing"]),
 });
 
 export const Route = createFileRoute("/subscribe")({

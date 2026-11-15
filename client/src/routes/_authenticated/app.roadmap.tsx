@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 import { Sparkles, ArrowUp, ThumbsUp, Circle } from "lucide-react";
-import { z } from "zod";
+import { searchSchema as makeSearchSchema, optEnum } from "@/lib/search-params";
 
-const searchSchema = z.object({
-  tab: z.enum(["changelog", "roadmap"]).optional(),
+const searchSchema = makeSearchSchema({
+  tab: optEnum(["changelog", "roadmap"]),
 });
 
 export const Route = createFileRoute("/_authenticated/app/roadmap")({
