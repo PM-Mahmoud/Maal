@@ -414,6 +414,7 @@ app.use('/api', require('./routes/extensibility'));
 app.use('/api', require('./routes/advisor-threads'));
 app.use('/api', require('./routes/account-security'));
 app.use('/api', require('./routes/risk-profile'));
+app.use('/api', require('./routes/spending-settings'));
 app.use('/api', require('./routes/api'));
 
 // ─── Server-side gate for the React app shell ─────────────────────────────

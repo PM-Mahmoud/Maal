@@ -200,6 +200,32 @@ app.get('/api/v1/advisor/memory', (_req, res) => res.json({ memory: null, custom
 // ?banks=live on the page URL previews the live Basiq connect step.
 app.get('/api/v1/basiq/status', (req, res) => res.json({ connected: false, live: /banks=live/.test(req.headers.referer || '') }));
 app.patch('/api/v1/profile', express.json(), (req, res) => res.json({ ...req.body, ok: true }));
+// Spending settings preview (in-memory; mirrors routes/spending-settings.js shapes).
+{
+  const { TAXONOMY } = require('../lib/transaction-categories');
+  const ss = require('../lib/spending-settings');
+  let pvSettings = {};
+  let pvBudgets = [{ id: 1, category_group: null, monthly_amount: '275.00' }];
+  let pvRules = [{ id: 1, name: null, match_type: 'contains', match_text: 'NETFLIX', category_group: 'Recurring & Subscriptions', category: 'Streaming', priority: 0, amount_direction: 'debit' }];
+  app.get('/api/v1/spending-settings', (_req, res) => res.json({ settings: ss.normaliseSettings(pvSettings) }));
+  app.patch('/api/v1/spending-settings', express.json(), (req, res) => {
+    const v = ss.validateSettingsPatch(req.body);
+    if (v.error) return res.status(400).json({ error: v.error });
+    pvSettings = { ...pvSettings, ...v.patch };
+    res.json({ settings: ss.normaliseSettings(pvSettings) });
+  });
+  app.get('/api/v1/budgets', (_req, res) => { const b = pvBudgets.map(ss.toBudget); res.json({ budgets: b, total: ss.totalMonthlyBudget(b) }); });
+  app.put('/api/v1/budgets', express.json(), (req, res) => {
+    const v = ss.validateBudgetInput(req.body);
+    if (v.error) return res.status(400).json({ error: v.error });
+    pvBudgets = pvBudgets.filter((b) => b.category_group !== v.budget.category_group).concat([{ id: Date.now(), ...v.budget }]);
+    res.json({ budget: ss.toBudget(pvBudgets[pvBudgets.length - 1]) });
+  });
+  app.delete('/api/v1/budgets', (_req, res) => { const n = pvBudgets.length; pvBudgets = []; res.json({ ok: true, deleted: n }); });
+  app.get('/api/v1/transaction-categories', (_req, res) => res.json({ groups: TAXONOMY.map((t) => ({ group: t.group, categories: t.categories })) }));
+  app.get('/api/v1/transaction-rules', (_req, res) => res.json({ rules: pvRules }));
+  app.delete('/api/v1/transaction-rules/:id', (req, res) => { pvRules = pvRules.filter((r) => String(r.id) !== req.params.id); res.json({ ok: true }); });
+}
 app.get('/api/v1/transaction-categories', (_req, res) => res.json([]));
 app.get('/api/v1/transaction-rules', (_req, res) => res.json([]));
 app.get('/api/v1/radar-templates', (_req, res) => res.json([]));
