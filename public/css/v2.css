@@ -5,7 +5,9 @@
    02–07): Lora + Inter, #F8F9F6 page, white card on #E6E6E6,
    label-inside inputs on #BDBDBD, #020109 buttons, #00A274 rules.
    ============================================================ */
-@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap');
+/* Lora + Inter: linked from the page <head> (views/partials/v2-head.ejs and
+   auth-signup.ejs), not @import'ed here, so the font CSS downloads in parallel
+   with this file instead of after it. */
 
 .v2 {
   --v2-bg: #F8F9F6; --v2-surface: #FFFFFF; --v2-surface-2: #F6F6F6;
