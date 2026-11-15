@@ -1,46 +1,29 @@
-<!DOCTYPE html>
+<%
+  // Sign in — v2 (Figma "Logging in"). Same split as the sign-up page:
+  // form card on the left, Maal's night-sky panel on the right.
+  // Locals: error, notice, email, next (safe same-site path or '').
+  const next = locals.next || '';
+  const loginAction = next ? '/login?next=' + encodeURIComponent(next) : '/login';
+%><!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#020109">
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <title>Sign in — Maal</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/retro.css">
-  <style>
-    /* auth-only extras layered on the retro theme */
-    .rf-alert { padding: .7rem .9rem; background: var(--rf-orange); color: var(--rf-cream); border: 2px solid var(--rf-ink); border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: .85rem; }
-    .rf-notice { padding: .7rem .9rem; background: var(--rf-gold); color: var(--rf-ink); border: 2px solid var(--rf-ink); border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: .85rem; }
-    .rf-forgot { text-align: right; font-size: 12.5px; }
-    .rf-forgot a { color: var(--rf-muted); text-decoration: none; }
-    .rf-forgot a:hover { color: var(--rf-ink); }
-    .rf-switch { margin-top: 1rem; text-align: center; font-size: 12.5px; }
-    .rf-switch button { background: none; border: none; padding: 0; font: inherit; color: var(--rf-muted); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
-    .rf-switch button:hover { color: var(--rf-ink); }
-    .rf-auth-disclaimer { margin-top: 2.5rem; font-size: 11.5px; color: var(--rf-muted); line-height: 1.7; }
-    [data-method] { display: none; }
-    [data-method].active { display: flex; }
-    html[data-theme="dark"] .maal-mark .mm-a{fill:currentColor}html[data-theme="dark"] .maal-mark .mm-b{fill:currentColor}
-  </style>
+<%- include('partials/v2-head', { title: 'Sign in' }) %>
 </head>
-<body>
-  <div class="rf-auth">
-    <div class="rf-auth-form">
-      <div class="rf-auth-head">
-        <a href="/" class="rf-wordmark">
-          <span class="rf-wordmark-badge"><svg class="maal-mark" width="14" height="14" viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true"><g class="mm-a" fill="currentColor"><rect x="0" y="0" width="1" height="7"/><rect x="6" y="0" width="1" height="7"/><rect x="1" y="1" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/></g><g class="mm-b" fill="currentColor"><rect x="2" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/></g></svg></span>
-          <span class="rf-wordmark-text">Maal</span>
+<body class="v2">
+  <main class="v2-auth">
+    <section class="v2-auth-card">
+      <div class="v2-auth-inner">
+        <a href="/" class="v2-auth-logo" aria-label="Maal home">
+          <%- include('partials/v2-mark', { size: 18 }) %>
+          <span>Maal</span>
         </a>
-      </div>
-      <div class="rf-auth-inner">
-        <div class="rf-auth-box">
-          <span class="rf-eyebrow">Welcome back</span>
-          <h1 class="rf-auth-h1">Sign in to Maal.</h1>
+        <h1>Welcome back</h1>
 
-          <a href="/auth/google" class="rf-auth-google">
+        <% if (locals.notice) { %><div class="v2-note v2-note-ok" role="status"><%= notice %></div><% } %>
+        <% if (locals.error) { %><div class="v2-alert" role="alert"><%= error %></div><% } %>
+
+        <div class="v2-social">
+          <a href="/auth/google" class="v2-btn v2-btn-line">
             <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.75h3.57c2.08-1.92 3.28-4.74 3.28-8.07z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.75c-.99.66-2.26 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -49,74 +32,65 @@
             </svg>
             Continue with Google
           </a>
-
-          <div class="rf-auth-divider">or</div>
-
-          <% if (error) { %><div class="rf-alert"><%= error %></div><% } %>
-          <% if (locals.notice) { %><div class="rf-notice"><%= notice %></div><% } %>
-
-          <form action="/login/email-code" method="POST" class="rf-auth-form-el active" data-method="email">
-            <input class="rf-input" type="email" name="email" placeholder="you@example.com" autocomplete="email" required value="<%= email %>">
-            <button type="submit" class="rf-btn rf-btn-block rf-btn-lg">Continue with email</button>
-          </form>
-
-          <form action="/login" method="POST" class="rf-auth-form-el" data-method="password">
-            <input class="rf-input" type="email" name="email" placeholder="you@example.com" autocomplete="email" required value="<%= email %>">
-            <input class="rf-input" type="password" name="password" placeholder="Password" autocomplete="current-password" required>
-            <div class="rf-forgot"><a href="/forgot-password">Forgot password?</a></div>
-            <button type="submit" class="rf-btn rf-btn-block rf-btn-lg">Sign in</button>
-          </form>
-
-          <p class="rf-switch">
-            <button type="button" id="method-toggle">Sign in with password instead</button>
-          </p>
-
-          <p class="rf-auth-toggle">Don't have an account? <a href="/signup">Sign up</a></p>
-
-          <div class="rf-auth-disclaimer">
-            Maal does not provide financial advice. Any information is for educational purposes only.
-          </div>
         </div>
+
+        <div class="v2-divider">or sign in with email</div>
+
+        <form id="login-form" action="<%= loginAction %>" method="POST" novalidate>
+          <input type="hidden" name="next" value="<%= next %>">
+          <div class="v2-field">
+            <input class="v2-input" id="login-email" name="email" type="email" autocomplete="email" required placeholder=" " value="<%= locals.email || '' %>">
+            <label for="login-email">Email</label>
+          </div>
+          <div class="v2-field">
+            <input class="v2-input has-eye" id="login-password" name="password" type="password" autocomplete="current-password" required placeholder=" ">
+            <label for="login-password">Password</label>
+            <button type="button" class="v2-eye" data-eye-for="login-password" aria-label="Show password" aria-pressed="false">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <p class="v2-forgot"><a href="/forgot-password">Forgot your password?</a></p>
+          <p class="v2-alert" id="login-error" role="alert" hidden></p>
+          <div class="v2-actions v2-actions-1"><button type="submit" class="v2-btn v2-btn-ink">Sign in</button></div>
+        </form>
+
+        <!-- Passwordless: emails a 6-digit sign-in code (POST /login/email-code). -->
+        <form id="code-form" action="/login/email-code" method="POST" hidden>
+          <input type="hidden" name="email" id="code-email">
+          <input type="hidden" name="next" value="<%= next %>">
+        </form>
+        <p class="v2-switch">Prefer no password? <button type="button" class="v2-linkbtn" id="use-code">Email me a sign-in code</button></p>
+        <p class="v2-switch">Don't have an account yet? <a href="/signup">Sign up</a></p>
+
+        <p class="v2-disclaimer-line">Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.</p>
       </div>
-    </div>
+    </section>
 
-    <div class="rf-auth-side">
-      <svg class="rf-star-deco one" style="top:8%;right:8%;color:var(--rf-gold);" viewBox="0 0 100 100" fill="currentColor"><path d="M50 0l9 34 34-9-25 25 25 25-34-9-9 34-9-34-34 9 25-25L7 25l34 9z"/></svg>
-      <span class="rf-eyebrow" style="color:var(--rf-gold);">Security</span>
-      <h2 class="rf-trust-h2">Privacy first, by design.</h2>
-      <ul class="rf-trust-list">
-        <li class="rf-trust-item">
-          <span class="rf-trust-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-          <span><span class="rf-trust-t">Bank-level encryption</span><span class="rf-trust-s">Security and confidentiality are built into every layer, from the connection to your bank down to how data is stored.</span></span>
-        </li>
-        <li class="rf-trust-item">
-          <span class="rf-trust-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6z"/></svg></span>
-          <span><span class="rf-trust-t">Your data, your control</span><span class="rf-trust-s">You choose what to connect, and you can delete it at any time.</span></span>
-        </li>
-        <li class="rf-trust-item">
-          <span class="rf-trust-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg></span>
-          <span><span class="rf-trust-t">Access controlled</span><span class="rf-trust-s">Your financial data is tied to your account for personalised features and restricted to authorised access.</span></span>
-        </li>
-        <li class="rf-trust-item">
-          <span class="rf-trust-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 12 2 2 4-4"/><path d="M12 2 4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6z"/></svg></span>
-          <span><span class="rf-trust-t">CDR-accredited</span><span class="rf-trust-s">Connections run through Basiq, an Australian Consumer Data Right accredited data recipient.</span></span>
-        </li>
-      </ul>
-    </div>
-  </div>
+<%- include('partials/v2-sky') %>
+  </main>
 
+  <script src="/js/v2-auth.js"></script>
   <script>
-    function toggleMethod() {
-      const email = document.querySelector('[data-method="email"]');
-      const pass = document.querySelector('[data-method="password"]');
-      const btn = document.getElementById('method-toggle');
-      const usingPassword = pass.classList.contains('active');
-      email.classList.toggle('active', usingPassword);
-      pass.classList.toggle('active', !usingPassword);
-      btn.textContent = usingPassword ? 'Sign in with password instead' : 'Continue with email code instead';
-    }
-    // Bound here, not via onclick="", because Helmet's CSP sets script-src-attr 'none'.
-    document.getElementById('method-toggle').addEventListener('click', toggleMethod);
+  (function () {
+    var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    var email = document.getElementById('login-email');
+    var pw = document.getElementById('login-password');
+    var err = document.getElementById('login-error');
+    function fail(msg, el) { err.textContent = msg; err.hidden = false; el.focus(); }
+
+    // Client-side check only for obvious slips; the server re-validates.
+    document.getElementById('login-form').addEventListener('submit', function (e) {
+      if (!EMAIL_RE.test(email.value.trim())) { e.preventDefault(); return fail('Please enter a valid email address.', email); }
+      if (!pw.value) { e.preventDefault(); return fail('Please enter your password.', pw); }
+    });
+    document.getElementById('use-code').addEventListener('click', function () {
+      var v = email.value.trim();
+      if (!EMAIL_RE.test(v)) return fail('Enter your email above and we’ll send you a sign-in code.', email);
+      document.getElementById('code-email').value = v;
+      document.getElementById('code-form').submit();
+    });
+    if (!email.value) email.focus(); else pw.focus();
+  })();
   </script>
 </body>
 </html>
