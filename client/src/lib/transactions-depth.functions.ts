@@ -1,7 +1,7 @@
 // lib/transactions-depth.functions.ts — categories, rules, subscriptions (PR 6).
 
 export type CategoryGroup = { group: string; categories: string[] };
-export type TxnRule = { id: number; name: string | null; match_type: string; match_text: string; category_group: string; category: string | null; priority: number; amount_direction: "any" | "debit" | "credit" };
+export type TxnRule = { id: number; name: string | null; match_type: string; match_text: string; category_group: string; category: string | null; priority: number; amount_direction: "any" | "debit" | "credit"; conditions?: { amount?: { op: "eq" | "gt" | "lt"; value: number }; categories?: string[]; date?: { from?: string; to?: string } } | null };
 export type Subscription = { merchant: string; amount: number; cadence: string; occurrences: number; lastDate: string | null; nextEstimate: string | null };
 export type RecurringTransaction = { kind: "income" | "bill" | "subscription"; merchant: string; averageAmount: number; minAmount: number; maxAmount: number; cadence: string; confidence: number; occurrences: number; lastDate: string | null; nextEstimate: string | null };
 export type Reconciliation = { account_reference: string; provider_balance: number | string | null; calculated_balance: number | string | null; adjusted_balance: number | string | null; difference: number | string | null; adjustment_total: number | string; status: "matched" | "mismatch" | "insufficient_data"; checked_at: string };

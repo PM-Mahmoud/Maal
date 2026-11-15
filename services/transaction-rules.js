@@ -4,21 +4,183 @@
 // (specs/silvia-parity-tier1-2.md, PR 6). Kept side-effect-free so it can be
 // unit-tested deterministically; the DB wiring lives in routes/api.js.
 
-// Does a rule match a transaction? Case-insensitive on the description.
-// match_type: 'contains' (default) | 'equals' | 'starts_with'.
+// Does a rule match a transaction? Every condition the rule sets must hold
+// (AND); a rule with no conditions at all never matches.
+//   - merchant:   match_text on the description, case-insensitive;
+//                 match_type 'contains' (default) | 'equals' | 'starts_with'
+//   - type:       amount_direction 'debit' (money out) | 'credit' (money in)
+//   - amount:     conditions.amount { op: 'eq'|'gt'|'lt', value } on |amount|,
+//                 compared in whole cents so $100.00 equals -100 exactly
+//   - categories: conditions.categories [group, ...] on the transaction's
+//                 (effective) category_group
+//   - date:       conditions.date { from, to } inclusive ISO dates on post_date
+// Legacy rules (match_text + optional direction, no conditions) behave exactly
+// as before.
 function matchRule(rule, txn) {
-  const text = String((txn && txn.description) || '').toLowerCase();
-  const needle = String((rule && rule.match_text) || '').toLowerCase();
-  if (!needle) return false;
-  const direction = rule.amount_direction || 'any';
-  const transactionDirection = amountDirection(txn && txn.amount);
-  if (direction !== 'any' && transactionDirection !== direction) return false;
-  switch (rule.match_type) {
-    case 'equals': return text === needle;
-    case 'starts_with': return text.startsWith(needle);
-    case 'contains':
-    default: return text.includes(needle);
+  if (!rule || !txn) return false;
+  const conditions = (rule.conditions && typeof rule.conditions === 'object') ? rule.conditions : {};
+  let checked = 0;
+
+  const needle = String(rule.match_text || '').toLowerCase();
+  if (needle.trim()) {
+    checked++;
+    const text = String(txn.description || '').toLowerCase();
+    const ok = rule.match_type === 'equals' ? text === needle
+      : rule.match_type === 'starts_with' ? text.startsWith(needle)
+      : text.includes(needle);
+    if (!ok) return false;
   }
+
+  const direction = rule.amount_direction || 'any';
+  if (direction !== 'any') {
+    checked++;
+    if (amountDirection(txn.amount) !== direction) return false;
+  }
+
+  const amount = conditions.amount;
+  if (amount && AMOUNT_OPS.includes(amount.op) && amount.value !== null && amount.value !== ''
+    && Number.isFinite(Number(amount.value))) {
+    checked++;
+    const actual = toCents(Math.abs(Number(txn.amount) || 0));
+    const target = toCents(Math.abs(Number(amount.value)));
+    const ok = amount.op === 'eq' ? actual === target : amount.op === 'gt' ? actual > target : actual < target;
+    if (!ok) return false;
+  }
+
+  if (Array.isArray(conditions.categories) && conditions.categories.length) {
+    checked++;
+    if (!conditions.categories.includes(txn.category_group)) return false;
+  }
+
+  const date = conditions.date;
+  if (date && (date.from || date.to)) {
+    checked++;
+    const day = isoDay(txn.post_date);
+    if (!day) return false;
+    if (date.from && day < date.from) return false;
+    if (date.to && day > date.to) return false;
+  }
+
+  return checked > 0;
+}
+
+const AMOUNT_OPS = ['eq', 'gt', 'lt'];
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+function toCents(n) { return Math.round(n * 100); }
+function isoDay(value) {
+  if (!value) return null;
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+  // node-postgres parses a DATE column to LOCAL midnight — read local parts so
+  // a non-UTC server never shifts the day.
+  if (value instanceof Date && !isNaN(value)) {
+    const p = (n) => String(n).padStart(2, '0');
+    return `${value.getFullYear()}-${p(value.getMonth() + 1)}-${p(value.getDate())}`;
+  }
+  const d = new Date(value);
+  return isNaN(d) ? null : d.toISOString().slice(0, 10);
+}
+
+// Validate + normalise rule input from the client. Create AND preview share
+// this, so a preview always runs against exactly what would be saved.
+// `requireCategory: false` is for previews (the update can be picked later).
+// Returns { ok: true, rule } or { ok: false, error }. Pure.
+function normaliseRuleInput(input, opts = {}) {
+  const { isKnownGroup, isValidCategory } = require('../lib/transaction-categories');
+  const d = (input && typeof input === 'object') ? input : {};
+  const match_text = String(d.match_text || '').trim().slice(0, 120);
+  const match_type = ['contains', 'equals', 'starts_with'].includes(d.match_type) ? d.match_type : 'contains';
+  const amount_direction = ['any', 'debit', 'credit'].includes(d.amount_direction) ? d.amount_direction : 'any';
+  const raw = (d.conditions && typeof d.conditions === 'object') ? d.conditions : {};
+  const conditions = {};
+
+  if (raw.amount && raw.amount.value !== '' && raw.amount.value != null) {
+    const value = Number(raw.amount.value);
+    if (!AMOUNT_OPS.includes(raw.amount.op)) return { ok: false, error: 'Pick how to compare the amount.' };
+    if (!Number.isFinite(value) || value < 0 || value > 1e9) return { ok: false, error: 'Enter a valid amount.' };
+    conditions.amount = { op: raw.amount.op, value: toCents(value) / 100 };
+  }
+  if (Array.isArray(raw.categories) && raw.categories.length) {
+    const groups = [...new Set(raw.categories.map(String))];
+    if (!groups.every(isKnownGroup)) return { ok: false, error: 'Unknown category.' };
+    conditions.categories = groups;
+  }
+  if (raw.date && (raw.date.from || raw.date.to)) {
+    const from = raw.date.from ? String(raw.date.from) : null;
+    const to = raw.date.to ? String(raw.date.to) : null;
+    if ((from && !ISO_DATE.test(from)) || (to && !ISO_DATE.test(to))) return { ok: false, error: 'Enter valid dates.' };
+    if (from && to && from > to) return { ok: false, error: 'The start date must be on or before the end date.' };
+    conditions.date = { ...(from ? { from } : {}), ...(to ? { to } : {}) };
+  }
+
+  const hasCondition = !!match_text || amount_direction !== 'any' || Object.keys(conditions).length > 0;
+  if (!hasCondition) return { ok: false, error: 'Add at least one condition.' };
+
+  const category_group = d.category_group ? String(d.category_group) : '';
+  const category = d.category ? String(d.category) : '';
+  if (opts.requireCategory !== false || category_group) {
+    if (!isKnownGroup(category_group)) return { ok: false, error: 'Pick a category to update to.' };
+    if (!isValidCategory(category_group, category || undefined)) return { ok: false, error: 'Pick a valid category.' };
+  }
+
+  return {
+    ok: true,
+    rule: {
+      name: d.name ? String(d.name).slice(0, 80) : null,
+      match_type, match_text, amount_direction, conditions,
+      category_group: category_group || null, category: category || null,
+      priority: Math.max(-100, Math.min(100, Math.round(Number(d.priority) || 0))),
+    },
+  };
+}
+
+// The category a rule's "Categories" condition sees: the stored category, or
+// the keyword auto-category the transactions list shows when none is stored.
+function withEffectiveCategory(rows) {
+  const { autoCategorize } = require('../lib/transaction-categories');
+  return (rows || []).map((r) => {
+    if (r.category_group) return r;
+    const auto = autoCategorize(r.description, r.amount);
+    return auto ? { ...r, category_group: auto.group, category: auto.category, category_source: 'auto' } : r;
+  });
+}
+
+// The transactions a rule would update — never one the user categorised by
+// hand. Shared by the preview endpoint and both apply endpoints, so
+// preview == apply by construction. Pure.
+function selectRuleMatches(rule, rows) {
+  return withEffectiveCategory(rows)
+    .filter((r) => r.category_source !== 'manual')
+    .filter((r) => matchRule(rule, r));
+}
+
+// Narrow a rule's matches to the member's review-step selection: drop
+// exclude_ids, and when include_ids is given keep only those. Always a subset
+// of `matches`, so a selection can never reach beyond the rule. Pure.
+function filterSelection(matches, sel = {}) {
+  const exclude = new Set((Array.isArray(sel.exclude_ids) ? sel.exclude_ids : []).map(String));
+  const include = Array.isArray(sel.include_ids) ? new Set(sel.include_ids.map(String)) : null;
+  return (matches || []).filter((r) => !exclude.has(String(r.id)) && (!include || include.has(String(r.id))));
+}
+
+// One page of a rule's matches for the preview UI (total + capped items). Pure.
+function previewRuleMatches(rule, rows, opts = {}) {
+  const limit = Math.max(1, Math.min(200, Math.round(Number(opts.limit) || 50)));
+  const offset = Math.max(0, Math.round(Number(opts.offset) || 0));
+  const matches = selectRuleMatches(rule, rows);
+  return {
+    total: matches.length,
+    offset,
+    limit,
+    items: matches.slice(offset, offset + limit).map((r) => ({
+      id: r.id,
+      description: r.description,
+      amount: Number(r.amount),
+      post_date: isoDay(r.post_date),
+      status: r.status || null,
+      category_group: r.category_group || null,
+      category: r.category || null,
+    })),
+  };
 }
 
 // Compute category assignments for transactions from a rule set. First matching
@@ -238,6 +400,7 @@ function toISO(d) { const x = new Date(d); return isNaN(x) ? null : x.toISOStrin
 
 module.exports = {
   matchRule, computeAssignments, computeLearnedSuggestions,
+  normaliseRuleInput, withEffectiveCategory, selectRuleMatches, filterSelection, previewRuleMatches,
   detectSubscriptions, detectRecurringTransactions, inferCadence, normaliseMerchant,
   normaliseMerchantIdentity, amountDirection,
 };
