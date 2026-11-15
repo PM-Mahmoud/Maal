@@ -15,10 +15,10 @@ type Tab = { to: string; label: string; typed?: boolean };
 export const SETTINGS_TABS: Tab[] = [
   { to: "/app/settings", label: "All settings", typed: true },
   { to: "/app/settings/profile", label: "Profile", typed: true },
-  { to: "/app/settings/security", label: "Security" },
-  { to: "/app/settings/notifications", label: "Notifications" },
-  { to: "/app/settings/appearance", label: "Appearance" },
-  { to: "/app/settings/risk-profile", label: "Risk profile" },
+  { to: "/app/settings/security", label: "Security", typed: true },
+  { to: "/app/settings/notifications", label: "Notifications", typed: true },
+  { to: "/app/settings/appearance", label: "Appearance", typed: true },
+  { to: "/app/settings/risk-profile", label: "Risk profile", typed: true },
 ];
 
 function SettingsLayout() {

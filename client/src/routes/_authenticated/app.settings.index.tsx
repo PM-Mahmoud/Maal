@@ -1,11 +1,11 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { InviteFriendsCard } from "@/components/maal/app/InviteFriendsCard";
 import {
   UserCircle2, Bell, BadgeCheck, Lock, Landmark, CircleDollarSign, Gauge, Palette, LifeBuoy, FileText,
   LogOut, Trash2, ChevronRight, Gift,
 } from "lucide-react";
-import { supabase } from "@/integrations/api";
+import { useLogout } from "@/components/maal/app/Logout";
 import { OPEN_SUPPORT_EVENT } from "@/components/maal/app/AppShell";
 
 // Settings menu (Figma "Settings" → Account menu): grouped Account /
@@ -22,16 +22,16 @@ type Entry = { href: string; label: string; sub?: string; icon: ReactNode; typed
 
 const ACCOUNT_ITEMS: Entry[] = [
   { href: "/app/settings/profile", label: "Profile", sub: "Name, contact details, address and tax details", icon: <UserCircle2 />, typed: true },
-  { href: "/app/settings/notifications", label: "Notifications", icon: <Bell /> },
+  { href: "/app/settings/notifications", label: "Notifications", icon: <Bell />, typed: true },
   { href: "/app/billing", label: "Membership", sub: "Your plan, billing and usage", icon: <BadgeCheck /> },
-  { href: "/app/settings/security", label: "Security", sub: "Password and two-factor authentication", icon: <Lock /> },
+  { href: "/app/settings/security", label: "Security", sub: "Password and two-factor authentication", icon: <Lock />, typed: true },
   { href: "/app/accounts/connect", label: "Linked accounts", icon: <Landmark /> },
 ];
 
 const PREFERENCE_ITEMS: Entry[] = [
-  { href: "/app/spending/settings", label: "Spending settings", icon: <CircleDollarSign /> },
-  { href: "/app/settings/risk-profile", label: "Risk profile", icon: <Gauge /> },
-  { href: "/app/settings/appearance", label: "Appearance", sub: "Light or dark mode", icon: <Palette /> },
+  { href: "/app/spending/settings", label: "Spending settings", icon: <CircleDollarSign />, typed: true },
+  { href: "/app/settings/risk-profile", label: "Risk profile", icon: <Gauge />, typed: true },
+  { href: "/app/settings/appearance", label: "Appearance", sub: "Light or dark mode", icon: <Palette />, typed: true },
 ];
 
 function Row({ entry }: { entry: Entry }) {
@@ -60,12 +60,8 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
 }
 
 function SettingsMenu() {
-  const navigate = useNavigate();
   const [showInvite, setShowInvite] = useState(false);
-  async function logOut() {
-    await supabase.auth.signOut();
-    navigate({ to: "/" });
-  }
+  const { logout: logOut, pending: loggingOut } = useLogout();
 
   return (
     <div className="ms-menu">
@@ -90,7 +86,7 @@ function SettingsMenu() {
       </Group>
 
       <div className="ms-list">
-        <button type="button" className="ms-item ms-item--danger" onClick={logOut}>
+        <button type="button" className="ms-item ms-item--danger" onClick={logOut} disabled={loggingOut}>
           <LogOut /><span>Log out</span><ChevronRight className="ms-item-chev" aria-hidden />
         </button>
         <Link to="/app/settings/delete-account" className="ms-item ms-item--danger">

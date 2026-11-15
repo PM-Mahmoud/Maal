@@ -7,6 +7,7 @@ import {
   aud, getBudgets, getSpendingSettings, resetBudgets, saveBudget, updateSpendingSettings,
   type SpendingSettings,
 } from "./api";
+import { CreateRuleFlow } from "../rules/CreateRuleFlow";
 import "./spending-settings.css";
 
 /**
@@ -139,9 +140,8 @@ function MainPanel({ onOpen, onNavigate }: { onOpen: (p: Panel) => void; onNavig
   const [rules, setRules] = useState<TxnRule[] | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
-  // Opened by the "Add rule" button; the create-rule flow is wired in by S5-E.
+  // Opened by the "Add rule" button.
   const [createRuleOpen, setCreateRuleOpen] = useState(false);
-  void createRuleOpen;
 
   const refreshRules = useCallback(() => { listRules().then(setRules); }, []);
   useEffect(() => { refreshRules(); }, [refreshRules]);
@@ -200,7 +200,7 @@ function MainPanel({ onOpen, onNavigate }: { onOpen: (p: Panel) => void; onNavig
           )}
         </div>
         <div className="ss-card-foot">
-          {/* TODO(S5-E): open <CreateRuleFlow open={createRuleOpen} onClose={() => setCreateRuleOpen(false)} onCreated={refreshRules} /> */}
+          <CreateRuleFlow open={createRuleOpen} onClose={() => setCreateRuleOpen(false)} onCreated={refreshRules} />
           <button type="button" className="ss-btn-line" onClick={() => setCreateRuleOpen(true)}>
             <Plus aria-hidden /> Add rule
           </button>
