@@ -40,6 +40,7 @@ function getIp(req) {
 // New-account password rules (8–64 chars, upper, lower, number, special) —
 // shared with the sign-up page's live checklist.
 const { passwordStrengthError } = require('../lib/password-rules');
+const { generateResetToken, safeRedirectPath } = require('../lib/auth-tokens');
 
 async function sendOtpEmail(email, name, otp) {
   const firstName = (name || '').split(' ')[0] || 'there';
@@ -67,9 +68,37 @@ async function sendOtpEmail(email, name, otp) {
 
 // ─── Page: /login ─────────────────────────────────────────────────────────────
 
+// Messages for the ?error= codes routes/oauth.js redirects back with.
+const LOGIN_ERRORS = {
+  google_not_configured: 'Google sign-in isn’t available right now. Please sign in with your email.',
+  google_denied: 'Google sign-in was cancelled. Try again, or sign in with your email.',
+  invalid_state: 'That Google sign-in expired. Please try again.',
+  google_token_failed: 'We couldn’t finish signing you in with Google. Please try again.',
+  no_email: 'Your Google account didn’t share an email address, so we couldn’t sign you in.',
+  google_failed: 'We couldn’t finish signing you in with Google. Please try again.',
+};
+
+// Where to go after signing in: ?next= (or the legacy ?redirect=), carried
+// through the forms as a hidden field. Only same-site paths survive.
+function requestedNext(req) {
+  const raw = (req.body && req.body.next) || req.query.next || req.query.redirect;
+  const safe = safeRedirectPath(raw, '');
+  return safe || '';
+}
+
+function renderLogin(req, res, locals) {
+  res.render('auth-login', {
+    layout: false, error: null, notice: null, email: '', next: requestedNext(req), ...locals,
+  });
+}
+
 router.get('/login', (req, res) => {
-  if (req.session.userId) return res.redirect('/app');
-  res.render('auth-login', { layout: false, error: null, email: '' });
+  if (req.session.userId) return res.redirect(requestedNext(req) || '/app');
+  const error = LOGIN_ERRORS[req.query.error] || null;
+  const notice = req.query.signed_out ? 'You’ve been logged out. See you soon.'
+    : req.query.reset ? 'Your password has been reset. Sign in with your new password.'
+    : null;
+  renderLogin(req, res, { error, notice, email: '' });
 });
 
 router.post('/login', authLimiter,
@@ -78,20 +107,20 @@ router.post('/login', authLimiter,
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.render('auth-login', { layout: false, error: 'Please enter a valid email and password.', email: req.body.email });
+      return renderLogin(req, res, { error: 'Please enter a valid email and password.', email: req.body.email });
     }
 
     const { email, password } = req.body;
     const user = await findUserByEmail(email);
 
     if (!user || !user.password_hash) {
-      return res.render('auth-login', { layout: false, error: 'No account found with that email. Try signing up.', email });
+      return renderLogin(req, res, { error: 'No account found with that email. Try signing up.', email });
     }
 
     // Check lockout
     if (user.locked_until && new Date(user.locked_until) > new Date()) {
       const mins = Math.ceil((new Date(user.locked_until) - Date.now()) / 60000);
-      return res.render('auth-login', { layout: false, error: `Account locked after too many failed attempts. Try again in ${mins} minute${mins === 1 ? '' : 's'}.`, email });
+      return renderLogin(req, res, { error: `Account locked after too many failed attempts. Try again in ${mins} minute${mins === 1 ? '' : 's'}.`, email });
     }
 
     const valid = await bcrypt.compare(password, user.password_hash);
@@ -99,10 +128,10 @@ router.post('/login', authLimiter,
       const attempts = await incrementFailedAttempts(user.id);
       if (attempts >= MAX_ATTEMPTS) {
         await lockUser(user.id, new Date(Date.now() + LOCK_DURATION));
-        return res.render('auth-login', { layout: false, error: `Too many failed attempts. Account locked for 15 minutes.`, email });
+        return renderLogin(req, res, { error: `Too many failed attempts. Account locked for 15 minutes.`, email });
       }
       const remaining = MAX_ATTEMPTS - attempts;
-      return res.render('auth-login', { layout: false, error: `Incorrect password. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining before lockout.`, email });
+      return renderLogin(req, res, { error: `Incorrect password. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining before lockout.`, email });
     }
 
     // Check email verified
@@ -128,6 +157,7 @@ router.post('/login', authLimiter,
       req.session.pendingEmail = user.email;
       // 2FA on an established account — completing it is a login, not signup.
       req.session.otpPurpose = 'login';
+      req.session.postLoginRedirect = requestedNext(req) || null;
       return req.session.save(() => res.redirect('/verify-email'));
     }
 
@@ -136,6 +166,7 @@ router.post('/login', authLimiter,
 
     // SECURITY: regenerate session ID before writing auth state (prevents session fixation)
     const pendingLink = req.session.pendingGoogleLink || null;
+    const next = requestedNext(req) || '/app';
     req.session.regenerate((regenErr) => {
       if (regenErr) { console.error('[login] Session regenerate error:', regenErr); return res.status(500).render('error', { layout: false, message: 'Session error.' }); }
       req.session.userId = user.id;
@@ -162,13 +193,8 @@ router.post('/login', authLimiter,
 
       req.session.save((err) => {
         if (err) console.error('[login] Session save error:', err.message);
-        // SECURITY: validate redirect to prevent open redirect attacks
-        const redir = (
-          typeof req.query.redirect === 'string' &&
-          req.query.redirect.startsWith('/') &&
-          !req.query.redirect.startsWith('//')
-        ) ? req.query.redirect : '/app';
-        res.redirect(redir);
+        // SECURITY: ?next= is validated by safeRedirectPath (no open redirect).
+        res.redirect(next);
       });
     });
   }
@@ -252,13 +278,13 @@ router.post('/login/email-code', authLimiter,
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.render('auth-login', { layout: false, error: 'Please enter a valid email address.', email: req.body.email || '' });
+      return renderLogin(req, res, { error: 'Please enter a valid email address.', email: req.body.email || '' });
     }
 
     const { email } = req.body;
     const user = await findUserByEmail(email);
     if (!user) {
-      return res.render('auth-login', { layout: false, error: 'No account found with that email. Try signing up.', email });
+      return renderLogin(req, res, { error: 'No account found with that email. Try signing up.', email });
     }
 
     const otp = generateOtp();
@@ -267,6 +293,7 @@ router.post('/login/email-code', authLimiter,
 
     req.session.pendingEmail = user.email;
     req.session.otpPurpose = 'login';
+    req.session.postLoginRedirect = requestedNext(req) || null;
     req.session.save(() => res.redirect('/verify-email'));
   }
 );
@@ -310,16 +337,23 @@ router.post('/signup/email-code', authLimiter,
 
 // ─── Page: /verify-email (OTP entry) ─────────────────────────────────────────
 
+// `purpose` only changes the copy on the code screen (views/auth-verify-otp.ejs):
+// 'login' = passwordless or 2FA sign-in, anything else = confirming a new email.
+function renderOtp(req, res, locals) {
+  const purpose = req.session.otpPurpose === 'login' ? 'login' : 'verify';
+  res.render('auth-verify-otp', { layout: false, error: null, purpose, ...locals });
+}
+
 router.get('/verify-email', (req, res) => {
   const email = req.session.pendingEmail || req.query.email || '';
   if (!email) return res.redirect('/signup');
-  res.render('auth-verify-otp', { layout: false, email, error: null });
+  renderOtp(req, res, { email, error: null });
 });
 
 router.post('/verify-email', otpLimiter, async (req, res) => {
   const { email, code } = req.body;
   if (!email || !code) {
-    return res.render('auth-verify-otp', { layout: false, email: email || '', error: 'Please enter the 6-digit code.' });
+    return renderOtp(req, res, { email: email || '', error: 'Please enter the 6-digit code.' });
   }
 
   // Brute-force lock: look up user by email first, check lock status
@@ -328,14 +362,14 @@ router.post('/verify-email', otpLimiter, async (req, res) => {
     const lockStatus = await getOtpLockStatus(userForLock.id);
     if (lockStatus?.otp_locked_until && new Date(lockStatus.otp_locked_until) > new Date()) {
       const mins = Math.ceil((new Date(lockStatus.otp_locked_until) - Date.now()) / 60000);
-      return res.render('auth-verify-otp', { layout: false, email, error: `Too many failed attempts. Try again in ${mins} minute(s).` });
+      return renderOtp(req, res, { email, error: `Too many failed attempts. Try again in ${mins} minute(s).` });
     }
   }
 
   const user = await findUserByOtp(email, code.trim());
   if (!user) {
     if (userForLock) await incrementOtpAttempts(userForLock.id);
-    return res.render('auth-verify-otp', { layout: false, email, error: 'Invalid or expired code. Check your email or request a new code.' });
+    return renderOtp(req, res, { email, error: 'Invalid or expired code. Check your email or request a new code.' });
   }
 
   await resetOtpAttempts(user.id);
@@ -346,6 +380,7 @@ router.post('/verify-email', otpLimiter, async (req, res) => {
   // A code requested from the sign-in page (not signup/2FA) is an existing user
   // logging in passwordlessly — send them straight to the dashboard, not onboarding.
   const isPasswordlessLogin = req.session.otpPurpose === 'login';
+  const loginNext = safeRedirectPath(req.session.postLoginRedirect, '/app');
 
   // SECURITY: regenerate session ID to prevent fixation
   req.session.regenerate((regenErr) => {
@@ -360,7 +395,7 @@ router.post('/verify-email', otpLimiter, async (req, res) => {
       // React app owns both destinations now: the EJS /dashboard is retired and
       // the EJS /onboarding wizard is legacy — new users get the React flow.
       // New accounts go through the welcome flow (onboarding v2, PR 4).
-      res.redirect(isPasswordlessLogin ? '/app' : '/welcome');
+      res.redirect(isPasswordlessLogin ? loginNext : '/welcome');
     });
   });
 });
@@ -374,7 +409,12 @@ router.post('/resend-otp', otpLimiter, async (req, res) => {
   // SECURITY: always return 200 regardless of whether user exists (prevents email enumeration)
   try {
     const user = await findUserByEmail(email);
-    if (user && !user.email_verified) {
+    // Sign-in codes (passwordless / email 2FA) can be resent too, but only for
+    // the address this browser is already mid-sign-in for.
+    const resendingLoginCode = req.session.otpPurpose === 'login' &&
+      typeof req.session.pendingEmail === 'string' &&
+      req.session.pendingEmail.toLowerCase() === String(email).toLowerCase();
+    if (user && (!user.email_verified || resendingLoginCode)) {
       const otp = generateOtp();
       await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
       await resetOtpAttempts(user.id);
@@ -412,41 +452,59 @@ router.post('/resend-otp-sms', otpLimiter, async (req, res) => {
 });
 
 // ─── Page: /forgot-password ────────────────────────────────────────────────────
+// Figma "Resetting password from Logging in": Reset your password → Check your
+// email. The "check your email" screen is shown for EVERY well-formed address
+// (registered or not), and the lookup + token write + email run after the
+// response is sent, so neither the copy nor the response time reveals whether
+// an account exists.
+
+function resetEmailHtml(resetUrl) {
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#F8F9F6;font-family:Inter,system-ui,-apple-system,'Segoe UI',sans-serif;color:#202120;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F8F9F6;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="520" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border:1px solid #E6E6E6;border-radius:20px;max-width:520px;width:100%;">
+        <tr><td style="padding:40px 36px;text-align:center;">
+          <p style="margin:0 0 28px;font-family:Lora,Georgia,serif;font-size:22px;color:#202120;">Maal</p>
+          <h1 style="margin:0 0 12px;font-family:Lora,Georgia,serif;font-weight:400;font-size:28px;color:#202120;">Reset your password</h1>
+          <p style="margin:0 0 28px;font-size:15px;color:#666666;line-height:1.6;">Use the button below to choose a new password. The link works once and expires in 1 hour.</p>
+          <a href="${resetUrl}" style="display:inline-block;background:#020109;color:#FFFFFF;font-size:15px;padding:14px 32px;border-radius:8px;text-decoration:none;">Reset password</a>
+          <p style="margin:28px 0 0;font-size:12.5px;color:#999999;line-height:1.6;">Didn’t ask to reset your password? You can ignore this email — your password won’t change.</p>
+        </td></tr>
+      </table>
+      <p style="margin:20px 0 0;font-size:11px;color:#999999;max-width:520px;line-height:1.6;">Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.</p>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+
+async function sendResetLink(email) {
+  const user = await findUserByEmail(email);
+  if (!user) return;
+  const { token, hash } = generateResetToken();
+  await setResetToken(user.id, hash, new Date(Date.now() + RESET_TOKEN_TTL));
+  const resetUrl = `${process.env.BASE_URL || 'https://hellomaal.com'}/reset-password?token=${token}`;
+  await sendEmail({
+    to: user.email, subject: 'Reset your Maal password', html: resetEmailHtml(resetUrl),
+    text: `Reset your Maal password (link works once, expires in 1 hour): ${resetUrl}\n\nDidn't ask for this? Ignore this email.`,
+  });
+}
 
 router.get('/forgot-password', (req, res) => {
-  res.render('auth-forgot-password', { layout: false, error: null, success: null });
+  res.render('auth-forgot-password', { layout: false, error: null, sent: false, email: '' });
 });
 
 router.post('/forgot-password', authLimiter,
   body('email').isEmail().normalizeEmail(),
-  async (req, res) => {
-    const { email } = req.body;
-    const user = await findUserByEmail(email);
-
-    if (user) {
-      const resetToken = crypto.randomBytes(32).toString('hex');
-      await setResetToken(user.id, resetToken, new Date(Date.now() + RESET_TOKEN_TTL));
-      const resetUrl = `${process.env.BASE_URL || 'https://hellomaal.com'}/reset-password?token=${resetToken}`;
-      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#0A0F0D;font-family:'DM Sans',system-ui,sans-serif;color:#F0EFE9;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0F0D;padding:40px 20px;">
-    <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#0F2E24;border:1px solid rgba(201,168,76,0.15);border-radius:16px;max-width:560px;width:100%;">
-        <tr><td style="padding:40px;">
-          <p style="margin:0 0 24px;font-size:1.4rem;font-weight:600;color:#C9A84C;">◈ Maal</p>
-          <h1 style="margin:0 0 12px;font-size:1.4rem;font-weight:600;">Reset your password</h1>
-          <p style="margin:0 0 24px;font-size:0.9rem;color:#8A8D83;line-height:1.6;">Click below to set a new password. This link expires in 1 hour.</p>
-          <a href="${resetUrl}" style="display:inline-block;background:#C9A84C;color:#0A0F0D;font-weight:600;padding:0.85rem 2rem;border-radius:8px;text-decoration:none;">Reset Password</a>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
-      sendEmail({ to: email, subject: 'Reset your Maal password', html, text: `Reset your password: ${resetUrl}` })
-        .catch(err => console.error('[auth] Reset email failed:', err.message));
+  (req, res) => {
+    if (!validationResult(req).isEmpty()) {
+      return res.render('auth-forgot-password', { layout: false, error: 'Please enter a valid email address.', sent: false, email: req.body.email || '' });
     }
-
-    res.render('auth-forgot-password', { layout: false, error: null, success: 'If that email is registered, a reset link is on its way.' });
+    // Respond first; do the work after (constant response time, no enumeration).
+    setImmediate(() => {
+      sendResetLink(req.body.email).catch((err) => console.error('[auth] Reset email failed:', err.message));
+    });
+    res.render('auth-forgot-password', { layout: false, error: null, sent: true, email: '' });
   }
 );
 
@@ -469,9 +527,25 @@ router.post('/api/account/delete', async (req, res) => {
   }
 });
 
-// ─── API: logout ───────────────────────────────────────────────────────────────
+// ─── Logout ────────────────────────────────────────────────────────────────────
+// Figma "Logging out": Logout → the sign-in page. POST only (a GET that signs
+// you out can be triggered by any <img> on another site); the session cookie is
+// SameSite=Lax, so a cross-site form POST arrives without it and does nothing.
+// The session row is destroyed server-side and the cookie cleared.
+// The React app calls the JSON twin, POST /api/auth/logout (routes/api.js).
 
-router.post('/logout', (req, res) => { req.session.destroy(() => res.redirect('/')); });
-router.get('/logout',  (req, res) => { req.session.destroy(() => res.redirect('/')); });
+const SESSION_COOKIE = 'connect.sid';
+
+function logout(req, res) {
+  req.session.destroy((err) => {
+    if (err) console.error('[logout] session destroy failed:', err.message);
+    res.clearCookie(SESSION_COOKIE, { path: '/' });
+    res.redirect(303, '/login?signed_out=1');
+  });
+}
+
+router.post('/logout', logout);
+// Old bookmarks / links: never sign out on GET — just route to the right place.
+router.get('/logout', (req, res) => res.redirect(req.session.userId ? '/app' : '/login'));
 
 module.exports = router;

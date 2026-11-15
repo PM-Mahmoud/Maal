@@ -50,5 +50,13 @@ test('sign-up page checklist mirrors every server rule', () => {
   for (const r of pr.RULES) assert.ok(view.includes(`data-rule="${r.id}"`), `auth-signup.ejs missing rule ${r.id}`);
 });
 
+test('reset-password page checklist mirrors every server rule', () => {
+  const view = fs.readFileSync(path.join(__dirname, '..', 'views', 'auth-reset-password.ejs'), 'utf8');
+  for (const r of pr.RULES) {
+    assert.ok(view.includes(`data-rule="${r.id}"`), `auth-reset-password.ejs missing rule ${r.id}`);
+    assert.ok(view.includes(`>${r.label}<`), `auth-reset-password.ejs label differs for ${r.id}`);
+  }
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

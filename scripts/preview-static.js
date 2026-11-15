@@ -28,9 +28,14 @@ app.get('/', (_req, res, next) => {
   ejs.renderFile(path.join(VIEWS, 'layout.ejs'), buildLandingContext())
     .then(html => res.send(html)).catch(next);
 });
-app.get('/login', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'auth-login.ejs'), { error: null, email: '' })
-    .then(html => res.send(html)).catch(next);
+app.get('/login', (req, res, next) => {
+  // ?state=error | signedout previews the alert / notice banners.
+  const s = req.query.state;
+  ejs.renderFile(path.join(VIEWS, 'auth-login.ejs'), {
+    error: s === 'error' ? 'Incorrect password. 2 attempts remaining before lockout.' : null,
+    notice: s === 'signedout' ? 'You’ve been logged out. See you soon.' : null,
+    email: s === 'error' ? 'mahmoud@example.com' : '', next: '',
+  }).then(html => res.send(html)).catch(next);
 });
 app.get('/signup', (req, res, next) => {
   ejs.renderFile(path.join(VIEWS, 'auth-signup.ejs'), {
@@ -40,20 +45,27 @@ app.get('/signup', (req, res, next) => {
     error: null, email: '', name: '',
   }).then(html => res.send(html)).catch(next);
 });
-app.get('/forgot-password', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'auth-forgot-password.ejs'), { error: null, success: null })
+app.get('/forgot-password', (req, res, next) => {
+  // ?state=sent previews "Check your email".
+  ejs.renderFile(path.join(VIEWS, 'auth-forgot-password.ejs'), { error: null, sent: req.query.state === 'sent', email: '' })
     .then(html => res.send(html)).catch(next);
 });
-app.get('/reset-password', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'auth-reset-password.ejs'), { error: null, success: null, token: 'demo-token' })
+app.get('/reset-password', (req, res, next) => {
+  // ?state=invalid | done previews the expired-link and success screens.
+  const s = req.query.state;
+  ejs.renderFile(path.join(VIEWS, 'auth-reset-password.ejs'), {
+    error: s === 'invalid' ? 'This reset link is invalid or has expired. Request a new one below.' : null,
+    success: s === 'done' ? true : null,
+    token: s ? '' : 'demo-token',
+  }).then(html => res.send(html)).catch(next);
+});
+app.get('/verify-otp', (req, res, next) => {
+  // ?state=login previews the sign-in code (passwordless / 2FA) copy.
+  ejs.renderFile(path.join(VIEWS, 'auth-verify-otp.ejs'), { email: 'mahmoud@example.com', error: null, purpose: req.query.state === 'login' ? 'login' : 'verify' })
     .then(html => res.send(html)).catch(next);
 });
-app.get('/verify-otp', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'auth-verify-otp.ejs'), { email: 'preview@example.com', error: null })
-    .then(html => res.send(html)).catch(next);
-});
-app.get('/verify-email', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'auth-verify-email.ejs'), { success: true, error: null })
+app.get('/verify-email', (req, res, next) => {
+  ejs.renderFile(path.join(VIEWS, 'auth-verify-email.ejs'), { success: req.query.state !== 'failed', error: null })
     .then(html => res.send(html)).catch(next);
 });
 app.get('/google-link', (_req, res, next) => {

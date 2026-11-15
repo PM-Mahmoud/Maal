@@ -161,3 +161,67 @@
    fills at least the viewport, so black never appears as a gap. */
 html { background: #020109; }
 body { min-height: 100vh; }
+
+/* ─── Sign in + single-task auth pages (Figma "Logging in", "Resetting
+   password from Logging in"; session 5). Sign in reuses the sign-up split
+   above; reset / code / confirmation screens use the focus layout below:
+   hairline top bar (Back + centred mark), one centred column, hairline
+   footer with the security link and the disclaimer. ─────────────────── */
+.v2-forgot { margin-top: .9rem; text-align: center; font-size: 13.5px; }
+.v2-forgot a { color: var(--v2-ink); text-decoration: underline; text-underline-offset: 3px; }
+.v2-note-ok { background: #D6F7FF; border-color: #B4ECF8; color: #006B87; }
+.v2-status { margin-left: .35rem; font-size: 12.5px; color: var(--v2-muted); }
+
+.v2-focus-page { display: flex; flex-direction: column; background: var(--v2-surface); }
+.v2-focus-head {
+  position: relative; display: flex; align-items: center; min-height: 64px; padding: 0 16px;
+  border-bottom: 1px solid var(--v2-hair); background: var(--v2-surface);
+}
+@media (min-width: 768px) { .v2-focus-head { min-height: 80px; padding: 0 40px; } }
+.v2-back {
+  position: relative; z-index: 1; display: inline-flex; align-items: center; height: 36px; padding: 0 14px;
+  border: 1px solid #999; border-radius: 8px; background: var(--v2-surface); color: var(--v2-btn);
+  font: inherit; font-size: 14px; text-decoration: none; cursor: pointer;
+}
+.v2-back:hover { border-color: var(--v2-ink); }
+.v2-back:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 2px; }
+.v2-focus-logo {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: inline-flex; align-items: center; gap: .45rem; color: var(--v2-ink); text-decoration: none;
+}
+.v2-focus-logo span { font-family: var(--v2-serif); font-size: 24px; line-height: 1; }
+
+.v2-focus { flex: 1; display: flex; align-items: center; justify-content: center; padding: 48px 16px 56px; }
+.v2-focus-inner { width: 100%; max-width: 380px; text-align: center; }
+.v2-focus-icon { display: flex; justify-content: center; color: var(--v2-ink); margin-bottom: .6rem; }
+.v2-focus-page h1 { font-family: var(--v2-serif); font-size: 32px; line-height: 1.25; color: var(--v2-ink); text-align: center; }
+.v2-focus-sub { margin-top: .7rem !important; font-size: 15px; line-height: 1.5; color: var(--v2-muted); }
+.v2-focus-sub strong { color: var(--v2-ink); font-weight: 500; overflow-wrap: anywhere; }
+.v2-focus-inner .v2-alert, .v2-focus-form { text-align: left; }
+.v2-focus-form { margin-top: 1.4rem; }
+#reset-form { margin-top: 0; }
+#reset-form h1 + .v2-field, #reset-form h1 + .v2-alert, #reset-form h1 + p + .v2-field { margin-top: 1.4rem; }
+.v2-focus-actions { margin-top: 1.2rem; }
+.v2-focus-inner > .v2-focus-actions { margin-top: 1.6rem; }
+.v2-focus-link { margin-top: 1.8rem !important; font-size: 15px; }
+.v2-focus-link a { color: var(--v2-ink); text-decoration: underline; text-underline-offset: 3px; }
+
+.v2-focus-foot { border-top: 1px solid var(--v2-hair); padding: 22px 16px 26px; text-align: center; }
+.v2-focus-foot a { font-size: 13px; color: var(--v2-ink); text-decoration: underline; text-underline-offset: 3px; }
+.v2-focus-foot .v2-disclaimer-line { max-width: 620px; margin: .9rem auto 0; }
+
+/* 6-digit code boxes */
+.v2-otp { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.v2-otp input {
+  width: 100%; height: 56px; padding: 0; text-align: center; border-radius: 8px;
+  border: 1px solid var(--v2-hair-strong); background: var(--v2-surface); color: var(--v2-ink);
+  font: inherit; font-size: 22px; font-weight: 500; caret-color: var(--v2-ink);
+}
+.v2-otp input:focus { border-color: var(--v2-ink); outline: none; }
+.v2-otp input:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 1px; }
+.v2-otp input.filled { border-color: var(--v2-ink); }
+@media (max-width: 380px) { .v2-otp { gap: 6px; } .v2-otp input { height: 50px; font-size: 20px; } }
+@media (max-width: 480px) {
+  .v2-focus { align-items: flex-start; padding-top: 40px; }
+  .v2-focus-page h1 { font-size: 28px; }
+}

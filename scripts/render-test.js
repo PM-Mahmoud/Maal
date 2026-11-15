@@ -36,9 +36,11 @@ const cases = {
   'security': { analyticsSnippet: '', user: null },
   'financial-wellbeing-score': { analyticsSnippet: '', user: null },
   'contact': { analyticsSnippet: '', user: null, success: false, name: '', email: '', message: '' },
-  'auth-forgot-password': { error: null, success: null, email: '' },
+  'auth-forgot-password': { error: null, sent: false, email: '' },
   'auth-reset-password': { error: null, success: null, token: 'tok' },
   'auth-verify-otp': { email: 'test@example.com', error: null },
+  'auth-verify-email': { success: true, error: null },
+  'auth-layout': { body: '<h1>Test</h1>', title: 'Test' },
   'error': { message: 'Test error' },
 };
 
@@ -53,6 +55,27 @@ async function main() {
       if (err.code === 'ENOENT') { console.log('  SKIP ' + view + ' (no such view)'); continue; }
       failed++;
       console.error('  FAIL ' + view + ' — ' + err.message.split('\n')[0]);
+    }
+  }
+  // Extra states of the auth pages (each state is its own branch of the view).
+  const variants = [
+    ['auth-login', { error: 'Incorrect password. 2 attempts remaining before lockout.', notice: 'You’ve been logged out.', email: 'a@b.co', next: '/app/goals' }],
+    ['auth-forgot-password', { error: null, sent: true, email: '' }],
+    ['auth-forgot-password', { error: 'Please enter a valid email address.', sent: false, email: 'x' }],
+    ['auth-reset-password', { error: 'Password must contain at least one number.', success: null, token: 'tok' }],
+    ['auth-reset-password', { error: 'This reset link is invalid or has expired.', success: null, token: '' }],
+    ['auth-reset-password', { error: null, success: true, token: '' }],
+    ['auth-verify-otp', { email: 'test@example.com', error: 'Invalid or expired code.', purpose: 'login' }],
+    ['auth-verify-otp', { email: '', error: null, purpose: 'totp', heading: 'Enter your authenticator code', subtitle: 'Open your authenticator app.', action: '/login/totp', resend: false, sms: false }],
+    ['auth-verify-email', { success: false, error: null }],
+  ];
+  for (const [view, locals] of variants) {
+    try {
+      await ejs.renderFile(path.join(VIEWS, view + '.ejs'), locals, { async: false });
+      console.log('  OK   ' + view + ' (state)');
+    } catch (err) {
+      failed++;
+      console.error('  FAIL ' + view + ' (state) — ' + err.message.split('\n')[0]);
     }
   }
   console.log(failed ? `\n${failed} view(s) failed` : '\nAll views rendered cleanly');
