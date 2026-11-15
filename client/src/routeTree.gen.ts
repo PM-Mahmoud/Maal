@@ -47,6 +47,7 @@ import { Route as AuthenticatedAppWealthOtherRouteImport } from './routes/_authe
 import { Route as AuthenticatedAppWealthLiabilitiesRouteImport } from './routes/_authenticated/app.wealth.liabilities'
 import { Route as AuthenticatedAppWealthInvestmentsRouteImport } from './routes/_authenticated/app.wealth.investments'
 import { Route as AuthenticatedAppWealthCashRouteImport } from './routes/_authenticated/app.wealth.cash'
+import { Route as AuthenticatedAppSpendingSettingsRouteImport } from './routes/_authenticated/app.spending.settings'
 import { Route as AuthenticatedAppServicesTaxRouteImport } from './routes/_authenticated/app.services.tax'
 import { Route as AuthenticatedAppServicesFinancialPlannerRouteImport } from './routes/_authenticated/app.services.financial-planner'
 import { Route as AuthenticatedAppServicesEstatePlanningRouteImport } from './routes/_authenticated/app.services.estate-planning'
@@ -263,6 +264,12 @@ const AuthenticatedAppWealthCashRoute =
     path: '/wealth/cash',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppSpendingSettingsRoute =
+  AuthenticatedAppSpendingSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedAppSpendingRoute,
+  } as any)
 const AuthenticatedAppServicesTaxRoute =
   AuthenticatedAppServicesTaxRouteImport.update({
     id: '/services/tax',
@@ -326,7 +333,7 @@ export interface FileRoutesByFullPath {
   '/app/research': typeof AuthenticatedAppResearchRoute
   '/app/retirement': typeof AuthenticatedAppRetirementRoute
   '/app/roadmap': typeof AuthenticatedAppRoadmapRoute
-  '/app/spending': typeof AuthenticatedAppSpendingRoute
+  '/app/spending': typeof AuthenticatedAppSpendingRouteWithChildren
   '/app/transactions': typeof AuthenticatedAppTransactionsRoute
   '/app/vault': typeof AuthenticatedAppVaultRoute
   '/app/zakat': typeof AuthenticatedAppZakatRoute
@@ -337,6 +344,7 @@ export interface FileRoutesByFullPath {
   '/app/services/estate-planning': typeof AuthenticatedAppServicesEstatePlanningRoute
   '/app/services/financial-planner': typeof AuthenticatedAppServicesFinancialPlannerRoute
   '/app/services/tax': typeof AuthenticatedAppServicesTaxRoute
+  '/app/spending/settings': typeof AuthenticatedAppSpendingSettingsRoute
   '/app/wealth/cash': typeof AuthenticatedAppWealthCashRoute
   '/app/wealth/investments': typeof AuthenticatedAppWealthInvestmentsRoute
   '/app/wealth/liabilities': typeof AuthenticatedAppWealthLiabilitiesRoute
@@ -370,7 +378,7 @@ export interface FileRoutesByTo {
   '/app/research': typeof AuthenticatedAppResearchRoute
   '/app/retirement': typeof AuthenticatedAppRetirementRoute
   '/app/roadmap': typeof AuthenticatedAppRoadmapRoute
-  '/app/spending': typeof AuthenticatedAppSpendingRoute
+  '/app/spending': typeof AuthenticatedAppSpendingRouteWithChildren
   '/app/transactions': typeof AuthenticatedAppTransactionsRoute
   '/app/vault': typeof AuthenticatedAppVaultRoute
   '/app/zakat': typeof AuthenticatedAppZakatRoute
@@ -381,6 +389,7 @@ export interface FileRoutesByTo {
   '/app/services/estate-planning': typeof AuthenticatedAppServicesEstatePlanningRoute
   '/app/services/financial-planner': typeof AuthenticatedAppServicesFinancialPlannerRoute
   '/app/services/tax': typeof AuthenticatedAppServicesTaxRoute
+  '/app/spending/settings': typeof AuthenticatedAppSpendingSettingsRoute
   '/app/wealth/cash': typeof AuthenticatedAppWealthCashRoute
   '/app/wealth/investments': typeof AuthenticatedAppWealthInvestmentsRoute
   '/app/wealth/liabilities': typeof AuthenticatedAppWealthLiabilitiesRoute
@@ -417,7 +426,7 @@ export interface FileRoutesById {
   '/_authenticated/app/research': typeof AuthenticatedAppResearchRoute
   '/_authenticated/app/retirement': typeof AuthenticatedAppRetirementRoute
   '/_authenticated/app/roadmap': typeof AuthenticatedAppRoadmapRoute
-  '/_authenticated/app/spending': typeof AuthenticatedAppSpendingRoute
+  '/_authenticated/app/spending': typeof AuthenticatedAppSpendingRouteWithChildren
   '/_authenticated/app/transactions': typeof AuthenticatedAppTransactionsRoute
   '/_authenticated/app/vault': typeof AuthenticatedAppVaultRoute
   '/_authenticated/app/zakat': typeof AuthenticatedAppZakatRoute
@@ -428,6 +437,7 @@ export interface FileRoutesById {
   '/_authenticated/app/services/estate-planning': typeof AuthenticatedAppServicesEstatePlanningRoute
   '/_authenticated/app/services/financial-planner': typeof AuthenticatedAppServicesFinancialPlannerRoute
   '/_authenticated/app/services/tax': typeof AuthenticatedAppServicesTaxRoute
+  '/_authenticated/app/spending/settings': typeof AuthenticatedAppSpendingSettingsRoute
   '/_authenticated/app/wealth/cash': typeof AuthenticatedAppWealthCashRoute
   '/_authenticated/app/wealth/investments': typeof AuthenticatedAppWealthInvestmentsRoute
   '/_authenticated/app/wealth/liabilities': typeof AuthenticatedAppWealthLiabilitiesRoute
@@ -475,6 +485,7 @@ export interface FileRouteTypes {
     | '/app/services/estate-planning'
     | '/app/services/financial-planner'
     | '/app/services/tax'
+    | '/app/spending/settings'
     | '/app/wealth/cash'
     | '/app/wealth/investments'
     | '/app/wealth/liabilities'
@@ -519,6 +530,7 @@ export interface FileRouteTypes {
     | '/app/services/estate-planning'
     | '/app/services/financial-planner'
     | '/app/services/tax'
+    | '/app/spending/settings'
     | '/app/wealth/cash'
     | '/app/wealth/investments'
     | '/app/wealth/liabilities'
@@ -565,6 +577,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/services/estate-planning'
     | '/_authenticated/app/services/financial-planner'
     | '/_authenticated/app/services/tax'
+    | '/_authenticated/app/spending/settings'
     | '/_authenticated/app/wealth/cash'
     | '/_authenticated/app/wealth/investments'
     | '/_authenticated/app/wealth/liabilities'
@@ -850,6 +863,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppWealthCashRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/spending/settings': {
+      id: '/_authenticated/app/spending/settings'
+      path: '/settings'
+      fullPath: '/app/spending/settings'
+      preLoaderRoute: typeof AuthenticatedAppSpendingSettingsRouteImport
+      parentRoute: typeof AuthenticatedAppSpendingRoute
+    }
     '/_authenticated/app/services/tax': {
       id: '/_authenticated/app/services/tax'
       path: '/services/tax'
@@ -895,6 +915,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedAppSpendingRouteChildren {
+  AuthenticatedAppSpendingSettingsRoute: typeof AuthenticatedAppSpendingSettingsRoute
+}
+
+const AuthenticatedAppSpendingRouteChildren: AuthenticatedAppSpendingRouteChildren =
+  {
+    AuthenticatedAppSpendingSettingsRoute:
+      AuthenticatedAppSpendingSettingsRoute,
+  }
+
+const AuthenticatedAppSpendingRouteWithChildren =
+  AuthenticatedAppSpendingRoute._addFileChildren(
+    AuthenticatedAppSpendingRouteChildren,
+  )
+
 interface AuthenticatedAppRouteChildren {
   AuthenticatedAppActionPlanRoute: typeof AuthenticatedAppActionPlanRoute
   AuthenticatedAppAssetsRoute: typeof AuthenticatedAppAssetsRoute
@@ -916,7 +951,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppResearchRoute: typeof AuthenticatedAppResearchRoute
   AuthenticatedAppRetirementRoute: typeof AuthenticatedAppRetirementRoute
   AuthenticatedAppRoadmapRoute: typeof AuthenticatedAppRoadmapRoute
-  AuthenticatedAppSpendingRoute: typeof AuthenticatedAppSpendingRoute
+  AuthenticatedAppSpendingRoute: typeof AuthenticatedAppSpendingRouteWithChildren
   AuthenticatedAppTransactionsRoute: typeof AuthenticatedAppTransactionsRoute
   AuthenticatedAppVaultRoute: typeof AuthenticatedAppVaultRoute
   AuthenticatedAppZakatRoute: typeof AuthenticatedAppZakatRoute
@@ -957,7 +992,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppResearchRoute: AuthenticatedAppResearchRoute,
   AuthenticatedAppRetirementRoute: AuthenticatedAppRetirementRoute,
   AuthenticatedAppRoadmapRoute: AuthenticatedAppRoadmapRoute,
-  AuthenticatedAppSpendingRoute: AuthenticatedAppSpendingRoute,
+  AuthenticatedAppSpendingRoute: AuthenticatedAppSpendingRouteWithChildren,
   AuthenticatedAppTransactionsRoute: AuthenticatedAppTransactionsRoute,
   AuthenticatedAppVaultRoute: AuthenticatedAppVaultRoute,
   AuthenticatedAppZakatRoute: AuthenticatedAppZakatRoute,

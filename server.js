@@ -412,6 +412,7 @@ app.post('/contact', async (req, res) => {
 app.use('/api/v1/briefs', require('./routes/briefs'));
 app.use('/api', require('./routes/extensibility'));
 app.use('/api', require('./routes/advisor-threads'));
+app.use('/api', require('./routes/spending-settings'));
 app.use('/api', require('./routes/api'));
 
 // ─── Server-side gate for the React app shell ─────────────────────────────
