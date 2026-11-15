@@ -106,7 +106,7 @@
   <%- include('partials/footer') %>
   <%- analyticsSnippet %>
 
-  <script>
+  <script nonce="<%= locals.cspNonce || '' %>">
   (function() {
     var form = document.getElementById('wl-form');
     var btn = document.getElementById('wl-btn');

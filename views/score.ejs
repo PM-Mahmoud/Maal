@@ -130,7 +130,7 @@
   <% if (!locals.kiosk) { %><%- include('partials/footer') %><% } %>
   <%- analyticsSnippet %>
 
-  <script>
+  <script nonce="<%= locals.cspNonce || '' %>">
   (function() {
     'use strict';
 

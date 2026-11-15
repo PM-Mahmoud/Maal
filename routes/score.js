@@ -23,7 +23,7 @@ router.get('/', (req, res) => {
     // Event tablet mode: no site nav, touch-sized, resets between people.
     kiosk: req.query.kiosk === '1',
     themeCSS: buildThemeCSS(),
-    analyticsSnippet: buildAnalyticsSnippet(slug),
+    analyticsSnippet: buildAnalyticsSnippet(slug, res.locals.cspNonce),
     result: null,
     formData: null,
     error: null,
@@ -50,7 +50,7 @@ router.post('/calculate', async (req, res) => {
   if (incomeMissing || ageMissing) {
     return res.render('score', { layout: false,
       themeCSS: buildThemeCSS(),
-      analyticsSnippet: buildAnalyticsSnippet(slug),
+      analyticsSnippet: buildAnalyticsSnippet(slug, res.locals.cspNonce),
       result: null,
       formData: req.body,
       error: 'Please enter your age and gross annual income to calculate your score.',
@@ -84,7 +84,7 @@ router.post('/calculate', async (req, res) => {
 
   res.render('score', { layout: false,
     themeCSS: buildThemeCSS(),
-    analyticsSnippet: buildAnalyticsSnippet(slug),
+    analyticsSnippet: buildAnalyticsSnippet(slug, res.locals.cspNonce),
     result,
     formData,
     error: null,

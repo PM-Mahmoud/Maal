@@ -38,7 +38,7 @@
   <a href="<%= locals.waitlistGated !== false ? '/waitlist' : '/signup' %>"><%= locals.waitlistGated !== false ? 'Join waitlist' : 'Sign up' %></a>
   <a href="/login">Log in</a>
 </div>
-<script>
+<script nonce="<%= locals.cspNonce || '' %>">
 function toggleMobileNav() {
   document.getElementById('lv-mobile-nav').classList.toggle('open');
 }

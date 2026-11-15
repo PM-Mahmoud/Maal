@@ -125,7 +125,7 @@
 <%- include('partials/v2-sky') %>
   </main>
 
-  <script>
+  <script nonce="<%= locals.cspNonce || '' %>">
   (function () {
     var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     var offer = document.getElementById('step-offer');

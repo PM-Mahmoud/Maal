@@ -53,8 +53,8 @@
     </div>
   </main>
 <%- include('partials/v2-focus-footer') %>
-  <script src="/js/v2-auth.js"></script>
-  <script>
+  <script nonce="<%= locals.cspNonce || '' %>" src="/js/v2-auth.js"></script>
+  <script nonce="<%= locals.cspNonce || '' %>">
   (function () {
     var submit = document.getElementById('otp-submit');
     var boxes = window.MaalAuth.otpBoxes(document.querySelector('[data-otp]'), function (code) {
