@@ -1,16 +1,16 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { CreditCard, Check, Sparkles, Clock } from "lucide-react";
-import { z } from "zod";
+import { searchSchema as makeSearchSchema, optEnum, optString } from "@/lib/search-params";
 import { getUsage, type Usage } from "@/lib/usage.functions";
 import { InviteFriendsCard } from "@/components/maal/app/InviteFriendsCard";
 
-const searchSchema = z.object({
-  billing: z.enum([
+const searchSchema = makeSearchSchema({
+  billing: optEnum([
     "success", "cancel", "demo", "downgraded", "cancel_scheduled",
     "error", "error_config", "error_stripe",
-  ]).optional(),
-  plan: z.string().optional(),
+  ]),
+  plan: optString(),
 });
 
 export const Route = createFileRoute("/_authenticated/app/billing")({

@@ -9,7 +9,7 @@
    reference's cloud/earth/star photos are NOT used).
    Scoped to .v2 so the rest of the site is untouched.
    ============================================================ */
-@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap');
+/* Lora + Inter load from the single Google Fonts <link> in client/index.html. */
 
 .v2 {
   --v2-bg: #F8F9F6;

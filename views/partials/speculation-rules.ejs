@@ -1,0 +1,8 @@
+<%# Prefetch the public pages a visitor is likely to open next, once they hover
+    a link to them (moderate eagerness). Explicit allowlist: only side-effect-free
+    GET pages, never /auth/google (starts OAuth), /logout, /r/*, /billing, /basiq,
+    /lunchflow or /api. Chromium-only progressive enhancement; other browsers
+    ignore it. Keep in step with the copy in client/index.html. %>
+<script type="speculationrules" nonce="<%= locals.cspNonce || '' %>">
+{"prefetch":[{"where":{"or":[{"href_matches":"/login"},{"href_matches":"/signup"},{"href_matches":"/waitlist"},{"href_matches":"/forgot-password"},{"href_matches":"/pricing"},{"href_matches":"/about"},{"href_matches":"/security"},{"href_matches":"/contact"},{"href_matches":"/score"}]},"eagerness":"moderate"}]}
+</script>

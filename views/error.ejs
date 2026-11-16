@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/app.css">
-  <script>
+  <script nonce="<%= locals.cspNonce || '' %>">
     (function() {
       try {
         document.documentElement.setAttribute('data-theme', localStorage.getItem('maal-theme') || 'light');

@@ -69,8 +69,8 @@
 <%- include('partials/v2-sky') %>
   </main>
 
-  <script src="/js/v2-auth.js"></script>
-  <script>
+  <script nonce="<%= locals.cspNonce || '' %>" src="/js/v2-auth.js"></script>
+  <script nonce="<%= locals.cspNonce || '' %>">
   (function () {
     var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     var email = document.getElementById('login-email');

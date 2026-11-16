@@ -459,7 +459,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="<%= locals.cspNonce || '' %>">
   // ── State ────────────────────────────────────────────────────────────────────
   let currentStep = 1;
   const TOTAL_STEPS = 7;

@@ -1,4 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { WealthPortfolioPage } from "./app.assets";
+import { WealthPortfolioPage } from "@/components/maal/wealth/WealthPortfolioPage";
 
 export const Route = createFileRoute("/_authenticated/app/wealth/cash")({ component: () => <WealthPortfolioPage section="cash" /> });

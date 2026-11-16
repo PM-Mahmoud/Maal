@@ -10,7 +10,7 @@ import {
   fullDate, previewRule, saveRule, txnAmount,
   type AmountOp, type Direction, type MatchItem, type MatchType, type RuleInput, type SavedRule,
 } from "./api";
-import "../../../../v2-landing.css"; // Lora + Inter font import (styles there are scoped to .v2)
+import "../../../../v2-landing.css"; // v2 tokens (scoped to .v2); fonts come from index.html
 import "./rules.css";
 
 /* ============================================================

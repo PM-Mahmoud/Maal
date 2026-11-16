@@ -6,7 +6,7 @@
    Tokens mirror the v2 system (client/src/v2-landing.css) but are
    scoped to .mb so nothing outside the briefs is affected.
    ============================================================ */
-@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap');
+/* Lora + Inter load from the single Google Fonts <link> in client/index.html. */
 
 .mb, .mb-overlay {
   --mb-page: #F8F9F6;

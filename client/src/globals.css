@@ -1,4 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Space+Grotesk:wght@400;500;600;700&family=Lora:ital,wght@0,400;1,400&display=swap');
+/* Google Fonts (Bricolage Grotesque, Space Grotesk, Lora, Inter) load from a
+   <link> in client/index.html, not @import here: an @import inside the bundled
+   stylesheet is only discovered after this CSS downloads, chaining the font CSS
+   behind it on every first paint. */
 @import "tailwindcss" source(none);
 @source "./";
 @import "tw-animate-css";

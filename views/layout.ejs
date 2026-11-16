@@ -349,7 +349,7 @@
   </footer>
 
   <%- analyticsSnippet %>
-  <script>
+  <script nonce="<%= locals.cspNonce || '' %>">
     // Mobile nav
     function rfToggleNav() {
       document.getElementById('rf-mobile-nav').classList.toggle('open');

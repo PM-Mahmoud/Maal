@@ -11,7 +11,7 @@ const os = require('os');
 const path = require('path');
 const http = require('http');
 const express = require('express');
-const { mountStatic } = require('../lib/static-assets');
+const { mountStatic, IMMUTABLE } = require('../lib/static-assets');
 
 let passed = 0;
 let failed = 0;
@@ -37,7 +37,10 @@ async function run() {
   const base = `http://127.0.0.1:${server.address().port}`;
   const get = async (p) => {
     const res = await fetch(base + p, { redirect: 'manual' });
-    return { status: res.status, body: await res.text(), location: res.headers.get('location') };
+    return {
+      status: res.status, body: await res.text(), location: res.headers.get('location'),
+      cache: res.headers.get('cache-control'),
+    };
   };
 
   const cases = [
@@ -64,6 +67,15 @@ async function run() {
       assert.strictEqual((await get('/css/theme.css')).body, 'body{}');
       assert.strictEqual((await get('/favicon.png')).body, 'png');
       assert.strictEqual((await get('/app/assets/app-abc.js')).body, 'console.log(1)');
+    }],
+    ['hashed bundle files are cached for a year, immutable', async () => {
+      assert.strictEqual((await get('/assets/app-abc.js')).cache, IMMUTABLE);
+      assert.strictEqual((await get('/app/assets/app-abc.js')).cache, IMMUTABLE);
+    }],
+    ['unhashed static files keep revalidating (max-age=0)', async () => {
+      assert.strictEqual((await get('/css/theme.css')).cache, 'public, max-age=0');
+      assert.strictEqual((await get('/favicon.png')).cache, 'public, max-age=0');
+      assert.strictEqual((await get('/app/index.html')).cache, 'public, max-age=0');
     }],
   ];
 
