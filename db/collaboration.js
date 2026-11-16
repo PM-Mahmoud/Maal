@@ -6,8 +6,10 @@ const {
   normalizeHouseholdName,
   normalizeOwnership,
   normalizeGrant,
+  normalizeOwnershipAllocations,
   READ_SCOPES,
 } = require('../lib/collaboration');
+const { summarizeCanonicalSnapshot, summarizeCanonicalAllocation, valuationFreshness } = require('../lib/canonical-wealth');
 
 async function createHousehold(userId, name) {
   const client = await pool.connect();
@@ -115,6 +117,129 @@ async function removeMember(householdId, actorId, userId) {
       RETURNING member.*`,
     [householdId, actorId, userId]
   )).rows[0] || null;
+}
+
+async function replaceHouseholdOwnership(householdId, actorId, subjectOwnerUserId, subjectType, subjectKey, values) {
+  const allocations = normalizeOwnershipAllocations(values);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const allowed = await client.query(
+      `SELECT EXISTS (
+         SELECT 1 FROM household_members owner
+          WHERE owner.household_id = $1 AND owner.user_id = $2 AND owner.role = 'owner'
+       ) AS actor_is_owner,
+       EXISTS (
+         SELECT 1 FROM household_members subject_owner
+          WHERE subject_owner.household_id = $1 AND subject_owner.user_id = $3
+       ) AS subject_owner_is_member,
+       EXISTS (
+         SELECT 1 FROM valuations
+          WHERE user_id = $3 AND subject_type = $4 AND subject_key = $5
+       ) AS subject_exists,
+       (SELECT COUNT(*)::int FROM household_members member
+         WHERE member.household_id = $1 AND member.user_id = ANY($6::bigint[])) AS allocation_members`,
+      [householdId, actorId, subjectOwnerUserId, subjectType, subjectKey, allocations.map((row) => row.userId)]
+    );
+    const guard = allowed.rows[0];
+    if (!guard.actor_is_owner || !guard.subject_owner_is_member || !guard.subject_exists ||
+        guard.allocation_members !== allocations.length) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    await client.query(
+      `UPDATE ownership_interests
+          SET effective_to = NOW(), updated_at = NOW()
+        WHERE user_id = $1 AND subject_type = $2 AND subject_key = $3
+          AND effective_to IS NULL`,
+      [subjectOwnerUserId, subjectType, subjectKey]
+    );
+    const inserted = [];
+    for (const allocation of allocations) {
+      const row = (await client.query(
+        `INSERT INTO ownership_interests
+           (user_id,subject_type,subject_key,owner_type,owner_label,ownership_percent,
+            effective_from,household_id,owner_user_id)
+         SELECT $1,$2,$3,
+                CASE WHEN $4 = $1 THEN 'self' ELSE 'joint' END,
+                COALESCE(member.name, member.email),$5,NOW(),$6,$4
+           FROM users member
+          WHERE member.id = $4
+         RETURNING *`,
+        [subjectOwnerUserId, subjectType, subjectKey, allocation.userId,
+          allocation.ownershipPercent, householdId]
+      )).rows[0];
+      inserted.push(row);
+    }
+    await client.query('COMMIT');
+    return inserted;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function getHouseholdCanonicalSnapshot(householdId, userId) {
+  const member = (await pool.query(
+    'SELECT role FROM household_members WHERE household_id = $1 AND user_id = $2',
+    [householdId, userId]
+  )).rows[0];
+  if (!member) return null;
+
+  const [valuations, ownershipInterests, holdings] = await Promise.all([
+    pool.query(
+      `SELECT DISTINCT v.*
+         FROM valuations v
+         JOIN ownership_interests oi
+           ON oi.user_id = v.user_id AND oi.subject_type = v.subject_type AND oi.subject_key = v.subject_key
+        WHERE oi.household_id = $1 AND oi.effective_from <= NOW()
+          AND (oi.effective_to IS NULL OR oi.effective_to > NOW())
+        ORDER BY v.as_of, v.created_at, v.id`,
+      [householdId]
+    ).then((result) => result.rows),
+    pool.query(
+      `SELECT oi.*
+         FROM ownership_interests oi
+         JOIN household_members hm
+           ON hm.household_id = oi.household_id AND hm.user_id = oi.owner_user_id
+        WHERE oi.household_id = $1 AND oi.effective_from <= NOW()
+          AND (oi.effective_to IS NULL OR oi.effective_to > NOW())
+        ORDER BY oi.created_at, oi.id`,
+      [householdId]
+    ).then((result) => result.rows),
+    pool.query(
+      `SELECT DISTINCT h.*, i.name AS instrument_name, i.instrument_type, i.ticker, i.isin, i.apir, i.exchange
+         FROM holdings h
+         JOIN instruments i ON i.id = h.instrument_id AND i.user_id = h.user_id
+         JOIN ownership_interests oi
+           ON oi.user_id = h.user_id AND oi.subject_type = 'holding'
+          AND oi.subject_key = 'holding:' || h.id::text
+        WHERE oi.household_id = $1 AND oi.effective_from <= NOW()
+          AND (oi.effective_to IS NULL OR oi.effective_to > NOW())
+        ORDER BY h.as_of DESC, h.id DESC`,
+      [householdId]
+    ).then((result) => result.rows),
+  ]);
+  const normalized = {
+    holdings,
+    ownershipInterests,
+    valuations: valuations.map((row) => ({
+      ...row, subjectType: row.subject_type, subjectKey: row.subject_key,
+      amountMinor: row.amount_minor, asOf: row.as_of,
+      presentationAmountMinor: row.presentation_amount_minor,
+      presentationCurrency: row.presentation_currency,
+      recordedAt: row.created_at, freshness: valuationFreshness(row),
+    })),
+  };
+  return {
+    householdId: String(householdId), role: member.role,
+    valuations, ownershipInterests, holdings,
+    summary: summarizeCanonicalSnapshot(normalized),
+    allocation: summarizeCanonicalAllocation(normalized),
+  };
 }
 
 async function createGrant(ownerUserId, input) {
@@ -276,6 +401,8 @@ module.exports = {
   addMember,
   updateMemberOwnership,
   removeMember,
+  replaceHouseholdOwnership,
+  getHouseholdCanonicalSnapshot,
   createGrant,
   listGrants,
   listIncomingGrants,
