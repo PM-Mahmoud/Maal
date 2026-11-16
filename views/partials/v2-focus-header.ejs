@@ -1,0 +1,14 @@
+<%# Top bar of a v2 single-task page (reset password, codes). Locals:
+    back — href for the Back button, or a "#id" for a JS step-back button
+    (data-back), or falsy for no Back button (Figma: Create password and
+    Password reset successful have none). %>
+  <header class="v2-focus-head">
+    <% if (locals.back) { %>
+      <% if (String(back).startsWith('#')) { %>
+        <button type="button" class="v2-back" data-back="<%= back.slice(1) %>" hidden>Back</button>
+      <% } else { %>
+        <a class="v2-back" href="<%= back %>">Back</a>
+      <% } %>
+    <% } %>
+    <a href="/" class="v2-focus-logo" aria-label="Maal home"><%- include('v2-mark', { size: 18 }) %><span>Maal</span></a>
+  </header>

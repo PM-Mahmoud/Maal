@@ -1,0 +1,97 @@
+/* ============================================================
+   Settings panels: Notifications + Appearance (Figma "Notifications"
+   + "Switching to dark mode", 2026-11). Built on the Home tokens
+   (--mh-*, defined in home/home.css which AppShell loads), so they
+   follow light/dark automatically.
+   ============================================================ */
+.mt-page { max-width: 640px; }
+.mt-stack { display: flex; flex-direction: column; gap: 20px; }
+
+.mt-panel { background: var(--mh-card); border: 1px solid var(--mh-line); border-radius: var(--mh-radius, 21px); overflow: hidden; }
+.mt-head { display: flex; align-items: center; gap: 14px; min-height: 68px; padding: 14px 24px; border-bottom: 1px solid var(--mh-line); }
+.mt-back {
+  display: inline-grid; place-items: center; width: 32px; height: 32px; margin-left: -6px;
+  border: 0; border-radius: 8px; background: none; color: var(--mh-ink); cursor: pointer;
+}
+.mt-back:hover { background: var(--mh-chip); }
+.mt-back svg { width: 20px; height: 20px; }
+.mt-kicker { margin: 0; font-size: 11px; font-weight: 400; letter-spacing: 2.2px; text-transform: uppercase; color: var(--mh-muted); }
+.mt-head-action { margin-left: auto; background: none; border: 0; padding: 4px 0; color: var(--mh-ink); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.mt-head-action:disabled { color: var(--mh-faint); text-decoration: none; cursor: default; }
+
+/* ---------- Inbox ---------- */
+.mt-list { list-style: none; margin: 0; padding: 0; }
+.mt-item { border-bottom: 1px solid var(--mh-line); }
+.mt-item:last-child { border-bottom: 0; }
+.mt-item-link { display: block; padding: 24px 28px 22px; color: inherit; text-decoration: none; position: relative; }
+a.mt-item-link:hover { background: var(--mh-hover); }
+.mt-item-title { margin: 0; font-size: 15px; font-weight: 500; line-height: 1.4; color: var(--mh-ink); }
+.mt-item-body { margin: 6px 0 0; font-size: 14px; line-height: 1.5; color: var(--mh-ink); overflow-wrap: anywhere; }
+.mt-item-time { margin: 10px 0 0; font-size: 13px; color: var(--mh-muted); }
+.mt-unread { position: absolute; left: 12px; top: 31px; width: 7px; height: 7px; border-radius: 50%; background: var(--mh-chart); }
+
+.mt-empty { padding: 36px 28px 32px; text-align: center; }
+.mt-empty-title { margin: 0; font-family: var(--mh-serif); font-size: 22px; font-weight: 400; color: var(--mh-ink); }
+.mt-empty-text { margin: 8px auto 0; max-width: 40ch; font-size: 14px; line-height: 1.55; color: var(--mh-muted); }
+.mt-empty-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 18px; }
+
+.mt-skel { padding: 24px 28px; border-bottom: 1px solid var(--mh-line); }
+.mt-skel span { display: block; height: 12px; border-radius: 6px; background: var(--mh-chip); }
+.mt-skel span + span { margin-top: 10px; }
+.mt-error { padding: 28px; font-size: 14px; color: var(--mh-muted); display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+
+/* ---------- Rows (preferences + appearance) ---------- */
+.mt-rows { list-style: none; margin: 0; padding: 8px 16px; }
+.mt-row {
+  display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; padding: 12px 12px;
+  border: 0; border-bottom: 1px solid var(--mh-line); background: none; color: var(--mh-ink);
+  font: inherit; font-size: 15px; text-align: left; text-decoration: none;
+}
+.mt-rows > li:last-child .mt-row { border-bottom: 0; }
+button.mt-row, a.mt-row, label.mt-row { cursor: pointer; border-radius: 0; }
+button.mt-row:hover, a.mt-row:hover, label.mt-row:hover { background: var(--mh-hover); }
+.mt-row-icon { width: 18px; height: 18px; flex-shrink: 0; color: var(--mh-ink); }
+.mt-row-text { flex: 1; min-width: 0; }
+.mt-row-sub { display: block; margin-top: 2px; font-size: 13px; color: var(--mh-muted); }
+.mt-row-end { margin-left: auto; flex-shrink: 0; color: var(--mh-muted); display: inline-flex; align-items: center; }
+.mt-row-end svg { width: 16px; height: 16px; }
+.mt-section-label { margin: 0; padding: 18px 28px 0; font-size: 11px; letter-spacing: 2.2px; text-transform: uppercase; color: var(--mh-muted); }
+
+/* Radio dot (appearance) */
+.mt-radio {
+  appearance: none; -webkit-appearance: none; margin: 0; flex-shrink: 0;
+  width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--mh-btn-line); background: var(--mh-card);
+  display: inline-grid; place-items: center; cursor: pointer;
+}
+.mt-radio:checked { border-color: var(--mh-ink); }
+.mt-radio:checked::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--mh-ink); }
+.mt-radio:focus-visible { outline: 2px solid var(--mh-chart); outline-offset: 2px; }
+
+/* Toggle switch (preferences) */
+.mt-switch {
+  position: relative; flex-shrink: 0; width: 40px; height: 24px; border-radius: 999px; border: 0; padding: 0;
+  background: var(--mh-line-strong); cursor: pointer; transition: background .15s;
+}
+.mt-switch::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--mh-card); transition: transform .15s;
+}
+.mt-switch[aria-checked="true"] { background: var(--mh-ink); }
+.mt-switch[aria-checked="true"]::after { transform: translateX(16px); }
+.mt-switch:disabled { opacity: .5; cursor: default; }
+.mt-switch:focus-visible { outline: 2px solid var(--mh-chart); outline-offset: 2px; }
+
+.mt-note { margin: 0; padding: 0 28px 20px; font-size: 13px; line-height: 1.5; color: var(--mh-muted); }
+.mt-status { min-height: 18px; padding: 0 28px 16px; font-size: 13px; color: var(--mh-muted); }
+
+@media (max-width: 480px) {
+  .mt-head { padding: 12px 16px; }
+  .mt-item-link { padding: 20px 20px 18px 24px; }
+  .mt-unread { left: 10px; top: 27px; }
+  .mt-rows { padding: 4px 4px; }
+  .mt-section-label, .mt-note, .mt-status { padding-left: 16px; padding-right: 16px; }
+  .mt-empty { padding: 28px 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mt-switch, .mt-switch::after { transition: none; }
+}

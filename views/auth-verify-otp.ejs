@@ -1,198 +1,114 @@
-<!DOCTYPE html>
+<%
+  // Code entry — v2. One generic screen for every 6-digit code step:
+  //   purpose 'verify' — confirming a new account's email (sign-up)
+  //   purpose 'login'  — passwordless sign-in or email two-factor at sign-in
+  // A future authenticator-app (TOTP) step can reuse it by passing its own
+  // heading / subtitle / action / submitLabel and resend:false, sms:false.
+  // Locals: email, error, purpose, and the optional overrides above.
+  const purpose = locals.purpose || 'verify';
+  const isLogin = purpose === 'login';
+  const heading = locals.heading || (isLogin ? 'Enter your sign-in code' : 'Check your email');
+  const submitLabel = locals.submitLabel || (isLogin ? 'Sign in' : 'Verify email');
+  const action = locals.action || '/verify-email';
+  const allowResend = locals.resend !== false;
+  const allowSms = locals.sms !== undefined ? !!locals.sms : !isLogin;
+  const email = locals.email || '';
+%><!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#020109">
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
-  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
-  <title>Verify your email — Maal</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/theme.css">
-  <link rel="stylesheet" href="/css/retro-auth.css">
-  <style>
-    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1rem; }
-    .auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow-lg); padding: 2.5rem; width: 100%; max-width: 420px; }
-    .auth-logo { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; color: var(--accent); margin-bottom: 2rem; }
-    .auth-card h1 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem; }
-    .auth-card p { font-size: 0.875rem; color: var(--fg-muted); margin: 0 0 2rem; line-height: 1.6; }
-    .otp-inputs { display: flex; gap: 0.6rem; justify-content: center; margin-bottom: 1.75rem; }
-    .otp-inputs input {
-      width: 52px; height: 60px; text-align: center; font-size: 1.5rem; font-weight: 600;
-      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-      color: var(--fg); font-family: var(--font-body); outline: none;
-      transition: border-color 0.2s, background 0.2s; caret-color: var(--accent);
-    }
-    .otp-inputs input:focus { border-color: var(--accent); background: rgba(201,168,76,0.06); }
-    .otp-inputs input.filled { border-color: rgba(201,168,76,0.4); }
-    .btn-primary { width: 100%; background: var(--accent); color: #fff; font-weight: 600;
-      font-size: 0.95rem; padding: 0.85rem; border: none; border-radius: 10px;
-      cursor: pointer; font-family: var(--font-body); transition: opacity 0.2s; }
-    .btn-primary:hover { opacity: 0.88; }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .alert-error { background: var(--danger-soft); border: 1px solid rgba(224,112,112,0.3);
-      color: var(--danger); padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.875rem; margin-bottom: 1.25rem; }
-    .resend-row { text-align: center; margin-top: 1.25rem; font-size: 0.825rem; color: var(--fg-muted); }
-    .resend-row a, .resend-row button { color: var(--accent); background: none; border: none;
-      cursor: pointer; font-family: var(--font-body); font-size: 0.825rem; padding: 0; }
-    .resend-row a:hover, .resend-row button:hover { text-decoration: underline; }
-    #resendTimer { color: var(--fg-muted); }
-    .divider { display: flex; align-items: center; gap: 0.75rem; margin: 1.25rem 0; color: var(--fg-muted); font-size: 0.8rem; }
-    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-    .btn-sms { width: 100%; background: transparent; border: 1px solid var(--border); color: var(--fg);
-      font-size: 0.875rem; font-weight: 500; padding: 0.75rem; border-radius: 10px; cursor: pointer;
-      font-family: var(--font-body); transition: border-color 0.2s, background 0.2s; display: flex;
-      align-items: center; justify-content: center; gap: 0.5rem; }
-    .btn-sms:hover { border-color: var(--accent); background: var(--surface-2); }
-    .btn-sms:disabled { opacity: 0.5; cursor: not-allowed; }
-    #smsStatus { text-align: center; font-size: 0.8rem; margin-top: 0.5rem; min-height: 1.2em; }
-  </style>
+<%- include('partials/v2-head', { title: heading }) %>
 </head>
-<body>
-  <div class="auth-card">
-    <div class="auth-logo">◈ Maal</div>
-    <h1>Check your email</h1>
-    <p>We sent a 6-digit code to <strong style="color:var(--fg)"><%= email %></strong>. Enter it below to verify your account.</p>
+<body class="v2 v2-focus-page">
+<%- include('partials/v2-focus-header', { back: locals.back || '/login' }) %>
+  <main class="v2-focus">
+    <div class="v2-focus-inner">
+      <%- include('partials/v2-icon', { name: locals.icon || (isLogin ? 'shield' : 'mail') }) %>
+      <h1><%= heading %></h1>
+      <p class="v2-focus-sub">
+        <% if (locals.subtitle) { %><%= subtitle %>
+        <% } else { %>We sent a 6-digit code to <strong><%= email %></strong>. <%= isLogin ? 'Enter it below to sign in.' : 'Enter it below to confirm your email.' %> It expires in 10 minutes.<% } %>
+      </p>
 
-    <% if (error) { %>
-      <div class="alert-error"><%= error %></div>
-    <% } %>
+      <% if (locals.error) { %><div class="v2-alert" role="alert"><%= error %></div><% } %>
 
-    <form method="POST" action="/verify-email" id="otpForm">
-      <input type="hidden" name="email" value="<%= email %>">
-      <input type="hidden" name="code" id="codeHidden">
+      <form method="POST" action="<%= action %>" id="otp-form" class="v2-focus-form">
+        <input type="hidden" name="email" value="<%= email %>">
+        <input type="hidden" name="code" id="code-hidden">
+        <div class="v2-otp" data-otp data-target="code-hidden" role="group" aria-label="6-digit code">
+          <% for (let i = 0; i < 6; i++) { %><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="<%= i === 0 ? 6 : 1 %>" <%- i === 0 ? 'autocomplete="one-time-code"' : 'autocomplete="off"' %> aria-label="Digit <%= i + 1 %>"><% } %>
+        </div>
+        <div class="v2-focus-actions"><button type="submit" class="v2-btn v2-btn-ink" id="otp-submit" disabled><%= submitLabel %></button></div>
+      </form>
 
-      <div class="otp-inputs" id="otpInputs">
-        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="off">
-        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="off">
-        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="off">
-        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="off">
-        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="off">
-        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="off">
-      </div>
-
-      <button type="submit" class="btn-primary" id="btnVerify" disabled>Verify email</button>
-    </form>
-
-    <div class="resend-row">
-      <span id="resendTimer">Resend code in <span id="countdown">60</span>s</span>
-      <button id="btnResend" style="display:none">Resend to email</button>
+      <% if (allowResend) { %>
+      <p class="v2-switch" id="resend-row" data-email="<%= email %>">
+        <span id="resend-timer">You can resend the code in <span id="countdown">60</span>s</span>
+        <button type="button" class="v2-linkbtn" id="btn-resend" hidden>Resend code</button>
+        <span id="resend-status" class="v2-status" aria-live="polite"></span>
+      </p>
+      <% } %>
+      <% if (allowSms) { %>
+      <p class="v2-switch">No email? <button type="button" class="v2-linkbtn" id="btn-sms">Text me a code instead</button> <span id="sms-status" class="v2-status" aria-live="polite"></span></p>
+      <% } %>
     </div>
-
-    <div class="divider">or</div>
-
-    <button class="btn-sms" id="btnSms">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.09 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"></path></svg>
-      Send code via SMS instead
-    </button>
-    <div id="smsStatus"></div>
-  </div>
-
+  </main>
+<%- include('partials/v2-focus-footer') %>
+  <script src="/js/v2-auth.js"></script>
   <script>
-    const digits = document.querySelectorAll('.otp-digit');
-    const hidden = document.getElementById('codeHidden');
-    const btn = document.getElementById('btnVerify');
-
-    digits.forEach((d, i) => {
-      d.addEventListener('input', e => {
-        const val = e.target.value.replace(/\D/g, '');
-        e.target.value = val;
-        if (val && i < 5) digits[i + 1].focus();
-        syncCode();
-      });
-      d.addEventListener('keydown', e => {
-        if (e.key === 'Backspace' && !e.target.value && i > 0) {
-          digits[i - 1].focus();
-          digits[i - 1].value = '';
-          syncCode();
-        }
-      });
-      d.addEventListener('paste', e => {
-        e.preventDefault();
-        const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
-        paste.split('').forEach((ch, j) => { if (digits[j]) digits[j].value = ch; });
-        if (paste.length > 0) digits[Math.min(paste.length, 5)].focus();
-        syncCode();
-      });
+  (function () {
+    var submit = document.getElementById('otp-submit');
+    var boxes = window.MaalAuth.otpBoxes(document.querySelector('[data-otp]'), function (code) {
+      submit.disabled = code.length < 6;
+    });
+    document.getElementById('otp-form').addEventListener('submit', function () {
+      submit.disabled = true;
     });
 
-    function syncCode() {
-      const code = Array.from(digits).map(d => d.value).join('');
-      hidden.value = code;
-      btn.disabled = code.length < 6;
-      digits.forEach(d => d.classList.toggle('filled', d.value !== ''));
+    var row = document.getElementById('resend-row');
+    var email = row ? row.getAttribute('data-email') : '';
+    function post(url) {
+      return fetch(url, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email })
+      }).then(function (r) { return r.json().catch(function () { return {}; }); });
     }
 
-    // Countdown timer for resend
-    let seconds = 60;
-    const countdownEl = document.getElementById('countdown');
-    const timerEl = document.getElementById('resendTimer');
-    const resendBtn = document.getElementById('btnResend');
-    const timer = setInterval(() => {
-      seconds--;
-      countdownEl.textContent = seconds;
-      if (seconds <= 0) {
-        clearInterval(timer);
-        timerEl.style.display = 'none';
-        resendBtn.style.display = 'inline';
-      }
-    }, 1000);
-
-    async function resendEmail() {
-      resendBtn.disabled = true;
-      resendBtn.textContent = 'Sending…';
-      try {
-        const res = await fetch('/resend-otp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: '<%= email %>' })
-        });
-        const data = await res.json();
-        resendBtn.textContent = data.ok ? 'Sent!' : 'Try again';
-        if (data.ok) setTimeout(() => { resendBtn.textContent = 'Resend to email'; resendBtn.disabled = false; }, 3000);
-        else resendBtn.disabled = false;
-      } catch(e) {
-        resendBtn.textContent = 'Try again';
-        resendBtn.disabled = false;
-      }
+    if (row) {
+      var seconds = 60;
+      var timer = document.getElementById('resend-timer');
+      var countdown = document.getElementById('countdown');
+      var resend = document.getElementById('btn-resend');
+      var status = document.getElementById('resend-status');
+      var tick = setInterval(function () {
+        seconds--;
+        countdown.textContent = seconds;
+        if (seconds <= 0) { clearInterval(tick); timer.hidden = true; resend.hidden = false; }
+      }, 1000);
+      resend.addEventListener('click', function () {
+        resend.disabled = true;
+        status.textContent = 'Sending…';
+        post('/resend-otp').then(function (d) {
+          status.textContent = d.ok ? 'New code sent.' : (d.error || 'Couldn’t send. Try again shortly.');
+          setTimeout(function () { resend.disabled = false; status.textContent = ''; }, d.ok ? 30000 : 3000);
+        }).catch(function () { status.textContent = 'Couldn’t send. Try again shortly.'; resend.disabled = false; });
+      });
     }
 
-    async function resendSms() {
-      const smsBtn = document.getElementById('btnSms');
-      const smsStatus = document.getElementById('smsStatus');
-      smsBtn.disabled = true;
-      smsStatus.style.color = 'var(--fg-muted)';
-      smsStatus.textContent = 'Sending SMS…';
-      try {
-        const res = await fetch('/resend-otp-sms', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: '<%= email %>' })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          smsStatus.style.color = '#7ED4A6';
-          smsStatus.textContent = 'Code sent to your phone!';
-          setTimeout(() => { smsBtn.disabled = false; smsStatus.textContent = ''; }, 30000);
-        } else {
-          smsStatus.style.color = '#E07070';
-          smsStatus.textContent = data.error || 'Failed to send SMS.';
-          smsBtn.disabled = false;
-        }
-      } catch(e) {
-        smsStatus.style.color = '#E07070';
-        smsStatus.textContent = 'Something went wrong.';
-        smsBtn.disabled = false;
-      }
+    var sms = document.getElementById('btn-sms');
+    if (sms) {
+      var smsStatus = document.getElementById('sms-status');
+      sms.addEventListener('click', function () {
+        sms.disabled = true;
+        smsStatus.textContent = 'Sending…';
+        post('/resend-otp-sms').then(function (d) {
+          smsStatus.textContent = d.ok ? 'Code sent to your phone.' : (d.error || 'Couldn’t send a text.');
+          setTimeout(function () { sms.disabled = false; }, d.ok ? 30000 : 0);
+        }).catch(function () { smsStatus.textContent = 'Something went wrong.'; sms.disabled = false; });
+      });
     }
-
-    // Bound here, not via onclick="" (Helmet CSP: script-src-attr 'none').
-    document.getElementById('btnResend').addEventListener('click', resendEmail);
-    document.getElementById('btnSms').addEventListener('click', resendSms);
-
-    digits[0].focus();
+    boxes.focus();
+  })();
   </script>
 </body>
 </html>

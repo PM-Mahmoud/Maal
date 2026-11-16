@@ -59,7 +59,7 @@ export const CALCULATORS: SubPage[] = [
 ];
 
 export const ACCOUNT: SubPage[] = [
-  { to: "/app/onboarding", label: "Profile" },
+  { to: "/app/settings", label: "Settings" },
   { to: "/app/billing", label: "Plan & Usage" },
   { to: "/app/roadmap", label: "Roadmap" },
 ];

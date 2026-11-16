@@ -32,18 +32,28 @@ Maal copy only (never the reference app's name, wording, images or logo), partne
 ## Earlier
 - Onboarding v2 first pass (frames 01–16 of lYCk0dAcbGQGZt96GzU9ui) — live 2026-11-14 (PRs #84–#87).
 
-## Session 1 — next up (Figma links to come)
-| # | Flow | Figma file key | Agent / branch | Status |
-|---|------|----------------|----------------|--------|
-| 19 | Notifications | — | — | todo |
-| 20 | Switching to dark mode | — | — | todo |
-| 21 | Settings | — | — | todo |
-| 22 | Spending settings | — | — | todo |
-| 23 | Logging out | — | — | todo |
-| 24 | Logging in | — | — | todo |
-
 ## Sessions 2–4 — skipped for now (come back after session 5)
 
-## Session 5 — 2026-11-16 (15 flows, links to come)
+## Session 5 — 2026-11-16 (15 flows, Figma folder "Session 5 (Notifications to Loggin in)"; absorbs session 1's last 6)
 
-## Remaining after session 5: to be counted against the 85 total
+Integration branch `redesign/session-5`.
+
+| # | Flow | Figma file key | Agent / branch | Status |
+|---|------|----------------|----------------|--------|
+| 19 | Settings (account menu) | 9sm4aMNV57N8YlPMVgLZzP | S5-A `redesign/s5-settings` | built |
+| 20 | Updating profile from Settings | GMED6uyqybaq7YnoHDy8Wx | S5-A `redesign/s5-settings` | built |
+| 21 | Deleting an account from Settings | CSM6a5Tr8a1FSWjSjexKte | S5-A `redesign/s5-settings` | built |
+| 22 | Setting up two-factor authentication from Settings (file holds a risk-assessment copy — real 2FA design still needed; email-code 2FA restyled) | U9mxYZzdxlpJJm7Fh0EhGd | S5-B `redesign/s5-security-risk` | built |
+| 23 | Completing a risk assessment from Settings | CUkAI3SGv2ZKLYliEXyB7P | S5-B `redesign/s5-security-risk` | built |
+| 24 | Notifications | pYQyGJdHqBN9AMTVnSCmhi | S5-C `redesign/s5-notifications-theme` | built |
+| 25 | Switching to dark mode | 1mqGFan896h4zXV5VRCSfL | S5-C `redesign/s5-notifications-theme` | built |
+| 26 | Spending settings | LUk8sLdS6r5SCvoIgaN97u | S5-D `redesign/s5-spending-settings` | built |
+| 27 | Updating transaction settings from Spending settings | CK6YjfQEUKjRF0AmsMU8jb | S5-D `redesign/s5-spending-settings` | built |
+| 28 | Deleting a budget from Spending settings | 5pXgKSLHDmG403mDQts3dp | S5-D `redesign/s5-spending-settings` | built |
+| 29 | Creating a rule from Spending settings | VufoAtRve4sbettacY829g | S5-E `redesign/s5-rules` | built |
+| 30 | Preview matches from Creating a rule | rRSE0eHTc2KYpWW0OFDyL3 | S5-E `redesign/s5-rules` | built |
+| 31 | Logging in | 1V4AF22TucvpK04gBXb0Hz | S5-F `redesign/s5-auth` | built |
+| 32 | Resetting password from Logging in | K1sI9HQZFjVsPnqVd0beKH | S5-F `redesign/s5-auth` | built |
+| 33 | Logging out | HBNv4Mvb9yy4TbkTemym2w | S5-F `redesign/s5-auth` | built |
+
+## Remaining: 33 of 85 built; sessions 2–4 and later to come

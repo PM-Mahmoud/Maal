@@ -174,7 +174,7 @@ async function getTxnsForSubscriptions(userId, days = 400, limit = 2000) {
 async function listRules(userId) {
   const r = await pool.query(
     `SELECT id, name, match_type, match_text, category_group, category,
-            priority, amount_direction, created_at
+            priority, amount_direction, conditions, created_at
        FROM transaction_rules WHERE user_id = $1
        ORDER BY priority DESC, created_at ASC, id ASC`,
     [userId]
@@ -182,19 +182,31 @@ async function listRules(userId) {
   return r.rows;
 }
 
+// One rule, ownership-checked in SQL (no IDOR).
+async function getRule(userId, id) {
+  const r = await pool.query(
+    `SELECT id, name, match_type, match_text, category_group, category,
+            priority, amount_direction, conditions, created_at
+       FROM transaction_rules WHERE id = $1 AND user_id = $2`,
+    [id, userId]
+  );
+  return r.rows[0] || null;
+}
+
 async function createRule(userId, {
-  name, match_type, match_text, category_group, category, priority, amount_direction,
+  name, match_type, match_text, category_group, category, priority, amount_direction, conditions,
 }) {
   const r = await pool.query(
     `INSERT INTO transaction_rules
        (user_id, name, match_type, match_text, category_group, category,
-        priority, amount_direction)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+        priority, amount_direction, conditions)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb) RETURNING id`,
     [
       userId, (name || '').slice(0, 80) || null, match_type || 'contains',
       String(match_text || '').slice(0, 120), category_group, category || null,
       Math.max(-100, Math.min(100, Math.round(Number(priority) || 0))),
       amount_direction || 'any',
+      JSON.stringify(conditions && typeof conditions === 'object' ? conditions : {}),
     ]
   );
   return r.rows[0].id;
@@ -293,6 +305,6 @@ module.exports = {
   getCashFlowTransactions,
   getTransactionsForQuality,
   getTransactionsWithCategory, getTxnsForSubscriptions,
-  listRules, createRule, deleteRule, setTransactionCategory,
+  listRules, getRule, createRule, deleteRule, setTransactionCategory,
   getLearnedCategoryPreferences, applyCategoryAssignments,
 };

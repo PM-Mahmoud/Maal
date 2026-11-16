@@ -1,0 +1,23 @@
+<%# Right-hand panel of the v2 auth split (sign-up, sign-in): Maal's own night
+    sky and an illustrative spending card. Decorative only — not real data. %>
+    <aside class="v2-sky" aria-hidden="true">
+      <svg class="v2-sky-stars" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <% for (let i = 0; i < 40; i++) { %><circle cx="<%= (i * 73) % 100 %>" cy="<%= (i * 37) % 70 %>" r="<%= i % 7 === 0 ? 0.24 : 0.13 %>" fill="#fff" opacity="<%= (0.35 + ((i * 13) % 50) / 100).toFixed(2) %>"/><% } %>
+      </svg>
+      <span class="v2-sky-streak"></span>
+      <h2>Track spending, ask anything.<br>Grow it interest-free.</h2>
+      <div class="v2-glass v2-spend" aria-label="Example spending chart, not real data">
+        <div class="v2-spend-head">
+          <p class="v2-kicker">Spent this month <span style="opacity:.7;font-weight:400">· example</span></p>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z"/></svg>
+        </div>
+        <p class="v2-glass-big">$2,132</p>
+        <p class="v2-spend-month">&bull; November</p>
+        <svg class="v2-spend-chart" viewBox="0 0 316 90" preserveAspectRatio="none">
+          <defs><linearGradient id="spendFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset="1" stop-color="#fff" stop-opacity=".04"/></linearGradient></defs>
+          <path d="M0 86 C60 86 90 72 140 52 S230 14 316 12 L316 90 L0 90 Z" fill="url(#spendFill)"/>
+          <path d="M0 86 C60 86 90 72 140 52 S230 14 316 12" fill="none" stroke="#fff" stroke-width="1.6"/>
+        </svg>
+        <div class="v2-spend-axis"><span>01</span><span>07</span><span>14</span><span>21</span><span>28</span></div>
+      </div>
+    </aside>

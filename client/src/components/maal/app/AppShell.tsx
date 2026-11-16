@@ -1,5 +1,5 @@
 import { AdvisorPopup, openAdvisorPopup } from "@/components/maal/advisor/AdvisorPopup";
-import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { supabase, handleUnauthenticated } from "@/integrations/api";
@@ -7,10 +7,11 @@ import { Disclaimer } from "@/components/maal/Disclaimer";
 import { MaalMark } from "@/components/maal/MaalMark";
 import { ThemeToggle } from "@/components/maal/ThemeToggle";
 import { NotificationBell } from "@/components/maal/app/NotificationBell";
+import { LogoutIconButton, LogoutRow } from "@/components/maal/app/Logout";
 import { initPrivacy } from "@/components/maal/home/prefs";
 import "@/components/maal/home/home.css";
 import {
-  FolderLock, ArrowLeftRight, UserCircle2, Home, MessageSquarePlus, Map, LifeBuoy, ChevronDown, LogOut,
+  FolderLock, ArrowLeftRight, UserCircle2, Home, MessageSquarePlus, Map, LifeBuoy, ChevronDown,
   X, Lightbulb, CreditCard, Menu, Sparkles, BarChart3, BriefcaseBusiness, HandCoins,
   TrendingUp, PieChart, ScrollText, Receipt, UserRound, Target, ListChecks, Sprout,
 } from "lucide-react";
@@ -46,7 +47,6 @@ const BOTTOM: Item[] = ACCOUNT.map((a, i) => ({ ...a, icon: ACCOUNT_ICONS[i] }))
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const navigate = useNavigate();
   const [email, setEmail] = useState<string>("");
   const [servicesOpen, setServicesOpen] = useState(true);
   const [toolsOpen, setToolsOpen] = useState(true);
@@ -97,8 +97,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  async function signOut() { await supabase.auth.signOut(); navigate({ to: "/" }); }
-
   return (
     <div className="mh-shell min-h-screen flex">
       <aside className="mh-side hidden md:flex shrink-0 flex-col sticky top-0 h-screen">
@@ -129,10 +127,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <p className="text-[11px] text-[var(--mh-muted)] truncate">{email}</p>
             <div className="flex items-center gap-1.5">
               <ThemeToggle />
-              <button onClick={signOut} aria-label="Sign out" title="Sign out"
-                className="grid size-7 place-items-center rounded-full text-[var(--mh-muted)] hover:text-[var(--mh-ink)] hover:bg-[var(--mh-chip)]">
-                <LogOut className="size-3.5" />
-              </button>
+              <LogoutIconButton />
             </div>
           </div>
         </div>
@@ -203,9 +198,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <span className="truncate text-[11px] text-[var(--mh-muted)]">{email}</span>
                   <ThemeToggle />
                 </div>
-                <button onClick={signOut} className="mh-nav w-full bg-transparent border-0 text-left">
-                  <LogOut aria-hidden /> Sign out
-                </button>
+                <LogoutRow className="mt-3" />
               </section>
             </nav>
           </DialogPrimitive.Content>

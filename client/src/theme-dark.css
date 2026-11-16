@@ -1,0 +1,253 @@
+/* ============================================================
+   Maal v2 dark theme ("Switching to dark mode" Figma flow, 2026-11).
+
+   One neutral night palette — near-black page, #101010 cards on a #232323
+   hairline, white text and white primary buttons — replacing the old
+   warm-brown / navy dark tokens. Applied when <html> carries `.dark`
+   (+ data-theme="dark"); src/lib/theme.ts and the inline script in
+   index.html set both before first paint.
+
+   Every v2 surface keeps its own scoped token set (--mh-* Home/app shell,
+   --v2-* landing/welcome, --a-* advisor, --ms-* subscribe, --cx-* connect,
+   --mb-* briefs) — this file only re-points those tokens. Selectors start
+   with `:root.dark` so they outrank the scoped files' own `html.dark` /
+   `html[data-theme]` blocks regardless of chunk load order.
+
+   Contrast (WCAG AA, normal text): ink #F2F2F2 on #101010 = 17:1,
+   muted #A3A3A3 = 7.9:1, faint #8A8A8A = 5.5:1; on #050505 all higher.
+   ============================================================ */
+
+:root.dark {
+  /* Palette */
+  --dk-page: #050505;
+  --dk-card: #101010;
+  --dk-raise: #161616;   /* hover */
+  --dk-chip: #1C1C1C;    /* active nav / pressed range / chips */
+  --dk-line: #232323;
+  --dk-line-strong: #383838;
+  --dk-btn-line: #5C5C5C;
+  --dk-ink: #F2F2F2;
+  --dk-ink-soft: #D4D4D4;
+  --dk-muted: #A3A3A3;
+  --dk-faint: #8A8A8A;
+  --dk-btn: #F2F2F2;
+  --dk-btn-ink: #050505;
+  --dk-badge: #0E3542;
+  --dk-badge-ink: #9BE7F8;
+  --dk-accent: #5CC8DC;
+  --dk-good: #2FC197;
+  --dk-bad: #F07171;
+  --dk-chart: #3AA5EC;
+
+  color-scheme: dark;
+
+  /* Global shadcn/Tailwind tokens (were warm-brown) */
+  --background: var(--dk-page);
+  --surface: var(--dk-card);
+  --foreground: var(--dk-ink);
+  --card: var(--dk-card);
+  --card-foreground: var(--dk-ink);
+  --popover: var(--dk-card);
+  --popover-foreground: var(--dk-ink);
+  --primary: #F0754B;
+  --primary-foreground: #050505;
+  --secondary: var(--dk-chip);
+  --secondary-foreground: var(--dk-ink);
+  --muted: var(--dk-chip);
+  --muted-foreground: var(--dk-muted);
+  --accent: var(--dk-chip);
+  --accent-foreground: var(--dk-ink);
+  --destructive: var(--dk-bad);
+  --destructive-foreground: #050505;
+  --border: var(--dk-line);
+  --input: var(--dk-line);
+  --ring: var(--dk-accent);
+  --mint: #4DB6AC;
+  --chart-5: var(--dk-muted);
+  --sidebar: var(--dk-page);
+  --sidebar-foreground: var(--dk-ink);
+  --sidebar-accent: var(--dk-chip);
+  --sidebar-accent-foreground: var(--dk-ink);
+  --sidebar-border: var(--dk-line);
+}
+
+/* Canvas + body (globals paints <html> ink for overscroll; home.css paints
+   the body navy while the app shell is mounted). */
+:root.dark, :root.dark body,
+:root.dark:has(.mh-shell), :root.dark:has(.mh-shell) body { background-color: var(--dk-page); }
+:root.dark:has(.mh-shell) {
+  --background: var(--dk-page);
+  --surface: var(--dk-card);
+  --card: var(--dk-card);
+  --popover: var(--dk-card);
+  --secondary: var(--dk-chip);
+  --muted: var(--dk-chip);
+  --accent: var(--dk-chip);
+  --border: var(--dk-line);
+  --input: var(--dk-line);
+  --sidebar: var(--dk-page);
+  --sidebar-border: var(--dk-line);
+  --sidebar-accent: var(--dk-chip);
+}
+
+/* ---------- App shell + Home (--mh-*) ---------- */
+:root.dark .mh, :root.dark .mh-shell {
+  --mh-bg: var(--dk-page);
+  --mh-card: var(--dk-card);
+  --mh-line: var(--dk-line);
+  --mh-line-strong: var(--dk-line-strong);
+  --mh-btn-line: var(--dk-btn-line);
+  --mh-ink: var(--dk-ink);
+  --mh-muted: var(--dk-muted);
+  --mh-faint: var(--dk-faint);
+  --mh-chip: var(--dk-chip);
+  --mh-hover: var(--dk-raise);
+  --mh-good: var(--dk-good);
+  --mh-bad: var(--dk-bad);
+  --mh-chart: var(--dk-chart);
+  --mh-chart-fill: rgba(58, 165, 236, .22);
+  --mh-btn: var(--dk-btn);
+  --mh-btn-ink: var(--dk-btn-ink);
+  --mh-badge: var(--dk-badge);
+  --mh-badge-ink: var(--dk-badge-ink);
+  --mh-spark: #A894FF;
+  --mh-today: var(--dk-chart);
+}
+/* Active nav / tab: Figma uses a #191919-ish fill with no ring. */
+:root.dark .mh-nav[data-active="true"] { background: var(--dk-chip); box-shadow: none; }
+:root.dark .mh-iconbtn { background: var(--dk-raise); }
+:root.dark .mh-iconbtn--avatar { border-color: var(--dk-ink); }
+/* Empty-page placeholder hard-codes the light page shade. */
+:root.dark .mn-empty { background: var(--dk-page); }
+
+/* ---------- Landing / welcome / sign-up v2 (--v2-*) ---------- */
+:root.dark .v2 {
+  --v2-bg: var(--dk-page);
+  --v2-surface: var(--dk-card);
+  --v2-surface-2: var(--dk-raise);
+  --v2-ink: var(--dk-ink);
+  --v2-ink-soft: var(--dk-ink-soft);
+  --v2-muted: var(--dk-muted);
+  --v2-faint: var(--dk-faint);
+  --v2-hair: var(--dk-line);
+  --v2-hair-strong: var(--dk-line-strong);
+  --v2-btn: var(--dk-btn);
+  --v2-accent: var(--dk-accent);
+  --v2-accent-soft: var(--dk-badge);
+  --v2-accent-ink: var(--dk-badge-ink);
+  --v2-good: var(--dk-good);
+  --v2-shadow: 0 1px 2px rgba(0, 0, 0, .5);
+}
+:root.dark .v2 .v2-btn-ink { color: var(--dk-btn-ink); }
+:root.dark .v2 .v2-btn-line { border-color: var(--dk-btn-line); }
+/* Elements that pair --v2-btn with a hard-coded white glyph. */
+:root.dark .v2 .v2-step-num { color: var(--dk-btn-ink); }
+:root.dark .v2 .v2-list li::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 8.3l2.2 2.2 4.8-5' fill='none' stroke='%23050505' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* ---------- Advisor (--a-* + re-pointed globals) ---------- */
+:root.dark .mx-adv {
+  --background: var(--dk-page); --surface: var(--dk-card); --card: var(--dk-card); --popover: var(--dk-card);
+  --foreground: var(--dk-ink); --card-foreground: var(--dk-ink); --popover-foreground: var(--dk-ink);
+  --secondary: var(--dk-chip); --secondary-foreground: var(--dk-ink);
+  --muted: var(--dk-chip); --muted-foreground: var(--dk-muted);
+  --accent: var(--dk-chip); --accent-foreground: var(--dk-ink);
+  --primary-foreground: var(--dk-btn-ink);
+  --border: var(--dk-line); --input: var(--dk-line);
+  --a-bg: var(--dk-page); --a-surface: var(--dk-card); --a-surface-2: var(--dk-raise);
+  --a-ink: var(--dk-ink); --a-ink-soft: var(--dk-ink-soft); --a-muted: var(--dk-muted); --a-faint: var(--dk-faint);
+  --a-hair: var(--dk-line); --a-hair-strong: var(--dk-line-strong);
+  --a-btn: var(--dk-btn); --a-btn-ink: var(--dk-btn-ink);
+  --a-badge: var(--dk-badge); --a-badge-ink: var(--dk-badge-ink); --a-hint: #0F2B28;
+  --a-good: var(--dk-good);
+  --a-shadow: 0 12px 40px rgba(0, 0, 0, .6);
+}
+
+/* ---------- Subscribe / complete onboarding (--ms-*) ---------- */
+:root.dark .msub {
+  --ms-bg: var(--dk-page);
+  --ms-surface: var(--dk-card);
+  --ms-ink: var(--dk-ink);
+  --ms-ink-strong: #FFFFFF;
+  --ms-muted: var(--dk-muted);
+  --ms-faint: var(--dk-faint);
+  --ms-hair: var(--dk-line);
+  --ms-list: var(--dk-raise);
+  --ms-list-hair: var(--dk-line-strong);
+  --ms-btn: var(--dk-btn);
+  --ms-badge: var(--dk-badge);
+  --ms-badge-ink: var(--dk-badge-ink);
+  --ms-accent: var(--dk-accent);
+  --ms-good: var(--dk-good);
+}
+
+/* ---------- Connect accounts (--cx-*) ---------- */
+:root.dark .cx {
+  --cx-bg: var(--dk-page);
+  --cx-surface: var(--dk-card);
+  --cx-ink: var(--dk-ink);
+  --cx-ink-2: var(--dk-ink-soft);
+  --cx-muted: var(--dk-muted);
+  --cx-label: var(--dk-muted);
+  --cx-hair: var(--dk-line);
+  --cx-tile-line: var(--dk-line);
+  --cx-field-line: var(--dk-line-strong);
+  --cx-btn: var(--dk-btn);
+  --cx-badge: var(--dk-badge);
+  --cx-badge-ink: var(--dk-badge-ink);
+  --cx-good: var(--dk-good);
+  --cx-good-track: #133126;
+  --cx-chip: var(--dk-chip);
+}
+
+/* ---------- Weekly recap / market brief (--mb-*) ---------- */
+:root.dark .mb, :root.dark .mb-overlay {
+  --mb-page: var(--dk-page);
+  --mb-card: var(--dk-card);
+  --mb-surface: var(--dk-card);
+  --mb-ink: var(--dk-ink);
+  --mb-ink-strong: #FFFFFF;
+  --mb-body: var(--dk-muted);
+  --mb-label: var(--dk-muted);
+  --mb-faint: var(--dk-faint);
+  --mb-hair: var(--dk-line);
+  --mb-chip: var(--dk-chip);
+  --mb-btn: var(--dk-btn);
+  --mb-badge: var(--dk-badge);
+  --mb-badge-ink: var(--dk-badge-ink);
+  --mb-line: var(--dk-chart);
+  --mb-up: var(--dk-good);
+  --mb-down: var(--dk-bad);
+}
+/* Home brief cards (briefs.css hard-codes navy for these). */
+:root.dark .mb-entry { background: var(--dk-card); border-color: var(--dk-line); color: var(--dk-ink); }
+:root.dark .mb-entry-head { border-bottom-color: var(--dk-line); color: var(--dk-muted); }
+:root.dark .mb-entry-title, :root.dark .mb-entry-close { color: var(--dk-ink); }
+:root.dark .mb-entry-sub { color: var(--dk-muted); }
+
+/* ---------- /welcome onboarding (.wl) ----------
+   v2-landing.css hard-codes the light steps' white/black values, so map
+   them onto the night palette here. Steps that are already dark by design
+   (.wl.is-dark: the connect step) keep their own black hero. */
+:root.dark .wl, :root.dark .wl-top, :root.dark .wl-foot { background-color: var(--dk-page); }
+:root.dark .wl:not(.is-dark) .wl-main { background: var(--dk-page); }
+:root.dark .wl { color: var(--dk-ink); }
+:root.dark .wl-top { border-bottom-color: var(--dk-line); }
+:root.dark .wl-foot { border-top-color: var(--dk-line); }
+:root.dark .wl-chip { color: var(--dk-ink); border-color: var(--dk-btn-line); }
+:root.dark .wl-chip:hover { border-color: var(--dk-ink); }
+:root.dark .wl-h1, :root.dark .wl-option, :root.dark .wl-option-icon, :root.dark .wl-tick,
+:root.dark .wl-howto, :root.dark .wl-timeline li, :root.dark .wl-terms-link,
+:root.dark .wl-linked-row, :root.dark .wl-skip-link, :root.dark .wl-foot a { color: var(--dk-ink); }
+:root.dark .wl-sub, :root.dark .wl-timeline li span:not(.wl-step-dot), :root.dark .wl-ref-progress,
+:root.dark .wl-terms, :root.dark .wl-muted, :root.dark .wl-fine, :root.dark .wl-disclaimer { color: var(--dk-muted); }
+:root.dark .wl-option { background: var(--dk-card); border-color: var(--dk-line-strong); }
+:root.dark .wl-option:hover { border-color: var(--dk-btn-line); }
+:root.dark .wl-option.on { background: var(--dk-chip); border-color: var(--dk-muted); }
+:root.dark .wl-timeline::before { background: var(--dk-ink); }
+:root.dark .wl-step-dot { background: var(--dk-ink); color: var(--dk-btn-ink); }
+:root.dark .wl-col .wl-copy { border-color: var(--dk-btn-line); color: var(--dk-ink); }
+:root.dark .wl-col .wl-copy.is-copied { border-color: var(--dk-ink); }
+:root.dark .wl-linked { background: var(--dk-card); border-color: var(--dk-line); }
+:root.dark .wl-linked-row { border-bottom-color: var(--dk-line); }

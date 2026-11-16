@@ -57,12 +57,32 @@ async function findUserByVerifyToken(token) {
   return result.rows[0] || null;
 }
 
-async function findUserByResetToken(token) {
+// `tokenHash` is the SHA-256 of the emailed token (lib/auth-tokens.js) —
+// users.reset_token only ever holds the hash, never the raw token.
+async function findUserByResetToken(tokenHash) {
+  if (!tokenHash) return null;
   const result = await pool.query(
     `SELECT id, email
      FROM users
      WHERE reset_token = $1 AND reset_token_exp > NOW()`,
-    [token]
+    [tokenHash]
+  );
+  return result.rows[0] || null;
+}
+
+// Single-use reset: sets the new password and burns the token in ONE atomic
+// UPDATE, so two concurrent submits of the same link can't both succeed.
+// Also clears any login lockout (the reset just proved email ownership).
+// Returns { id, email } or null when the token is unknown/expired/used.
+async function consumeResetToken(tokenHash, passwordHash) {
+  if (!tokenHash) return null;
+  const result = await pool.query(
+    `UPDATE users
+        SET password_hash = $2, reset_token = NULL, reset_token_exp = NULL,
+            failed_attempts = 0, locked_until = NULL, updated_at = NOW()
+      WHERE reset_token = $1 AND reset_token_exp > NOW()
+      RETURNING id, email`,
+    [tokenHash, passwordHash]
   );
   return result.rows[0] || null;
 }
@@ -94,11 +114,12 @@ async function setPasswordHash(userId, hash) {
   );
 }
 
-async function setResetToken(userId, token, expiresAt) {
+// Stores the token HASH (see findUserByResetToken).
+async function setResetToken(userId, tokenHash, expiresAt) {
   await pool.query(
     `UPDATE users SET reset_token = $2, reset_token_exp = $3, updated_at = NOW()
      WHERE id = $1`,
-    [userId, token, expiresAt]
+    [userId, tokenHash, expiresAt]
   );
 }
 
@@ -120,6 +141,7 @@ module.exports = {
   findUserByProvider,
   findUserByVerifyToken,
   findUserByResetToken,
+  consumeResetToken,
   setVerifyToken,
   markEmailVerified,
   setPasswordHash,

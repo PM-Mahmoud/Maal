@@ -28,9 +28,14 @@ app.get('/', (_req, res, next) => {
   ejs.renderFile(path.join(VIEWS, 'layout.ejs'), buildLandingContext())
     .then(html => res.send(html)).catch(next);
 });
-app.get('/login', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'auth-login.ejs'), { error: null, email: '' })
-    .then(html => res.send(html)).catch(next);
+app.get('/login', (req, res, next) => {
+  // ?state=error | signedout previews the alert / notice banners.
+  const s = req.query.state;
+  ejs.renderFile(path.join(VIEWS, 'auth-login.ejs'), {
+    error: s === 'error' ? 'Incorrect password. 2 attempts remaining before lockout.' : null,
+    notice: s === 'signedout' ? 'You’ve been logged out. See you soon.' : null,
+    email: s === 'error' ? 'mahmoud@example.com' : '', next: '',
+  }).then(html => res.send(html)).catch(next);
 });
 app.get('/signup', (req, res, next) => {
   ejs.renderFile(path.join(VIEWS, 'auth-signup.ejs'), {
@@ -40,20 +45,27 @@ app.get('/signup', (req, res, next) => {
     error: null, email: '', name: '',
   }).then(html => res.send(html)).catch(next);
 });
-app.get('/forgot-password', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'auth-forgot-password.ejs'), { error: null, success: null })
+app.get('/forgot-password', (req, res, next) => {
+  // ?state=sent previews "Check your email".
+  ejs.renderFile(path.join(VIEWS, 'auth-forgot-password.ejs'), { error: null, sent: req.query.state === 'sent', email: '' })
     .then(html => res.send(html)).catch(next);
 });
-app.get('/reset-password', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'auth-reset-password.ejs'), { error: null, success: null, token: 'demo-token' })
+app.get('/reset-password', (req, res, next) => {
+  // ?state=invalid | done previews the expired-link and success screens.
+  const s = req.query.state;
+  ejs.renderFile(path.join(VIEWS, 'auth-reset-password.ejs'), {
+    error: s === 'invalid' ? 'This reset link is invalid or has expired. Request a new one below.' : null,
+    success: s === 'done' ? true : null,
+    token: s ? '' : 'demo-token',
+  }).then(html => res.send(html)).catch(next);
+});
+app.get('/verify-otp', (req, res, next) => {
+  // ?state=login previews the sign-in code (passwordless / 2FA) copy.
+  ejs.renderFile(path.join(VIEWS, 'auth-verify-otp.ejs'), { email: 'mahmoud@example.com', error: null, purpose: req.query.state === 'login' ? 'login' : 'verify' })
     .then(html => res.send(html)).catch(next);
 });
-app.get('/verify-otp', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'auth-verify-otp.ejs'), { email: 'preview@example.com', error: null })
-    .then(html => res.send(html)).catch(next);
-});
-app.get('/verify-email', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'auth-verify-email.ejs'), { success: true, error: null })
+app.get('/verify-email', (req, res, next) => {
+  ejs.renderFile(path.join(VIEWS, 'auth-verify-email.ejs'), { success: req.query.state !== 'failed', error: null })
     .then(html => res.send(html)).catch(next);
 });
 app.get('/google-link', (_req, res, next) => {
@@ -200,6 +212,32 @@ app.get('/api/v1/advisor/memory', (_req, res) => res.json({ memory: null, custom
 // ?banks=live on the page URL previews the live Basiq connect step.
 app.get('/api/v1/basiq/status', (req, res) => res.json({ connected: false, live: /banks=live/.test(req.headers.referer || '') }));
 app.patch('/api/v1/profile', express.json(), (req, res) => res.json({ ...req.body, ok: true }));
+// Spending settings preview (in-memory; mirrors routes/spending-settings.js shapes).
+{
+  const { TAXONOMY } = require('../lib/transaction-categories');
+  const ss = require('../lib/spending-settings');
+  let pvSettings = {};
+  let pvBudgets = [{ id: 1, category_group: null, monthly_amount: '275.00' }];
+  let pvRules = [{ id: 1, name: null, match_type: 'contains', match_text: 'NETFLIX', category_group: 'Recurring & Subscriptions', category: 'Streaming', priority: 0, amount_direction: 'debit' }];
+  app.get('/api/v1/spending-settings', (_req, res) => res.json({ settings: ss.normaliseSettings(pvSettings) }));
+  app.patch('/api/v1/spending-settings', express.json(), (req, res) => {
+    const v = ss.validateSettingsPatch(req.body);
+    if (v.error) return res.status(400).json({ error: v.error });
+    pvSettings = { ...pvSettings, ...v.patch };
+    res.json({ settings: ss.normaliseSettings(pvSettings) });
+  });
+  app.get('/api/v1/budgets', (_req, res) => { const b = pvBudgets.map(ss.toBudget); res.json({ budgets: b, total: ss.totalMonthlyBudget(b) }); });
+  app.put('/api/v1/budgets', express.json(), (req, res) => {
+    const v = ss.validateBudgetInput(req.body);
+    if (v.error) return res.status(400).json({ error: v.error });
+    pvBudgets = pvBudgets.filter((b) => b.category_group !== v.budget.category_group).concat([{ id: Date.now(), ...v.budget }]);
+    res.json({ budget: ss.toBudget(pvBudgets[pvBudgets.length - 1]) });
+  });
+  app.delete('/api/v1/budgets', (_req, res) => { const n = pvBudgets.length; pvBudgets = []; res.json({ ok: true, deleted: n }); });
+  app.get('/api/v1/transaction-categories', (_req, res) => res.json({ groups: TAXONOMY.map((t) => ({ group: t.group, categories: t.categories })) }));
+  app.get('/api/v1/transaction-rules', (_req, res) => res.json({ rules: pvRules }));
+  app.delete('/api/v1/transaction-rules/:id', (req, res) => { pvRules = pvRules.filter((r) => String(r.id) !== req.params.id); res.json({ ok: true }); });
+}
 app.get('/api/v1/transaction-categories', (_req, res) => res.json([]));
 app.get('/api/v1/transaction-rules', (_req, res) => res.json([]));
 app.get('/api/v1/radar-templates', (_req, res) => res.json([]));
