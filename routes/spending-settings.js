@@ -15,7 +15,9 @@
 const express = require('express');
 const s = require('../lib/spending-settings');
 
-function createSpendingSettingsRouter({ db = require('../db/budgets') } = {}) {
+function createSpendingSettingsRouter({ db = require('../db/budgets'), categoriesDb = null } = {}) {
+  // Lazy so tests that inject `db` never load the pool.
+  const catDb = () => categoriesDb || require('../db/spending-categories');
   const router = express.Router();
 
   function requireAuth(req, res, next) {
@@ -50,7 +52,12 @@ function createSpendingSettingsRouter({ db = require('../db/budgets') } = {}) {
   });
 
   router.put('/v1/budgets', requireAuth, async (req, res) => {
-    const v = s.validateBudgetInput(req.body);
+    let customNames = [];
+    try {
+      // Custom categories (Session 2, HEL-89) can carry a budget too.
+      customNames = await catDb().customCategoryNames(req.session.userId);
+    } catch (e) { return fail(res, 'list custom categories', e); }
+    const v = s.validateBudgetInput(req.body, customNames);
     if (v.error) return res.status(400).json({ error: v.error });
     try {
       const row = await db.upsertBudget(req.session.userId, v.budget);

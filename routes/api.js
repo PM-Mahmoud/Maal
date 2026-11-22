@@ -1208,16 +1208,217 @@ router.post('/v1/files/generate', async (req, res) => {
   }
 });
 
+// ─── Session 2 – Breakdown & budget (HEL-84..HEL-90) ─────────────────────
+// Custom categories + category groups (lib/spending-categories.js,
+// db/spending-categories.js, migration 1756900000000) and the "Create a budget
+// with Maal" suggestion. Budgets themselves stay in routes/spending-settings.js.
+// Every query is scoped to req.session.userId in SQL. Registered before the
+// generic /v1/:table handler.
+
+const spendCats = require('../lib/spending-categories');
+const spendCatsDb = () => require('../db/spending-categories');
+
+function s2Id(v) {
+  const s = String(v == null ? '' : v);
+  return /^[1-9]\d{0,17}$/.test(s) ? s : null;
+}
+function s2Fail(res, where, e) {
+  console.error(`[breakdown] ${where} failed:`, e && e.message);
+  if (e && e.code === '23505') return res.status(409).json({ error: 'That name is already in use.' });
+  res.status(500).json({ error: 'Something went wrong. Please try again.' });
+}
+
+// GET /v1/spending-categories → { categories: [custom], groups: [{ id, name, kind, color, categories }] }
+router.get('/v1/spending-categories', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const db = spendCatsDb();
+    const [custom, g] = await Promise.all([db.listCustomCategories(req.session.userId), db.listGroups(req.session.userId)]);
+    res.json({ categories: custom.map(spendCats.toCategory), groups: spendCats.toGroups(g.groups, g.members) });
+  } catch (e) { s2Fail(res, 'list categories', e); }
+});
+
+router.post('/v1/spending-categories', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const db = spendCatsDb();
+    const names = await db.customCategoryNames(req.session.userId);
+    const v = spendCats.validateCategoryInput(req.body, names);
+    if (v.error) return res.status(400).json({ error: v.error });
+    const row = await db.createCustomCategory(req.session.userId, v.category);
+    res.json({ category: spendCats.toCategory(row) });
+  } catch (e) { s2Fail(res, 'create category', e); }
+});
+
+router.patch('/v1/spending-categories/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const id = s2Id(req.params.id);
+  if (!id) return res.status(404).json({ error: 'Category not found' });
+  try {
+    const db = spendCatsDb();
+    const cur = await db.getCustomCategory(id, req.session.userId);
+    if (!cur) return res.status(404).json({ error: 'Category not found' });
+    const names = await db.customCategoryNames(req.session.userId);
+    const v = spendCats.validateCategoryInput(req.body, names, { partial: true, currentName: cur.name });
+    if (v.error) return res.status(400).json({ error: v.error });
+    const row = await db.updateCustomCategory(id, req.session.userId, v.category);
+    if (!row) return res.status(404).json({ error: 'Category not found' });
+    res.json({ category: spendCats.toCategory(row) });
+  } catch (e) { s2Fail(res, 'update category', e); }
+});
+
+router.delete('/v1/spending-categories/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const id = s2Id(req.params.id);
+  if (!id) return res.status(404).json({ error: 'Category not found' });
+  try {
+    const ok = await spendCatsDb().deleteCustomCategory(id, req.session.userId);
+    if (!ok) return res.status(404).json({ error: 'Category not found' });
+    res.json({ ok: true });
+  } catch (e) { s2Fail(res, 'delete category', e); }
+});
+
+async function s2KnownCategories(db, userId) {
+  const { GROUPS } = require('../lib/transaction-categories');
+  return [...GROUPS, ...(await db.customCategoryNames(userId))];
+}
+
+router.post('/v1/spending-category-groups', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const db = spendCatsDb();
+    const [known, g] = await Promise.all([s2KnownCategories(db, req.session.userId), db.listGroups(req.session.userId)]);
+    const v = spendCats.validateGroupInput(req.body, known, g.groups.map((x) => x.name));
+    if (v.error) return res.status(400).json({ error: v.error });
+    const row = await db.createGroup(req.session.userId, v.group);
+    res.json({ group: { id: String(row.id), name: row.name, kind: row.kind, color: row.color, categories: v.group.categories } });
+  } catch (e) { s2Fail(res, 'create group', e); }
+});
+
+router.patch('/v1/spending-category-groups/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const id = s2Id(req.params.id);
+  if (!id) return res.status(404).json({ error: 'Group not found' });
+  try {
+    const db = spendCatsDb();
+    const [known, g] = await Promise.all([s2KnownCategories(db, req.session.userId), db.listGroups(req.session.userId)]);
+    const cur = g.groups.find((x) => String(x.id) === id);
+    if (!cur) return res.status(404).json({ error: 'Group not found' });
+    const v = spendCats.validateGroupInput(req.body, known, g.groups.map((x) => x.name), { partial: true, currentName: cur.name });
+    if (v.error) return res.status(400).json({ error: v.error });
+    const row = await db.updateGroup(id, req.session.userId, v.group);
+    if (!row) return res.status(404).json({ error: 'Group not found' });
+    res.json({ group: { id: String(row.id), name: row.name, kind: row.kind, color: row.color } });
+  } catch (e) { s2Fail(res, 'update group', e); }
+});
+
+router.delete('/v1/spending-category-groups/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const id = s2Id(req.params.id);
+  if (!id) return res.status(404).json({ error: 'Group not found' });
+  try {
+    const ok = await spendCatsDb().deleteGroup(id, req.session.userId);
+    if (!ok) return res.status(404).json({ error: 'Group not found' });
+    res.json({ ok: true });
+  } catch (e) { s2Fail(res, 'delete group', e); }
+});
+
+// Transactions with their effective category (same rules as GET /v1/transactions,
+// minus learned suggestions) for server-side budget maths.
+async function s2CategorisedTransactions(userId) {
+  const txnDb = require('../db/transactions');
+  const { autoCategorize } = require('../lib/transaction-categories');
+  const { detectTransactionRelationships, indexRelationships } = require('../services/transaction-relationships');
+  const rows = await txnDb.getTransactionsWithCategory(userId, 2000);
+  const relationships = indexRelationships(detectTransactionRelationships(rows));
+  const out = rows.map((r) => {
+    const rel = relationships.get(String(r.id));
+    const row = rel ? { ...r, relationship_type: rel.type } : r;
+    if (row.category_group) return row;
+    const auto = autoCategorize(row.description, row.amount);
+    return auto ? { ...row, category_group: auto.group, category: auto.category } : row;
+  });
+  // Hidden rows drop out and split rows count per part (Transaction detail, shared/transaction-splits.mjs).
+  const detailDb = require('../db/transaction-detail');
+  const extras = await detailDb.getExtras(userId, out.map((r) => r.id));
+  const { effectiveTransactions } = await import('../shared/transaction-splits.mjs');
+  return effectiveTransactions(detailDb.attachExtras(out, extras));
+}
+
+// GET /v1/budgets/suggestion — HEL-86 "Create a budget with Maal".
+// The numbers come from shared/spending-breakdown.mjs suggestBudget() (pure,
+// tested). The model (gateway 'cheap' role) only writes an explanation, which
+// lib/budget-wording.js strips of any number it didn't receive. Works with no
+// AI key and on the Free plan: the suggestion is returned without wording.
+// When the wording is generated it uses one Ask Maal message from the plan.
+// ?wording=0 skips the model (e.g. when the user only re-opens the builder).
+// → { suggestion, wording: { summary, why[] } | null, wording_status }
+router.get('/v1/budgets/suggestion', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  let suggestion;
+  try {
+    const [rows, stored] = await Promise.all([
+      s2CategorisedTransactions(req.session.userId),
+      require('../db/budgets').getSettings(req.session.userId),
+    ]);
+    const { normaliseSettings } = require('../lib/spending-settings');
+    const { suggestBudget } = await import('../shared/spending-breakdown.mjs');
+    suggestion = suggestBudget(rows, new Date(), normaliseSettings(stored).excluded_groups);
+  } catch (e) { return s2Fail(res, 'budget suggestion', e); }
+
+  let wording = null;
+  let wordingStatus = 'skipped';
+  if (suggestion.enoughData && req.query.wording !== '0') {
+    const gateway = require('../services/gateway');
+    if (!gateway.hasRole('cheap')) wordingStatus = 'unavailable';
+    else {
+      let allowed = true;
+      try {
+        const user = await findUserById(req.session.userId);
+        const plan = await effectivePlanFor(user);
+        const limit = planLimits.limitFor(plan, 'advisor_messages');
+        if (limit <= 0) { allowed = false; wordingStatus = 'plan'; }
+        else if ((await usageDb.incrementIfUnder(req.session.userId, 'advisor_messages', limit)) === null) {
+          allowed = false; wordingStatus = 'limit';
+        }
+      } catch (e) {
+        console.error('[usage] metering failed open for budget wording:', e.message);
+      }
+      if (allowed) {
+        try {
+          const bw = require('../lib/budget-wording');
+          const { allowedFigures } = await import('../shared/spending-breakdown.mjs');
+          const raw = await gateway.completeAs('cheap', bw.buildMessages(suggestion), { maxTokens: 400, temperature: 0.3, timeoutMs: 12000 });
+          wording = bw.parseWording(raw, allowedFigures(suggestion));
+          wordingStatus = wording ? 'ok' : 'failed';
+        } catch (e) {
+          console.error('[breakdown] budget wording failed:', e.message);
+          wordingStatus = 'failed';
+        }
+      }
+    }
+  }
+  res.json({ suggestion, wording, wording_status: wordingStatus });
+});
+
 // ─── Transactions depth: categories, rules, subscriptions (PR 6) ───────────
 // All registered BEFORE /v1/:table so they aren't swallowed by the generic
 // handler. Scoped to req.session.userId. Categories live in a separate table,
 // so the protected `transactions` table is never altered.
 
 // GET /v1/transaction-categories — the 18-group taxonomy for pickers.
-router.get('/v1/transaction-categories', (req, res) => {
+// Session 2 – Breakdown & budget: the user's custom categories follow the 18
+// built-in groups as extra top-level groups ({ group, categories: [], custom: true,
+// id, kind, color, icon }) so every category picker offers them.
+router.get('/v1/transaction-categories', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
-  const { TAXONOMY } = require('../lib/transaction-categories');
-  res.json({ groups: TAXONOMY.map((t) => ({ group: t.group, categories: t.categories })) });
+  try {
+    const custom = await spendCatsDb().listCustomCategories(req.session.userId);
+    res.json({ groups: spendCats.mergeTaxonomy(custom) });
+  } catch (e) {
+    console.error('/api/v1/transaction-categories custom list failed:', e.message);
+    res.json({ groups: spendCats.mergeTaxonomy([]) });
+  }
 });
 
 // GET /v1/transactions — transactions with their category. Rows without a stored
@@ -1481,8 +1682,12 @@ router.patch('/v1/transactions/:id/category', async (req, res) => {
     const { isKnownGroup, isValidCategory } = require('../lib/transaction-categories');
     const txnDb = require('../db/transactions');
     const d = (req.body && req.body.data && typeof req.body.data === 'object') ? req.body.data : (req.body || {});
-    if (!isKnownGroup(d.category_group)) return res.status(400).json({ error: 'Unknown category group.' });
-    if (!isValidCategory(d.category_group, d.category)) return res.status(400).json({ error: 'Unknown category.' });
+    if (!isKnownGroup(d.category_group)) {
+      // Session 2 – Breakdown & budget: a custom category is a top-level group with no sub-category.
+      const customNames = await spendCatsDb().customCategoryNames(req.session.userId);
+      if (!spendCats.isAssignableCategory(d.category_group, d.category, customNames)) return res.status(400).json({ error: 'Unknown category group.' });
+      d.category = null;
+    } else if (!isValidCategory(d.category_group, d.category)) return res.status(400).json({ error: 'Unknown category.' });
     const ok = await txnDb.setTransactionCategory(req.session.userId, req.params.id, d.category_group, d.category, 'manual');
     if (!ok) return res.status(404).json({ error: 'Transaction not found.' });
     res.json({ ok: true });
@@ -1567,8 +1772,15 @@ router.put('/v1/transactions/:id/splits', async (req, res) => {
   const id = txnDetailId(req, res); if (!id) return;
   const parts = req.body && req.body.splits;
   const { isKnownGroup, isValidCategory } = require('../lib/transaction-categories');
+  // Session 2 – Breakdown & budget: the user's custom categories are valid parts too.
+  let customNames = [];
+  if (Array.isArray(parts) && parts.some((p) => p && p.category_group && !isKnownGroup(p.category_group))) {
+    try { customNames = await spendCatsDb().customCategoryNames(req.session.userId); }
+    catch (e) { console.error('[splits] custom categories unavailable:', e.message); }
+  }
   if (Array.isArray(parts) && parts.some((p) => p && p.category_group
-    && (!isKnownGroup(p.category_group) || !isValidCategory(p.category_group, p.category || null)))) {
+    && (isKnownGroup(p.category_group) ? !isValidCategory(p.category_group, p.category || null)
+      : !spendCats.isAssignableCategory(p.category_group, p.category || null, customNames)))) {
     return res.status(400).json({ error: 'Unknown category.' });
   }
   try {
@@ -1604,7 +1816,10 @@ router.delete('/v1/transactions/:id/splits', async (req, res) => {
 router.post('/v1/transactions/bulk-edit', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   const { validateBulkEdit } = require('../lib/transaction-detail');
-  const v = validateBulkEdit(req.body);
+  let customNames = [];
+  try { customNames = await spendCatsDb().customCategoryNames(req.session.userId); } // Session 2 – Breakdown & budget
+  catch (e) { console.error('[bulk-edit] custom categories unavailable:', e.message); }
+  const v = validateBulkEdit(req.body, customNames);
   if (v.error) return res.status(400).json({ error: v.error });
   try {
     const r = await require('../db/transaction-detail').bulkEdit(req.session.userId, v.ids, v.changes);

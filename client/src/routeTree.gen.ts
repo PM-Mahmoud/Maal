@@ -51,6 +51,7 @@ import { Route as AuthenticatedAppWealthInvestmentsRouteImport } from './routes/
 import { Route as AuthenticatedAppWealthCashRouteImport } from './routes/_authenticated/app.wealth.cash'
 import { Route as AuthenticatedAppSpendingReportsRouteImport } from './routes/_authenticated/app.spending_.reports'
 import { Route as AuthenticatedAppSpendingRecurringRouteImport } from './routes/_authenticated/app.spending_.recurring'
+import { Route as AuthenticatedAppSpendingBreakdownRouteImport } from './routes/_authenticated/app.spending_.breakdown'
 import { Route as AuthenticatedAppSpendingSettingsRouteImport } from './routes/_authenticated/app.spending.settings'
 import { Route as AuthenticatedAppSettingsSecurityRouteImport } from './routes/_authenticated/app.settings.security'
 import { Route as AuthenticatedAppSettingsRiskProfileRouteImport } from './routes/_authenticated/app.settings.risk-profile'
@@ -298,6 +299,12 @@ const AuthenticatedAppSpendingRecurringRoute =
     path: '/spending/recurring',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppSpendingBreakdownRoute =
+  AuthenticatedAppSpendingBreakdownRouteImport.update({
+    id: '/spending_/breakdown',
+    path: '/spending/breakdown',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppSpendingSettingsRoute =
   AuthenticatedAppSpendingSettingsRouteImport.update({
     id: '/settings',
@@ -422,6 +429,7 @@ export interface FileRoutesByFullPath {
   '/app/settings/risk-profile': typeof AuthenticatedAppSettingsRiskProfileRoute
   '/app/settings/security': typeof AuthenticatedAppSettingsSecurityRoute
   '/app/spending/settings': typeof AuthenticatedAppSpendingSettingsRoute
+  '/app/spending/breakdown': typeof AuthenticatedAppSpendingBreakdownRoute
   '/app/spending/recurring': typeof AuthenticatedAppSpendingRecurringRoute
   '/app/spending/reports': typeof AuthenticatedAppSpendingReportsRoute
   '/app/wealth/cash': typeof AuthenticatedAppWealthCashRoute
@@ -476,6 +484,7 @@ export interface FileRoutesByTo {
   '/app/settings/risk-profile': typeof AuthenticatedAppSettingsRiskProfileRoute
   '/app/settings/security': typeof AuthenticatedAppSettingsSecurityRoute
   '/app/spending/settings': typeof AuthenticatedAppSpendingSettingsRoute
+  '/app/spending/breakdown': typeof AuthenticatedAppSpendingBreakdownRoute
   '/app/spending/recurring': typeof AuthenticatedAppSpendingRecurringRoute
   '/app/spending/reports': typeof AuthenticatedAppSpendingReportsRoute
   '/app/wealth/cash': typeof AuthenticatedAppWealthCashRoute
@@ -534,6 +543,7 @@ export interface FileRoutesById {
   '/_authenticated/app/settings/risk-profile': typeof AuthenticatedAppSettingsRiskProfileRoute
   '/_authenticated/app/settings/security': typeof AuthenticatedAppSettingsSecurityRoute
   '/_authenticated/app/spending/settings': typeof AuthenticatedAppSpendingSettingsRoute
+  '/_authenticated/app/spending_/breakdown': typeof AuthenticatedAppSpendingBreakdownRoute
   '/_authenticated/app/spending_/recurring': typeof AuthenticatedAppSpendingRecurringRoute
   '/_authenticated/app/spending_/reports': typeof AuthenticatedAppSpendingReportsRoute
   '/_authenticated/app/wealth/cash': typeof AuthenticatedAppWealthCashRoute
@@ -592,6 +602,7 @@ export interface FileRouteTypes {
     | '/app/settings/risk-profile'
     | '/app/settings/security'
     | '/app/spending/settings'
+    | '/app/spending/breakdown'
     | '/app/spending/recurring'
     | '/app/spending/reports'
     | '/app/wealth/cash'
@@ -646,6 +657,7 @@ export interface FileRouteTypes {
     | '/app/settings/risk-profile'
     | '/app/settings/security'
     | '/app/spending/settings'
+    | '/app/spending/breakdown'
     | '/app/spending/recurring'
     | '/app/spending/reports'
     | '/app/wealth/cash'
@@ -703,6 +715,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/settings/risk-profile'
     | '/_authenticated/app/settings/security'
     | '/_authenticated/app/spending/settings'
+    | '/_authenticated/app/spending_/breakdown'
     | '/_authenticated/app/spending_/recurring'
     | '/_authenticated/app/spending_/reports'
     | '/_authenticated/app/wealth/cash'
@@ -1019,6 +1032,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppSpendingRecurringRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/spending_/breakdown': {
+      id: '/_authenticated/app/spending_/breakdown'
+      path: '/spending/breakdown'
+      fullPath: '/app/spending/breakdown'
+      preLoaderRoute: typeof AuthenticatedAppSpendingBreakdownRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/spending/settings': {
       id: '/_authenticated/app/spending/settings'
       path: '/settings'
@@ -1192,6 +1212,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppServicesEstatePlanningRoute: typeof AuthenticatedAppServicesEstatePlanningRoute
   AuthenticatedAppServicesFinancialPlannerRoute: typeof AuthenticatedAppServicesFinancialPlannerRoute
   AuthenticatedAppServicesTaxRoute: typeof AuthenticatedAppServicesTaxRoute
+  AuthenticatedAppSpendingBreakdownRoute: typeof AuthenticatedAppSpendingBreakdownRoute
   AuthenticatedAppSpendingRecurringRoute: typeof AuthenticatedAppSpendingRecurringRoute
   AuthenticatedAppSpendingReportsRoute: typeof AuthenticatedAppSpendingReportsRoute
   AuthenticatedAppWealthCashRoute: typeof AuthenticatedAppWealthCashRoute
@@ -1239,6 +1260,8 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppServicesFinancialPlannerRoute:
     AuthenticatedAppServicesFinancialPlannerRoute,
   AuthenticatedAppServicesTaxRoute: AuthenticatedAppServicesTaxRoute,
+  AuthenticatedAppSpendingBreakdownRoute:
+    AuthenticatedAppSpendingBreakdownRoute,
   AuthenticatedAppSpendingRecurringRoute:
     AuthenticatedAppSpendingRecurringRoute,
   AuthenticatedAppSpendingReportsRoute: AuthenticatedAppSpendingReportsRoute,
