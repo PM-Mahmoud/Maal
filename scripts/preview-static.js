@@ -203,6 +203,53 @@ function previewTransactions() {
   }
   return out.sort((a, b) => b.post_date.localeCompare(a.post_date));
 }
+// ── Session 2 – Transactions list (HEL-91..95) preview mocks ─────────────────
+// Only active on /app/transactions (by referer) so other pages' previews are
+// unchanged. Adds account references (CommBank / ING, cafés as manual entries),
+// keeps rows added via "Add transaction" in memory, honours category changes,
+// and names the accounts via cash_accounts. ?tx=flags on the page URL also adds
+// the optional hidden / reviewed flags so those filters can be previewed.
+{
+  const onTxPage = (req) => /\/app\/transactions/.test(req.headers.referer || '');
+  const txFlags = (req) => /tx=flags/.test(req.headers.referer || '');
+  const txAdded = [];
+  const txCats = new Map();
+  const txAccount = (t) => {
+    if (t.category === 'Cafes') return null; // manual entries
+    if (t.category_group === 'Income' || t.description.startsWith('Transfer to savings')) return 'basiq:ing-0412';
+    return 'basiq:cba-7781';
+  };
+  app.get('/api/v1/transactions', (req, res, next) => {
+    if (!onTxPage(req)) return next();
+    if (previewEmpty(req)) return res.json([]);
+    const rows = [...txAdded, ...previewTransactions().map((t, i) => ({
+      ...t,
+      account_reference: txAccount(t),
+      category_source: 'manual',
+      ...(txFlags(req) ? { hidden: t.relationship_type === 'transfer', reviewed: i % 4 === 0 } : {}),
+    }))].map((t) => (txCats.has(String(t.id)) ? { ...t, ...txCats.get(String(t.id)), category_source: 'manual' } : t));
+    res.json(rows.sort((a, b) => String(b.post_date).localeCompare(String(a.post_date))));
+  });
+  app.post('/api/v1/transactions', express.json(), (req, res) => {
+    const d = (req.body && req.body.data) || req.body || {};
+    if (!d.description || !Number.isFinite(Number(d.amount)) || !d.occurred_on) return res.status(400).json({ error: 'Transaction description is required' });
+    const row = { id: 9000 + txAdded.length, description: String(d.description), amount: Number(d.amount), post_date: d.occurred_on, account_reference: null };
+    txAdded.unshift(row);
+    res.json(row);
+  });
+  app.patch('/api/v1/transactions/:id/category', express.json(), (req, res) => {
+    txCats.set(String(req.params.id), { category_group: req.body.category_group, category: req.body.category || null });
+    res.json({ ok: true });
+  });
+  app.get('/api/v1/cash_accounts', (req, res, next) => {
+    if (!onTxPage(req)) return next();
+    res.json([
+      { id: 'c1', label: 'Savings Maximiser', institution: 'ING', account_reference: 'basiq:ing-0412', balance: 18600 },
+      { id: 'c2', label: 'Everyday Smart Access', institution: 'CommBank', account_reference: 'basiq:cba-7781', balance: 2400 },
+    ]);
+  });
+}
+// ── end Session 2 – Transactions list ────────────────────────────────────────
 app.get('/api/v1/transactions', (req, res) => res.json(previewEmpty(req) ? [] : previewTransactions()));
 // ── Session 2 – Recurring preview (HEL-104/105) ─────────────────────────────
 // In-memory manual recurring items + dismiss/confirm decisions, merged into
