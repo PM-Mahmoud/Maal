@@ -204,17 +204,70 @@ function previewTransactions() {
   return out.sort((a, b) => b.post_date.localeCompare(a.post_date));
 }
 app.get('/api/v1/transactions', (req, res) => res.json(previewEmpty(req) ? [] : previewTransactions()));
+// ── Session 2 – Recurring preview (HEL-104/105) ─────────────────────────────
+// In-memory manual recurring items + dismiss/confirm decisions, merged into
+// GET /api/v1/transactions/recurring exactly like routes/api.js does (via
+// shared/recurring.mjs). Resets when the preview restarts.
+// ?spend=empty on the page URL previews the empty state (no detected rows).
+let pvRecurringRows = [];
+let pvRecurringNextId = 1;
+const pvRecurring = () => import('../shared/recurring.mjs');
+async function pvMergeRecurring(detected) {
+  const { mergeRecurring } = await pvRecurring();
+  return mergeRecurring(detected, pvRecurringRows);
+}
+app.post('/api/v1/recurring-items/decisions', express.json(), (req, res) => {
+  const key = String((req.body && req.body.source_key) || '');
+  const status = req.body && req.body.status;
+  if (!key || (status !== 'dismissed' && status !== 'confirmed')) return res.status(400).json({ error: 'Unknown action.' });
+  pvRecurringRows = pvRecurringRows.filter((r) => r.source_key !== key).concat([{ id: pvRecurringNextId++, status, source_key: key }]);
+  res.json({ ok: true, source_key: key, status });
+});
+app.delete('/api/v1/recurring-items/decisions/:key', (req, res) => {
+  const n = pvRecurringRows.length;
+  pvRecurringRows = pvRecurringRows.filter((r) => r.source_key !== req.params.key);
+  res.json({ ok: pvRecurringRows.length < n });
+});
+app.get('/api/v1/recurring-items', async (_req, res) => {
+  const { manualToRecurring } = await pvRecurring();
+  res.json({ items: pvRecurringRows.filter((r) => r.status === 'active').map((r) => ({ ...manualToRecurring(r), row_id: String(r.id) })) });
+});
+app.post('/api/v1/recurring-items', express.json(), async (req, res) => {
+  const { validateRecurringInput, manualToRecurring } = await pvRecurring();
+  const v = validateRecurringInput(req.body);
+  if (v.error) return res.status(400).json({ error: v.error });
+  const row = { id: pvRecurringNextId++, status: 'active', ...v.item };
+  if (row.source_key) pvRecurringRows = pvRecurringRows.filter((r) => r.source_key !== row.source_key);
+  pvRecurringRows.push(row);
+  res.status(201).json({ item: { ...manualToRecurring(row), row_id: String(row.id) } });
+});
+app.patch('/api/v1/recurring-items/:id', express.json(), async (req, res) => {
+  const { validateRecurringInput, manualToRecurring } = await pvRecurring();
+  const v = validateRecurringInput(req.body, { partial: true });
+  if (v.error) return res.status(400).json({ error: v.error });
+  const row = pvRecurringRows.find((r) => String(r.id) === req.params.id && r.status === 'active');
+  if (!row) return res.status(404).json({ error: 'Recurring item not found.' });
+  Object.assign(row, v.item);
+  res.json({ item: { ...manualToRecurring(row), row_id: String(row.id) } });
+});
+app.delete('/api/v1/recurring-items/:id', (req, res) => {
+  const n = pvRecurringRows.length;
+  pvRecurringRows = pvRecurringRows.filter((r) => String(r.id) !== req.params.id);
+  if (pvRecurringRows.length === n) return res.status(404).json({ error: 'Recurring item not found.' });
+  res.json({ ok: true });
+});
+// ── end Session 2 – Recurring preview ───────────────────────────────────────
 // Mirrors services/transaction-rules.js detectRecurringTransactions() output.
 app.get('/api/v1/transactions/recurring', (req, res) => {
-  if (previewEmpty(req)) return res.json({ recurring: [] });
+  if (previewEmpty(req)) return pvMergeRecurring([]).then((recurring) => res.json({ recurring }));
   const now = new Date();
   const next = (day) => {
     let d = new Date(now.getFullYear(), now.getMonth(), day);
     if (d < new Date(now.getFullYear(), now.getMonth(), now.getDate())) d = new Date(now.getFullYear(), now.getMonth() + 1, day);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
-  const r = (kind, merchant, averageAmount, cadence, nextEstimate) => ({ kind, merchant, averageAmount, cadence, nextEstimate, confidence: 0.9, occurrences: 6 });
-  res.json({ recurring: [
+  const r = (kind, merchant, averageAmount, cadence, nextEstimate) => ({ kind, merchant, merchant_key: merchant.toLowerCase(), averageAmount, cadence, nextEstimate, confidence: 0.9, occurrences: 6 });
+  pvMergeRecurring([
     r('income', 'Acme Pty Ltd', 3650, 'monthly', next(29)),
     r('bill', 'Rent — Ray White', 1950, 'monthly', next(3)),
     r('subscription', 'Netflix', 18.99, 'monthly', next(6)),
@@ -223,7 +276,7 @@ app.get('/api/v1/transactions/recurring', (req, res) => {
     r('bill', 'Telstra', 65, 'monthly', next(20)),
     r('bill', 'Anytime Fitness', 21.95, 'monthly', next(22)),
     r('bill', 'NIB health insurance', 142.3, 'monthly', next(24)),
-  ] });
+  ]).then((recurring) => res.json({ recurring }));
 });
 
 app.get('/api/v1/markets/indices', (_req, res) => res.json([
