@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/api";
-import { listTransactions } from "@/lib/transactions.functions";
 import { getCategoryGroups, type CategoryGroup } from "@/lib/transactions-depth.functions";
+import { getReportTransactions } from "../reports/api";
 
-/** A row from GET /api/v1/transactions (only the user's own rows; server filters by user_id). */
+/**
+ * A row from GET /api/v1/reports/transactions (only the user's own rows; the
+ * server filters by user_id). Same row fields as GET /api/v1/transactions.
+ */
 export type Txn = {
   id: string | number;
   description?: string;
@@ -28,6 +31,8 @@ export type AccountInfo = { key: string; label: string; institution: string | nu
 
 export type TransactionsData = {
   rows: Txn[];
+  /** The server stopped at its 20,000-row cap for this range. */
+  truncated: boolean;
   accounts: Map<string, AccountInfo>;
   groups: CategoryGroup[];
   loading: boolean;
@@ -59,23 +64,51 @@ async function loadAccountNames(): Promise<Map<string, AccountInfo>> {
   return out;
 }
 
-/** Transactions, account names and the category taxonomy, all from existing endpoints. */
-export function useTransactionsData() {
+/**
+ * Transactions for one date range (at most 3 years; see fetchRange in
+ * shared/transactions-list.mjs) plus account names and the category taxonomy.
+ * Changing the range refetches; reload() refetches the current range (after an
+ * add, a category change or a detail edit). A response for an older request
+ * never overwrites a newer one.
+ */
+export function useTransactionsData(from: string, to: string) {
   const [data, setData] = useState<TransactionsData>({
-    rows: [], accounts: new Map(), groups: [], loading: true, error: null,
+    rows: [], truncated: false, accounts: new Map(), groups: [], loading: true, error: null,
   });
+  const range = useRef({ from, to });
+  range.current = { from, to };
+  const seq = useRef(0);
+  const inflight = useRef<AbortController | null>(null);
 
-  const load = useCallback(async () => {
-    const [txn, acc, grp] = await Promise.allSettled([listTransactions(), loadAccountNames(), getCategoryGroups()]);
-    setData((d) => ({
-      rows: txn.status === "fulfilled" ? (txn.value as Txn[]) : d.rows,
-      accounts: acc.status === "fulfilled" ? acc.value : d.accounts,
-      groups: grp.status === "fulfilled" ? grp.value : d.groups,
-      loading: false,
-      error: txn.status === "rejected" ? (txn.reason?.message || "Couldn’t load your transactions.") : null,
-    }));
+  const loadRows = useCallback(async () => {
+    const id = ++seq.current;
+    inflight.current?.abort();
+    const ac = new AbortController();
+    inflight.current = ac;
+    const { from: f, to: t } = range.current;
+    try {
+      const res = await getReportTransactions(f, t, ac.signal);
+      if (id !== seq.current) return;
+      setData((d) => ({ ...d, rows: res.transactions as Txn[], truncated: res.truncated, loading: false, error: null }));
+    } catch (err: any) {
+      if (id !== seq.current || err?.name === "AbortError") return;
+      setData((d) => ({ ...d, loading: false, error: err?.message || "Couldn’t load your transactions." }));
+    }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
-  return { ...data, reload: load };
+  // Account names and the taxonomy don't depend on the range, so load them once.
+  useEffect(() => {
+    void Promise.allSettled([loadAccountNames(), getCategoryGroups()]).then(([acc, grp]) => {
+      setData((d) => ({
+        ...d,
+        accounts: acc.status === "fulfilled" ? acc.value : d.accounts,
+        groups: grp.status === "fulfilled" ? grp.value : d.groups,
+      }));
+    });
+  }, []);
+
+  useEffect(() => { void loadRows(); }, [loadRows, from, to]);
+  useEffect(() => () => inflight.current?.abort(), []);
+
+  return { ...data, reload: loadRows };
 }

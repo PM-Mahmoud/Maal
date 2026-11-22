@@ -5,8 +5,10 @@
 // these and test/transactions-list.test.js covers them (CLAUDE.md: money and
 // filter logic must have a deterministic test).
 //
-// Rows use the GET /api/v1/transactions shape: signed `amount` (negative =
-// money out; NUMERIC may arrive as a string), `post_date`, `description`,
+// Rows use the GET /api/v1/reports/transactions shape (same row fields as
+// GET /api/v1/transactions, but date-ranged and not cut at 500 rows): signed
+// `amount` (negative = money out; NUMERIC may arrive as a string), `post_date`,
+// `description`,
 // `category_group` / `category`, optional `account_reference` and, when the
 // Transaction detail part has added them, optional `hidden` / `reviewed`
 // flags. Those flags are read defensively: absent means "not hidden" and
@@ -206,7 +208,9 @@ export function datePresets(today = new Date()) {
   const daysAgo = (n) => isoDate(new Date(y, m, today.getDate() - n));
   const fy = fyStartYear(today);
   return [
-    { id: "all", label: "All time", from: null, to: null },
+    // The list loads at most 3 years at a time (GET /api/v1/reports/transactions),
+    // so "no date filter" means the last 3 years and says so.
+    { id: "all", label: "Last 3 years", from: null, to: null },
     { id: "this-month", label: "This month", from: isoDate(new Date(y, m, 1)), to: t },
     { id: "last-month", label: "Last month", from: isoDate(new Date(y, m - 1, 1)), to: isoDate(new Date(y, m, 0)) },
     { id: "30d", label: "Last 30 days", from: daysAgo(29), to: t },
@@ -220,6 +224,51 @@ export function datePresets(today = new Date()) {
 export function presetFor(from, to, today = new Date()) {
   const hit = datePresets(today).find((p) => p.from === (from || null) && p.to === (to || null));
   return hit ? hit.id : "custom";
+}
+
+// ---------------------------------------------------------------------------
+// Fetch range (GET /api/v1/reports/transactions allows at most 3 years)
+// ---------------------------------------------------------------------------
+
+/** Longest range the reports endpoint accepts, inclusive (lib/report-views.js MAX_RANGE_DAYS). */
+export const MAX_RANGE_DAYS = 1096;
+
+const dayNum = (s) => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 86400000;
+
+/** "YYYY-MM-DD" shifted by n calendar days (UTC arithmetic, so no DST drift). */
+export function addDays(day, n) {
+  const d = new Date(Date.UTC(+day.slice(0, 4), +day.slice(5, 7) - 1, +day.slice(8, 10) + n));
+  return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+}
+
+/**
+ * Validation message for a chosen date filter, or null when it can be fetched.
+ * A missing end means today; a missing start is fine (the last 3 years up to the end).
+ */
+export function rangeError(from, to, today = new Date()) {
+  if (!from) return null;
+  const end = to || isoDate(today);
+  if (from > end) return "The start date is after the end date.";
+  if (dayNum(end) - dayNum(from) + 1 > MAX_RANGE_DAYS) return "Choose a range of up to 3 years.";
+  return null;
+}
+
+/**
+ * The { from, to } the list should request for the filters in force.
+ * No date filter → the last 3 years ending today. A start without an end runs
+ * to today; an end without a start covers the 3 years up to it. A range longer
+ * than 3 years keeps its end and is cut to 3 years (`clamped: true`).
+ * @returns {{ from: string, to: string, clamped: boolean }}
+ */
+export function fetchRange(filters, today = new Date()) {
+  const f = filters || {};
+  let to = f.to || isoDate(today);
+  let from = f.from || null;
+  if (from && from > to) [from, to] = [to, from];
+  const earliest = addDays(to, -(MAX_RANGE_DAYS - 1));
+  if (!from) return { from: earliest, to, clamped: false };
+  if (from < earliest) return { from: earliest, to, clamped: true };
+  return { from, to, clamped: false };
 }
 
 // ---------------------------------------------------------------------------
@@ -240,7 +289,7 @@ export function csvCell(value, { text = true } = {}) {
 
 /**
  * The export file for the given rows (already filtered to what the user sees,
- * and only ever their own rows from GET /api/v1/transactions).
+ * and only ever their own rows from GET /api/v1/reports/transactions).
  * accountLabel(t) names the account; flags adds Hidden/Reviewed columns.
  */
 export function transactionsToCsv(rows, { accountLabel = (t) => (accountKey(t) === "manual" ? "Manual entry" : accountKey(t)), flags = { hidden: false, reviewed: false } } = {}) {
