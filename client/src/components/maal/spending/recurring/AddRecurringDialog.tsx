@@ -8,6 +8,7 @@ import {
 import { DEFAULT_EXCLUDED_GROUPS, groupOf } from "../../../../../../shared/spending-overview.mjs";
 import { audCents, signedCents } from "@/components/maal/home/format";
 import { iconForGroup } from "../overview/categoryIcons";
+import { catColour } from "../categoryColour";
 import {
   createRecurringItem, manualRowId, updateRecurringItem, type RecurringItem,
 } from "./api";
@@ -178,7 +179,7 @@ function PickStep({ transactions, error, onPick, onManual }: {
                   <li key={t.id ?? `${day}-${i}`}>
                     <button type="button" className="rc-txn" data-muted={muted} onClick={() => onPick(t)}
                       aria-label={`${name}, ${amt > 0 ? "received" : "spent"} ${audCents(Math.abs(amt))}. Make recurring`}>
-                      <Icon className="rc-txn-icon" aria-hidden />
+                      <Icon className="rc-txn-icon" style={{ color: catColour(group) }} aria-hidden />
                       <span className="rc-txn-name">{name}</span>
                       {muted && <EyeOff className="rc-txn-hidden" aria-hidden />}
                       <span className="rc-txn-amt mh-amount" data-in={amt > 0 && !muted}>

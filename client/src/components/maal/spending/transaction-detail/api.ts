@@ -1,6 +1,7 @@
 // Client for the "Session 2 – Transaction detail" block in routes/api.js
 // (HEL-96..103). Every call throws an Error with the server's message on
 // failure so the drawer can show it — never a silent $0 or empty state.
+import { setCustomColours } from "../categoryColour";
 
 export type Tag = { id: string; name: string; color: string; uses?: number };
 export type Split = { id?: string; amount: number; category_group: string; category: string | null; hidden: boolean };
@@ -25,7 +26,8 @@ export type TxnDetail = {
   tags: Tag[];
   splits: Split[];
 };
-export type CategoryGroup = { group: string; categories: string[] };
+// Custom categories also carry custom/color (lib/spending-categories.js mergeTaxonomy).
+export type CategoryGroup = { group: string; categories: string[]; custom?: boolean; color?: string };
 
 /** What the "Editing transactions" drawer can change in one go. */
 export type BulkChanges = {
@@ -103,5 +105,7 @@ export async function createTag(name: string, color: string): Promise<Tag> {
 export async function getCategoryGroups(): Promise<CategoryGroup[]> {
   const r = await fetch("/api/v1/transaction-categories", { credentials: "include" });
   const body = await json<{ groups?: CategoryGroup[] }>(r, "Couldn't load categories.");
-  return Array.isArray(body?.groups) ? body.groups : [];
+  const groups = Array.isArray(body?.groups) ? body.groups : [];
+  setCustomColours(groups); // custom categories' stored colours for every Spending view
+  return groups;
 }

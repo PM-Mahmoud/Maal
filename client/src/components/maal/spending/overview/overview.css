@@ -1,8 +1,9 @@
 /* ============================================================
    Spending overview (/app/spending) — redesign session 2, HEL-83.
    Builds on the Home tokens + card shell in home/home.css
-   (--mh-*, .mh-card, .mh-grid, .mh-cal). Monochrome charts:
-   ink line/bars, grey comparison, red only for over-budget.
+   (--mh-*, .mh-card, .mh-grid, .mh-cal). Category and data
+   visuals use the shared category palette (../categoryColour.ts,
+   shared/category-colours.mjs); UI chrome stays monochrome.
    Prefix: .so-
    ============================================================ */
 
@@ -87,7 +88,7 @@ html:not(.dark) .so-seg button[aria-pressed="true"] { background: #EEEFEC; }
 .so-txn-hidden { width: 16px; height: 16px; color: var(--mh-faint); flex-shrink: 0; }
 .so-txn[data-muted="true"] .so-txn-name,
 .so-txn[data-muted="true"] .so-txn-amt { color: var(--mh-faint); }
-.so-txn[data-muted="true"] .so-txn-icon { color: var(--mh-faint); }
+.so-txn[data-muted="true"] .so-txn-icon { color: var(--mh-faint); opacity: .55; }
 
 /* ---------- Upcoming (two-week calendar) ---------- */
 .so-week-wrap { position: relative; }
@@ -201,7 +202,8 @@ html:not(.dark) .so-gauge-track { stroke: #EDEEEA; }
 .so-viewby { display: inline-flex; align-items: center; gap: 10px; margin-top: 18px; }
 .so-sankey { position: relative; margin: 16px 0 0; }
 .so-sankey svg { display: block; width: 100%; height: 100%; }
-.so-ribbon { fill: var(--mh-ink); fill-opacity: .1; }
+.so-ribbon { fill: var(--mh-ink); fill-opacity: .22; }
+html.dark .so-ribbon { fill-opacity: .34; }
 .so-node { fill: var(--mh-ink); }
 .so-sk-label { position: absolute; display: flex; flex-direction: column; transform: translateY(-50%); font-size: 12.5px; line-height: 1.3; max-width: 44%; pointer-events: none; }
 .so-sk-label b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

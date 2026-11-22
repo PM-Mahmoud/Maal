@@ -7,6 +7,7 @@ import { countsAsSpend, isIncome } from "../../../../../../shared/spending-overv
 import { accountKey, amountOf, dayOf, groupOf, isHidden, isReviewed, type SortKey } from "../../../../../../shared/transactions-list.mjs";
 import { openTransactionDetail } from "../transaction-detail/TransactionDetailMount";
 import { iconForGroup } from "../overview/categoryIcons";
+import { catVars } from "../categoryColour";
 import { describeAccount, type AccountInfo, type Txn } from "./useTransactionsData";
 
 const PAGE = 100;
@@ -82,7 +83,7 @@ export function TransactionsTable({
             return (
               <tr key={t.id} className="tx-tr" data-muted={!counted} onClick={open}>
                 <td className="tx-col-name">
-                  <span className="tx-mobile-icon" aria-hidden><Icon /></span>
+                  <span className="tx-mobile-icon cat-chip" style={catVars(group, groups)} aria-hidden><Icon /></span>
                   <button type="button" className="tx-name-btn" onClick={(e) => { e.stopPropagation(); open(); }}
                     aria-label={`${name}, ${signedCents(amt)}, ${longDate(dayOf(t))}. Open details`}>
                     <span className="tx-name">{name}</span>
@@ -92,7 +93,7 @@ export function TransactionsTable({
                 </td>
                 <td className="tx-col-cat" onClick={(e) => e.stopPropagation()}>
                   <span className="tx-chip">
-                    <span className="tx-chip-icon" aria-hidden><Icon /></span>
+                    <span className="tx-chip-icon cat-chip" style={catVars(group, groups)} aria-hidden><Icon /></span>
                     <span className="tx-chip-text">{t.category_group ? (t.category || group) : "Uncategorised"}</span>
                     <ChevronDown className="tx-chip-chev" aria-hidden />
                     <select

@@ -5,6 +5,7 @@ import {
 } from "../../../../../../shared/transaction-splits.mjs";
 import { audCents } from "@/components/maal/home/format";
 import { iconForGroup } from "../overview/categoryIcons";
+import { catVars } from "../categoryColour";
 import { putSplits, removeSplits, type CategoryGroup, type TxnDetail } from "./api";
 import { ErrorNote, PanelHeader, Switch, longDate } from "./ui";
 
@@ -125,7 +126,7 @@ export function SplitPanel({ txn, title, groups, onBack, onSaved }: {
               )}
               <div className="td-card-pad td-part-body">
                 <label className="td-cat-select" htmlFor={catId}>
-                  <span className="td-cat-icon" aria-hidden><Icon /></span>
+                  <span className="td-cat-icon cat-chip" style={catVars(p.category_group)} aria-hidden><Icon /></span>
                   <select id={catId} aria-label={`Category for part ${i + 1}`} value={p.category_group}
                     onChange={(e) => update(i, { category_group: e.target.value, category: null })}>
                     {groups.length === 0 && <option value={p.category_group}>{p.category_group}</option>}

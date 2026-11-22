@@ -1,6 +1,7 @@
 // Client for the Session 2 "Breakdown & budget" endpoints (routes/api.js,
 // "Session 2 – Breakdown & budget" block). Budgets reuse ../settings/api.
 import type { Suggestion } from "../../../../../../shared/spending-breakdown.mjs";
+import { PICKER_COLOURS } from "../../../../../../shared/category-colours.mjs";
 
 export type CustomCategory = { id: string; name: string; kind: "expense" | "income"; color: string; icon: string };
 export type CategoryGroupDef = { id: string; name: string; kind: "expense" | "income"; color: string; categories: string[] };
@@ -63,11 +64,6 @@ export async function getBudgetSuggestion(): Promise<SuggestionResponse> {
   return json(r, "Couldn't work out a budget right now.");
 }
 
-// Must match lib/spending-categories.js COLORS / ICONS (server validates).
-export const CATEGORY_COLORS = [
-  "#121313", "#4B4D4A", "#8A8C88", "#C9CAC6",
-  "#2F5D50", "#3E7C6B", "#6C9A8B", "#A8C5B9",
-  "#2C4A6B", "#4E6E94", "#8BA4C2", "#C3D1E2",
-  "#7A4A2A", "#A86E45", "#C99A6E", "#E3C9AE",
-  "#6B2F3A", "#9A4E5B", "#C48A94", "#5B4A7A",
-];
+// Swatches for new categories/groups: the shared category palette
+// (shared/category-colours.mjs PICKER_COLOURS; lib/spending-categories.js accepts them).
+export const CATEGORY_COLORS: readonly string[] = PICKER_COLOURS;

@@ -5,6 +5,7 @@ import { AskSparkButton, HomeCard } from "@/components/maal/home/HomeCard";
 import { aud, audTick } from "@/components/maal/home/format";
 import { usePrivacy } from "@/components/maal/home/prefs";
 import type { SpendTxn } from "./useSpendingData";
+import { catColour, dataColour, useCustomColours } from "../categoryColour";
 
 type Row = { key: string; year: number; month: number; income: number; expenses: number; net: number };
 type View = "net" | "split" | "flow";
@@ -156,14 +157,14 @@ function Bars({ rows, view, privacy }: { rows: Row[]; view: "net" | "split"; pri
             const cx = slot * i + slot / 2;
             if (view === "net") {
               const y = geo.y(r.net);
-              return <rect key={r.key} x={cx - 14} width={28} y={Math.min(y, geo.zero)} height={Math.max(1, Math.abs(geo.zero - y))} rx="2" className="so-bar" data-neg={r.net < 0} />;
+              return <rect key={r.key} x={cx - 14} width={28} y={Math.min(y, geo.zero)} height={Math.max(1, Math.abs(geo.zero - y))} rx="2" className="so-bar" data-neg={r.net < 0} style={{ fill: dataColour(r.net < 0 ? "negative" : "positive") }} />;
             }
             const yi = geo.y(r.income);
             const ye = geo.y(r.expenses);
             return (
               <g key={r.key}>
-                <rect x={cx - 24} width={22} y={yi} height={Math.max(r.income ? 1 : 0, geo.zero - yi)} rx="2" className="so-bar" />
-                <rect x={cx + 2} width={22} y={ye} height={Math.max(r.expenses ? 1 : 0, geo.zero - ye)} rx="2" className="so-bar so-bar--alt" />
+                <rect x={cx - 24} width={22} y={yi} height={Math.max(r.income ? 1 : 0, geo.zero - yi)} rx="2" className="so-bar" style={{ fill: dataColour("income") }} />
+                <rect x={cx + 2} width={22} y={ye} height={Math.max(r.expenses ? 1 : 0, geo.zero - ye)} rx="2" className="so-bar so-bar--alt" style={{ fill: dataColour("expense") }} />
               </g>
             );
           })}
@@ -181,7 +182,7 @@ function Bars({ rows, view, privacy }: { rows: Row[]; view: "net" | "split"; pri
         {rows.map((r) => <span key={r.key}>{shortMonth(r, crossYear && r.month === 0 || r === rows[0] && crossYear)}</span>)}
       </div>
       {view === "split" && (
-        <p className="so-bars-legend" aria-hidden><i className="so-key" /> Income <i className="so-key so-key--alt" /> Expenses</p>
+        <p className="so-bars-legend" aria-hidden><i className="so-key" style={{ background: dataColour("income") }} /> Income <i className="so-key so-key--alt" style={{ background: dataColour("expense") }} /> Expenses</p>
       )}
     </figure>
   );
@@ -191,6 +192,7 @@ type Flows = { sources: Array<{ label: string; amount: number; pct: number }>; t
 
 /** Sankey: income sources → Maal (middle) → spending categories. Ribbons in SVG, labels in HTML so text never stretches. */
 function Sankey({ flows, privacy }: { flows: Flows; privacy: boolean }) {
+  const custom = useCustomColours();
   const SW = 1000;
   const GAP = 18;
   const NODE_W = 14;
@@ -235,16 +237,16 @@ function Sankey({ flows, privacy }: { flows: Flows; privacy: boolean }) {
         {left.map((s) => {
           const d = ribbon(NODE_W, s.y, s.y + s.h, midX, inCursor, inCursor + s.h);
           inCursor += s.h;
-          return <path key={`l-${s.label}`} d={d} className="so-ribbon" />;
+          return <path key={`l-${s.label}`} d={d} className="so-ribbon" style={{ fill: dataColour("income") }} />;
         })}
-        {right.map((t, i) => {
+        {right.map((t) => {
           const d = ribbon(midX + NODE_W, outCursor, outCursor + t.h, SW - NODE_W, t.y, t.y + t.h);
           outCursor += t.h;
-          return <path key={`r-${t.label}`} d={d} className="so-ribbon" style={{ opacity: Math.max(0.35, 1 - i * 0.1) }} />;
+          return <path key={`r-${t.label}`} d={d} className="so-ribbon" style={{ fill: catColour(t.label, custom) }} />;
         })}
-        {left.map((s) => <rect key={`ln-${s.label}`} x="0" y={s.y} width={NODE_W} height={s.h} rx="3" className="so-node" />)}
+        {left.map((s) => <rect key={`ln-${s.label}`} x="0" y={s.y} width={NODE_W} height={s.h} rx="3" className="so-node" style={{ fill: dataColour("income") }} />)}
         <rect x={midX} y={midY} width={NODE_W} height={midH} rx="3" className="so-node" />
-        {right.map((t, i) => <rect key={`rn-${t.label}`} x={SW - NODE_W} y={t.y} width={NODE_W} height={t.h} rx="3" className="so-node" style={{ opacity: Math.max(0.35, 1 - i * 0.1) }} />)}
+        {right.map((t) => <rect key={`rn-${t.label}`} x={SW - NODE_W} y={t.y} width={NODE_W} height={t.h} rx="3" className="so-node" style={{ fill: catColour(t.label, custom) }} />)}
       </svg>
       {left.map((s) => (
         <span key={`lt-${s.label}`} className="so-sk-label so-sk-label--l" style={{ top: s.y + s.h / 2 }}>

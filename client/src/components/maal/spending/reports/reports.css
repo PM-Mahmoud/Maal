@@ -3,7 +3,9 @@
    HEL-106 (reports) + HEL-107 (saved views).
    Builds on home/home.css tokens (--mh-*) and reuses a few overview
    classes (.so-tabs, .so-seg, .so-select, .so-strip, .so-table).
-   Monochrome charts: ink bars, grey ramp for stacks and the donut.
+   Category and data charts use the shared category palette
+   (../category-colour.css, shared/category-colours.mjs); UI chrome
+   stays monochrome.
    Prefix: .rp-
    ============================================================ */
 
@@ -95,7 +97,8 @@ html:not(.dark) .rp-donut-track { stroke: #EEEFEC; }
 /* ---------- Sankey (copy of the overview's, own class names) ---------- */
 .rp-sankey { position: relative; margin: 18px 0 0; }
 .rp-sankey svg { display: block; width: 100%; height: 100%; }
-.rp-ribbon { fill: var(--mh-ink); fill-opacity: .1; }
+.rp-ribbon { fill: var(--mh-ink); fill-opacity: .22; }
+html.dark .rp-ribbon { fill-opacity: .34; }
 .rp-node { fill: var(--mh-ink); }
 .rp-sk-label { position: absolute; display: flex; flex-direction: column; transform: translateY(-50%); font-size: 12.5px; line-height: 1.3; max-width: 44%; pointer-events: none; }
 .rp-sk-label b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

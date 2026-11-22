@@ -5,6 +5,7 @@ import { MAX_RANGE_DAYS, emptyFilters, presetLabel, resolveRange } from "../../.
 import type { Interval, RangeConfig, RangePreset, ReportFilters } from "../../../../../../shared/spending-reports.mjs";
 import { isoDay as isoDayOf } from "../../../../../../shared/spending-overview.mjs";
 import { iconForGroup } from "../overview/categoryIcons";
+import { catVars } from "../categoryColour";
 
 /** The 18 groups of the AU taxonomy (lib/transaction-categories.js), in display order. */
 export const ALL_GROUPS = [
@@ -112,7 +113,7 @@ export function FiltersDialog({ open, initial, today, onApply, onClose }: {
                     <li key={g}>
                       <label className="rp-group" data-on={on}>
                         <input type="checkbox" checked={on} onChange={() => toggleGroup(g)} />
-                        <span className="rp-group-icon" aria-hidden><Icon /></span>
+                        <span className="rp-group-icon cat-chip" style={catVars(g)} aria-hidden><Icon /></span>
                         <span className="rp-group-name">{g}</span>
                         <span className="rp-check" aria-hidden>{on && <Check />}</span>
                       </label>

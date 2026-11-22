@@ -10,7 +10,8 @@ import { usePrivacy } from "@/components/maal/home/prefs";
 import type { Budget } from "../settings/api";
 import type { SpendTxn } from "../overview/useSpendingData";
 import type { CategoryGroupDef, CustomCategory } from "./api";
-import { CatIcon, ChangeBadge, Donut, Gauge, expenseCategories, incomeCategoryNames, monthLabel, rampAt } from "./parts";
+import { CatIcon, ChangeBadge, Donut, Gauge, expenseCategories, incomeCategoryNames, monthLabel } from "./parts";
+import { catColour, catVars, incomeColour } from "../categoryColour";
 
 export type Tab = "expenses" | "budget" | "income";
 
@@ -59,6 +60,10 @@ export function BreakdownCard({
   );
   const income = useMemo(() => incomeTable(transactions, year, month, incomeCategoryNames(custom)), [transactions, year, month, custom]);
   const incomeTotal = income.reduce((a, r) => a + r.amount, 0);
+  // User-made groups carry their own colour; categories use the shared palette.
+  const groupColours = useMemo(() => groups.map((g) => ({ name: g.name, color: g.color })), [groups]);
+  const spendColour = (name: string) => catColour(name, viewBy === "group" ? groupColours : custom);
+  const inColour = (name: string) => incomeColour(name, custom);
 
   const overall = budgets.find((b) => !b.category_group);
   const budgetTotal = overall ? Number(overall.monthly_amount) : budgets.reduce((a, b) => a + Number(b.monthly_amount || 0), 0);
@@ -92,7 +97,7 @@ export function BreakdownCard({
             <div className="mh-empty"><p className="m-0">No spending {when}. Categories appear here as transactions come in.</p></div>
           ) : (
             <>
-              <Donut rows={viewBy === "group" ? grouped : spendRows} total={spent} label={current ? "Spent this month" : "Spent"} privacy={privacy} />
+              <Donut rows={viewBy === "group" ? grouped : spendRows} total={spent} label={current ? "Spent this month" : "Spent"} privacy={privacy} colourOf={spendColour} />
               <div className="bd-viewby">
                 <label className="mh-muted mh-small" htmlFor="bd-viewby">View by</label>
                 <span className="so-select">
@@ -132,9 +137,9 @@ export function BreakdownCard({
                     <span role="columnheader">Spent</span>
                     <span role="columnheader">% of expenses</span>
                   </div>
-                  {grouped.map((g, i) => (
+                  {grouped.map((g) => (
                     <div key={g.group} className="bd-tr bd-tr--3" role="row">
-                      <span role="cell" className="bd-name"><i className="bd-swatch" style={{ opacity: rampAt(i) }} aria-hidden />
+                      <span role="cell" className="bd-name"><i className="bd-swatch" style={{ background: catColour(g.group, groupColours) }} aria-hidden />
                         <span className="min-w-0"><span className="bd-trunc">{g.group}</span><span className="bd-sub bd-trunc">{g.members.join(", ") || "No spending yet"}</span></span>
                       </span>
                       <span role="cell" className="mh-amount">{aud(g.amount)}</span>
@@ -200,7 +205,7 @@ export function BreakdownCard({
                       <span role="cell" className="bd-name"><CatIcon name={r.rest ? "Other" : r.group} custom={custom} /><span className="bd-trunc">{r.group}</span></span>
                       <span role="cell" className="bd-spent">
                         <span className="mh-amount">{aud(r.spent)}</span>
-                        <span className="mh-bar bd-bar"><i style={{ width: `${Math.min(100, p)}%` }} data-over={p > 100} /></span>
+                        <span className="mh-bar bd-bar cat-bar" style={catVars(r.rest ? "Other" : r.group, custom)}><i style={{ width: `${Math.min(100, p)}%` }} data-over={p > 100} /></span>
                       </span>
                       <span role="cell" className="mh-amount">{aud(r.budget)}</span>
                       <span role="cell" className="mh-amount" data-over={r.available < 0}>{r.available < 0 ? `−${aud(-r.available)}` : aud(r.available)}</span>
@@ -219,16 +224,16 @@ export function BreakdownCard({
           <div className="mh-empty"><p className="m-0">No income recorded {when}.</p></div>
         ) : (
           <>
-            <Donut rows={income} total={incomeTotal} label={current ? "Received this month" : "Received"} privacy={privacy} />
+            <Donut rows={income} total={incomeTotal} label={current ? "Received this month" : "Received"} privacy={privacy} colourOf={inColour} />
             <div className="bd-table" role="table" aria-label="Income by source">
               <div className="bd-tr bd-th bd-tr--3" role="row">
                 <span role="columnheader">Source</span>
                 <span role="columnheader">Received</span>
                 <span role="columnheader">% of income</span>
               </div>
-              {income.map((r, i) => (
+              {income.map((r) => (
                 <div key={r.group} className="bd-tr bd-tr--3" role="row">
-                  <span role="cell" className="bd-name"><i className="bd-swatch" style={{ opacity: rampAt(i) }} aria-hidden /><span className="bd-trunc">{r.group}</span></span>
+                  <span role="cell" className="bd-name"><i className="bd-swatch" style={{ background: inColour(r.group) }} aria-hidden /><span className="bd-trunc">{r.group}</span></span>
                   <span role="cell" className="mh-amount bd-in">{aud(r.amount)}</span>
                   <span role="cell">{r.pct.toFixed(r.pct < 10 ? 1 : 0)}%</span>
                 </div>

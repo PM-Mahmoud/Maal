@@ -141,8 +141,8 @@ function SpendChart({ current, compare, budget, loading, privacy, label }: {
           aria-label={privacy ? `${label}: amounts hidden` : `${label}: ${aud(spentNow)} so far`}>
           <defs>
             <linearGradient id={`so-fill-${gid}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--mh-ink)" stopOpacity=".12" />
-              <stop offset="100%" stopColor="var(--mh-ink)" stopOpacity="0" />
+              <stop offset="0%" style={{ stopColor: "var(--mh-chart)", stopOpacity: 0.22 }} />
+              <stop offset="100%" style={{ stopColor: "var(--mh-chart)", stopOpacity: 0 }} />
             </linearGradient>
           </defs>
           {geo.budgetY !== null && (

@@ -2,7 +2,9 @@
    Spending › Recurring (/app/spending/recurring) — redesign
    session 2, HEL-104/105. Builds on home.css (.mh-*), the
    overview's fortnight grid (.so-week*) and the settings drawer
-   buttons (.ss-*). Monochrome: ink badges, green only for income.
+   buttons (.ss-*). Kind badges wear the shared category palette
+   (bills amber, subscriptions plum, income green). UI chrome stays
+   monochrome.
    Prefix: .rc-
    ============================================================ */
 
@@ -25,7 +27,7 @@
 .rc-empty { width: min(320px, 86%); line-height: 1.5; }
 .rc-empty-link { display: block; margin: 6px auto 0; font-size: 13px; }
 
-/* Round kind badge: ink on chip; income tinted green. */
+/* Round kind badge: category tint + ink via .cat-chip (../category-colour.css). */
 .rc-badge { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 99px; background: var(--mh-ink); color: var(--mh-card); flex-shrink: 0; }
 .rc-badge[data-size="sm"] { width: 26px; height: 26px; }
 .rc-badge svg { width: 15px; height: 15px; }

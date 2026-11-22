@@ -1,14 +1,12 @@
 // Report charts. Adapted copies of the overview's ReportsCard Bars/Sankey
 // (those aren't exported, and the overview's files belong to another part):
 // SVG with preserveAspectRatio="none" + non-scaling strokes, every label in
-// positioned HTML so text never stretches. Monochrome: ink bars, grey ramp
-// for stacks and the donut.
+// positioned HTML so text never stretches. Colour: the shared category
+// palette (../categoryColour.ts) for stacks, donut and Sankey; income green,
+// expenses warm, negative periods red.
 import { useMemo } from "react";
 import { aud, audTick } from "@/components/maal/home/format";
-
-/** Grey ramp for stacks, donut and legends (strongest first) — same steps as the overview. */
-export const RAMP = [1, 0.72, 0.5, 0.34, 0.22, 0.14, 0.09];
-export const rampAt = (i: number) => RAMP[Math.min(i, RAMP.length - 1)];
+import { catColour, dataColour, useCustomColours } from "../categoryColour";
 
 const BW = 600;
 const BH = 240;
@@ -16,7 +14,7 @@ const BH = 240;
 export type BarsInput =
   | { mode: "net"; values: number[] }
   | { mode: "split"; pairs: Array<[number, number]>; legend: [string, string] }
-  | { mode: "stack"; stacks: number[][]; legend: string[] };
+  | { mode: "stack"; stacks: number[][]; legend: string[]; colours: string[] };
 
 /** Round gridlines: a 1/2/2.5/5 × 10^n step giving about four intervals. */
 function scale(lo: number, hi: number) {
@@ -64,7 +62,7 @@ export function PeriodBars({ data, labels, summary }: { data: BarsInput; labels:
             if (data.mode === "net") {
               const v = data.values[i] ?? 0;
               const y = geo.y(v);
-              return <rect key={i} x={cx - single / 2} width={single} y={Math.min(y, zero)} height={v ? Math.max(1, Math.abs(zero - y)) : 0} rx="2" className="rp-bar" data-neg={v < 0} />;
+              return <rect key={i} x={cx - single / 2} width={single} y={Math.min(y, zero)} height={v ? Math.max(1, Math.abs(zero - y)) : 0} rx="2" className="rp-bar" data-neg={v < 0} style={{ fill: dataColour(v < 0 ? "negative" : "positive") }} />;
             }
             if (data.mode === "split") {
               const [a, b] = data.pairs[i] ?? [0, 0];
@@ -72,12 +70,13 @@ export function PeriodBars({ data, labels, summary }: { data: BarsInput; labels:
               const yb = geo.y(b);
               return (
                 <g key={i}>
-                  <rect x={cx - half - 1} width={half} y={ya} height={a ? Math.max(1, zero - ya) : 0} rx="2" className="rp-bar" />
-                  <rect x={cx + 1} width={half} y={yb} height={b ? Math.max(1, zero - yb) : 0} rx="2" className="rp-bar rp-bar--alt" />
+                  <rect x={cx - half - 1} width={half} y={ya} height={a ? Math.max(1, zero - ya) : 0} rx="2" className="rp-bar" style={{ fill: dataColour("income") }} />
+                  <rect x={cx + 1} width={half} y={yb} height={b ? Math.max(1, zero - yb) : 0} rx="2" className="rp-bar rp-bar--alt" style={{ fill: dataColour("expense") }} />
                 </g>
               );
             }
             const segs = data.stacks[i] ?? [];
+            const drawn = segs.filter((v) => v > 0).length;
             let top = zero;
             return (
               <g key={i}>
@@ -85,7 +84,9 @@ export function PeriodBars({ data, labels, summary }: { data: BarsInput; labels:
                   if (!(v > 0)) return null;
                   const h = Math.max(1, zero - geo.y(v));
                   top -= h;
-                  return <rect key={j} x={cx - single / 2} width={single} y={top} height={h} className="rp-bar" style={{ fillOpacity: rampAt(j) }} />;
+                  // Surface gap between stacked segments (dataviz spacer rule).
+                  const g = drawn > 1 && h > 3 ? 1 : 0;
+                  return <rect key={j} x={cx - single / 2} width={single} y={top + g} height={Math.max(1, h - g * 2)} className="rp-bar" style={{ fill: data.colours[j] }} />;
                 })}
               </g>
             );
@@ -111,22 +112,23 @@ export function PeriodBars({ data, labels, summary }: { data: BarsInput; labels:
       </div>
       {data.mode === "split" && (
         <p className="rp-legend" aria-hidden>
-          <span><i className="rp-key" />{data.legend[0]}</span>
-          <span><i className="rp-key rp-key--alt" />{data.legend[1]}</span>
+          <span><i className="rp-key" style={{ background: dataColour("income") }} />{data.legend[0]}</span>
+          <span><i className="rp-key rp-key--alt" style={{ background: dataColour("expense") }} />{data.legend[1]}</span>
         </p>
       )}
       {data.mode === "stack" && data.legend.length > 0 && (
         <p className="rp-legend" aria-hidden>
-          {data.legend.map((l, j) => <span key={l}><i className="rp-key" style={{ opacity: rampAt(j) }} />{l}</span>)}
+          {data.legend.map((l, j) => <span key={l}><i className="rp-key" style={{ background: data.colours[j] }} />{l}</span>)}
         </p>
       )}
     </figure>
   );
 }
 
-/** Donut of a breakdown, total in the middle (HTML). Segments use the grey ramp. */
-export function Donut({ rows, total, caption, summary }: {
+/** Donut of a breakdown, total in the middle (HTML). Segments use each row's category colour. */
+export function Donut({ rows, total, caption, summary, colourOf }: {
   rows: Array<{ label: string; amount: number }>;
+  colourOf: (label: string) => string;
   total: number;
   caption: string;
   summary: string;
@@ -139,12 +141,12 @@ export function Donut({ rows, total, caption, summary }: {
     <figure className="rp-donut">
       <svg viewBox="0 0 200 200" role="img" aria-label={summary}>
         <circle cx="100" cy="100" r={R} className="rp-donut-track" />
-        {total > 0 && rows.map((r, i) => {
+        {total > 0 && rows.map((r) => {
           const len = (r.amount / total) * C;
           const dash = Math.max(0.5, len - gap);
           const el = (
             <circle key={r.label} cx="100" cy="100" r={R} className="rp-donut-seg"
-              style={{ strokeOpacity: rampAt(i) }}
+              style={{ stroke: colourOf(r.label) }}
               strokeDasharray={`${dash} ${C - dash}`} strokeDashoffset={-offset} transform="rotate(-90 100 100)" />
           );
           offset += len;
@@ -163,6 +165,7 @@ type Flows = { sources: Array<{ label: string; amount: number; pct: number }>; t
 
 /** Sankey: income sources → middle → spending. Copied from the overview's ReportsCard. */
 export function Sankey({ flows, privacy, rangeText }: { flows: Flows; privacy: boolean; rangeText: string }) {
+  const custom = useCustomColours();
   const SW = 1000;
   const GAP = 18;
   const NODE_W = 14;
@@ -203,16 +206,16 @@ export function Sankey({ flows, privacy, rangeText }: { flows: Flows; privacy: b
         {left.map((s) => {
           const d = ribbon(NODE_W, s.y, s.y + s.h, midX, inCursor, inCursor + s.h);
           inCursor += s.h;
-          return <path key={`l-${s.label}`} d={d} className="rp-ribbon" />;
+          return <path key={`l-${s.label}`} d={d} className="rp-ribbon" style={{ fill: dataColour("income") }} />;
         })}
-        {right.map((t, i) => {
+        {right.map((t) => {
           const d = ribbon(midX + NODE_W, outCursor, outCursor + t.h, SW - NODE_W, t.y, t.y + t.h);
           outCursor += t.h;
-          return <path key={`r-${t.label}`} d={d} className="rp-ribbon" style={{ opacity: Math.max(0.35, 1 - i * 0.1) }} />;
+          return <path key={`r-${t.label}`} d={d} className="rp-ribbon" style={{ fill: catColour(t.label, custom) }} />;
         })}
-        {left.map((s) => <rect key={`ln-${s.label}`} x="0" y={s.y} width={NODE_W} height={s.h} rx="3" className="rp-node" />)}
+        {left.map((s) => <rect key={`ln-${s.label}`} x="0" y={s.y} width={NODE_W} height={s.h} rx="3" className="rp-node" style={{ fill: dataColour("income") }} />)}
         <rect x={midX} y={midY} width={NODE_W} height={midH} rx="3" className="rp-node" />
-        {right.map((t, i) => <rect key={`rn-${t.label}`} x={SW - NODE_W} y={t.y} width={NODE_W} height={t.h} rx="3" className="rp-node" style={{ opacity: Math.max(0.35, 1 - i * 0.1) }} />)}
+        {right.map((t) => <rect key={`rn-${t.label}`} x={SW - NODE_W} y={t.y} width={NODE_W} height={t.h} rx="3" className="rp-node" style={{ fill: catColour(t.label, custom) }} />)}
       </svg>
       {left.map((s) => (
         <span key={`lt-${s.label}`} className="rp-sk-label rp-sk-label--l" style={{ top: s.y + s.h / 2 }}>

@@ -8,6 +8,7 @@ import { usePrivacy } from "@/components/maal/home/prefs";
 import { createThread } from "@/lib/advisor.functions";
 import type { Budget } from "../settings/api";
 import { iconForGroup } from "./categoryIcons";
+import { catColour, catVars, useCustomColours } from "../categoryColour";
 import type { Recurring, SpendTxn } from "./useSpendingData";
 
 const PROMO_KEY = "maal.spending.budgetPromoDismissed";
@@ -56,9 +57,6 @@ export function BudgetPromoCard() {
   );
 }
 
-/** Grey ramp for the donut + legend: monochrome charts, strongest first. */
-const RAMP = [1, 0.72, 0.5, 0.34, 0.22, 0.14, 0.09];
-
 export function CategoryBreakdownCard({ transactions, excluded, budgets, upcoming, includeUpcoming, loading, error, budgetError, today }: {
   transactions: SpendTxn[];
   excluded: string[] | undefined;
@@ -73,6 +71,7 @@ export function CategoryBreakdownCard({ transactions, excluded, budgets, upcomin
   const [tab, setTab] = useState<"expenses" | "budget">("expenses");
   const [more, setMore] = useState(false);
   const privacy = usePrivacy();
+  const custom = useCustomColours();
   const breakdown = useMemo(
     () => categoryBreakdown(transactions, today.getFullYear(), today.getMonth(), excluded) as Array<{ group: string; amount: number; pct: number }>,
     [transactions, excluded, today],
@@ -109,16 +108,16 @@ export function CategoryBreakdownCard({ transactions, excluded, budgets, upcomin
             </div>
           ) : (
             <>
-              <Donut rows={breakdown} total={spent} privacy={privacy} />
+              <Donut rows={breakdown} total={spent} privacy={privacy} custom={custom} />
               <ul className="so-cat-list">
-                {(more ? breakdown : breakdown.slice(0, 5)).map((r, i) => {
+                {(more ? breakdown : breakdown.slice(0, 5)).map((r) => {
                   const Icon = iconForGroup(r.group);
                   return (
-                    <li key={r.group} className="so-cat-row">
-                      <span className="so-cat-icon" aria-hidden><Icon /></span>
+                    <li key={r.group} className="so-cat-row" style={catVars(r.group, custom)}>
+                      <span className="so-cat-icon cat-chip" aria-hidden><Icon /></span>
                       <span className="min-w-0 flex-1">
                         <span className="so-cat-name">
-                          <i className="so-swatch" style={{ opacity: RAMP[Math.min(i, RAMP.length - 1)] }} aria-hidden />{r.group}
+                          <i className="so-swatch cat-dot" aria-hidden />{r.group}
                         </span>
                         <span className="so-cat-sub">{r.pct.toFixed(r.pct < 10 ? 1 : 0)}% of expenses</span>
                       </span>
@@ -168,15 +167,15 @@ export function CategoryBreakdownCard({ transactions, excluded, budgets, upcomin
                 {(more ? rows : rows.slice(0, 4)).map((r) => {
                   const Icon = r.rest ? CircleDollarSign : iconForGroup(r.group);
                   return (
-                    <li key={r.group} className="so-cat-row so-brow">
-                      <span className="so-cat-icon" aria-hidden><Icon /></span>
+                    <li key={r.group} className="so-cat-row so-brow" style={r.rest ? undefined : catVars(r.group, custom)}>
+                      <span className={r.rest ? "so-cat-icon" : "so-cat-icon cat-chip"} aria-hidden><Icon /></span>
                       <span className="min-w-0 flex-1">
                         <span className="so-brow-top">
                           <span className="so-cat-name">{r.group}</span>
                           <span className="so-cat-amt mh-amount">{aud(r.spent)} <span className="mh-muted">of {aud(r.budget)}</span></span>
                         </span>
                         <span className="so-brow-bar">
-                          <span className="mh-bar flex-1"><i style={{ width: `${Math.min(100, r.pct)}%` }} data-over={r.pct > 100} /></span>
+                          <span className={r.rest ? "mh-bar flex-1" : "mh-bar flex-1 cat-bar"}><i style={{ width: `${Math.min(100, r.pct)}%` }} data-over={r.pct > 100} /></span>
                           <span className="so-cat-sub">{r.pct.toFixed(r.pct < 10 ? 1 : 0)}%</span>
                         </span>
                       </span>
@@ -197,7 +196,7 @@ export function CategoryBreakdownCard({ transactions, excluded, budgets, upcomin
   );
 }
 
-function Donut({ rows, total, privacy }: { rows: Array<{ group: string; amount: number }>; total: number; privacy: boolean }) {
+function Donut({ rows, total, privacy, custom }: { rows: Array<{ group: string; amount: number }>; total: number; privacy: boolean; custom: ReturnType<typeof useCustomColours> }) {
   const r = 70;
   const c = 2 * Math.PI * r;
   let offset = 0;
@@ -205,12 +204,12 @@ function Donut({ rows, total, privacy }: { rows: Array<{ group: string; amount: 
     <div className="so-donut">
       <svg viewBox="0 0 180 180" role="img" aria-label={privacy ? "Spending by category" : `Spending by category: ${rows.map((x) => `${x.group} ${aud(x.amount)}`).join(", ")}`}>
         <circle cx="90" cy="90" r={r} className="so-donut-track" />
-        {rows.map((row, i) => {
+        {rows.map((row) => {
           const len = total > 0 ? (row.amount / total) * c : 0;
           const gap = rows.length > 1 ? Math.min(2, len / 2) : 0;
           const el = (
             <circle key={row.group} cx="90" cy="90" r={r} className="so-donut-seg"
-              style={{ opacity: RAMP[Math.min(i, RAMP.length - 1)] }}
+              style={{ stroke: catColour(row.group, custom) }}
               strokeDasharray={`${Math.max(0, len - gap)} ${c}`} strokeDashoffset={-offset} transform="rotate(-90 90 90)" />
           );
           offset += len;

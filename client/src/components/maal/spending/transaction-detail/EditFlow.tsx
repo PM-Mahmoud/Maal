@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 import { iconForGroup } from "../overview/categoryIcons";
+import { catVars } from "../categoryColour";
 import { bulkEdit, type BulkChanges, type CategoryGroup, type Tag } from "./api";
 import { CategoryList, CreateTagDialog, TagList, type CategoryValue } from "./pickers";
 import { EditorActions, ErrorNote, PanelHeader, TagChip } from "./ui";
@@ -228,7 +229,7 @@ export function CategoryEditor({ groups, initial, onSave, onReset, saving, saveL
     <>
       <EditorCard label="Update category">
         {value && (
-          <p className="td-chosen"><span className="td-cat-icon" aria-hidden><Icon /></span>
+          <p className="td-chosen"><span className="td-cat-icon cat-chip" style={catVars(value.group, groups)} aria-hidden><Icon /></span>
             {value.group}{value.category ? ` · ${value.category}` : ""}</p>
         )}
         {groups.length === 0 ? <p className="td-muted m-0">Categories couldn’t load right now.</p> : (

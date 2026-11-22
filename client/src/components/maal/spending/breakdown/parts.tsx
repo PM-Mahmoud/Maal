@@ -3,6 +3,7 @@ import { ArrowDownRight, ArrowUpRight, Check, Minus, X } from "lucide-react";
 import { aud } from "@/components/maal/home/format";
 import type { CustomCategory } from "./api";
 import { categoryLook } from "./icons";
+import { catVars } from "../categoryColour";
 
 // The 18 built-in groups (lib/transaction-categories.js order). Money that only
 // moves between the user's own accounts, and income, aren't expense categories.
@@ -27,11 +28,11 @@ export function incomeCategoryNames(custom: CustomCategory[]): string[] {
   return custom.filter((c) => c.kind === "income").map((c) => c.name);
 }
 
-/** Round category icon; custom categories show their chosen colour. */
+/** Round category icon on its category tint (shared palette; custom categories use their stored colour). */
 export function CatIcon({ name, custom, size = 32 }: { name: string; custom: CustomCategory[]; size?: number }) {
-  const { Icon, color } = categoryLook(name, custom);
+  const { Icon } = categoryLook(name, custom);
   return (
-    <span className="bd-icon" aria-hidden style={{ width: size, height: size, ...(color ? { background: color, color: "#fff" } : {}) }}>
+    <span className="bd-icon cat-chip" aria-hidden style={{ width: size, height: size, ...catVars(name, custom) }}>
       <Icon />
     </span>
   );
@@ -51,11 +52,8 @@ export function ChangeBadge({ change }: { change: number | null }) {
   );
 }
 
-const RAMP = [1, 0.72, 0.5, 0.34, 0.22, 0.14, 0.09];
-export const rampAt = (i: number) => RAMP[Math.min(i, RAMP.length - 1)];
-
-/** Monochrome donut (SVG rings; the total sits in positioned HTML). */
-export function Donut({ rows, total, label, privacy }: { rows: Array<{ group: string; amount: number }>; total: number; label: string; privacy: boolean }) {
+/** Donut in category colours (SVG rings; the total sits in positioned HTML). */
+export function Donut({ rows, total, label, privacy, colourOf }: { rows: Array<{ group: string; amount: number }>; total: number; label: string; privacy: boolean; colourOf: (name: string) => string }) {
   const r = 70;
   const c = 2 * Math.PI * r;
   let offset = 0;
@@ -63,11 +61,11 @@ export function Donut({ rows, total, label, privacy }: { rows: Array<{ group: st
     <div className="bd-donut">
       <svg viewBox="0 0 180 180" role="img" aria-label={privacy ? label : `${label}: ${rows.map((x) => `${x.group} ${aud(x.amount)}`).join(", ")}`}>
         <circle cx="90" cy="90" r={r} className="bd-donut-track" />
-        {rows.map((row, i) => {
+        {rows.map((row) => {
           const len = total > 0 ? (row.amount / total) * c : 0;
           const gap = rows.length > 1 ? Math.min(2, len / 2) : 0;
           const el = (
-            <circle key={row.group} cx="90" cy="90" r={r} className="bd-donut-seg" style={{ opacity: rampAt(i) }}
+            <circle key={row.group} cx="90" cy="90" r={r} className="bd-donut-seg" style={{ stroke: colourOf(row.group) }}
               strokeDasharray={`${Math.max(0, len - gap)} ${c}`} strokeDashoffset={-offset} transform="rotate(-90 90 90)" />
           );
           offset += len;

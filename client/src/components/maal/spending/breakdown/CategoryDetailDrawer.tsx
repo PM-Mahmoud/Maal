@@ -12,6 +12,7 @@ import type { SpendTxn } from "../overview/useSpendingData";
 import { openTransactionDetail } from "../transaction-detail/TransactionDetailMount";
 import { deleteBudget, type CustomCategory } from "./api";
 import { CatIcon, ErrorLine, monthLabel, Toast } from "./parts";
+import { catVars } from "../categoryColour";
 import "../settings/spending-settings.css";
 
 const BARS = 6;
@@ -92,7 +93,7 @@ export function CategoryDetailDrawer({ name, transactions, excluded, budgets, cu
     <DialogPrimitive.Root open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="ss-scrim" />
-        <DialogPrimitive.Content className="mh-shell ss-drawer bd-drawer" aria-describedby={undefined}>
+        <DialogPrimitive.Content className="mh-shell ss-drawer bd-drawer bd-drawer--cat" style={catVars(name, custom)} aria-describedby={undefined}>
           <header className="ss-head">
             <DialogPrimitive.Title className="ss-eyebrow">Category detail</DialogPrimitive.Title>
             <DialogPrimitive.Close className="ss-iconbtn ss-close" aria-label="Close category detail"><X aria-hidden /></DialogPrimitive.Close>

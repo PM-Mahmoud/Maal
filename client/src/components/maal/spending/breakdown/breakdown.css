@@ -3,8 +3,9 @@
    redesign session 2, HEL-84..HEL-90. Builds on home.css tokens
    (--mh-*), the .mh-card shell, overview.css (.so-select, .so-month)
    and spending-settings.css (.ss-drawer, .ss-card, .ss-btn-sm).
-   Monochrome charts: ink bars/rings, grey for the rest, red only
-   for over-budget. Prefix: .bd-
+   Category and data visuals use the shared category palette
+   (../category-colour.css, shared/category-colours.mjs); red only
+   for over-budget. UI chrome stays monochrome. Prefix: .bd-
    ============================================================ */
 
 .bd-page { padding-top: 18px; }
@@ -42,8 +43,8 @@ html:not(.dark) .bd-pcol[aria-pressed="true"] { background: #F1F2EE; }
 .bd-pcol:focus-visible, .bd-hcol:focus-visible, .bd-tr:focus-visible, .bd-txn:focus-visible { outline: 2px solid var(--mh-badge-ink); outline-offset: -2px; }
 .bd-pplot { position: relative; display: block; width: 100%; height: 72px; }
 .bd-pplot svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.bd-pbar { fill: var(--mh-faint); }
-.bd-pbar[data-sel="true"] { fill: var(--mh-ink); }
+.bd-pbar { fill: var(--sp-expense, var(--mh-faint)); fill-opacity: .38; }
+.bd-pbar[data-sel="true"] { fill-opacity: 1; }
 .bd-pbase { stroke: var(--mh-line); stroke-width: 1; }
 .bd-plabel { font-size: 12.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 @media (max-width: 480px) { .bd-plabel { font-size: 11px; } }
@@ -57,8 +58,8 @@ html:not(.dark) .bd-pcol[aria-pressed="true"] { background: #F1F2EE; }
 .bd-ptip b { font-weight: 500; font-size: 14px; margin-bottom: 2px; }
 .bd-ptip span { display: flex; align-items: center; gap: 6px; color: var(--mh-muted); }
 .bd-ptip em { margin-left: auto; font-style: normal; color: var(--mh-ink); font-variant-numeric: tabular-nums; }
-.bd-key { display: inline-block; width: 8px; height: 8px; border-radius: 99px; background: var(--mh-ink); }
-.bd-key--alt { background: var(--mh-line-strong); }
+.bd-key { display: inline-block; width: 8px; height: 8px; border-radius: 99px; background: var(--sp-expense, var(--mh-ink)); }
+.bd-key--alt { background: var(--sp-income, var(--mh-line-strong)); }
 
 /* ---------- Category breakdown ---------- */
 .bd-cat-body { padding: 0; }
@@ -72,6 +73,7 @@ html:not(.dark) .bd-pcol[aria-pressed="true"] { background: #F1F2EE; }
 .bd-donut svg { width: 100%; height: 100%; }
 .bd-donut-track { fill: none; stroke: var(--mh-chip); stroke-width: 14; }
 .bd-donut-seg { fill: none; stroke: var(--mh-ink); stroke-width: 14; }
+/* Category colour pass: rings/bars/icons take the shared palette (../category-colour.css). */
 .bd-donut-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
 .bd-donut-amt { font-size: 28px; font-variant-numeric: tabular-nums; }
 .bd-donut-sub { font-size: 13px; color: var(--mh-muted); }
@@ -141,7 +143,8 @@ html.dark .bd-gauge-track { stroke: var(--mh-chip); }
 .bd-cf-list dt { font-size: 15px; }
 .bd-cf-list dd { margin: 0; font-size: 15px; font-variant-numeric: tabular-nums; }
 .bd-cf-bar { grid-column: 1 / -1; height: 8px; }
-.bd-cf-bar > i[data-alt="true"] { background: var(--mh-line-strong); }
+.bd-cf-bar > i { background: var(--sp-expense, var(--mh-ink)); }
+.bd-cf-bar > i[data-alt="true"] { background: var(--sp-income, var(--mh-line-strong)); }
 .bd-cf-net { border-top: 1px solid var(--mh-line); padding-top: 14px; }
 .bd-cf-net dd[data-neg="true"] { color: var(--mh-bad); }
 .bd-list-body { padding: 4px 0; }
@@ -189,6 +192,10 @@ html.dark .bd-gauge-track { stroke: var(--mh-chip); }
 .bd-hbar { fill: var(--mh-line); }
 html:not(.dark) .bd-hbar { fill: #E2E3DF; }
 html .bd-hbar[data-sel="true"] { fill: var(--mh-ink); }
+/* Category detail: history bars + budget ring in the category's colour. */
+html .bd-drawer--cat .bd-hbar { fill: var(--cat); fill-opacity: .35; }
+html .bd-drawer--cat .bd-hbar[data-sel="true"] { fill-opacity: 1; }
+.bd-drawer--cat .bd-ring { background: conic-gradient(var(--cat) var(--p), var(--cat-tint) 0); }
 .bd-hval { position: absolute; left: 50%; transform: translate(-50%, -4px); font-size: 12px; white-space: nowrap; color: var(--mh-muted); font-variant-numeric: tabular-nums; }
 .bd-hcol[aria-pressed="true"] .bd-hval { color: var(--mh-ink); }
 @media (max-width: 480px) { .bd-hval { font-size: 10px; } }

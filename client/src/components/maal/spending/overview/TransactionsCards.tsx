@@ -8,6 +8,7 @@ import { AskSparkButton, HomeCard } from "@/components/maal/home/HomeCard";
 import { aud, shortDate, signedCents } from "@/components/maal/home/format";
 import { usePrivacy } from "@/components/maal/home/prefs";
 import { iconForGroup } from "./categoryIcons";
+import { catVars } from "../categoryColour";
 import { openTransactionDetail } from "../transaction-detail/TransactionDetailMount";
 import type { Recurring, SpendTxn } from "./useSpendingData";
 
@@ -50,7 +51,7 @@ export function LatestTransactionsCard({ transactions, excluded, loading, error 
                 <button type="button" className="td-txn-open" disabled={t.id == null}
                   onClick={() => t.id != null && openTransactionDetail(t.id)}
                   aria-label={`Open ${t.merchant || t.description || "transaction"}, ${shortDate(t.post_date)}`}>
-                <span className="so-txn-icon" aria-hidden><Icon /></span>
+                <span className="so-txn-icon cat-chip" style={catVars(group)} aria-hidden><Icon /></span>
                 <span className="min-w-0 flex-1">
                   <span className="so-txn-name">{t.merchant || t.description || "Transaction"}</span>
                   <span className="so-txn-date">{shortDate(t.post_date)}</span>

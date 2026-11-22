@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, CircleCheck, EyeOff, Pencil } from "lucide-r
 import { audCents, signedCents } from "@/components/maal/home/format";
 import { InstitutionLogo } from "@/components/maal/InstitutionLogo";
 import { iconForGroup } from "../overview/categoryIcons";
+import { catVars } from "../categoryColour";
 import {
   getCategoryGroups, getTransactionDetail, listTags, patchMeta, setCategory, setTags,
   type CategoryGroup, type Tag, type TxnDetail,
@@ -200,7 +201,7 @@ function DetailPanel({ txn, merchant, tags, tagsError, busy, error, onDismissErr
           <p className="td-amount mh-amount" data-in={amount > 0}>{amount > 0 ? signedCents(amount) : audCents(Math.abs(amount))}</p>
           <button type="button" className="td-cat-chip" onClick={() => onOpen("category")}
             aria-label={`Category: ${txn.category_group || "Uncategorised"}. Change category`}>
-            <span className="td-cat-icon" aria-hidden><Icon /></span>
+            <span className="td-cat-icon cat-chip" style={catVars(txn.category_group || "Other")} aria-hidden><Icon /></span>
             {txn.category_group || "Uncategorised"}{txn.category ? ` · ${txn.category}` : ""}
             <ChevronDown aria-hidden />
           </button>
@@ -259,7 +260,7 @@ function DetailPanel({ txn, merchant, tags, tagsError, busy, error, onDismissErr
                 const SIcon = iconForGroup(s.category_group);
                 return (
                   <li key={s.id || i} data-hidden={s.hidden}>
-                    <span className="td-cat-icon td-cat-icon-sm" aria-hidden><SIcon /></span>
+                    <span className="td-cat-icon td-cat-icon-sm cat-chip" style={catVars(s.category_group)} aria-hidden><SIcon /></span>
                     <span className="td-split-cat">{s.category_group}{s.hidden && <EyeOff aria-label="Hidden" role="img" />}</span>
                     <span className="mh-amount">{audCents(Number(s.amount))}</span>
                   </li>

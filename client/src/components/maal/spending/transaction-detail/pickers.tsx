@@ -2,6 +2,7 @@ import { useId, useMemo, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Search, X } from "lucide-react";
 import { iconForGroup } from "../overview/categoryIcons";
+import { catVars } from "../categoryColour";
 import { createTag, type CategoryGroup, type Tag } from "./api";
 import { ErrorNote, TAG_COLOR_KEYS, TAG_SWATCHES, TagDot } from "./ui";
 
@@ -43,7 +44,7 @@ export function CategoryList({ groups, value, onChange }: {
             return (
               <li key={g.group}>
                 <label className="td-pick" data-on={on}>
-                  <span className="td-cat-icon" aria-hidden><Icon /></span>
+                  <span className="td-cat-icon cat-chip" style={catVars(g.group, groups)} aria-hidden><Icon /></span>
                   <span className="td-pick-label">{g.group}</span>
                   <input type="radio" name={name} className="td-radio" checked={on && !value?.category}
                     onChange={() => onChange({ group: g.group, category: null })} />
