@@ -211,11 +211,11 @@ export function Sankey({ flows, privacy, rangeText }: { flows: Flows; privacy: b
         {right.map((t) => {
           const d = ribbon(midX + NODE_W, outCursor, outCursor + t.h, SW - NODE_W, t.y, t.y + t.h);
           outCursor += t.h;
-          return <path key={`r-${t.label}`} d={d} className="rp-ribbon" style={{ fill: catColour(t.label, custom) }} />;
+          return <path key={`r-${t.label}`} d={d} className="rp-ribbon" style={{ fill: (t.label === "Everything else" ? dataColour("neutral") : catColour(t.label, custom)) }} />;
         })}
         {left.map((s) => <rect key={`ln-${s.label}`} x="0" y={s.y} width={NODE_W} height={s.h} rx="3" className="rp-node" style={{ fill: dataColour("income") }} />)}
         <rect x={midX} y={midY} width={NODE_W} height={midH} rx="3" className="rp-node" />
-        {right.map((t) => <rect key={`rn-${t.label}`} x={SW - NODE_W} y={t.y} width={NODE_W} height={t.h} rx="3" className="rp-node" style={{ fill: catColour(t.label, custom) }} />)}
+        {right.map((t) => <rect key={`rn-${t.label}`} x={SW - NODE_W} y={t.y} width={NODE_W} height={t.h} rx="3" className="rp-node" style={{ fill: (t.label === "Everything else" ? dataColour("neutral") : catColour(t.label, custom)) }} />)}
       </svg>
       {left.map((s) => (
         <span key={`lt-${s.label}`} className="rp-sk-label rp-sk-label--l" style={{ top: s.y + s.h / 2 }}>
