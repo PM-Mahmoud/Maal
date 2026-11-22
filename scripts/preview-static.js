@@ -203,6 +203,107 @@ function previewTransactions() {
   }
   return out.sort((a, b) => b.post_date.localeCompare(a.post_date));
 }
+// ── Session 2 – Transaction detail preview (HEL-96..103) ──────────────────
+// In-memory meta / tags / splits mirroring routes/api.js "Session 2 –
+// Transaction detail" shapes. Registered before GET /api/v1/transactions so the
+// list carries the additive hidden / reviewed / tags / splits fields too.
+{
+  const td = require('../lib/transaction-detail');
+  const { isKnownGroup, isValidCategory } = require('../lib/transaction-categories');
+  const pvMeta = new Map(); // id -> { hidden, reviewed, note, merchant_name, description }
+  const pvTxnTags = new Map(); // id -> [tagId]
+  const pvSplits = new Map(); // id -> [split]
+  const pvCats = new Map(); // id -> { category_group, category } (manual overrides)
+  let pvTags = [
+    { id: '1', name: 'Work trip', color: 'sky' },
+    { id: '2', name: 'Tax deductible', color: 'sage' },
+  ];
+  let pvTagSeq = 3;
+  pvTxnTags.set('t4', ['2']);
+  const decorate = (t) => {
+    const m = pvMeta.get(t.id) || {};
+    const cat = pvCats.get(t.id);
+    const out = {
+      ...t,
+      ...(cat ? { ...cat, category_source: 'manual' } : { category_source: 'auto' }),
+      hidden: !!m.hidden, reviewed: !!m.reviewed, reviewed_at: m.reviewed ? new Date().toISOString() : null,
+      note: m.note || null, merchant_name: m.merchant_name || null, description_override: m.description || null,
+      tags: (pvTxnTags.get(t.id) || []).map((id) => pvTags.find((g) => g.id === id)).filter(Boolean),
+      splits: pvSplits.get(t.id) || [],
+      account_reference: '06-2000-12345678', institution_name: 'Commonwealth Bank',
+    };
+    if (m.merchant_name) out.merchant = m.merchant_name;
+    return out;
+  };
+  const find = (id) => previewTransactions().find((t) => t.id === id);
+  app.get('/api/v1/transactions', (req, res) => res.json(previewEmpty(req) ? [] : previewTransactions().map(decorate)));
+  app.get('/api/v1/transactions/:id/detail', (req, res) => {
+    const t = find(req.params.id);
+    if (!t) return res.status(404).json({ error: 'Transaction not found.' });
+    res.json({ transaction: decorate(t) });
+  });
+  app.patch('/api/v1/transactions/:id/meta', express.json(), (req, res) => {
+    if (!find(req.params.id)) return res.status(404).json({ error: 'Transaction not found.' });
+    const v = td.validateMetaPatch(req.body);
+    if (v.error) return res.status(400).json({ error: v.error });
+    pvMeta.set(req.params.id, { ...(pvMeta.get(req.params.id) || {}), ...v.patch });
+    res.json({ ok: true });
+  });
+  app.patch('/api/v1/transactions/:id/category', express.json(), (req, res) => {
+    const d = req.body || {};
+    if (!isKnownGroup(d.category_group) || !isValidCategory(d.category_group, d.category)) return res.status(400).json({ error: 'Unknown category.' });
+    pvCats.set(req.params.id, { category_group: d.category_group, category: d.category || null });
+    res.json({ ok: true });
+  });
+  app.put('/api/v1/transactions/:id/tags', express.json(), (req, res) => {
+    const v = td.validateTagIds(req.body && req.body.tag_ids);
+    if (v.error) return res.status(400).json({ error: v.error });
+    pvTxnTags.set(req.params.id, v.ids.filter((id) => pvTags.some((g) => g.id === id)));
+    res.json({ ok: true });
+  });
+  app.put('/api/v1/transactions/:id/splits', express.json(), async (req, res) => {
+    const t = find(req.params.id);
+    if (!t) return res.status(404).json({ error: 'Transaction not found.' });
+    const { validateSplits } = await import('../shared/transaction-splits.mjs');
+    const v = validateSplits(t.amount, req.body && req.body.splits);
+    if (!v.ok) return res.status(400).json({ error: v.error, partErrors: v.partErrors });
+    pvSplits.set(t.id, v.parts.map((p, i) => ({ id: `${t.id}-${i + 1}`, position: i + 1, ...p })));
+    res.json({ splits: pvSplits.get(t.id) });
+  });
+  app.delete('/api/v1/transactions/:id/splits', (req, res) => { pvSplits.delete(req.params.id); res.json({ ok: true }); });
+  app.post('/api/v1/transactions/bulk-edit', express.json(), (req, res) => {
+    // Preview ids look like "t12"; the real API takes numeric ids.
+    const body = { ...req.body, ids: (req.body && Array.isArray(req.body.ids) ? req.body.ids : []).map((x) => String(x).replace(/^t/, '')) };
+    const v = td.validateBulkEdit(body);
+    if (v.error) return res.status(400).json({ error: v.error });
+    const ids = v.ids.map((id) => `t${id}`).filter((id) => find(id));
+    for (const id of ids) {
+      const c = v.changes;
+      if (c.category === null) pvCats.delete(id);
+      else if (c.category) pvCats.set(id, c.category);
+      const m = { ...(pvMeta.get(id) || {}) };
+      for (const k of ['hidden', 'reviewed', 'merchant_name', 'description']) if (c[k] !== undefined) m[k] = c[k];
+      pvMeta.set(id, m);
+      if (c.set_tag_ids) pvTxnTags.set(id, c.set_tag_ids);
+      if (c.add_tag_ids) pvTxnTags.set(id, [...new Set([...(pvTxnTags.get(id) || []), ...c.add_tag_ids])]);
+    }
+    if (!ids.length) return res.status(404).json({ error: 'Transaction not found.' });
+    res.json({ updated: ids.length });
+  });
+  // ?tags=empty on the page URL previews the "no tags yet" state.
+  app.get('/api/v1/tags', (req, res) => res.json({
+    tags: /tags=empty/.test(req.headers.referer || '') ? [] : pvTags, colors: td.TAG_COLORS,
+  }));
+  app.post('/api/v1/tags', express.json(), (req, res) => {
+    const v = td.validateTag(req.body);
+    if (v.error) return res.status(400).json({ error: v.error });
+    if (pvTags.some((g) => g.name.toLowerCase() === v.tag.name.toLowerCase())) return res.status(409).json({ error: 'You already have a tag with that name.' });
+    const tag = { id: String(pvTagSeq++), ...v.tag };
+    pvTags = [...pvTags, tag];
+    res.json({ tag });
+  });
+}
+// ── end Session 2 – Transaction detail preview ─────────────────────────────
 app.get('/api/v1/transactions', (req, res) => res.json(previewEmpty(req) ? [] : previewTransactions()));
 // Mirrors services/transaction-rules.js detectRecurringTransactions() output.
 app.get('/api/v1/transactions/recurring', (req, res) => {
