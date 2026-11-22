@@ -141,7 +141,7 @@ export function CategoryBreakdownCard({ transactions, excluded, budgets, upcomin
             <p className="so-budget-empty-title">Create your budget</p>
             <p className="mh-muted mh-small m-0">Set a monthly budget to stay on top of your spending and see how each month is tracking.</p>
             <Gauge pct={0} />
-            <Link to="/app/spending/settings" search={{ panel: "budget" }} className="mh-btn-ink so-create">
+            <Link to="/app/spending/breakdown" search={{ panel: "ai" }} className="mh-btn-ink so-create">
               <Pencil aria-hidden size={15} /> Create budget
             </Link>
           </div>
@@ -159,7 +159,7 @@ export function CategoryBreakdownCard({ transactions, excluded, budgets, upcomin
               <p className="mh-muted mh-small so-center m-0">Includes <span className="mh-amount">{aud(upcoming)}</span> of upcoming bills</p>
             )}
             <p className="so-center m-0 mt-2">
-              <Link to="/app/spending/settings" search={{ panel: "budget" }} className="mh-link-btn so-edit">
+              <Link to="/app/spending/breakdown" search={{ panel: "edit" }} className="mh-link-btn so-edit">
                 Edit budget <Pencil aria-hidden size={13} />
               </Link>
             </p>
