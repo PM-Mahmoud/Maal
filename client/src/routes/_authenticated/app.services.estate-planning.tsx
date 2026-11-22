@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { EmptyPage } from "@/components/maal/nav/EmptyPage";
+import { ComingSoonPage } from "@/components/maal/coming-soon/ComingSoonPage";
 
-// Left empty until the Figma designs are finalised (2026-11-15).
+// Coming soon (2026-11-23): shared page, copy in components/maal/coming-soon/features.ts.
 export const Route = createFileRoute("/_authenticated/app/services/estate-planning")({ component: EstatePlanning });
 
 function EstatePlanning() {
-  return <EmptyPage title="Estate planning" />;
+  return <ComingSoonPage feature="estate-planning" />;
 }

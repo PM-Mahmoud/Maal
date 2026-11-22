@@ -1,0 +1,54 @@
+/* Shared "Coming soon" page (2026-11-23). Home tokens (--mh-*) from home.css,
+   which AppShell loads; --cs-a / --cs-b are the feature's two accent hues. */
+.cs-root { color: var(--mh-ink, #121313); }
+.cs-head { padding-bottom: 14px; }
+.cs-title { margin: 0; font-weight: 400; line-height: 1.2; }
+
+.cs-col {
+  max-width: 640px; margin: 0 auto; padding: 32px 16px 56px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+}
+@media (min-width: 768px) { .cs-col { padding-top: 48px; } }
+
+.cs-art { position: relative; width: 240px; max-width: 100%; aspect-ratio: 4 / 3; }
+.cs-art-svg { display: block; width: 100%; height: 100%; }
+.cs-art-card {
+  position: absolute; left: 50%; top: 51%; transform: translate(-50%, -50%);
+  display: grid; place-items: center; width: 76px; height: 76px; border-radius: 22px;
+  background: var(--mh-card, #fff); color: var(--cs-a);
+  box-shadow: 0 0 0 1px var(--mh-line, #E4E5E2), 0 10px 24px -10px color-mix(in srgb, var(--cs-a) 55%, transparent);
+}
+.cs-art-card svg { width: 34px; height: 34px; }
+
+.cs-pill {
+  margin-top: 20px; padding: 3px 10px; border-radius: 999px;
+  font-size: 12px; font-weight: 500; letter-spacing: .02em;
+  color: var(--mh-badge-ink, #006B87); background: var(--mh-badge, #D6F7FF);
+}
+.cs-headline {
+  font-family: var(--mh-serif, Lora, serif); font-weight: 400;
+  font-size: clamp(28px, 4vw, 38px); line-height: 1.15; margin: 14px 0 10px; text-wrap: balance;
+}
+.cs-promise { margin: 0; max-width: 520px; color: var(--mh-muted, #686969); font-size: 16px; line-height: 1.55; text-wrap: pretty; }
+
+.cs-benefits {
+  list-style: none; margin: 32px 0 0; padding: 0; width: 100%;
+  display: grid; gap: 12px; grid-template-columns: 1fr;
+}
+@media (min-width: 640px) { .cs-benefits { grid-template-columns: repeat(3, 1fr); } }
+.cs-benefit {
+  display: flex; align-items: center; gap: 12px; text-align: left;
+  padding: 14px; border-radius: 14px; background: var(--mh-card, #fff);
+  border: 1px solid var(--mh-line, #E4E5E2); font-size: 14px; line-height: 1.4;
+}
+@media (min-width: 640px) {
+  .cs-benefit { flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 18px 14px; }
+}
+.cs-benefit-icon {
+  flex-shrink: 0; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px;
+  color: var(--cs-a); background: color-mix(in srgb, var(--cs-a) 14%, transparent);
+}
+.cs-benefit-icon svg { width: 18px; height: 18px; }
+
+.cs-btn { margin-top: 32px; min-width: 180px; }
+.cs-btn[disabled] { opacity: 1; background: var(--mh-chip, #F5F5F4); color: var(--mh-ink, #121313); box-shadow: inset 0 0 0 1px var(--mh-line, #E4E5E2); }
