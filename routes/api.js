@@ -1331,13 +1331,18 @@ async function s2CategorisedTransactions(userId) {
   const { detectTransactionRelationships, indexRelationships } = require('../services/transaction-relationships');
   const rows = await txnDb.getTransactionsWithCategory(userId, 2000);
   const relationships = indexRelationships(detectTransactionRelationships(rows));
-  return rows.map((r) => {
+  const out = rows.map((r) => {
     const rel = relationships.get(String(r.id));
     const row = rel ? { ...r, relationship_type: rel.type } : r;
     if (row.category_group) return row;
     const auto = autoCategorize(row.description, row.amount);
     return auto ? { ...row, category_group: auto.group, category: auto.category } : row;
   });
+  // Hidden rows drop out and split rows count per part (Transaction detail, shared/transaction-splits.mjs).
+  const detailDb = require('../db/transaction-detail');
+  const extras = await detailDb.getExtras(userId, out.map((r) => r.id));
+  const { effectiveTransactions } = await import('../shared/transaction-splits.mjs');
+  return effectiveTransactions(detailDb.attachExtras(out, extras));
 }
 
 // GET /v1/budgets/suggestion — HEL-86 "Create a budget with Maal".
@@ -1767,8 +1772,15 @@ router.put('/v1/transactions/:id/splits', async (req, res) => {
   const id = txnDetailId(req, res); if (!id) return;
   const parts = req.body && req.body.splits;
   const { isKnownGroup, isValidCategory } = require('../lib/transaction-categories');
+  // Session 2 – Breakdown & budget: the user's custom categories are valid parts too.
+  let customNames = [];
+  if (Array.isArray(parts) && parts.some((p) => p && p.category_group && !isKnownGroup(p.category_group))) {
+    try { customNames = await spendCatsDb().customCategoryNames(req.session.userId); }
+    catch (e) { console.error('[splits] custom categories unavailable:', e.message); }
+  }
   if (Array.isArray(parts) && parts.some((p) => p && p.category_group
-    && (!isKnownGroup(p.category_group) || !isValidCategory(p.category_group, p.category || null)))) {
+    && (isKnownGroup(p.category_group) ? !isValidCategory(p.category_group, p.category || null)
+      : !spendCats.isAssignableCategory(p.category_group, p.category || null, customNames)))) {
     return res.status(400).json({ error: 'Unknown category.' });
   }
   try {
@@ -1804,7 +1816,10 @@ router.delete('/v1/transactions/:id/splits', async (req, res) => {
 router.post('/v1/transactions/bulk-edit', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   const { validateBulkEdit } = require('../lib/transaction-detail');
-  const v = validateBulkEdit(req.body);
+  let customNames = [];
+  try { customNames = await spendCatsDb().customCategoryNames(req.session.userId); } // Session 2 – Breakdown & budget
+  catch (e) { console.error('[bulk-edit] custom categories unavailable:', e.message); }
+  const v = validateBulkEdit(req.body, customNames);
   if (v.error) return res.status(400).json({ error: v.error });
   try {
     const r = await require('../db/transaction-detail').bulkEdit(req.session.userId, v.ids, v.changes);

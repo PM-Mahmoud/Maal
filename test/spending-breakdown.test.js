@@ -139,6 +139,15 @@ const t = (post_date, amount, category_group, extra = {}) => ({ post_date, amoun
   await test('suggestBudget: already saving 20%+ keeps spending where it is', () => {
     const rich = steady.map((x) => (x.category_group === 'Income' ? { ...x, amount: 8000 } : x));
     assert.strictEqual(m.suggestBudget(rich, today).suggested, 4500);
+    // Rounding to $10 never lifts it above typical spend ($3,296 → $3,290, not $3,300).
+    const odd = [];
+    for (const mo of ['08', '09', '10']) {
+      odd.push(t(`2026-${mo}-01`, 8000, 'Income', { category: 'Salary & wages' }));
+      for (let i = 1; i <= 4; i++) odd.push(t(`2026-${mo}-1${i}`, -824, 'Housing'));
+    }
+    const s = m.suggestBudget(odd, today);
+    assert.strictEqual(s.avgExpenses, 3296);
+    assert.strictEqual(s.suggested, 3290);
   });
 
   await test('suggestBudget: no income trims typical spend by 15%; negative cash flow flagged', () => {
@@ -203,6 +212,14 @@ const t = (post_date, amount, category_group, extra = {}) => ({ post_date, amoun
   await test('toGroups shapes rows + members', () => {
     const g = cats.toGroups([{ id: 1, name: 'Fun', kind: 'expense', color: '#121313' }], [{ group_id: '1', category_name: 'Shopping' }, { group_id: 1, category_name: 'Pets' }, { group_id: 9, category_name: 'X' }]);
     assert.deepStrictEqual(g, [{ id: '1', name: 'Fun', kind: 'expense', color: '#121313', categories: ['Pets', 'Shopping'] }]);
+  });
+
+  await test('bulk-edit + custom categories: accepted only when they are the user\'s and carry no sub-category', () => {
+    const d = require('../lib/transaction-detail');
+    assert.deepStrictEqual(d.validateBulkEdit({ ids: [1], changes: { category: { category_group: 'Pets' } } }, ['Pets']).changes, { category: { category_group: 'Pets', category: null } });
+    assert.ok(d.validateBulkEdit({ ids: [1], changes: { category: { category_group: 'Pets' } } }).error);
+    assert.ok(d.validateBulkEdit({ ids: [1], changes: { category: { category_group: 'Pets', category: 'Vet' } } }, ['Pets']).error);
+    assert.deepStrictEqual(d.validateBulkEdit({ ids: [1], changes: { category: { category_group: 'Shopping' } } }).changes.category, { category_group: 'Shopping', category: null });
   });
 
   console.log('\nbudget-wording');

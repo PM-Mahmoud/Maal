@@ -112,7 +112,7 @@ export function BreakdownCard({
                     <span role="columnheader">vs last month</span>
                   </div>
                   {(all ? rows : spendRows.slice(0, 6)).map((r) => (
-                    <button key={r.group} type="button" className="bd-tr" role="row" onClick={() => onOpenCategory(r.group)}>
+                    <button key={r.group} type="button" className="bd-tr" role="row" aria-label={`${r.group}: ${privacy ? "" : `${aud(r.amount)} spent, `}open details`} onClick={() => onOpenCategory(r.group)}>
                       <span role="cell" className="bd-name"><CatIcon name={r.group} custom={custom} /><span className="min-w-0"><span className="bd-trunc">{r.group}</span><span className="bd-sub bd-pct-sub">{r.pct.toFixed(r.pct < 10 ? 1 : 0)}%</span></span></span>
                       <span role="cell" className="mh-amount">{aud(r.amount)}</span>
                       <span role="cell" className="bd-col-pct">{r.pct.toFixed(r.pct < 10 ? 1 : 0)}%</span>
@@ -209,7 +209,7 @@ export function BreakdownCard({
                   return r.rest ? (
                     <div key={r.group} className="bd-tr bd-tr--budget" role="row">{row}</div>
                   ) : (
-                    <button key={r.group} type="button" className="bd-tr bd-tr--budget" role="row" onClick={() => onOpenCategory(r.group)}>{row}</button>
+                    <button key={r.group} type="button" className="bd-tr bd-tr--budget" role="row" aria-label={`${r.group} budget: open details`} onClick={() => onOpenCategory(r.group)}>{row}</button>
                   );
                 })}
               </div>

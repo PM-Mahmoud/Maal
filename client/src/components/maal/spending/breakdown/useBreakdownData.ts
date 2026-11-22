@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { listTransactions } from "@/lib/transactions.functions";
+import { effectiveTransactions } from "../../../../../../shared/transaction-splits.mjs";
 import { getBudgets, getSpendingSettings, type Budget, type SpendingSettings } from "../settings/api";
 import type { SpendTxn } from "../overview/useSpendingData";
 import { getSpendingCategories, type CategoryGroupDef, type CustomCategory } from "./api";
@@ -26,7 +27,8 @@ export function useBreakdownData() {
       listTransactions(), getSpendingSettings(), getBudgets(), getSpendingCategories(),
     ]);
     setData({
-      transactions: txn.status === "fulfilled" ? (txn.value as SpendTxn[]) : [],
+      // Hidden rows drop out; split rows count once per part (Transaction detail).
+      transactions: txn.status === "fulfilled" ? effectiveTransactions(txn.value as SpendTxn[]) : [],
       settings: set.status === "fulfilled" ? set.value : null,
       budgets: bud.status === "fulfilled" ? bud.value.budgets : [],
       custom: cat.status === "fulfilled" ? cat.value.categories : [],

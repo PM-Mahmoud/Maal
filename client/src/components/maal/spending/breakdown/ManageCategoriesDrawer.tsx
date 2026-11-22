@@ -188,7 +188,7 @@ function NewGroupDialog({ kind, available, custom, groups, onClose, onCreated, o
             </div>
           </fieldset>
           <div className="bd-multi">
-            <button type="button" className="bd-field bd-field-box bd-multi-btn" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+            <button type="button" className="bd-field bd-field-box bd-multi-btn" aria-expanded={open} aria-label={`Categories: ${picked.length ? picked.join(", ") : "none chosen"}`} onClick={() => setOpen((o) => !o)}>
               <span>Categories</span>
               {picked.length ? (
                 <span className="bd-chips">{picked.map((c) => <span key={c} className="bd-chip"><CatIcon name={c} custom={custom} size={18} />{c}</span>)}</span>
@@ -203,7 +203,7 @@ function NewGroupDialog({ kind, available, custom, groups, onClose, onCreated, o
                 </label>
                 <ul className="bd-multi-list">
                   <li>
-                    <button type="button" className="bd-check-row" aria-pressed={allOn} onClick={() => setPicked((p) => (allOn ? p.filter((x) => !shown.includes(x)) : [...new Set([...p, ...shown])]))}>
+                    <button type="button" className="bd-check-row" aria-pressed={allOn} aria-label={`All ${kind} categories`} onClick={() => setPicked((p) => (allOn ? p.filter((x) => !shown.includes(x)) : [...new Set([...p, ...shown])]))}>
                       <span className="flex-1">All {kind === "expense" ? "expense" : "income"} categories</span>
                       <span className="bd-box" data-on={allOn}>{allOn && <Check aria-hidden />}</span>
                     </button>
@@ -212,7 +212,7 @@ function NewGroupDialog({ kind, available, custom, groups, onClose, onCreated, o
                     const owner = ownerOf(c);
                     return (
                       <li key={c}>
-                        <button type="button" className="bd-check-row" aria-pressed={picked.includes(c)} onClick={() => toggle(c)}>
+                        <button type="button" className="bd-check-row" aria-pressed={picked.includes(c)} aria-label={owner ? `${c} (moves from ${owner})` : c} onClick={() => toggle(c)}>
                           <CatIcon name={c} custom={custom} size={24} />
                           <span className="flex-1 min-w-0"><span className="bd-trunc">{c}</span>{owner && <span className="bd-sub">Moves from {owner}</span>}</span>
                           <span className="bd-box" data-on={picked.includes(c)}>{picked.includes(c) && <Check aria-hidden />}</span>

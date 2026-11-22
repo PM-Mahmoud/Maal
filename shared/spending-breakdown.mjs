@@ -279,7 +279,8 @@ export function suggestBudget(txns, today = new Date(), excluded) {
   if (avgIncome > 0 && avgIncome * (1 - TARGET_SAVINGS_RATE) >= avgExpenses) target = avgExpenses;
   else if (avgIncome > 0) target = Math.max(avgExpenses * (1 - MAX_TRIM), avgIncome * (1 - TARGET_SAVINGS_RATE));
   else target = avgExpenses * (1 - MAX_TRIM);
-  const suggested = Math.max(10, roundTo(target, 10));
+  // Rounding never lifts the budget above what the user typically spends.
+  const suggested = Math.max(10, Math.min(roundTo(target, 10), avgExpenses >= 10 ? floorTo(avgExpenses, 10) : Infinity));
   const range = { min: Math.max(10, floorTo(suggested * 0.8, 10)), max: ceilTo(suggested * 1.2, 10) };
   const slider = {
     min: Math.max(10, floorTo(suggested * 0.5, 10)),

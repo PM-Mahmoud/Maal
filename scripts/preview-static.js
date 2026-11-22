@@ -203,6 +203,63 @@ function previewTransactions() {
   }
   return out.sort((a, b) => b.post_date.localeCompare(a.post_date));
 }
+// ── Session 2 – Breakdown & budget preview (HEL-84..90) ─────────────────────
+// In-memory custom categories + groups and the budget suggestion, mirroring
+// routes/api.js "Session 2 – Breakdown & budget". Registered before the other
+// Spending mocks so GET /api/v1/transaction-categories includes custom ones.
+{
+  const sc = require('../lib/spending-categories');
+  let pvSeq = 3;
+  let pvCustom = [{ id: '1', name: 'Pet care', kind: 'expense', color: '#3E7C6B', icon: 'paw' }];
+  let pvGroups = [{ id: '2', name: 'Fun', kind: 'expense', color: '#4E6E94', categories: ['Shopping', 'Travel & Lifestyle'] }];
+  const names = () => pvCustom.map((c) => c.name);
+  app.locals.pvCustomNames = names;
+  app.get('/api/v1/spending-categories', (req, res) => res.json(previewEmpty(req) ? { categories: [], groups: [] } : { categories: pvCustom, groups: pvGroups }));
+  app.post('/api/v1/spending-categories', express.json(), (req, res) => {
+    const v = sc.validateCategoryInput(req.body, names());
+    if (v.error) return res.status(400).json({ error: v.error });
+    const c = { id: String(++pvSeq), ...v.category };
+    pvCustom = pvCustom.concat([c]);
+    res.json({ category: c });
+  });
+  app.delete('/api/v1/spending-categories/:id', (req, res) => {
+    const c = pvCustom.find((x) => x.id === req.params.id);
+    if (!c) return res.status(404).json({ error: 'Category not found' });
+    pvCustom = pvCustom.filter((x) => x !== c);
+    pvGroups = pvGroups.map((g) => ({ ...g, categories: g.categories.filter((n) => n !== c.name) }));
+    res.json({ ok: true });
+  });
+  const known = () => [...require('../lib/transaction-categories').GROUPS, ...names()];
+  app.post('/api/v1/spending-category-groups', express.json(), (req, res) => {
+    const v = sc.validateGroupInput(req.body, known(), pvGroups.map((g) => g.name));
+    if (v.error) return res.status(400).json({ error: v.error });
+    pvGroups = pvGroups.map((g) => ({ ...g, categories: g.categories.filter((n) => !v.group.categories.includes(n)) }));
+    const g = { id: String(++pvSeq), ...v.group };
+    pvGroups = pvGroups.concat([g]);
+    res.json({ group: g });
+  });
+  app.patch('/api/v1/spending-category-groups/:id', express.json(), (req, res) => {
+    const cur = pvGroups.find((g) => g.id === req.params.id);
+    if (!cur) return res.status(404).json({ error: 'Group not found' });
+    const v = sc.validateGroupInput(req.body, known(), pvGroups.map((g) => g.name), { partial: true, currentName: cur.name });
+    if (v.error) return res.status(400).json({ error: v.error });
+    pvGroups = pvGroups.map((g) => (g === cur ? { ...g, ...v.group } : v.group.categories ? { ...g, categories: g.categories.filter((n) => !v.group.categories.includes(n)) } : g));
+    res.json({ group: pvGroups.find((g) => g.id === cur.id) });
+  });
+  app.delete('/api/v1/spending-category-groups/:id', (req, res) => {
+    pvGroups = pvGroups.filter((g) => g.id !== req.params.id);
+    res.json({ ok: true });
+  });
+  app.get('/api/v1/transaction-categories', (_req, res) => res.json({ groups: sc.mergeTaxonomy(pvCustom) }));
+  // ?ai=thin on the page URL previews the "not enough history" state.
+  app.get('/api/v1/budgets/suggestion', async (req, res) => {
+    const { suggestBudget } = await import('../shared/spending-breakdown.mjs');
+    const thin = previewEmpty(req) || /ai=thin/.test(req.headers.referer || '');
+    const suggestion = suggestBudget(thin ? [] : previewTransactions(), new Date());
+    res.json({ suggestion, wording: null, wording_status: suggestion.enoughData ? 'unavailable' : 'skipped' });
+  });
+}
+// ── end Session 2 – Breakdown & budget preview ──────────────────────────────
 // ── Session 2 – Transactions list (HEL-91..95) preview mocks ─────────────────
 // Only active on /app/transactions (by referer) so other pages' previews are
 // unchanged. Adds account references (CommBank / ING, cafés as manual entries),
@@ -487,11 +544,12 @@ app.patch('/api/v1/profile', express.json(), (req, res) => res.json({ ...req.bod
     res.json({ budgets: b, total: ss.totalMonthlyBudget(b) });
   });
   app.put('/api/v1/budgets', express.json(), (req, res) => {
-    const v = ss.validateBudgetInput(req.body);
+    const v = ss.validateBudgetInput(req.body, app.locals.pvCustomNames ? app.locals.pvCustomNames() : []);
     if (v.error) return res.status(400).json({ error: v.error });
     pvBudgets = pvBudgets.filter((b) => b.category_group !== v.budget.category_group).concat([{ id: Date.now(), ...v.budget }]);
     res.json({ budget: ss.toBudget(pvBudgets[pvBudgets.length - 1]) });
   });
+  app.delete('/api/v1/budgets/:id', (req, res) => { pvBudgets = pvBudgets.filter((b) => String(b.id) !== req.params.id); res.json({ ok: true }); });
   app.delete('/api/v1/budgets', (_req, res) => { const n = pvBudgets.length; pvBudgets = []; res.json({ ok: true, deleted: n }); });
   app.get('/api/v1/transaction-categories', (_req, res) => res.json({ groups: TAXONOMY.map((t) => ({ group: t.group, categories: t.categories })) }));
   app.get('/api/v1/transaction-rules', (_req, res) => res.json({ rules: pvRules }));
