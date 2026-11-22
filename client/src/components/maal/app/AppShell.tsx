@@ -10,11 +10,7 @@ import { NotificationBell } from "@/components/maal/app/NotificationBell";
 import { LogoutIconButton, LogoutRow } from "@/components/maal/app/Logout";
 import { initPrivacy } from "@/components/maal/home/prefs";
 import "@/components/maal/home/home.css";
-import {
-  FolderLock, ArrowLeftRight, UserCircle2, Home, MessageSquarePlus, Map, LifeBuoy, ChevronDown,
-  X, Lightbulb, CreditCard, Menu, Sparkles, BarChart3, BriefcaseBusiness, HandCoins,
-  TrendingUp, PieChart, ScrollText, Receipt, UserRound, Target, ListChecks, Sprout,
-} from "lucide-react";
+import { MessageSquare, LifeBuoy, ChevronDown, X, Lightbulb, Menu, Sparkles, type LucideIcon } from "lucide-react";
 import { TRACK, SERVICES, CALCULATORS, ACCOUNT, areaFor } from "@/components/maal/nav/sections";
 import { SectionTabs } from "@/components/maal/nav/SectionTabs";
 
@@ -26,24 +22,19 @@ export const FOUNDER_CALENDAR_URL = "https://calendar.app.google/oh9aghBVTuQ4fvC
 /** Any page can open the shell's support dialog: window.dispatchEvent(new Event(OPEN_SUPPORT_EVENT)). */
 export const OPEN_SUPPORT_EVENT = "maal:open-support";
 
-type Item = { to: string; label: string; icon: any; area?: string };
+type Item = { to: string; label: string; icon: LucideIcon; area?: string; soon?: boolean };
 
 // Track · Services · Calculators · Account (2026-11-15). Pages inside each
-// Track area are shown as tabs by <SectionTabs/> — see nav/sections.ts.
-const TRACK_ICONS: Record<string, any> = {
-  home: Home, spending: ArrowLeftRight, invest: BarChart3, equity: PieChart, forecast: TrendingUp,
-  goals: Target, "action-plan": ListChecks, vault: FolderLock,
-};
-const TOP: Item[] = TRACK.map((a) => ({ to: a.to, label: a.label, icon: TRACK_ICONS[a.key], area: a.key }));
-
-const SERVICE_ICONS = [BriefcaseBusiness, ScrollText, Receipt, UserRound];
-const SERVICE_ITEMS: Item[] = SERVICES.map((s, i) => ({ ...s, icon: SERVICE_ICONS[i] }));
-
-const CALCULATOR_ICONS = [HandCoins, Sprout];
-const TOOLS: Item[] = CALCULATORS.map((c, i) => ({ ...c, icon: CALCULATOR_ICONS[i] ?? HandCoins }));
-
-const ACCOUNT_ICONS = [UserCircle2, CreditCard, Map];
-const BOTTOM: Item[] = ACCOUNT.map((a, i) => ({ ...a, icon: ACCOUNT_ICONS[i] }));
+// Track area are shown as tabs by <SectionTabs/> — see nav/sections.ts, which
+// also owns each item's icon and "Soon" flag. One lucide line icon per item,
+// drawn at one size (.mh-nav svg) and one stroke (NAV_STROKE).
+const NAV_STROKE = 1.6;
+const TOP: Item[] = TRACK.map((a) => ({ to: a.to, label: a.label, icon: a.icon, area: a.key, soon: a.soon }));
+const toItem = (p: { to: string; label: string; icon?: LucideIcon; soon?: boolean }): Item =>
+  ({ to: p.to, label: p.label, icon: p.icon ?? Sparkles, soon: p.soon });
+const SERVICE_ITEMS: Item[] = SERVICES.map(toItem);
+const TOOLS: Item[] = CALCULATORS.map(toItem);
+const BOTTOM: Item[] = ACCOUNT.map(toItem);
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -75,8 +66,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <Link to={item.to} onClick={onClick} className="mh-nav" data-active={isActive(item.to, item.area)}
         aria-current={isActive(item.to, item.area) ? "page" : undefined}>
-        <Icon aria-hidden />
+        <Icon aria-hidden strokeWidth={NAV_STROKE} />
         <span className="truncate">{item.label}</span>
+        {item.soon && <span className="mh-soon">Soon</span>}
       </Link>
     );
   }
@@ -113,10 +105,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="space-y-0.5">
             {BOTTOM.map((b) => <NavLink key={b.to} item={b} />)}
             <button onClick={() => setFeedbackOpen(true)} className="mh-nav w-full bg-transparent border-0 cursor-pointer text-left">
-              <MessageSquarePlus aria-hidden /> <span className="truncate">Share feedback</span>
+              <MessageSquare aria-hidden strokeWidth={NAV_STROKE} /> <span className="truncate">Share feedback</span>
             </button>
             <button onClick={() => setSupportOpen(true)} className="mh-nav w-full bg-transparent border-0 cursor-pointer text-left">
-              <LifeBuoy aria-hidden /> <span className="truncate">Support</span>
+              <LifeBuoy aria-hidden strokeWidth={NAV_STROKE} /> <span className="truncate">Support</span>
             </button>
           </div>
         </nav>
@@ -188,10 +180,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ))}
               <section className="mt-4 border-t border-[var(--mh-line)] pt-3 space-y-0.5">
                 <button onClick={() => { setMobileNavOpen(false); setFeedbackOpen(true); }} className="mh-nav w-full bg-transparent border-0 text-left">
-                  <MessageSquarePlus aria-hidden /> Share feedback
+                  <MessageSquare aria-hidden strokeWidth={NAV_STROKE} /> Share feedback
                 </button>
                 <button onClick={() => { setMobileNavOpen(false); setSupportOpen(true); }} className="mh-nav w-full bg-transparent border-0 text-left">
-                  <LifeBuoy aria-hidden /> Support
+                  <LifeBuoy aria-hidden strokeWidth={NAV_STROKE} /> Support
                 </button>
                 <button type="button" onClick={() => { setMobileNavOpen(false); openAdvisorPopup(); }} className="mh-ask mt-3"><Sparkles className="size-4" aria-hidden /> Ask anything</button>
                 <div className="mt-2 flex items-center justify-between px-1 py-2">

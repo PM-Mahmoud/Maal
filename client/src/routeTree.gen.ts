@@ -38,6 +38,7 @@ import { Route as AuthenticatedAppInvestRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAppGoalsRouteImport } from './routes/_authenticated/app.goals'
 import { Route as AuthenticatedAppForecastRouteImport } from './routes/_authenticated/app.forecast'
 import { Route as AuthenticatedAppEquityRouteImport } from './routes/_authenticated/app.equity'
+import { Route as AuthenticatedAppCreditScoreRouteImport } from './routes/_authenticated/app.credit-score'
 import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated/app.billing'
 import { Route as AuthenticatedAppAssetsRouteImport } from './routes/_authenticated/app.assets'
 import { Route as AuthenticatedAppActionPlanRouteImport } from './routes/_authenticated/app.action-plan'
@@ -60,8 +61,10 @@ import { Route as AuthenticatedAppSettingsNotificationsRouteImport } from './rou
 import { Route as AuthenticatedAppSettingsDeleteAccountRouteImport } from './routes/_authenticated/app.settings.delete-account'
 import { Route as AuthenticatedAppSettingsAppearanceRouteImport } from './routes/_authenticated/app.settings.appearance'
 import { Route as AuthenticatedAppServicesTaxRouteImport } from './routes/_authenticated/app.services.tax'
+import { Route as AuthenticatedAppServicesIdProtectionRouteImport } from './routes/_authenticated/app.services.id-protection'
 import { Route as AuthenticatedAppServicesFinancialPlannerRouteImport } from './routes/_authenticated/app.services.financial-planner'
 import { Route as AuthenticatedAppServicesEstatePlanningRouteImport } from './routes/_authenticated/app.services.estate-planning'
+import { Route as AuthenticatedAppServicesCfpSessionsRouteImport } from './routes/_authenticated/app.services.cfp-sessions'
 import { Route as AuthenticatedAppServicesBrokerageRouteImport } from './routes/_authenticated/app.services.brokerage'
 import { Route as AuthenticatedAppAdvisorThreadIdRouteImport } from './routes/_authenticated/app.advisor.$threadId'
 import { Route as AuthenticatedAppAccountsConnectRouteImport } from './routes/_authenticated/app.accounts.connect'
@@ -223,6 +226,12 @@ const AuthenticatedAppEquityRoute = AuthenticatedAppEquityRouteImport.update({
   path: '/equity',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppCreditScoreRoute =
+  AuthenticatedAppCreditScoreRouteImport.update({
+    id: '/credit-score',
+    path: '/credit-score',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppBillingRoute = AuthenticatedAppBillingRouteImport.update({
   id: '/billing',
   path: '/billing',
@@ -353,6 +362,12 @@ const AuthenticatedAppServicesTaxRoute =
     path: '/services/tax',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppServicesIdProtectionRoute =
+  AuthenticatedAppServicesIdProtectionRouteImport.update({
+    id: '/services/id-protection',
+    path: '/services/id-protection',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppServicesFinancialPlannerRoute =
   AuthenticatedAppServicesFinancialPlannerRouteImport.update({
     id: '/services/financial-planner',
@@ -363,6 +378,12 @@ const AuthenticatedAppServicesEstatePlanningRoute =
   AuthenticatedAppServicesEstatePlanningRouteImport.update({
     id: '/services/estate-planning',
     path: '/services/estate-planning',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppServicesCfpSessionsRoute =
+  AuthenticatedAppServicesCfpSessionsRouteImport.update({
+    id: '/services/cfp-sessions',
+    path: '/services/cfp-sessions',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppServicesBrokerageRoute =
@@ -393,6 +414,7 @@ export interface FileRoutesByFullPath {
   '/app/action-plan': typeof AuthenticatedAppActionPlanRoute
   '/app/assets': typeof AuthenticatedAppAssetsRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
+  '/app/credit-score': typeof AuthenticatedAppCreditScoreRoute
   '/app/equity': typeof AuthenticatedAppEquityRoute
   '/app/forecast': typeof AuthenticatedAppForecastRoute
   '/app/goals': typeof AuthenticatedAppGoalsRoute
@@ -419,8 +441,10 @@ export interface FileRoutesByFullPath {
   '/app/accounts/connect': typeof AuthenticatedAppAccountsConnectRoute
   '/app/advisor/$threadId': typeof AuthenticatedAppAdvisorThreadIdRoute
   '/app/services/brokerage': typeof AuthenticatedAppServicesBrokerageRoute
+  '/app/services/cfp-sessions': typeof AuthenticatedAppServicesCfpSessionsRoute
   '/app/services/estate-planning': typeof AuthenticatedAppServicesEstatePlanningRoute
   '/app/services/financial-planner': typeof AuthenticatedAppServicesFinancialPlannerRoute
+  '/app/services/id-protection': typeof AuthenticatedAppServicesIdProtectionRoute
   '/app/services/tax': typeof AuthenticatedAppServicesTaxRoute
   '/app/settings/appearance': typeof AuthenticatedAppSettingsAppearanceRoute
   '/app/settings/delete-account': typeof AuthenticatedAppSettingsDeleteAccountRoute
@@ -449,6 +473,7 @@ export interface FileRoutesByTo {
   '/app/action-plan': typeof AuthenticatedAppActionPlanRoute
   '/app/assets': typeof AuthenticatedAppAssetsRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
+  '/app/credit-score': typeof AuthenticatedAppCreditScoreRoute
   '/app/equity': typeof AuthenticatedAppEquityRoute
   '/app/forecast': typeof AuthenticatedAppForecastRoute
   '/app/goals': typeof AuthenticatedAppGoalsRoute
@@ -474,8 +499,10 @@ export interface FileRoutesByTo {
   '/app/accounts/connect': typeof AuthenticatedAppAccountsConnectRoute
   '/app/advisor/$threadId': typeof AuthenticatedAppAdvisorThreadIdRoute
   '/app/services/brokerage': typeof AuthenticatedAppServicesBrokerageRoute
+  '/app/services/cfp-sessions': typeof AuthenticatedAppServicesCfpSessionsRoute
   '/app/services/estate-planning': typeof AuthenticatedAppServicesEstatePlanningRoute
   '/app/services/financial-planner': typeof AuthenticatedAppServicesFinancialPlannerRoute
+  '/app/services/id-protection': typeof AuthenticatedAppServicesIdProtectionRoute
   '/app/services/tax': typeof AuthenticatedAppServicesTaxRoute
   '/app/settings/appearance': typeof AuthenticatedAppSettingsAppearanceRoute
   '/app/settings/delete-account': typeof AuthenticatedAppSettingsDeleteAccountRoute
@@ -507,6 +534,7 @@ export interface FileRoutesById {
   '/_authenticated/app/action-plan': typeof AuthenticatedAppActionPlanRoute
   '/_authenticated/app/assets': typeof AuthenticatedAppAssetsRoute
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
+  '/_authenticated/app/credit-score': typeof AuthenticatedAppCreditScoreRoute
   '/_authenticated/app/equity': typeof AuthenticatedAppEquityRoute
   '/_authenticated/app/forecast': typeof AuthenticatedAppForecastRoute
   '/_authenticated/app/goals': typeof AuthenticatedAppGoalsRoute
@@ -533,8 +561,10 @@ export interface FileRoutesById {
   '/_authenticated/app/accounts/connect': typeof AuthenticatedAppAccountsConnectRoute
   '/_authenticated/app/advisor/$threadId': typeof AuthenticatedAppAdvisorThreadIdRoute
   '/_authenticated/app/services/brokerage': typeof AuthenticatedAppServicesBrokerageRoute
+  '/_authenticated/app/services/cfp-sessions': typeof AuthenticatedAppServicesCfpSessionsRoute
   '/_authenticated/app/services/estate-planning': typeof AuthenticatedAppServicesEstatePlanningRoute
   '/_authenticated/app/services/financial-planner': typeof AuthenticatedAppServicesFinancialPlannerRoute
+  '/_authenticated/app/services/id-protection': typeof AuthenticatedAppServicesIdProtectionRoute
   '/_authenticated/app/services/tax': typeof AuthenticatedAppServicesTaxRoute
   '/_authenticated/app/settings/appearance': typeof AuthenticatedAppSettingsAppearanceRoute
   '/_authenticated/app/settings/delete-account': typeof AuthenticatedAppSettingsDeleteAccountRoute
@@ -566,6 +596,7 @@ export interface FileRouteTypes {
     | '/app/action-plan'
     | '/app/assets'
     | '/app/billing'
+    | '/app/credit-score'
     | '/app/equity'
     | '/app/forecast'
     | '/app/goals'
@@ -592,8 +623,10 @@ export interface FileRouteTypes {
     | '/app/accounts/connect'
     | '/app/advisor/$threadId'
     | '/app/services/brokerage'
+    | '/app/services/cfp-sessions'
     | '/app/services/estate-planning'
     | '/app/services/financial-planner'
+    | '/app/services/id-protection'
     | '/app/services/tax'
     | '/app/settings/appearance'
     | '/app/settings/delete-account'
@@ -622,6 +655,7 @@ export interface FileRouteTypes {
     | '/app/action-plan'
     | '/app/assets'
     | '/app/billing'
+    | '/app/credit-score'
     | '/app/equity'
     | '/app/forecast'
     | '/app/goals'
@@ -647,8 +681,10 @@ export interface FileRouteTypes {
     | '/app/accounts/connect'
     | '/app/advisor/$threadId'
     | '/app/services/brokerage'
+    | '/app/services/cfp-sessions'
     | '/app/services/estate-planning'
     | '/app/services/financial-planner'
+    | '/app/services/id-protection'
     | '/app/services/tax'
     | '/app/settings/appearance'
     | '/app/settings/delete-account'
@@ -679,6 +715,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/action-plan'
     | '/_authenticated/app/assets'
     | '/_authenticated/app/billing'
+    | '/_authenticated/app/credit-score'
     | '/_authenticated/app/equity'
     | '/_authenticated/app/forecast'
     | '/_authenticated/app/goals'
@@ -705,8 +742,10 @@ export interface FileRouteTypes {
     | '/_authenticated/app/accounts/connect'
     | '/_authenticated/app/advisor/$threadId'
     | '/_authenticated/app/services/brokerage'
+    | '/_authenticated/app/services/cfp-sessions'
     | '/_authenticated/app/services/estate-planning'
     | '/_authenticated/app/services/financial-planner'
+    | '/_authenticated/app/services/id-protection'
     | '/_authenticated/app/services/tax'
     | '/_authenticated/app/settings/appearance'
     | '/_authenticated/app/settings/delete-account'
@@ -941,6 +980,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppEquityRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/credit-score': {
+      id: '/_authenticated/app/credit-score'
+      path: '/credit-score'
+      fullPath: '/app/credit-score'
+      preLoaderRoute: typeof AuthenticatedAppCreditScoreRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/billing': {
       id: '/_authenticated/app/billing'
       path: '/billing'
@@ -1095,6 +1141,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppServicesTaxRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/services/id-protection': {
+      id: '/_authenticated/app/services/id-protection'
+      path: '/services/id-protection'
+      fullPath: '/app/services/id-protection'
+      preLoaderRoute: typeof AuthenticatedAppServicesIdProtectionRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/services/financial-planner': {
       id: '/_authenticated/app/services/financial-planner'
       path: '/services/financial-planner'
@@ -1107,6 +1160,13 @@ declare module '@tanstack/react-router' {
       path: '/services/estate-planning'
       fullPath: '/app/services/estate-planning'
       preLoaderRoute: typeof AuthenticatedAppServicesEstatePlanningRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/services/cfp-sessions': {
+      id: '/_authenticated/app/services/cfp-sessions'
+      path: '/services/cfp-sessions'
+      fullPath: '/app/services/cfp-sessions'
+      preLoaderRoute: typeof AuthenticatedAppServicesCfpSessionsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/services/brokerage': {
@@ -1183,6 +1243,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppActionPlanRoute: typeof AuthenticatedAppActionPlanRoute
   AuthenticatedAppAssetsRoute: typeof AuthenticatedAppAssetsRoute
   AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
+  AuthenticatedAppCreditScoreRoute: typeof AuthenticatedAppCreditScoreRoute
   AuthenticatedAppEquityRoute: typeof AuthenticatedAppEquityRoute
   AuthenticatedAppForecastRoute: typeof AuthenticatedAppForecastRoute
   AuthenticatedAppGoalsRoute: typeof AuthenticatedAppGoalsRoute
@@ -1209,8 +1270,10 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAccountsConnectRoute: typeof AuthenticatedAppAccountsConnectRoute
   AuthenticatedAppAdvisorThreadIdRoute: typeof AuthenticatedAppAdvisorThreadIdRoute
   AuthenticatedAppServicesBrokerageRoute: typeof AuthenticatedAppServicesBrokerageRoute
+  AuthenticatedAppServicesCfpSessionsRoute: typeof AuthenticatedAppServicesCfpSessionsRoute
   AuthenticatedAppServicesEstatePlanningRoute: typeof AuthenticatedAppServicesEstatePlanningRoute
   AuthenticatedAppServicesFinancialPlannerRoute: typeof AuthenticatedAppServicesFinancialPlannerRoute
+  AuthenticatedAppServicesIdProtectionRoute: typeof AuthenticatedAppServicesIdProtectionRoute
   AuthenticatedAppServicesTaxRoute: typeof AuthenticatedAppServicesTaxRoute
   AuthenticatedAppSpendingBreakdownRoute: typeof AuthenticatedAppSpendingBreakdownRoute
   AuthenticatedAppSpendingRecurringRoute: typeof AuthenticatedAppSpendingRecurringRoute
@@ -1228,6 +1291,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppActionPlanRoute: AuthenticatedAppActionPlanRoute,
   AuthenticatedAppAssetsRoute: AuthenticatedAppAssetsRoute,
   AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
+  AuthenticatedAppCreditScoreRoute: AuthenticatedAppCreditScoreRoute,
   AuthenticatedAppEquityRoute: AuthenticatedAppEquityRoute,
   AuthenticatedAppForecastRoute: AuthenticatedAppForecastRoute,
   AuthenticatedAppGoalsRoute: AuthenticatedAppGoalsRoute,
@@ -1255,10 +1319,14 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAdvisorThreadIdRoute: AuthenticatedAppAdvisorThreadIdRoute,
   AuthenticatedAppServicesBrokerageRoute:
     AuthenticatedAppServicesBrokerageRoute,
+  AuthenticatedAppServicesCfpSessionsRoute:
+    AuthenticatedAppServicesCfpSessionsRoute,
   AuthenticatedAppServicesEstatePlanningRoute:
     AuthenticatedAppServicesEstatePlanningRoute,
   AuthenticatedAppServicesFinancialPlannerRoute:
     AuthenticatedAppServicesFinancialPlannerRoute,
+  AuthenticatedAppServicesIdProtectionRoute:
+    AuthenticatedAppServicesIdProtectionRoute,
   AuthenticatedAppServicesTaxRoute: AuthenticatedAppServicesTaxRoute,
   AuthenticatedAppSpendingBreakdownRoute:
     AuthenticatedAppSpendingBreakdownRoute,
