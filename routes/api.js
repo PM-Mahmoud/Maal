@@ -1600,6 +1600,117 @@ function parseFilters(raw) {
   return { where: clauses.length ? ' AND ' + clauses.join(' AND ') : '', vals };
 }
 
+// ─── Session 2 – Reports (/app/spending/reports, HEL-106/HEL-107) ──────────
+// Additive endpoints behind the Spending Reports page. Registered BEFORE the
+// generic /v1/:table handler so 'report-views' is never treated as a table.
+// Validation: lib/report-views.js (tested in test/spending-reports.test.js).
+// Every db call passes req.session.userId; db/reports.js filters by user_id.
+//
+//   GET    /v1/reports/transactions?from=YYYY-MM-DD&to=YYYY-MM-DD
+//            → { from, to, transactions, truncated }  (≤ 3-year range, paged
+//              server-side; GET /v1/transactions is unchanged)
+//   GET    /v1/report-views          → { views }
+//   POST   /v1/report-views          { name, config } → { view }
+//   PATCH  /v1/report-views/:id      { name?, config? } → { view }
+//   DELETE /v1/report-views/:id      → { ok }
+
+router.get('/v1/reports/transactions', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const rv = require('../lib/report-views');
+  const v = rv.validateRange(req.query.from, req.query.to);
+  if (v.error) return res.status(400).json({ error: v.error });
+  try {
+    const reportsDb = require('../db/reports');
+    const txnDb = require('../db/transactions');
+    const { autoCategorize } = require('../lib/transaction-categories');
+    const { computeLearnedSuggestions } = require('../services/transaction-rules');
+    const { detectTransactionRelationships, indexRelationships } = require('../services/transaction-relationships');
+    const [{ rows, truncated }, preferences] = await Promise.all([
+      reportsDb.getTransactionsInRange(req.session.userId, v.from, v.to),
+      txnDb.getLearnedCategoryPreferences(req.session.userId),
+    ]);
+    // Same annotation as GET /v1/transactions: own-account transfer legs,
+    // then learned, then keyword categories for rows without a stored one.
+    const learned = new Map(computeLearnedSuggestions(
+      preferences, rows.filter((row) => !row.category_group)
+    ).map((s) => [String(s.transaction_id), s]));
+    const relationships = indexRelationships(detectTransactionRelationships(rows));
+    const transactions = rows.map((r) => {
+      const rel = relationships.get(String(r.id));
+      const a = rel ? { ...r, relationship_type: rel.type, relationship_confidence: rel.confidence } : r;
+      if (a.category_group) return a;
+      const s = learned.get(String(r.id));
+      if (s) return { ...a, category_group: s.category_group, category: s.category, category_source: 'learned', category_confidence: s.confidence };
+      const auto = autoCategorize(a.description, a.amount);
+      return auto ? { ...a, category_group: auto.group, category: auto.category, category_source: 'auto' } : a;
+    });
+    res.json({ from: v.from, to: v.to, transactions, truncated });
+  } catch (e) {
+    console.error('/api/v1/reports/transactions error:', e.message);
+    res.status(500).json({ error: 'Could not load transactions for this report' });
+  }
+});
+
+router.get('/v1/report-views', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const rv = require('../lib/report-views');
+    const views = await require('../db/reports').listViews(req.session.userId);
+    res.json({ views: views.map(rv.toView) });
+  } catch (e) {
+    console.error('/api/v1/report-views GET error:', e.message);
+    res.status(500).json({ error: 'Could not load saved reports' });
+  }
+});
+
+router.post('/v1/report-views', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const rv = require('../lib/report-views');
+  const v = rv.validateViewInput(req.body);
+  if (v.error) return res.status(400).json({ error: v.error });
+  try {
+    const reportsDb = require('../db/reports');
+    if (await reportsDb.countViews(req.session.userId) >= rv.MAX_VIEWS) {
+      return res.status(400).json({ error: `You can save up to ${rv.MAX_VIEWS} reports. Delete one to save another.` });
+    }
+    const row = await reportsDb.createView(req.session.userId, v.view);
+    res.status(201).json({ view: rv.toView(row) });
+  } catch (e) {
+    console.error('/api/v1/report-views POST error:', e.message);
+    res.status(500).json({ error: 'Could not save this report' });
+  }
+});
+
+router.patch('/v1/report-views/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!/^\d{1,18}$/.test(req.params.id)) return res.status(404).json({ error: 'Saved report not found' });
+  const rv = require('../lib/report-views');
+  const v = rv.validateViewPatch(req.body);
+  if (v.error) return res.status(400).json({ error: v.error });
+  try {
+    const row = await require('../db/reports').updateView(req.params.id, req.session.userId, v.patch);
+    if (!row) return res.status(404).json({ error: 'Saved report not found' });
+    res.json({ view: rv.toView(row) });
+  } catch (e) {
+    console.error('/api/v1/report-views PATCH error:', e.message);
+    res.status(500).json({ error: 'Could not update this report' });
+  }
+});
+
+router.delete('/v1/report-views/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!/^\d{1,18}$/.test(req.params.id)) return res.status(404).json({ error: 'Saved report not found' });
+  try {
+    const ok = await require('../db/reports').deleteView(req.params.id, req.session.userId);
+    if (!ok) return res.status(404).json({ error: 'Saved report not found' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/v1/report-views DELETE error:', e.message);
+    res.status(500).json({ error: 'Could not delete this report' });
+  }
+});
+// ─── end Session 2 – Reports ───────────────────────────────────────────────
+
 router.all('/v1/:table', async (req, res) => {
   const { table } = req.params;
   if (!ASSET_TABLES.has(table)) {

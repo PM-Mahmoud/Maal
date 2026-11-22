@@ -296,6 +296,52 @@ app.patch('/api/v1/profile', express.json(), (req, res) => res.json({ ...req.bod
   app.get('/api/v1/transaction-rules', (_req, res) => res.json({ rules: pvRules }));
   app.delete('/api/v1/transaction-rules/:id', (req, res) => { pvRules = pvRules.filter((r) => String(r.id) !== req.params.id); res.json({ ok: true }); });
 }
+// ── Session 2 – Reports preview (HEL-106/HEL-107) ──────────────────────────
+// Mirrors the "Session 2 – Reports" block in routes/api.js: the date-ranged
+// transactions read (same deterministic rows as /api/v1/transactions) and
+// in-memory saved views validated by lib/report-views.js.
+// ?spend=empty on the page URL previews the no-data state; ?reports=fail
+// previews the failed-request state.
+{
+  const rv = require('../lib/report-views');
+  let pvViews = [];
+  let pvViewSeq = 1;
+  const failing = (req) => /reports=fail/.test(req.headers.referer || '');
+  app.get('/api/v1/reports/transactions', (req, res) => {
+    if (failing(req)) return res.status(500).json({ error: 'Could not load transactions for this report' });
+    const v = rv.validateRange(req.query.from, req.query.to);
+    if (v.error) return res.status(400).json({ error: v.error });
+    const rows = previewEmpty(req) ? [] : previewTransactions()
+      .filter((t) => t.post_date >= v.from && t.post_date <= v.to)
+      .sort((a, b) => a.post_date.localeCompare(b.post_date));
+    res.json({ from: v.from, to: v.to, transactions: rows, truncated: false });
+  });
+  app.get('/api/v1/report-views', (_req, res) => res.json({ views: pvViews.map(rv.toView) }));
+  app.post('/api/v1/report-views', express.json(), (req, res) => {
+    const v = rv.validateViewInput(req.body);
+    if (v.error) return res.status(400).json({ error: v.error });
+    if (pvViews.length >= rv.MAX_VIEWS) return res.status(400).json({ error: `You can save up to ${rv.MAX_VIEWS} reports. Delete one to save another.` });
+    const now = new Date();
+    const row = { id: pvViewSeq++, ...v.view, created_at: now, updated_at: now };
+    pvViews.push(row);
+    res.status(201).json({ view: rv.toView(row) });
+  });
+  app.patch('/api/v1/report-views/:id', express.json(), (req, res) => {
+    const v = rv.validateViewPatch(req.body);
+    if (v.error) return res.status(400).json({ error: v.error });
+    const row = pvViews.find((x) => String(x.id) === req.params.id);
+    if (!row) return res.status(404).json({ error: 'Saved report not found' });
+    Object.assign(row, v.patch, { updated_at: new Date() });
+    res.json({ view: rv.toView(row) });
+  });
+  app.delete('/api/v1/report-views/:id', (req, res) => {
+    const n = pvViews.length;
+    pvViews = pvViews.filter((x) => String(x.id) !== req.params.id);
+    if (pvViews.length === n) return res.status(404).json({ error: 'Saved report not found' });
+    res.json({ ok: true });
+  });
+}
+// ── end Session 2 – Reports preview ────────────────────────────────────────
 app.get('/api/v1/transaction-categories', (_req, res) => res.json([]));
 app.get('/api/v1/transaction-rules', (_req, res) => res.json([]));
 app.get('/api/v1/radar-templates', (_req, res) => res.json([]));
