@@ -8,6 +8,7 @@ import { AskSparkButton, HomeCard } from "@/components/maal/home/HomeCard";
 import { aud, shortDate, signedCents } from "@/components/maal/home/format";
 import { usePrivacy } from "@/components/maal/home/prefs";
 import { iconForGroup } from "./categoryIcons";
+import { openTransactionDetail } from "../transaction-detail/TransactionDetailMount";
 import type { Recurring, SpendTxn } from "./useSpendingData";
 
 /** Latest transactions: category icon, merchant, date, amount. Money that doesn't count as spending is greyed. */
@@ -41,10 +42,14 @@ export function LatestTransactionsCard({ transactions, excluded, loading, error 
           {recent.map((t, i) => {
             const amt = Number(t.amount) || 0;
             const group = groupOf(t);
-            const counted = countsAsSpend(t, excluded) || isIncome(t);
+            // Hidden in Transaction detail (HEL-100) → greyed like excluded money.
+            const counted = !(t as SpendTxn & { hidden?: boolean }).hidden && (countsAsSpend(t, excluded) || isIncome(t));
             const Icon = iconForGroup(group);
             return (
               <li key={t.id ?? i} className="so-txn" data-muted={!counted}>
+                <button type="button" className="td-txn-open" disabled={t.id == null}
+                  onClick={() => t.id != null && openTransactionDetail(t.id)}
+                  aria-label={`Open ${t.merchant || t.description || "transaction"}, ${shortDate(t.post_date)}`}>
                 <span className="so-txn-icon" aria-hidden><Icon /></span>
                 <span className="min-w-0 flex-1">
                   <span className="so-txn-name">{t.merchant || t.description || "Transaction"}</span>
@@ -56,6 +61,7 @@ export function LatestTransactionsCard({ transactions, excluded, loading, error 
                 <span className="so-txn-amt mh-amount" data-in={amt > 0 && counted}>
                   {amt > 0 ? signedCents(amt) : signedCents(Math.abs(amt)).replace("+", "")}
                 </span>
+                </button>
               </li>
             );
           })}
@@ -126,7 +132,7 @@ export function UpcomingCard({ recurring, loading, error, today }: {
               {error ? "Upcoming bills couldn’t load right now." : (
                 <>
                   Add your recurring bills and subscriptions to see what’s coming up.{" "}
-                  <Link to="/app/transactions" className="mh-link-btn" style={{ fontSize: 13 }}>Review transactions</Link>
+                  <Link to="/app/spending/recurring" search={{ add: 1 }} className="mh-link-btn" style={{ fontSize: 13 }}>Add recurring</Link>
                 </>
               )}
             </div>

@@ -171,6 +171,25 @@ async function test(name, fn) {
     assert.ok(m.sameConfig({ ...cfg, range: { preset: '6m' } }, { ...cfg, range: { preset: '6m', from: 'x', to: 'y' } }));
   });
 
+  await test('reports on effectiveTransactions(): hidden rows dropped, splits counted per part', async () => {
+    const { effectiveTransactions } = await import('../shared/transaction-splits.mjs');
+    const rows = [
+      T(1, '2026-10-02', -100, 'Shopping', { description: 'Kmart', splits: [
+        { amount: 60, category_group: 'Shopping' }, { amount: 40, category_group: 'Food & Dining' },
+      ] }),
+      T(2, '2026-10-03', -50, 'Food & Dining', { description: 'Coles', hidden: true }),
+      T(3, '2026-10-04', -30, 'Auto & Transport', { description: 'Opal', splits: [
+        { amount: 20, category_group: 'Auto & Transport' }, { amount: 10, category_group: 'Shopping', hidden: true },
+      ] }),
+    ];
+    const eff = effectiveTransactions(rows);
+    const b = m.breakdown(eff, 'expense', 'category', undefined);
+    assert.deepStrictEqual(b.rows.map((r) => [r.label, r.amount]), [['Shopping', 60], ['Food & Dining', 40], ['Auto & Transport', 20]]);
+    assert.strictEqual(m.cashFlowByPeriod(eff, '2026-10-01', '2026-10-31', 'month', undefined)[0].expenses, 120);
+    // Filtering by category sees the split part's category, not the parent's.
+    assert.deepStrictEqual(m.applyFilters(eff, { groups: ['Food & Dining'], merchant: '' }, null, null).map((t) => t.split_of), [1]);
+  });
+
   console.log('\nreport-views (server validation)');
 
   const good = { tab: 'expenses', chart: 'donut', interval: 'month', viewBy: 'category',

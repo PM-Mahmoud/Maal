@@ -7,6 +7,7 @@ import {
 } from "../../../../../../shared/spending-reports.mjs";
 import type { Kind, ReportTab, ViewBy } from "../../../../../../shared/spending-reports.mjs";
 import { sankeyFlows } from "../../../../../../shared/spending-overview.mjs";
+import { effectiveTransactions } from "../../../../../../shared/transaction-splits.mjs";
 import { AskSparkButton, HomeCard } from "@/components/maal/home/HomeCard";
 import { aud } from "@/components/maal/home/format";
 import { usePrivacy } from "@/components/maal/home/prefs";
@@ -67,8 +68,10 @@ export function ReportsPage() {
 
   const range = resolveRange(config.range, today) ?? resolveRange({ preset: "6m" }, today)!;
   const data = useReportTransactions(range.from, range.to);
-  const filtered = useMemo(() => applyFilters(data.transactions, config.filters, range.from, range.to),
-    [data.transactions, config.filters, range.from, range.to]);
+  // Hidden rows dropped, split transactions expanded to one row per part.
+  const effective = useMemo(() => effectiveTransactions(data.transactions), [data.transactions]);
+  const filtered = useMemo(() => applyFilters(effective, config.filters, range.from, range.to),
+    [effective, config.filters, range.from, range.to]);
   const filterCount = activeFilterCount(config.filters);
   const isCash = config.tab === "cashflow";
   const kind = isCash ? null : KIND[config.tab as Exclude<ReportTab, "cashflow">];
@@ -92,7 +95,7 @@ export function ReportsPage() {
   const xLabels = periodsList.map((p, i) => shortLabel(p, config.interval, i, crossYear));
   const rText = rangeText(range.from, range.to);
 
-  const hasAny = data.transactions.length > 0;
+  const hasAny = effective.length > 0;
   const hasKind = isCash ? cash.some((r) => r.income || r.expenses) : (share?.rows.length ?? 0) > 0;
 
   // ---------- Saved views ----------

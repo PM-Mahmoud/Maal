@@ -203,18 +203,220 @@ function previewTransactions() {
   }
   return out.sort((a, b) => b.post_date.localeCompare(a.post_date));
 }
+// ── Session 2 – Transactions list (HEL-91..95) preview mocks ─────────────────
+// Only active on /app/transactions (by referer) so other pages' previews are
+// unchanged. Adds account references (CommBank / ING, cafés as manual entries),
+// keeps rows added via "Add transaction" in memory, honours category changes,
+// and names the accounts via cash_accounts. ?tx=flags on the page URL also adds
+// the optional hidden / reviewed flags so those filters can be previewed.
+{
+  const onTxPage = (req) => /\/app\/transactions/.test(req.headers.referer || '');
+  const txFlags = (req) => /tx=flags/.test(req.headers.referer || '');
+  const txAdded = [];
+  const txCats = new Map();
+  const txAccount = (t) => {
+    if (t.category === 'Cafes') return null; // manual entries
+    if (t.category_group === 'Income' || t.description.startsWith('Transfer to savings')) return 'basiq:ing-0412';
+    return 'basiq:cba-7781';
+  };
+  app.get('/api/v1/transactions', (req, res, next) => {
+    if (!onTxPage(req)) return next();
+    if (previewEmpty(req)) return res.json([]);
+    const rows = [...txAdded, ...previewTransactions().map((t, i) => ({
+      ...t,
+      account_reference: txAccount(t),
+      category_source: 'manual',
+      ...(txFlags(req) ? { hidden: t.relationship_type === 'transfer', reviewed: i % 4 === 0 } : {}),
+    }))].map((t) => (txCats.has(String(t.id)) ? { ...t, ...txCats.get(String(t.id)), category_source: 'manual' } : t));
+    res.json(rows.sort((a, b) => String(b.post_date).localeCompare(String(a.post_date))));
+  });
+  app.post('/api/v1/transactions', express.json(), (req, res) => {
+    const d = (req.body && req.body.data) || req.body || {};
+    if (!d.description || !Number.isFinite(Number(d.amount)) || !d.occurred_on) return res.status(400).json({ error: 'Transaction description is required' });
+    const row = { id: 9000 + txAdded.length, description: String(d.description), amount: Number(d.amount), post_date: d.occurred_on, account_reference: null };
+    txAdded.unshift(row);
+    res.json(row);
+  });
+  app.patch('/api/v1/transactions/:id/category', express.json(), (req, res) => {
+    txCats.set(String(req.params.id), { category_group: req.body.category_group, category: req.body.category || null });
+    res.json({ ok: true });
+  });
+  app.get('/api/v1/cash_accounts', (req, res, next) => {
+    if (!onTxPage(req)) return next();
+    res.json([
+      { id: 'c1', label: 'Savings Maximiser', institution: 'ING', account_reference: 'basiq:ing-0412', balance: 18600 },
+      { id: 'c2', label: 'Everyday Smart Access', institution: 'CommBank', account_reference: 'basiq:cba-7781', balance: 2400 },
+    ]);
+  });
+}
+// ── end Session 2 – Transactions list ────────────────────────────────────────
+// ── Session 2 – Transaction detail preview (HEL-96..103) ──────────────────
+// In-memory meta / tags / splits mirroring routes/api.js "Session 2 –
+// Transaction detail" shapes. Registered before GET /api/v1/transactions so the
+// list carries the additive hidden / reviewed / tags / splits fields too.
+{
+  const td = require('../lib/transaction-detail');
+  const { isKnownGroup, isValidCategory } = require('../lib/transaction-categories');
+  const pvMeta = new Map(); // id -> { hidden, reviewed, note, merchant_name, description }
+  const pvTxnTags = new Map(); // id -> [tagId]
+  const pvSplits = new Map(); // id -> [split]
+  const pvCats = new Map(); // id -> { category_group, category } (manual overrides)
+  let pvTags = [
+    { id: '1', name: 'Work trip', color: 'sky' },
+    { id: '2', name: 'Tax deductible', color: 'sage' },
+  ];
+  let pvTagSeq = 3;
+  pvTxnTags.set('t4', ['2']);
+  const decorate = (t) => {
+    const m = pvMeta.get(t.id) || {};
+    const cat = pvCats.get(t.id);
+    const out = {
+      ...t,
+      ...(cat ? { ...cat, category_source: 'manual' } : { category_source: 'auto' }),
+      hidden: !!m.hidden, reviewed: !!m.reviewed, reviewed_at: m.reviewed ? new Date().toISOString() : null,
+      note: m.note || null, merchant_name: m.merchant_name || null, description_override: m.description || null,
+      tags: (pvTxnTags.get(t.id) || []).map((id) => pvTags.find((g) => g.id === id)).filter(Boolean),
+      splits: pvSplits.get(t.id) || [],
+      account_reference: '06-2000-12345678', institution_name: 'Commonwealth Bank',
+    };
+    if (m.merchant_name) out.merchant = m.merchant_name;
+    return out;
+  };
+  const find = (id) => previewTransactions().find((t) => t.id === id);
+  app.locals.previewDecorate = decorate; // reused by the Reports preview block
+  app.get('/api/v1/transactions', (req, res) => res.json(previewEmpty(req) ? [] : previewTransactions().map(decorate)));
+  app.get('/api/v1/transactions/:id/detail', (req, res) => {
+    const t = find(req.params.id);
+    if (!t) return res.status(404).json({ error: 'Transaction not found.' });
+    res.json({ transaction: decorate(t) });
+  });
+  app.patch('/api/v1/transactions/:id/meta', express.json(), (req, res) => {
+    if (!find(req.params.id)) return res.status(404).json({ error: 'Transaction not found.' });
+    const v = td.validateMetaPatch(req.body);
+    if (v.error) return res.status(400).json({ error: v.error });
+    pvMeta.set(req.params.id, { ...(pvMeta.get(req.params.id) || {}), ...v.patch });
+    res.json({ ok: true });
+  });
+  app.patch('/api/v1/transactions/:id/category', express.json(), (req, res) => {
+    const d = req.body || {};
+    if (!isKnownGroup(d.category_group) || !isValidCategory(d.category_group, d.category)) return res.status(400).json({ error: 'Unknown category.' });
+    pvCats.set(req.params.id, { category_group: d.category_group, category: d.category || null });
+    res.json({ ok: true });
+  });
+  app.put('/api/v1/transactions/:id/tags', express.json(), (req, res) => {
+    const v = td.validateTagIds(req.body && req.body.tag_ids);
+    if (v.error) return res.status(400).json({ error: v.error });
+    pvTxnTags.set(req.params.id, v.ids.filter((id) => pvTags.some((g) => g.id === id)));
+    res.json({ ok: true });
+  });
+  app.put('/api/v1/transactions/:id/splits', express.json(), async (req, res) => {
+    const t = find(req.params.id);
+    if (!t) return res.status(404).json({ error: 'Transaction not found.' });
+    const { validateSplits } = await import('../shared/transaction-splits.mjs');
+    const v = validateSplits(t.amount, req.body && req.body.splits);
+    if (!v.ok) return res.status(400).json({ error: v.error, partErrors: v.partErrors });
+    pvSplits.set(t.id, v.parts.map((p, i) => ({ id: `${t.id}-${i + 1}`, position: i + 1, ...p })));
+    res.json({ splits: pvSplits.get(t.id) });
+  });
+  app.delete('/api/v1/transactions/:id/splits', (req, res) => { pvSplits.delete(req.params.id); res.json({ ok: true }); });
+  app.post('/api/v1/transactions/bulk-edit', express.json(), (req, res) => {
+    // Preview ids look like "t12"; the real API takes numeric ids.
+    const body = { ...req.body, ids: (req.body && Array.isArray(req.body.ids) ? req.body.ids : []).map((x) => String(x).replace(/^t/, '')) };
+    const v = td.validateBulkEdit(body);
+    if (v.error) return res.status(400).json({ error: v.error });
+    const ids = v.ids.map((id) => `t${id}`).filter((id) => find(id));
+    for (const id of ids) {
+      const c = v.changes;
+      if (c.category === null) pvCats.delete(id);
+      else if (c.category) pvCats.set(id, c.category);
+      const m = { ...(pvMeta.get(id) || {}) };
+      for (const k of ['hidden', 'reviewed', 'merchant_name', 'description']) if (c[k] !== undefined) m[k] = c[k];
+      pvMeta.set(id, m);
+      if (c.set_tag_ids) pvTxnTags.set(id, c.set_tag_ids);
+      if (c.add_tag_ids) pvTxnTags.set(id, [...new Set([...(pvTxnTags.get(id) || []), ...c.add_tag_ids])]);
+    }
+    if (!ids.length) return res.status(404).json({ error: 'Transaction not found.' });
+    res.json({ updated: ids.length });
+  });
+  // ?tags=empty on the page URL previews the "no tags yet" state.
+  app.get('/api/v1/tags', (req, res) => res.json({
+    tags: /tags=empty/.test(req.headers.referer || '') ? [] : pvTags, colors: td.TAG_COLORS,
+  }));
+  app.post('/api/v1/tags', express.json(), (req, res) => {
+    const v = td.validateTag(req.body);
+    if (v.error) return res.status(400).json({ error: v.error });
+    if (pvTags.some((g) => g.name.toLowerCase() === v.tag.name.toLowerCase())) return res.status(409).json({ error: 'You already have a tag with that name.' });
+    const tag = { id: String(pvTagSeq++), ...v.tag };
+    pvTags = [...pvTags, tag];
+    res.json({ tag });
+  });
+}
+// ── end Session 2 – Transaction detail preview ─────────────────────────────
 app.get('/api/v1/transactions', (req, res) => res.json(previewEmpty(req) ? [] : previewTransactions()));
+// ── Session 2 – Recurring preview (HEL-104/105) ─────────────────────────────
+// In-memory manual recurring items + dismiss/confirm decisions, merged into
+// GET /api/v1/transactions/recurring exactly like routes/api.js does (via
+// shared/recurring.mjs). Resets when the preview restarts.
+// ?spend=empty on the page URL previews the empty state (no detected rows).
+let pvRecurringRows = [];
+let pvRecurringNextId = 1;
+const pvRecurring = () => import('../shared/recurring.mjs');
+async function pvMergeRecurring(detected) {
+  const { mergeRecurring } = await pvRecurring();
+  return mergeRecurring(detected, pvRecurringRows);
+}
+app.post('/api/v1/recurring-items/decisions', express.json(), (req, res) => {
+  const key = String((req.body && req.body.source_key) || '');
+  const status = req.body && req.body.status;
+  if (!key || (status !== 'dismissed' && status !== 'confirmed')) return res.status(400).json({ error: 'Unknown action.' });
+  pvRecurringRows = pvRecurringRows.filter((r) => r.source_key !== key).concat([{ id: pvRecurringNextId++, status, source_key: key }]);
+  res.json({ ok: true, source_key: key, status });
+});
+app.delete('/api/v1/recurring-items/decisions/:key', (req, res) => {
+  const n = pvRecurringRows.length;
+  pvRecurringRows = pvRecurringRows.filter((r) => r.source_key !== req.params.key);
+  res.json({ ok: pvRecurringRows.length < n });
+});
+app.get('/api/v1/recurring-items', async (_req, res) => {
+  const { manualToRecurring } = await pvRecurring();
+  res.json({ items: pvRecurringRows.filter((r) => r.status === 'active').map((r) => ({ ...manualToRecurring(r), row_id: String(r.id) })) });
+});
+app.post('/api/v1/recurring-items', express.json(), async (req, res) => {
+  const { validateRecurringInput, manualToRecurring } = await pvRecurring();
+  const v = validateRecurringInput(req.body);
+  if (v.error) return res.status(400).json({ error: v.error });
+  const row = { id: pvRecurringNextId++, status: 'active', ...v.item };
+  if (row.source_key) pvRecurringRows = pvRecurringRows.filter((r) => r.source_key !== row.source_key);
+  pvRecurringRows.push(row);
+  res.status(201).json({ item: { ...manualToRecurring(row), row_id: String(row.id) } });
+});
+app.patch('/api/v1/recurring-items/:id', express.json(), async (req, res) => {
+  const { validateRecurringInput, manualToRecurring } = await pvRecurring();
+  const v = validateRecurringInput(req.body, { partial: true });
+  if (v.error) return res.status(400).json({ error: v.error });
+  const row = pvRecurringRows.find((r) => String(r.id) === req.params.id && r.status === 'active');
+  if (!row) return res.status(404).json({ error: 'Recurring item not found.' });
+  Object.assign(row, v.item);
+  res.json({ item: { ...manualToRecurring(row), row_id: String(row.id) } });
+});
+app.delete('/api/v1/recurring-items/:id', (req, res) => {
+  const n = pvRecurringRows.length;
+  pvRecurringRows = pvRecurringRows.filter((r) => String(r.id) !== req.params.id);
+  if (pvRecurringRows.length === n) return res.status(404).json({ error: 'Recurring item not found.' });
+  res.json({ ok: true });
+});
+// ── end Session 2 – Recurring preview ───────────────────────────────────────
 // Mirrors services/transaction-rules.js detectRecurringTransactions() output.
 app.get('/api/v1/transactions/recurring', (req, res) => {
-  if (previewEmpty(req)) return res.json({ recurring: [] });
+  if (previewEmpty(req)) return pvMergeRecurring([]).then((recurring) => res.json({ recurring }));
   const now = new Date();
   const next = (day) => {
     let d = new Date(now.getFullYear(), now.getMonth(), day);
     if (d < new Date(now.getFullYear(), now.getMonth(), now.getDate())) d = new Date(now.getFullYear(), now.getMonth() + 1, day);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
-  const r = (kind, merchant, averageAmount, cadence, nextEstimate) => ({ kind, merchant, averageAmount, cadence, nextEstimate, confidence: 0.9, occurrences: 6 });
-  res.json({ recurring: [
+  const r = (kind, merchant, averageAmount, cadence, nextEstimate) => ({ kind, merchant, merchant_key: merchant.toLowerCase(), averageAmount, cadence, nextEstimate, confidence: 0.9, occurrences: 6 });
+  pvMergeRecurring([
     r('income', 'Acme Pty Ltd', 3650, 'monthly', next(29)),
     r('bill', 'Rent — Ray White', 1950, 'monthly', next(3)),
     r('subscription', 'Netflix', 18.99, 'monthly', next(6)),
@@ -223,7 +425,7 @@ app.get('/api/v1/transactions/recurring', (req, res) => {
     r('bill', 'Telstra', 65, 'monthly', next(20)),
     r('bill', 'Anytime Fitness', 21.95, 'monthly', next(22)),
     r('bill', 'NIB health insurance', 142.3, 'monthly', next(24)),
-  ] });
+  ]).then((recurring) => res.json({ recurring }));
 });
 
 app.get('/api/v1/markets/indices', (_req, res) => res.json([
@@ -311,8 +513,10 @@ app.patch('/api/v1/profile', express.json(), (req, res) => res.json({ ...req.bod
     if (failing(req)) return res.status(500).json({ error: 'Could not load transactions for this report' });
     const v = rv.validateRange(req.query.from, req.query.to);
     if (v.error) return res.status(400).json({ error: v.error });
+    const decorate = app.locals.previewDecorate || ((t) => t);
     const rows = previewEmpty(req) ? [] : previewTransactions()
       .filter((t) => t.post_date >= v.from && t.post_date <= v.to)
+      .map(decorate)
       .sort((a, b) => a.post_date.localeCompare(b.post_date));
     res.json({ from: v.from, to: v.to, transactions: rows, truncated: false });
   });
