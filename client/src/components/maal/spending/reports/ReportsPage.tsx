@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { ArrowDown, ArrowDownRight, ArrowUp, ArrowUpRight, BarChart3, CalendarRange, ChevronDown, GitFork, ListFilter, PieChart, SquareSplitVertical } from "lucide-react";
 import {
@@ -7,13 +7,15 @@ import {
 } from "../../../../../../shared/spending-reports.mjs";
 import type { Kind, ReportTab, ViewBy } from "../../../../../../shared/spending-reports.mjs";
 import { sankeyFlows } from "../../../../../../shared/spending-overview.mjs";
+import { configFromSearch, searchFromConfig, type ReportSearch } from "../../../../../../shared/report-url.mjs";
 import { effectiveTransactions } from "../../../../../../shared/transaction-splits.mjs";
 import { AskSparkButton, HomeCard } from "@/components/maal/home/HomeCard";
 import { aud } from "@/components/maal/home/format";
 import { usePrivacy } from "@/components/maal/home/prefs";
 import { iconForGroup } from "../overview/categoryIcons";
 import { createView, deleteView, updateView, type ChartType, type ReportConfig, type SavedView } from "./api";
-import { Donut, PeriodBars, Sankey, rampAt, type BarsInput } from "./charts";
+import { Donut, PeriodBars, Sankey, type BarsInput } from "./charts";
+import { catColour, catVars, dataColour, dataVars, incomeColour, incomeVars, useCustomColours } from "../categoryColour";
 import { FiltersDialog, type FilterDraft } from "./FiltersDialog";
 import { PER, PERIOD_NOUN, longLabel, rangeText, shortLabel } from "./labels";
 import { ConfirmDeleteDialog, NameDialog, SavedReportsCard } from "./SavedReports";
@@ -55,16 +57,28 @@ type Sort = { col: number; dir: "asc" | "desc" };
  * custom, up to 3 years), grouped by week, month or quarter, filtered by
  * category and merchant; saved views on the right. Data: the date-ranged
  * GET /api/v1/reports/transactions; maths: shared/spending-reports.mjs.
+ *
+ * Settings live in the URL (route validateSearch, shared/report-url.mjs) so
+ * refresh, back/forward and shared links keep the view. The merchant text
+ * filter is the exception: it is free text and stays in component state only.
  */
-export function ReportsPage() {
+export function ReportsPage({ search, setSearch }: { search: ReportSearch; setSearch: (next: ReportSearch) => void }) {
   const today = useMemo(() => new Date(), []);
   const privacy = usePrivacy();
-  const [config, setConfig] = useState<ReportConfig>(DEFAULT_CONFIG);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [merchant, setMerchant] = useState("");
+  const urlConfig = useMemo(() => configFromSearch(search), [search]);
+  const config: ReportConfig = useMemo(() => ({
+    tab: urlConfig.tab, chart: urlConfig.chart, interval: urlConfig.interval, viewBy: urlConfig.viewBy, range: urlConfig.range,
+    filters: { groups: urlConfig.groups, merchant },
+  }), [urlConfig, merchant]);
+  const activeId = search.view ?? null;
+  // Saved view whose merchant filter has been loaded into state (the URL never carries it).
+  const hydrated = useRef<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sort, setSort] = useState<Sort | null>(null);
   const saved = useSavedViews();
   const { excluded } = useExcludedGroups();
+  const custom = useCustomColours();
 
   const range = resolveRange(config.range, today) ?? resolveRange({ preset: "6m" }, today)!;
   const data = useReportTransactions(range.from, range.to);
@@ -100,6 +114,12 @@ export function ReportsPage() {
 
   // ---------- Saved views ----------
   const activeView = saved.views.find((v) => v.id === activeId) ?? null;
+  useEffect(() => {
+    if (!activeView || hydrated.current === activeView.id) return;
+    hydrated.current = activeView.id;
+    const m = activeView.config.filters?.merchant;
+    if (typeof m === "string" && m) setMerchant(m);
+  }, [activeView]);
   const dirty = !!activeView && !sameConfig(activeView.config, config);
   const [nameDialog, setNameDialog] = useState<{ mode: "save" | "rename"; view?: SavedView } | null>(null);
   const [nameBusy, setNameBusy] = useState(false);
@@ -107,17 +127,25 @@ export function ReportsPage() {
   const [toDelete, setToDelete] = useState<SavedView | null>(null);
   const [delBusy, setDelBusy] = useState(false);
 
+  /** Write a config: safe fields to the URL, the merchant text to state. */
+  function commit(next: ReportConfig, view: string | null) {
+    setMerchant(next.filters.merchant || "");
+    setSearch(searchFromConfig(next, view));
+  }
+  function setActiveId(id: string | null) {
+    setSearch(searchFromConfig(config, id));
+  }
   function update(patch: Partial<ReportConfig>) {
-    setConfig((c) => ({ ...c, ...patch }));
+    commit({ ...config, ...patch }, activeId);
   }
   function setTab(tab: ReportTab) {
     const valid = tab === "cashflow" ? ["net", "split", "flow"] : ["bars", "donut"];
-    setConfig((c) => ({ ...c, tab, chart: valid.includes(c.chart) ? c.chart : (tab === "cashflow" ? "net" : "bars") }));
+    commit({ ...config, tab, chart: valid.includes(config.chart) ? config.chart : (tab === "cashflow" ? "net" : "bars") }, activeId);
     setSort(null);
   }
   function openView(v: SavedView) {
-    setConfig({ ...DEFAULT_CONFIG, ...v.config, filters: { ...emptyFilters(), ...(v.config.filters || {}) } });
-    setActiveId(v.id);
+    hydrated.current = v.id;
+    commit({ ...DEFAULT_CONFIG, ...v.config, filters: { ...emptyFilters(), ...(v.config.filters || {}) } }, v.id);
     setSort(null);
   }
   async function submitName(name: string) {
@@ -166,6 +194,12 @@ export function ReportsPage() {
   const groupsText = config.filters.groups.length ? ` in ${config.filters.groups.join(", ")}` : "";
   const askQuestion = `Looking at my ${noun}${groupsText} from ${rText}, what stands out, what's driving it, and what could I change?`;
 
+  // ---------- Colour ----------
+  // Same category = same colour everywhere (shared/category-colours.mjs).
+  // Income sources stay green-family; the folded tail is neutral.
+  const colourFor = (label: string) => label === "Everything else" ? dataColour("neutral")
+    : kind === "income" ? incomeColour(label, custom) : catColour(label, custom);
+
   // ---------- Chart ----------
   let chart: ReactNode = null;
   if (isCash && config.chart === "flow" && flows) {
@@ -182,11 +216,11 @@ export function ReportsPage() {
     const top = breakdown(filtered, kind!, config.viewBy, excluded, 6);
     const summary = privacy ? `${noun} breakdown: amounts hidden`
       : `${noun} by ${config.viewBy}, ${rText}: ${top.rows.map((r) => `${r.label} ${aud(r.amount)} (${r.pct.toFixed(1)}%)`).join(", ")}`;
-    chart = <Donut rows={top.rows} total={top.total} caption={`Total ${noun}`} summary={summary} />;
+    chart = <Donut rows={top.rows} total={top.total} caption={`Total ${noun}`} summary={summary} colourOf={colourFor} />;
   } else if (stacked) {
     const summary = privacy ? `${noun} by ${PERIOD_NOUN[config.interval].toLowerCase()}: amounts hidden`
       : `${noun} by ${PERIOD_NOUN[config.interval].toLowerCase()}, ${rText}: ${stacked.rows.map((r, i) => `${xLabels[i]} ${aud(r.total)}`).join("; ")}`;
-    chart = <PeriodBars data={{ mode: "stack", stacks: stacked.rows.map((r) => r.segments), legend: stacked.labels }} labels={xLabels} summary={summary} />;
+    chart = <PeriodBars data={{ mode: "stack", stacks: stacked.rows.map((r) => r.segments), legend: stacked.labels, colours: stacked.labels.map(colourFor) }} labels={xLabels} summary={summary} />;
   }
 
   // ---------- Strip ----------
@@ -217,16 +251,17 @@ export function ReportsPage() {
   } else if (share && config.chart === "donut") {
     firstIsPeriod = false;
     head = [config.viewBy === "merchant" ? "Merchants" : "Categories", cap(noun), `% of ${noun}`];
-    rows = share.rows.map((r, i) => {
+    rows = share.rows.map((r) => {
       const Icon = iconForGroup(r.group);
+      const colour = colourFor(r.label);
       return {
         key: r.label,
         firstSort: r.label,
         first: (
           <span className="rp-cat">
             {config.viewBy === "merchant"
-              ? <i className="rp-swatch" style={{ opacity: rampAt(i) }} aria-hidden />
-              : <span className="rp-cat-icon" aria-hidden><Icon /></span>}
+              ? <i className="rp-swatch" style={{ background: colour }} aria-hidden />
+              : <span className="rp-cat-icon cat-chip" style={r.label === "Everything else" ? dataVars("neutral") : kind === "income" ? incomeVars(r.label, custom) : catVars(r.label, custom)} aria-hidden><Icon /></span>}
             <span className="rp-cat-name">{r.label}</span>
           </span>
         ),
