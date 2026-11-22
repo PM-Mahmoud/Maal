@@ -187,7 +187,7 @@ function previewTransactions() {
     add(at(3), 'Rent — Ray White', -1950, 'Housing', 'Rent');
     add(at(6), 'Netflix', -18.99, 'Recurring & Subscriptions', 'Streaming');
     add(at(9), 'Spotify', -13.99, 'Recurring & Subscriptions', 'Streaming');
-    add(at(8), 'Origin Energy', -132.55 + wobble(1), 'Bills & Utilities', 'Electricity');
+    add(at(8), 'AGL Energy', -132.55 + wobble(1), 'Bills & Utilities', 'Electricity');
     add(at(20), 'Telstra', -65, 'Bills & Utilities', 'Mobile');
     add(at(16), 'Transfer to savings', -500, 'Transfers', 'Internal transfer', { relationship_type: 'transfer' });
     add(at(24), 'NIB health insurance', -142.3, 'Financial', 'Insurance');
@@ -219,7 +219,7 @@ app.get('/api/v1/transactions/recurring', (req, res) => {
     r('bill', 'Rent — Ray White', 1950, 'monthly', next(3)),
     r('subscription', 'Netflix', 18.99, 'monthly', next(6)),
     r('subscription', 'Spotify', 13.99, 'monthly', next(9)),
-    r('bill', 'Origin Energy', 132.55, 'monthly', next(8)),
+    r('bill', 'AGL Energy', 132.55, 'monthly', next(8)),
     r('bill', 'Telstra', 65, 'monthly', next(20)),
     r('bill', 'Anytime Fitness', 21.95, 'monthly', next(22)),
     r('bill', 'NIB health insurance', 142.3, 'monthly', next(24)),
