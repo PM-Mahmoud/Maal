@@ -126,7 +126,7 @@ export function UpcomingCard({ recurring, loading, error, today }: {
               {error ? "Upcoming bills couldn’t load right now." : (
                 <>
                   Add your recurring bills and subscriptions to see what’s coming up.{" "}
-                  <Link to="/app/transactions" className="mh-link-btn" style={{ fontSize: 13 }}>Review transactions</Link>
+                  <Link to="/app/spending/recurring" search={{ add: 1 }} className="mh-link-btn" style={{ fontSize: 13 }}>Add recurring</Link>
                 </>
               )}
             </div>
