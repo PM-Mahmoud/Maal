@@ -40,6 +40,10 @@ declare module "*transactions-list.mjs" {
   export function fyStartYear(d: Date): number;
   export function datePresets(today?: Date): DatePreset[];
   export function presetFor(from: string | null, to: string | null, today?: Date): string;
+  export const MAX_RANGE_DAYS: number;
+  export function addDays(day: string, n: number): string;
+  export function rangeError(from: string | null, to: string | null, today?: Date): string | null;
+  export function fetchRange(filters: Partial<TxnFilters> | null | undefined, today?: Date): { from: string; to: string; clamped: boolean };
   export function csvCell(value: unknown, opts?: { text?: boolean }): string;
   export function transactionsToCsv(rows: Txn[], opts?: { accountLabel?: (t: Txn) => string; flags?: { hidden: boolean; reviewed: boolean } }): string;
   export function exportFilename(filters: Partial<TxnFilters>, today?: Date): string;

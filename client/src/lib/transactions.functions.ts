@@ -14,8 +14,6 @@ export async function listTransactions(): Promise<unknown[]> {
   const j = await r.json().catch(() => null);
   return Array.isArray(j) ? j : [];
 }
-export async function seedMockTransactions(): Promise<void> {}
-export async function clearTransactions(): Promise<void> {}
 export async function addTransaction(data?: unknown): Promise<unknown> {
   const r = await fetch('/api/v1/transactions', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
   if (!r.ok) throw await readError(r, "Couldn't add the transaction");

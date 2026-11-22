@@ -51,23 +51,25 @@ async function deleteView(id, userId) {
 }
 
 /**
- * Transactions dated within [from, to] (inclusive "YYYY-MM-DD"), oldest first,
- * read in keyset pages of `pageSize` so long ranges come back complete rather
- * than cut at the latest 500 like GET /v1/transactions. Stops at `maxRows` and
- * reports `truncated` so the client can say the report is partial.
+ * Transactions dated within [from, to] (inclusive "YYYY-MM-DD"), returned
+ * oldest first. Read newest first in keyset pages of `pageSize` so long ranges
+ * come back complete rather than cut at the latest 500 like GET /v1/transactions.
+ * When the range holds more than `maxRows`, the NEWEST `maxRows` are kept (the
+ * oldest part is dropped) and `truncated` is set so the client can say so.
  * Same columns as db/transactions.getTransactionsWithCategory, except
  * post_date is returned as "YYYY-MM-DD" text (no timezone shift).
  */
 async function getTransactionsInRange(userId, from, to, { pageSize = 1000, maxRows = 20000 } = {}) {
-  const rows = [];
-  let after = null; // [post_date text, id] of the last row read
+  const newestFirst = [];
+  let before = null; // [post_date text, id] of the oldest row read so far
+  let truncated = false;
   for (;;) {
-    const limit = Math.min(pageSize, maxRows - rows.length + 1);
+    const limit = Math.min(pageSize, maxRows - newestFirst.length + 1);
     const params = [userId, from, to, limit];
     let keyset = '';
-    if (after) {
-      params.push(after[0], after[1]);
-      keyset = 'AND (t.post_date, t.id) > ($5::date, $6::bigint)';
+    if (before) {
+      params.push(before[0], before[1]);
+      keyset = 'AND (t.post_date, t.id) < ($5::date, $6::bigint)';
     }
     const r = await pool.query(
       `SELECT t.id, t.description, t.amount, t.status, to_char(t.post_date, 'YYYY-MM-DD') AS post_date,
@@ -78,16 +80,18 @@ async function getTransactionsInRange(userId, from, to, { pageSize = 1000, maxRo
         WHERE t.user_id = $1
           AND t.post_date >= $2::date AND t.post_date <= $3::date
           ${keyset}
-        ORDER BY t.post_date ASC, t.id ASC
+        ORDER BY t.post_date DESC, t.id DESC
         LIMIT $4`,
       params
     );
-    rows.push(...r.rows);
-    if (rows.length > maxRows) return { rows: rows.slice(0, maxRows), truncated: true };
-    if (r.rows.length < limit) return { rows, truncated: false };
+    newestFirst.push(...r.rows);
+    if (newestFirst.length > maxRows) { newestFirst.length = maxRows; truncated = true; break; }
+    if (r.rows.length < limit) break;
     const last = r.rows[r.rows.length - 1];
-    after = [last.post_date, last.id];
+    before = [last.post_date, last.id];
   }
+  // Callers (Reports charts, the Transactions list) expect oldest first.
+  return { rows: newestFirst.reverse(), truncated };
 }
 
 module.exports = { listViews, countViews, createView, updateView, deleteView, getTransactionsInRange };

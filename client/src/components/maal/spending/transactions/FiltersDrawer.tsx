@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Check, ChevronRight } from "lucide-react";
 import { InstitutionLogo } from "@/components/maal/InstitutionLogo";
-import { datePresets, emptyFilters, presetFor, type TxnFilters } from "../../../../../../shared/transactions-list.mjs";
+import { datePresets, emptyFilters, presetFor, rangeError, type TxnFilters } from "../../../../../../shared/transactions-list.mjs";
 import { iconForGroup } from "../overview/categoryIcons";
 import { TxDrawer } from "./TxDrawer";
 import type { AccountInfo } from "./useTransactionsData";
@@ -57,7 +57,7 @@ export function FiltersDrawer({
 
   const amountError = draft.min != null && draft.max != null && draft.min > draft.max
     ? "The minimum is more than the maximum." : null;
-  const dateError = draft.from && draft.to && draft.from > draft.to ? "The start date is after the end date." : null;
+  const dateError = rangeError(draft.from, draft.to, today);
 
   const footer = (
     <div className="tx-foot-row">
@@ -120,6 +120,7 @@ export function FiltersDrawer({
               </label>
             </div>
           )}
+          {(custom || presetId === "custom") && !dateError && <p className="tx-muted tx-small m-0">You can view up to 3 years at a time.</p>}
           {dateError && <p className="tx-error" role="alert">{dateError}</p>}
         </>
       )}

@@ -266,6 +266,8 @@ function previewTransactions() {
 // keeps rows added via "Add transaction" in memory, honours category changes,
 // and names the accounts via cash_accounts. ?tx=flags on the page URL also adds
 // the optional hidden / reviewed flags so those filters can be previewed.
+// The page reads GET /api/v1/reports/transactions?from&to (validated like the
+// real endpoint, ≤ 3 years); ?tx=truncated previews the row cap (newest 100 kept).
 {
   const onTxPage = (req) => /\/app\/transactions/.test(req.headers.referer || '');
   const txFlags = (req) => /tx=flags/.test(req.headers.referer || '');
@@ -276,16 +278,28 @@ function previewTransactions() {
     if (t.category_group === 'Income' || t.description.startsWith('Transfer to savings')) return 'basiq:ing-0412';
     return 'basiq:cba-7781';
   };
+  const txRows = (req) => [...txAdded, ...previewTransactions().map((t, i) => ({
+    ...t,
+    account_reference: txAccount(t),
+    category_source: 'manual',
+    ...(txFlags(req) ? { hidden: t.relationship_type === 'transfer', reviewed: i % 4 === 0 } : {}),
+  }))].map((t) => (txCats.has(String(t.id)) ? { ...t, ...txCats.get(String(t.id)), category_source: 'manual' } : t));
   app.get('/api/v1/transactions', (req, res, next) => {
     if (!onTxPage(req)) return next();
     if (previewEmpty(req)) return res.json([]);
-    const rows = [...txAdded, ...previewTransactions().map((t, i) => ({
-      ...t,
-      account_reference: txAccount(t),
-      category_source: 'manual',
-      ...(txFlags(req) ? { hidden: t.relationship_type === 'transfer', reviewed: i % 4 === 0 } : {}),
-    }))].map((t) => (txCats.has(String(t.id)) ? { ...t, ...txCats.get(String(t.id)), category_source: 'manual' } : t));
-    res.json(rows.sort((a, b) => String(b.post_date).localeCompare(String(a.post_date))));
+    res.json(txRows(req).sort((a, b) => String(b.post_date).localeCompare(String(a.post_date))));
+  });
+  app.get('/api/v1/reports/transactions', (req, res, next) => {
+    if (!onTxPage(req)) return next();
+    const v = require('../lib/report-views').validateRange(req.query.from, req.query.to);
+    if (v.error) return res.status(400).json({ error: v.error });
+    let rows = previewEmpty(req) ? [] : txRows(req)
+      .filter((t) => String(t.post_date).slice(0, 10) >= v.from && String(t.post_date).slice(0, 10) <= v.to)
+      .sort((a, b) => String(a.post_date).localeCompare(String(b.post_date)));
+    // Like db/reports.js at its cap: keep the newest rows, drop the oldest (cap of 100 here).
+    const truncated = /tx=truncated/.test(req.headers.referer || '') && rows.length > 100;
+    if (truncated) rows = rows.slice(-100);
+    res.json({ from: v.from, to: v.to, transactions: rows, truncated });
   });
   app.post('/api/v1/transactions', express.json(), (req, res) => {
     const d = (req.body && req.body.data) || req.body || {};

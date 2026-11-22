@@ -2,17 +2,16 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import {
-  ArrowLeft, Check, Database, Download, Eraser, ListFilter, MoreVertical, Plus, Repeat, Scale, Search,
+  ArrowLeft, Check, Download, ListFilter, MoreVertical, Plus, Repeat, Scale, Search,
   SlidersHorizontal, Upload, X,
 } from "lucide-react";
-import { clearTransactions, seedMockTransactions } from "@/lib/transactions.functions";
 import { setTransactionCategory } from "@/lib/transactions-depth.functions";
 import { AskSparkButton } from "@/components/maal/home/HomeCard";
 import { signedCents } from "@/components/maal/home/format";
 import { RulesModal } from "@/components/maal/transactions/RulesModal";
 import {
-  accountKey, activeFilterCount, datePresets, detailFlags, emptyFilters, exportFilename, filterTransactions, groupOf,
-  presetFor, sortTransactions, summarise, transactionsToCsv, type SortKey, type TxnFilters,
+  accountKey, activeFilterCount, datePresets, detailFlags, emptyFilters, exportFilename, fetchRange, filterTransactions,
+  groupOf, presetFor, sortTransactions, summarise, transactionsToCsv, type SortKey, type TxnFilters,
 } from "../../../../../../shared/transactions-list.mjs";
 import { TransactionDetailMount } from "../transaction-detail/TransactionDetailMount";
 import { AddTransactionDrawer } from "./AddTransactionDrawer";
@@ -31,15 +30,20 @@ type Toast = { tone: "ok" | "error"; text: string } | null;
 /**
  * Transactions list (/app/transactions, redesign session 2, HEL-91..95):
  * search, filters, CSV export of the filtered rows, and manual add. The old
- * page's tools (CSV import, rules, recurring, reconciliation, demo data) live
- * in the More menu. Rows open the Transaction detail drawer via ?txn=<id>.
+ * page's tools (CSV import, rules, recurring, reconciliation) live in the
+ * More menu. Rows open the Transaction detail drawer via ?txn=<id>.
+ *
+ * Rows come from the date-ranged GET /api/v1/reports/transactions: the last
+ * 3 years by default, or exactly the chosen date filter (capped at 3 years),
+ * so search, filters and export see the whole range, not just the latest 500.
  */
 export function TransactionsPage() {
-  const data = useTransactionsData();
-  const { reload } = data;
   const today = useMemo(() => new Date(), []);
-
   const [filters, setFilters] = useState<TxnFilters>(emptyFilters);
+  const range = useMemo(() => fetchRange(filters, today), [filters.from, filters.to, today]); // eslint-disable-line react-hooks/exhaustive-deps
+  const data = useTransactionsData(range.from, range.to);
+  const { reload } = data;
+
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "date", dir: "desc" });
   const [view, setView] = useState<View>("list");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -119,7 +123,8 @@ export function TransactionsPage() {
 
   const removeChip = (patch: Partial<TxnFilters>) => setFilters((f) => ({ ...f, ...patch }));
   const chips = filterChips(filters, today, (k) => describeAccount(k, data.accounts).label, removeChip);
-  const empty = !data.loading && !data.error && data.rows.length === 0;
+  // "No transactions yet" only without a date filter; a filtered empty range is a "no match".
+  const empty = !data.loading && !data.error && data.rows.length === 0 && !filters.from && !filters.to;
 
   return (
     <div className="mh tx">
@@ -178,13 +183,6 @@ export function TransactionsPage() {
                     <Menu.Item className="tx-menu-item" onSelect={() => setView("recurring")}><Repeat aria-hidden /> Recurring payments</Menu.Item>
                     <Menu.Item className="tx-menu-item" onSelect={() => setView("reconcile")}><Scale aria-hidden /> Reconcile accounts</Menu.Item>
                     <Menu.Item className="tx-menu-item" onSelect={() => setRulesOpen(true)}><SlidersHorizontal aria-hidden /> Categorisation rules</Menu.Item>
-                    <Menu.Separator className="tx-menu-sep" />
-                    <Menu.Item className="tx-menu-item" disabled={busy === "seed"} onSelect={async () => {
-                      setBusy("seed"); try { await seedMockTransactions(); await refresh(); } finally { setBusy(null); }
-                    }}><Database aria-hidden /> Load demo data</Menu.Item>
-                    <Menu.Item className="tx-menu-item" onSelect={async () => { await clearTransactions(); await refresh(); }}>
-                      <Eraser aria-hidden /> Clear demo data
-                    </Menu.Item>
                   </Menu.Content>
                 </Menu.Portal>
               </Menu.Root>
@@ -223,6 +221,17 @@ export function TransactionsPage() {
                 <div><dt>Money out</dt><dd className="mh-amount">{signedCents(summary.moneyOut)}</dd></div>
                 <div><dt>Money in</dt><dd className="mh-amount" data-in={summary.moneyIn > 0}>{signedCents(summary.moneyIn)}</dd></div>
               </dl>}
+              {data.truncated && (
+                <p className="tx-muted tx-small tx-pad-x" role="status">
+                  {/* db/reports.js keeps the newest 20,000 rows of the range and drops the oldest. */}
+                  Showing the most recent 20,000 transactions in this range — narrow the dates to see older ones.
+                </p>
+              )}
+              {range.clamped && (
+                <p className="tx-muted tx-small tx-pad-x" role="status">
+                  Showing up to 3 years at a time, from {longDate(range.from)} to {longDate(range.to)}.
+                </p>
+              )}
               {chips.length > 0 && (
                 <div className="tx-chips" aria-label="Filters in use">
                   {chips.map((c) => (
@@ -265,7 +274,7 @@ function filterChips(f: TxnFilters, today: Date, accountLabel: (k: string) => st
   if (f.from || f.to) {
     const id = presetFor(f.from, f.to, today);
     const label = id === "custom"
-      ? `${f.from ? longDate(f.from) : "Start"} – ${f.to ? longDate(f.to) : "today"}`
+      ? (f.from ? `${longDate(f.from)} – ${f.to ? longDate(f.to) : "today"}` : `3 years to ${longDate(f.to as string)}`)
       : datePresets(today).find((p) => p.id === id)?.label || "Date";
     out.push({ key: "date", label, remove: () => remove({ from: null, to: null }) });
   }

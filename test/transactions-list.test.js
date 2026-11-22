@@ -141,6 +141,41 @@ const ROWS = [
     assert.strictEqual(m.presetFor('2026-01-05', null, today), 'custom');
   });
 
+  await test('fetch range defaults to the last 3 years and never exceeds the endpoint cap', () => {
+    const today = new Date(2026, 10, 23); // 23 Nov 2026
+    const span = (r) => (Date.UTC(+r.to.slice(0, 4), +r.to.slice(5, 7) - 1, +r.to.slice(8, 10))
+      - Date.UTC(+r.from.slice(0, 4), +r.from.slice(5, 7) - 1, +r.from.slice(8, 10))) / 86400000 + 1;
+    // No date filter: 3 years ending today, exactly at the 1096-day inclusive cap.
+    const def = m.fetchRange(m.emptyFilters(), today);
+    assert.deepStrictEqual(def, { from: '2023-11-24', to: '2026-11-23', clamped: false });
+    assert.strictEqual(span(def), m.MAX_RANGE_DAYS);
+    assert.strictEqual(m.datePresets(today)[0].label, 'Last 3 years');
+    // A preset or custom range inside 3 years is fetched exactly.
+    assert.deepStrictEqual(m.fetchRange({ from: '2025-07-01', to: '2026-06-30' }, today), { from: '2025-07-01', to: '2026-06-30', clamped: false });
+    // Start only → runs to today; end only → the 3 years up to that end.
+    assert.deepStrictEqual(m.fetchRange({ from: '2026-01-05', to: null }, today), { from: '2026-01-05', to: '2026-11-23', clamped: false });
+    assert.deepStrictEqual(m.fetchRange({ from: null, to: '2025-02-28' }, today), { from: '2022-03-01', to: '2025-02-28', clamped: false });
+    // Longer than 3 years keeps the end and is clamped.
+    const long = m.fetchRange({ from: '2019-01-01', to: '2026-06-30' }, today);
+    assert.deepStrictEqual(long, { from: '2023-07-01', to: '2026-06-30', clamped: true });
+    assert.strictEqual(span(long), m.MAX_RANGE_DAYS);
+    // Reversed dates are swapped rather than sent invalid.
+    assert.deepStrictEqual(m.fetchRange({ from: '2026-06-30', to: '2026-01-01' }, today), { from: '2026-01-01', to: '2026-06-30', clamped: false });
+    // Month/leap-year arithmetic.
+    assert.strictEqual(m.addDays('2024-02-28', 1), '2024-02-29');
+    assert.strictEqual(m.addDays('2026-01-01', -1), '2025-12-31');
+  });
+
+  await test('range validation matches the 3-year endpoint limit', () => {
+    const today = new Date(2026, 10, 23);
+    assert.strictEqual(m.rangeError(null, null, today), null);
+    assert.strictEqual(m.rangeError(null, '2020-01-01', today), null);
+    assert.strictEqual(m.rangeError('2023-11-24', '2026-11-23', today), null); // exactly 1096 days
+    assert.strictEqual(m.rangeError('2023-11-23', '2026-11-23', today), 'Choose a range of up to 3 years.');
+    assert.strictEqual(m.rangeError('2023-11-23', null, today), 'Choose a range of up to 3 years.'); // end defaults to today
+    assert.strictEqual(m.rangeError('2026-02-01', '2026-01-01', today), 'The start date is after the end date.');
+  });
+
   await test('CSV cells are quoted and guarded against formula injection', () => {
     assert.strictEqual(m.csvCell('plain'), 'plain');
     assert.strictEqual(m.csvCell('a, b'), '"a, b"');

@@ -95,6 +95,12 @@
   .tx-summary > div { flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; }
   .tx-summary dt { font-size: 12px; }
 }
+/* Phones: three money cells share ~343px, so tighten padding and type so a
+   full "-$25,116.08" fits; anything longer wraps instead of being clipped. */
+@media (max-width: 479.98px) {
+  .tx-summary > div { padding: 10px 8px; }
+  .tx-summary dd { font-size: 13px; overflow-wrap: anywhere; }
+}
 
 /* ---------- Active filter chips ---------- */
 .tx-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 20px 4px; }
