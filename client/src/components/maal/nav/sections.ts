@@ -13,14 +13,12 @@ export const TRACK: Area[] = [
   {
     key: "spending", label: "Spending", to: "/app/spending",
     pages: [
-      // Session 2 (Spending) tab set. Breakdown & budget, Recurring and
-      // Reports get their own pages in later flows; until then they jump to the
-      // matching card on the overview. Cash and Debts moved to Invest.
+      // Session 2 (Spending) tab set. Cash and Debts moved to Invest.
       { to: "/app/spending", label: "Overview" },
-      { to: "/app/spending", label: "Breakdown & budget", hash: "breakdown" },
+      { to: "/app/spending/breakdown", label: "Breakdown & budget" },
       { to: "/app/transactions", label: "Transactions" },
-      { to: "/app/spending", label: "Recurring", hash: "upcoming" },
-      { to: "/app/spending", label: "Reports", hash: "reports" },
+      { to: "/app/spending/recurring", label: "Recurring" },
+      { to: "/app/spending/reports", label: "Reports" },
     ],
   },
   {
