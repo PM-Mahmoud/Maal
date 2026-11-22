@@ -267,7 +267,7 @@ function previewTransactions() {
 // and names the accounts via cash_accounts. ?tx=flags on the page URL also adds
 // the optional hidden / reviewed flags so those filters can be previewed.
 // The page reads GET /api/v1/reports/transactions?from&to (validated like the
-// real endpoint, ≤ 3 years); ?tx=truncated previews the 20,000-row cap note.
+// real endpoint, ≤ 3 years); ?tx=truncated previews the row cap (newest 100 kept).
 {
   const onTxPage = (req) => /\/app\/transactions/.test(req.headers.referer || '');
   const txFlags = (req) => /tx=flags/.test(req.headers.referer || '');
@@ -293,10 +293,13 @@ function previewTransactions() {
     if (!onTxPage(req)) return next();
     const v = require('../lib/report-views').validateRange(req.query.from, req.query.to);
     if (v.error) return res.status(400).json({ error: v.error });
-    const rows = previewEmpty(req) ? [] : txRows(req)
+    let rows = previewEmpty(req) ? [] : txRows(req)
       .filter((t) => String(t.post_date).slice(0, 10) >= v.from && String(t.post_date).slice(0, 10) <= v.to)
       .sort((a, b) => String(a.post_date).localeCompare(String(b.post_date)));
-    res.json({ from: v.from, to: v.to, transactions: rows, truncated: /tx=truncated/.test(req.headers.referer || '') });
+    // Like db/reports.js at its cap: keep the newest rows, drop the oldest (cap of 100 here).
+    const truncated = /tx=truncated/.test(req.headers.referer || '') && rows.length > 100;
+    if (truncated) rows = rows.slice(-100);
+    res.json({ from: v.from, to: v.to, transactions: rows, truncated });
   });
   app.post('/api/v1/transactions', express.json(), (req, res) => {
     const d = (req.body && req.body.data) || req.body || {};

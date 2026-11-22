@@ -223,8 +223,8 @@ export function TransactionsPage() {
               </dl>}
               {data.truncated && (
                 <p className="tx-muted tx-small tx-pad-x" role="status">
-                  {/* The endpoint reads oldest first and stops at 20,000 (db/reports.js), so the cut-off rows are the newest. */}
-                  Showing the earliest 20,000 transactions in this range — narrow the dates to see more recent ones.
+                  {/* db/reports.js keeps the newest 20,000 rows of the range and drops the oldest. */}
+                  Showing the most recent 20,000 transactions in this range — narrow the dates to see older ones.
                 </p>
               )}
               {range.clamped && (
