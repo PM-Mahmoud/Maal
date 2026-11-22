@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useLocation } from "@tanstack/react-router";
 import { upcomingThisMonth } from "../../../../../../shared/spending-overview.mjs";
+import { effectiveTransactions } from "../../../../../../shared/transaction-splits.mjs";
+import { TransactionDetailMount } from "../transaction-detail/TransactionDetailMount";
 import { SpendingSettingsLink } from "../settings/SpendingSettingsLink";
 import { SpendThisMonthCard } from "./SpendThisMonthCard";
 import { LatestTransactionsCard, UpcomingCard } from "./TransactionsCards";
@@ -40,6 +42,9 @@ export function SpendingOverview() {
   }, [data.budgets]);
   const upcoming = useMemo(() => upcomingThisMonth(data.recurring, today), [data.recurring, today]);
   const monthName = today.toLocaleDateString("en-AU", { month: "long", year: "numeric" });
+  // Totals ignore hidden transactions and count split parts by their own
+  // category (Transaction detail, HEL-100/101). The latest list keeps raw rows.
+  const counted = useMemo(() => effectiveTransactions(data.transactions), [data.transactions]);
 
   return (
     <div className="mh so">
@@ -52,7 +57,7 @@ export function SpendingOverview() {
         </div>
         <div className="mh-grid so-grid">
           <div className="mh-col">
-            <SpendThisMonthCard transactions={data.transactions} excluded={excluded} budget={budgetTotal}
+            <SpendThisMonthCard transactions={counted} excluded={excluded} budget={budgetTotal}
               loading={data.loading} error={data.errors.transactions} today={today} />
             <div className="so-pair">
               <LatestTransactionsCard transactions={data.transactions} excluded={excluded}
@@ -61,19 +66,20 @@ export function SpendingOverview() {
                 <UpcomingCard recurring={data.recurring} loading={data.loading} error={data.errors.recurring} today={today} />
               </div>
             </div>
-            <ReportsCard transactions={data.transactions} excluded={excluded}
+            <ReportsCard transactions={counted} excluded={excluded}
               loading={data.loading} error={data.errors.transactions} today={today} />
           </div>
           <aside className="mh-col" aria-label="Budget and income">
             {!data.loading && !data.errors.budgets && budgetTotal <= 0 && <BudgetPromoCard />}
-            <CategoryBreakdownCard transactions={data.transactions} excluded={excluded} budgets={data.budgets}
+            <CategoryBreakdownCard transactions={counted} excluded={excluded} budgets={data.budgets}
               upcoming={upcoming} includeUpcoming={includeUpcoming} loading={data.loading}
               error={data.errors.transactions} budgetError={data.errors.budgets} today={today} />
-            <IncomeCard transactions={data.transactions} recurring={data.recurring}
+            <IncomeCard transactions={counted} recurring={data.recurring}
               loading={data.loading} error={data.errors.transactions} today={today} />
           </aside>
         </div>
       </div>
+      <TransactionDetailMount onChanged={reload} />
     </div>
   );
 }
