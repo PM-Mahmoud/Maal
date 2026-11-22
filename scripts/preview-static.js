@@ -164,16 +164,67 @@ app.get('/api/v1/snapshots', (req, res) => {
   res.json(out);
 });
 
-app.get('/api/v1/transactions', (_req, res) => res.json([
-  { id: 't1', description: 'Woolworths', amount: -86.40, post_date: iso(1), category_name: 'Groceries' },
-  { id: 't2', description: 'Salary — Acme Pty Ltd', amount: 3650.00, post_date: iso(3), category_name: 'Income' },
-  { id: 't3', description: 'Opal Transport', amount: -42.10, post_date: iso(4), category_name: 'Transport' },
-  { id: 't4', description: 'Netflix', amount: -18.99, post_date: iso(6), category_name: 'Subscriptions' },
-  { id: 't5', description: 'Origin Energy', amount: -132.55, post_date: iso(8), category_name: 'Utilities' },
-  { id: 't6', description: 'ING interest', amount: 61.20, post_date: iso(10), category_name: 'Interest' },
-  { id: 't7', description: 'Coles', amount: -64.75, post_date: iso(12), category_name: 'Groceries' },
-  { id: 't8', description: 'Car loan repayment', amount: -410.00, post_date: iso(14), category_name: 'Debt repayment' },
-]));
+// Six months of deterministic transactions (category_group = the 18-group AU
+// taxonomy, as GET /api/v1/transactions returns). Feeds Home and the Spending
+// overview. ?spend=empty on the page URL previews the no-data states.
+const previewEmpty = (req) => /spend=empty/.test(req.headers.referer || '');
+function previewTransactions() {
+  const out = [];
+  const now = new Date();
+  const add = (d, description, amount, category_group, category, extra = {}) => {
+    if (d > now) return;
+    const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    out.push({ id: `t${out.length + 1}`, description, amount, post_date: day, category_group, category, ...extra });
+  };
+  for (let k = 5; k >= 0; k--) {
+    const y = now.getFullYear();
+    const m = now.getMonth() - k;
+    const at = (day) => new Date(y, m, day);
+    const wobble = (n) => Math.round(Math.sin(k * 3 + n) * 1800) / 100; // ± $18, stable per month
+    add(at(1), 'ING Savings Maximiser interest', 12.4 + k, 'Income', 'Interest');
+    add(at(15), 'Salary — Acme Pty Ltd', 3650, 'Income', 'Salary & wages');
+    add(at(29), 'Salary — Acme Pty Ltd', 3650, 'Income', 'Salary & wages');
+    add(at(3), 'Rent — Ray White', -1950, 'Housing', 'Rent');
+    add(at(6), 'Netflix', -18.99, 'Recurring & Subscriptions', 'Streaming');
+    add(at(9), 'Spotify', -13.99, 'Recurring & Subscriptions', 'Streaming');
+    add(at(8), 'Origin Energy', -132.55 + wobble(1), 'Bills & Utilities', 'Electricity');
+    add(at(20), 'Telstra', -65, 'Bills & Utilities', 'Mobile');
+    add(at(16), 'Transfer to savings', -500, 'Transfers', 'Internal transfer', { relationship_type: 'transfer' });
+    add(at(24), 'NIB health insurance', -142.3, 'Financial', 'Insurance');
+    [2, 9, 16, 23].forEach((d, i) => add(at(d), i % 2 ? 'Coles' : 'Woolworths', -(92 + wobble(d)), 'Food & Dining', 'Groceries'));
+    [4, 11, 18, 25].forEach((d) => add(at(d), 'Opal Transport', -(38 + wobble(d) / 3), 'Auto & Transport', 'Public transport'));
+    [5, 13, 21].forEach((d) => add(at(d), 'Single O Surry Hills', -(14.5 + wobble(d) / 4), 'Food & Dining', 'Cafes'));
+    add(at(12), 'Uber Eats', -(46 + wobble(2)), 'Food & Dining', 'Delivery');
+    add(at(10), k % 2 ? 'JB Hi-Fi' : 'Kmart', -(k % 2 ? 249 : 64.5), 'Shopping', k % 2 ? 'Electronics' : 'General retail');
+    add(at(19), 'Priceline Pharmacy', -(28 + wobble(3) / 2), 'Health & Wellness', 'Pharmacy');
+    add(at(22), 'Anytime Fitness', -21.95, 'Health & Wellness', 'Fitness');
+    if (k === 2) add(at(14), 'Qantas', -389, 'Travel & Lifestyle', 'Flights');
+    add(at(26), 'Card payment — CommBank', -620, 'Credit Card Payments', 'Card payment');
+  }
+  return out.sort((a, b) => b.post_date.localeCompare(a.post_date));
+}
+app.get('/api/v1/transactions', (req, res) => res.json(previewEmpty(req) ? [] : previewTransactions()));
+// Mirrors services/transaction-rules.js detectRecurringTransactions() output.
+app.get('/api/v1/transactions/recurring', (req, res) => {
+  if (previewEmpty(req)) return res.json({ recurring: [] });
+  const now = new Date();
+  const next = (day) => {
+    let d = new Date(now.getFullYear(), now.getMonth(), day);
+    if (d < new Date(now.getFullYear(), now.getMonth(), now.getDate())) d = new Date(now.getFullYear(), now.getMonth() + 1, day);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const r = (kind, merchant, averageAmount, cadence, nextEstimate) => ({ kind, merchant, averageAmount, cadence, nextEstimate, confidence: 0.9, occurrences: 6 });
+  res.json({ recurring: [
+    r('income', 'Acme Pty Ltd', 3650, 'monthly', next(29)),
+    r('bill', 'Rent — Ray White', 1950, 'monthly', next(3)),
+    r('subscription', 'Netflix', 18.99, 'monthly', next(6)),
+    r('subscription', 'Spotify', 13.99, 'monthly', next(9)),
+    r('bill', 'Origin Energy', 132.55, 'monthly', next(8)),
+    r('bill', 'Telstra', 65, 'monthly', next(20)),
+    r('bill', 'Anytime Fitness', 21.95, 'monthly', next(22)),
+    r('bill', 'NIB health insurance', 142.3, 'monthly', next(24)),
+  ] });
+});
 
 app.get('/api/v1/markets/indices', (_req, res) => res.json([
   { name: 'S&P 500', symbol: 'SPX', price: 6312.40, changePercent: 0.42 },
@@ -217,7 +268,11 @@ app.patch('/api/v1/profile', express.json(), (req, res) => res.json({ ...req.bod
   const { TAXONOMY } = require('../lib/transaction-categories');
   const ss = require('../lib/spending-settings');
   let pvSettings = {};
-  let pvBudgets = [{ id: 1, category_group: null, monthly_amount: '275.00' }];
+  let pvBudgets = [
+    { id: 1, category_group: null, monthly_amount: '3800.00' },
+    { id: 2, category_group: 'Food & Dining', monthly_amount: '650.00' },
+    { id: 3, category_group: 'Shopping', monthly_amount: '200.00' },
+  ];
   let pvRules = [{ id: 1, name: null, match_type: 'contains', match_text: 'NETFLIX', category_group: 'Recurring & Subscriptions', category: 'Streaming', priority: 0, amount_direction: 'debit' }];
   app.get('/api/v1/spending-settings', (_req, res) => res.json({ settings: ss.normaliseSettings(pvSettings) }));
   app.patch('/api/v1/spending-settings', express.json(), (req, res) => {
@@ -226,7 +281,10 @@ app.patch('/api/v1/profile', express.json(), (req, res) => res.json({ ...req.bod
     pvSettings = { ...pvSettings, ...v.patch };
     res.json({ settings: ss.normaliseSettings(pvSettings) });
   });
-  app.get('/api/v1/budgets', (_req, res) => { const b = pvBudgets.map(ss.toBudget); res.json({ budgets: b, total: ss.totalMonthlyBudget(b) }); });
+  app.get('/api/v1/budgets', (req, res) => {
+    const b = previewEmpty(req) ? [] : pvBudgets.map(ss.toBudget);
+    res.json({ budgets: b, total: ss.totalMonthlyBudget(b) });
+  });
   app.put('/api/v1/budgets', express.json(), (req, res) => {
     const v = ss.validateBudgetInput(req.body);
     if (v.error) return res.status(400).json({ error: v.error });

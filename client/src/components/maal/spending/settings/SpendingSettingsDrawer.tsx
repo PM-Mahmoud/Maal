@@ -24,8 +24,8 @@ const TITLES: Record<Panel, string> = {
 };
 const PARENT: Record<Panel, Panel | null> = { main: null, categories: "main", budget: "main", reset: "budget" };
 
-export function SpendingSettingsDrawer({ onClose }: { onClose: () => void }) {
-  const [panel, setPanel] = useState<Panel>("main");
+export function SpendingSettingsDrawer({ onClose, initialPanel }: { onClose: () => void; initialPanel?: "budget" | "categories" }) {
+  const [panel, setPanel] = useState<Panel>(initialPanel ?? "main");
   const [settings, setSettings] = useState<SpendingSettings | null>(null);
   const [budgetTotal, setBudgetTotal] = useState<number | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);

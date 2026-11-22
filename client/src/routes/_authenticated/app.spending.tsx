@@ -1,15 +1,13 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { EmptyPage } from "@/components/maal/nav/EmptyPage";
-import { SpendingSettingsLink } from "@/components/maal/spending/settings/SpendingSettingsLink";
+import { SpendingOverview } from "@/components/maal/spending/overview/SpendingOverview";
 
-// Left empty until the Figma designs are finalised (2026-11-15).
+// Spending overview (redesign session 2, HEL-83).
 export const Route = createFileRoute("/_authenticated/app/spending")({ component: Spending });
 
 function Spending() {
   return (
     <div className="ss-entry">
-      <SpendingSettingsLink />
-      <EmptyPage title="Spending" />
+      <SpendingOverview />
       {/* Child routes (e.g. /app/spending/settings drawer) render over the page. */}
       <Outlet />
     </div>

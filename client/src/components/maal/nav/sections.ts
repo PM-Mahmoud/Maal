@@ -4,7 +4,8 @@
 // Each Track area groups the existing pages that belong to it; the shell shows
 // those pages as tabs at the top of the content (SectionTabs).
 
-export type SubPage = { to: string; label: string };
+/** `hash` links to a section of the page at `to` (used until a tab gets its own route). */
+export type SubPage = { to: string; label: string; hash?: string };
 export type Area = { key: string; label: string; to: string; pages: SubPage[] };
 
 export const TRACK: Area[] = [
@@ -12,10 +13,14 @@ export const TRACK: Area[] = [
   {
     key: "spending", label: "Spending", to: "/app/spending",
     pages: [
+      // Session 2 (Spending) tab set. Breakdown & budget, Recurring and
+      // Reports get their own pages in later flows; until then they jump to the
+      // matching card on the overview. Cash and Debts moved to Invest.
       { to: "/app/spending", label: "Overview" },
+      { to: "/app/spending", label: "Breakdown & budget", hash: "breakdown" },
       { to: "/app/transactions", label: "Transactions" },
-      { to: "/app/wealth/cash", label: "Cash" },
-      { to: "/app/wealth/liabilities", label: "Debts" },
+      { to: "/app/spending", label: "Recurring", hash: "upcoming" },
+      { to: "/app/spending", label: "Reports", hash: "reports" },
     ],
   },
   {
@@ -25,6 +30,8 @@ export const TRACK: Area[] = [
       { to: "/app/wealth/investments", label: "Investments" },
       { to: "/app/wealth/super", label: "Super" },
       { to: "/app/wealth/property", label: "Property" },
+      { to: "/app/wealth/cash", label: "Cash" },
+      { to: "/app/wealth/liabilities", label: "Debts" },
       { to: "/app/wealth/other", label: "Other assets" },
       { to: "/app/assets", label: "Net worth" },
       { to: "/app/portfolio-plan", label: "Portfolio plan" },
