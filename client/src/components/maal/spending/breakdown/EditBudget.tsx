@@ -75,7 +75,7 @@ export function EditBudget({ transactions, excluded, budgets, custom, today, loa
         <button type="button" className="ss-iconbtn" onClick={onBack} aria-label="Back to breakdown"><ArrowLeft aria-hidden /></button>
         <h2 id="bd-edit-title" className="mh-card-label m-0 font-normal">Monthly budget</h2>
         <div className="mh-card-actions">
-          <button type="button" className="mh-btn-outline" onClick={onAi}><Sparkles aria-hidden className="bd-spark" /> Budget with Maal</button>
+          <button type="button" className="mh-btn-outline" onClick={onAi} aria-label="Budget with Maal"><Sparkles aria-hidden className="bd-spark" /><span className="bd-sm-hide">Budget with Maal</span></button>
         </div>
       </div>
       {loading ? <div className="mh-skel m-5" style={{ height: 320 }} /> : budgetError ? (

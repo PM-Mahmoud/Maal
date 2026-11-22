@@ -261,7 +261,8 @@ function factText(f: SuggestFact) {
 /** The arithmetic behind the suggestion, in words (used when there's no model wording). */
 function ruleWhy(s: Suggestion): string[] {
   const out = [`You usually spend about ${aud(s.avgExpenses)} a month.`];
-  if (s.avgIncome > 0 && s.suggested >= s.avgExpenses) out.push(`That already leaves at least 20% of your ${aud(s.avgIncome)} income unspent, so the budget keeps your spending where it is.`);
+  // Same test as suggestBudget(): spending at or under 80% of income stays put.
+  if (s.avgIncome > 0 && s.avgIncome * 0.8 >= s.avgExpenses) out.push(`That already leaves at least 20% of your ${aud(s.avgIncome)} income unspent, so the budget keeps your spending where it is.`);
   else if (s.avgIncome > 0) out.push(`Maal aims for spending at about 80% of your income, without asking you to cut more than 15% in one go.`);
   else out.push("With no income to compare against, Maal suggests trimming your usual spending by up to 15%.");
   out.push(`Anywhere between ${aud(s.range.min)} and ${aud(s.range.max)} is a sensible place to start.`);

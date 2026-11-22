@@ -211,6 +211,7 @@ html .bd-hbar[data-sel="true"] { fill: var(--mh-ink); }
 .bd-swatches { clear: both; display: flex; flex-wrap: wrap; gap: 10px; }
 .bd-swatch-btn { width: 30px; height: 30px; border-radius: 99px; border: 0; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08); }
 .bd-swatch-btn[aria-pressed="true"] { outline: 2px solid var(--mh-ink); outline-offset: 3px; }
+html.dark .bd-swatch-btn { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .28); }
 .bd-icons { clear: both; display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 8px; }
 .bd-icon-btn { display: grid; place-items: center; height: 38px; border: 0; border-radius: 99px; background: none; color: var(--mh-ink); cursor: pointer; }
 .bd-icon-btn:hover { background: var(--mh-hover); }
@@ -290,7 +291,18 @@ html.dark .bd-sum-box { background: var(--mh-chip); }
 .bd-h3 { font-size: 24px; margin-bottom: 4px; }
 .bd-h4 { margin: 0 0 10px; font-size: 14px; font-weight: 500; color: var(--mh-muted); }
 .bd-mform { display: flex; align-items: flex-end; gap: 12px; padding: 16px; }
-.bd-mform .bd-field { flex: 1; max-width: 260px; }
+.bd-mform .bd-field { flex: 1; max-width: 260px; min-width: 0; }
+.bd-field-in input { width: 100%; }
+.bd-bform-row .bd-field { min-width: 0; }
+.bd-edit .mh-card-label { white-space: nowrap; }
+.bd-edit .mh-card-actions .mh-btn-outline { white-space: nowrap; gap: 6px; }
+@media (max-width: 480px) {
+  .bd-edit .mh-card-head { padding: 12px 12px; gap: 6px; }
+  .bd-edit .mh-card-actions .mh-btn-outline { height: 36px; padding: 0 10px; font-size: 14px; }
+  .bd-mform { padding: 12px; gap: 8px; }
+  .bd-sm-hide { display: none; }
+  .bd-edit .mh-card-actions .mh-btn-outline { width: 40px; padding: 0; }
+}
 .bd-mform .mh-btn-ink { height: 48px; margin-left: auto; }
 .bd-banner { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px 14px; border-radius: 10px; background: #FBF1D9; color: #5C4206; font-size: 14px; line-height: 1.45; }
 .bd-banner svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
