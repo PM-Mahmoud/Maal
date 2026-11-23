@@ -42,6 +42,7 @@ const cases = {
   'auth-verify-email': { success: true, error: null },
   'auth-layout': { body: '<h1>Test</h1>', title: 'Test' },
   'error': { message: 'Test error' },
+  'not-found': { signedIn: false },
 };
 
 async function main() {
@@ -68,6 +69,7 @@ async function main() {
     ['auth-verify-otp', { email: 'test@example.com', error: 'Invalid or expired code.', purpose: 'login' }],
     ['auth-verify-otp', { email: '', error: null, purpose: 'totp', heading: 'Enter your authenticator code', subtitle: 'Open your authenticator app.', action: '/login/totp', resend: false, sms: false }],
     ['auth-verify-email', { success: false, error: null }],
+    ['not-found', { signedIn: true, cspNonce: 'n0nce' }],
   ];
   for (const [view, locals] of variants) {
     try {

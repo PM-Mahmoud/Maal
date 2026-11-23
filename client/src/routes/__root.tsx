@@ -1,19 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Outlet, createRootRouteWithContext, Link } from "@tanstack/react-router";
+import { Outlet, createRootRouteWithContext } from "@tanstack/react-router";
+import { NotFoundPage } from "@/components/maal/not-found/NotFoundPage";
 import { Toaster } from "sonner";
 
+// Unknown client routes outside /app (unknown /app/* paths render the same page
+// inside the app shell — see _authenticated/app.tsx).
 function NotFoundComponent() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold">404</h1>
-        <p className="mt-4 text-muted-foreground">Page not found.</p>
-        <Link to="/" className="mt-6 inline-flex items-center justify-center rounded-[8px] bg-foreground text-background px-4 py-2 text-sm font-semibold">
-          Go home
-        </Link>
-      </div>
-    </div>
-  );
+  return <NotFoundPage signedIn={false} />;
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({

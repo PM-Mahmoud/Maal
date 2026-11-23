@@ -16,10 +16,9 @@ const VIEWS = path.join(__dirname, '..', 'views');
 const app = express();
 const port = process.env.PORT || 4173;
 
-app.use(express.static(path.join(__dirname, '..', 'public'), { index: false }));
-
-// Serve React build assets at /assets/ (Vite builds here but Express serves from public/)
-app.use('/assets', express.static(path.join(__dirname, '..', 'public', 'app', 'assets')));
+// Same static mounts as server.js (lib/static-assets.js): /assets/* for the
+// React build, /js/collapsing-mark.mjs, and plain 404s for missing files.
+require('../lib/static-assets').mountStatic(app, path.join(__dirname, '..', 'public'));
 
 const { buildLandingContext } = require('../lib/landing-context');
 
@@ -694,11 +693,21 @@ app.use((err, _req, res, _next) => {
   res.status(500).send('<pre>' + (err.stack || err.message) + '</pre>');
 });
 
-// React SPA — serve public/app/index.html for all unmatched routes (the real dashboard)
+// React SPA — serve public/app/index.html for all unmatched routes (the real
+// dashboard), with the same 404 rules as server.js (lib/app-routes.js).
 const reactIndex = path.join(__dirname, '..', 'public', 'app', 'index.html');
 const fs = require('fs');
-app.use('*', (req, res) => {
+const appRoutes = require('../lib/app-routes');
+const routeManifest = appRoutes.loadRouteManifest(path.join(__dirname, '..', 'public', 'app', 'route-manifest.json'));
+app.use('*', (req, res, next) => {
+  const kind = appRoutes.classifyRequest(routeManifest, req.originalUrl);
+  if (kind === 'asset') return res.status(404).type('text/plain').send('Not found');
+  if (kind === 'public-404') {
+    return ejs.renderFile(path.join(VIEWS, 'not-found.ejs'), { signedIn: req.query.signedin === '1' })
+      .then((html) => res.status(404).send(html)).catch(next);
+  }
   if (fs.existsSync(reactIndex)) {
+    if (kind === 'spa-404') res.status(404);
     res.sendFile(reactIndex);
   } else {
     res.status(404).send('404 - React build not found. Run: cd client && npm run build');

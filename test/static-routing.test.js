@@ -4,6 +4,7 @@
 // SPA handler. No database or network beyond a loopback server.
 //  - /app/assets (a SPA route that is also a folder) must reach the SPA, not 301
 //  - real files under public/ and /assets/* still serve 200
+//  - missing files under the files-only folders are a plain 404 (HEL-110)
 
 const assert = require('assert');
 const fs = require('fs');
@@ -30,7 +31,7 @@ function makePublic() {
 async function run() {
   const dir = makePublic();
   const app = express();
-  mountStatic(app, dir);
+  mountStatic(app, dir, { sharedDir: path.join(__dirname, '..', 'shared') });
   app.use('*', (req, res) => res.status(200).send('SPA:' + req.originalUrl));
   const server = http.createServer(app);
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
@@ -71,6 +72,19 @@ async function run() {
     ['hashed bundle files are cached for a year, immutable', async () => {
       assert.strictEqual((await get('/assets/app-abc.js')).cache, IMMUTABLE);
       assert.strictEqual((await get('/app/assets/app-abc.js')).cache, IMMUTABLE);
+    }],
+    ['missing bundle files are a 404, not the app page', async () => {
+      for (const p of ['/app/assets/index-gone.js', '/assets/chunk-gone.css', '/css/gone.css', '/images/gone.png', '/js/gone.js']) {
+        const r = await get(p);
+        assert.strictEqual(r.status, 404, `${p} → ${r.status}`);
+        assert.ok(!r.body.startsWith('SPA:'), `${p} reached the SPA`);
+      }
+    }],
+    ['the 404 page animation module is served as JavaScript', async () => {
+      const res = await fetch(base + '/js/collapsing-mark.mjs');
+      assert.strictEqual(res.status, 200);
+      assert.match(res.headers.get('content-type'), /javascript/);
+      assert.match(await res.text(), /export function mountCollapsingMark/);
     }],
     ['unhashed static files keep revalidating (max-age=0)', async () => {
       assert.strictEqual((await get('/css/theme.css')).cache, 'public, max-age=0');

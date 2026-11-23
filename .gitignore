@@ -13,6 +13,8 @@ npm-debug.log*
 !package-lock.json
 !evals/*.json
 !shared/au-constants.json
+# Client route list for real 404s (scripts/build-route-manifest.js, HEL-110).
+!public/app/route-manifest.json
 
 # macOS / iCloud "conflicted copy" duplicates, e.g. "server 2.js", "api 3.js",
 # "1756200000000_build9_extensibility 3.js". These have bitten deploys before:

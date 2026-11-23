@@ -1,0 +1,78 @@
+/* ============================================================
+   "Page not found" (HEL-110). One stylesheet for both versions:
+   - the React page (client/src/components/maal/not-found/NotFoundPage.tsx
+     imports this file, so it ships in the bundle), inside the app shell or
+     as a plain v2 page;
+   - the server-rendered page (views/not-found.ejs links /css/not-found.css).
+   v2 look: Lora headline, Inter body, #F8F9F6 page, black buttons. Dark mode
+   follows html[data-theme="dark"], which both pages set before first paint.
+   ============================================================ */
+.nf {
+  --nf-bg: #F8F9F6; --nf-ink: #121313; --nf-muted: #686969; --nf-hair: #E4E5E2;
+  --nf-btn: #020109; --nf-btn-ink: #FFFFFF; --nf-focus: #0F8FA6;
+  --nf-serif: 'Lora', Georgia, 'Times New Roman', serif;
+  --nf-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--nf-ink); font-family: var(--nf-sans); -webkit-font-smoothing: antialiased;
+  box-sizing: border-box;
+}
+.nf *, .nf *::before, .nf *::after { box-sizing: border-box; }
+html[data-theme="dark"] .nf {
+  --nf-bg: #050505; --nf-ink: #F2F3F1; --nf-muted: #A3A3A3; --nf-hair: #232323;
+  --nf-btn: #F2F3F1; --nf-btn-ink: #050505; --nf-focus: #5CC8DC;
+}
+
+/* Plain page: its own background, a quiet top bar and the disclaimer. */
+.nf-page { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; background: var(--nf-bg); margin: 0; }
+.nf-top { display: flex; align-items: center; height: 64px; padding: 0 16px; }
+@media (min-width: 768px) { .nf-top { height: 80px; padding: 0 40px; } }
+.nf-logo { display: inline-flex; align-items: center; gap: .45rem; color: var(--nf-ink); text-decoration: none; }
+.nf-logo span { font-family: var(--nf-serif); font-size: 24px; line-height: 1; }
+.nf-logo:focus-visible { outline: 2px solid var(--nf-focus); outline-offset: 4px; border-radius: 4px; }
+.nf-foot { padding: 20px 16px 26px; text-align: center; }
+.nf-foot p { max-width: 620px; margin: 0 auto; font-size: 11px; line-height: 1.6; color: var(--nf-muted); }
+
+/* Inside the app shell: no background of its own, centred in the content area. */
+.nf-shell { min-height: calc(100vh - 180px); min-height: calc(100dvh - 180px); display: flex; }
+
+.nf-main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 16px 64px; }
+.nf-inner { width: 100%; max-width: 460px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+
+.nf-mark {
+  display: block; width: clamp(176px, 15vw, 216px); padding: 0; margin: 0; border: 0; background: none;
+  color: var(--nf-ink); cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 12px;
+}
+.nf-mark:focus-visible { outline: 2px solid var(--nf-focus); outline-offset: 6px; }
+.nf-mark[data-still] { cursor: default; }
+.nf-mark svg { display: block; width: 100%; height: auto; overflow: visible; }
+/* Before the script draws the bricks (or without JavaScript): the plain mark. */
+.nf-mark .nf-fallback { width: 58%; margin: 0 auto; }
+
+.nf h1 {
+  margin: 28px 0 0; font-family: var(--nf-serif); font-weight: 400; color: var(--nf-ink);
+  font-size: clamp(32px, 3.2vw, 44px); line-height: 1.15; letter-spacing: -.015em;
+}
+.nf-lines { margin: 12px 0 0; font-size: 15.5px; line-height: 1.55; color: var(--nf-muted); text-wrap: balance; }
+@media (min-width: 480px) { .nf-lines span { display: block; } }
+
+.nf-actions { margin-top: 28px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.nf-btn {
+  display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 22px;
+  border: 0; border-radius: 8px; background: var(--nf-btn); color: var(--nf-btn-ink);
+  font: inherit; font-size: 15px; font-weight: 500; text-decoration: none; cursor: pointer;
+  transition: opacity .15s, transform .1s;
+}
+.nf-btn:hover { opacity: .86; }
+.nf-btn:active { transform: translateY(1px); }
+.nf-link {
+  padding: 0; border: 0; background: none; font: inherit; font-size: 14px; color: var(--nf-ink); cursor: pointer;
+  text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--nf-ink) 35%, transparent);
+  text-underline-offset: 4px;
+}
+.nf-link:hover { text-decoration-color: currentColor; }
+.nf-btn:focus-visible, .nf-link:focus-visible { outline: 2px solid var(--nf-focus); outline-offset: 3px; border-radius: 6px; }
+
+@media (max-width: 480px) {
+  .nf-main { align-items: flex-start; padding-top: 48px; }
+  .nf h1 { margin-top: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { .nf-btn { transition: none; } }
