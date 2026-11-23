@@ -25,6 +25,7 @@ The build runs pending database migrations and builds the React client and its r
 | `PORT` | Assigned by Render |
 | `RESEND_API_KEY` | Sends transactional email through Resend |
 | `EMAIL_FROM` | Verified sender address for signup, password reset and other transactional email |
+| `BASIQ_API_KEY` | Enables bank consent and synchronisation. Set it on both the web service and import worker when bank connections are enabled |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Membership checkout and webhook verification when Stripe is enabled |
 | `EXA_API_KEY` | Web grounding for research and radar when enabled |
 
@@ -44,6 +45,8 @@ npm run migrate
 npm run build:client
 npm run dev
 ```
+
+`npm run build:client` installs the client dependencies before building, so the local startup commands work after installing only the root dependencies.
 
 For a database-free preview with mock data, run `node scripts/preview-static.js`.
 
