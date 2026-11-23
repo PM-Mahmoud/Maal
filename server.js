@@ -287,22 +287,7 @@ app.use(require('./routes/feedback'));
 // else to /app. Unauthenticated users then hit the /app auth gate → /auth.
 // (The EJS dashboard views/routes/*.ejs remain on disk as dead code for now;
 // deleting them is a separate cleanup.)
-const DASHBOARD_REDIRECTS = {
-  '/': '/app',
-  '/assets': '/app/assets',
-  '/vault': '/app/vault',
-  '/transactions': '/app/transactions',
-  '/goals': '/app/goals',
-  '/ask': '/app/advisor',
-  '/research': '/app/research',
-  '/radar': '/app/radar',
-  '/profile': '/app/onboarding',
-  '/portfolio': '/app/portfolio-plan',
-};
-app.use('/dashboard', (req, res) => {
-  const sub = (req.path.replace(/\/+$/, '') || '/');
-  res.redirect(301, DASHBOARD_REDIRECTS[sub] || '/app');
-});
+app.use('/dashboard', require('./routes/dashboard-redirect'));
 
 app.use('/billing', require('./routes/billing'));
 app.use('/basiq', require('./routes/basiq'));
