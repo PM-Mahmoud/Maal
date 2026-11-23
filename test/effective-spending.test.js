@@ -35,10 +35,10 @@ function mockReads(t, transactions = raw, spendingDetails = details) {
       assert.match(sql, /m\.user_id = \$1/);
       assert.match(sql, /c\.user_id = \$1/);
       assert.match(sql, /s\.user_id = \$1/);
-      assert.deepEqual(args[1], transactions.map((row) => row.id));
+      assert.deepEqual(args[1], transactions.filter((row) => row.in_window !== false).map((row) => row.id));
       return { rows: spendingDetails };
     }
-    return { rows: transactions };
+    return { rows: transactions.map((row) => ({ in_window: true, ...row })) };
   });
 }
 
@@ -81,18 +81,18 @@ test('recurrence uses one payment per parent and only the visible amount', async
   ]);
 });
 
-test('runway excludes paired own-account transfers and uses the category from the visibility read', async (t) => {
+test('runway matches a transfer outside the reporting window and uses current spending categories', async (t) => {
   const rows = [
     { id: '1', amount: '-1000', description: 'Rent', category_group: 'Transfers', post_date },
     { id: '2', amount: '-9000', description: 'TFR SAVER', account_reference: 'everyday', post_date },
-    { id: '3', amount: '9000', description: 'TFR SAVER', account_reference: 'saver', post_date },
+    { id: '3', amount: '9000', description: 'TFR SAVER', account_reference: 'saver', post_date: '2026-11-08', in_window: false },
   ];
   mockReads(t, rows, [
     { transaction_id: '1', id: null, transaction_group: 'Housing' },
     { transaction_id: '2', id: null },
-    { transaction_id: '3', id: null },
   ]);
   const effective = await getCashFlowTransactions(8);
+  assert.deepEqual(effective.map((row) => row.id), ['1', '2']);
   assert.equal(effective[0].category_group, 'Housing');
   assert.equal(effective[1].relationship_type, 'internal_transfer');
   assert.deepEqual(calculateCashRunway(effective, 10000, 0), { months: 10, fromTransactions: true });
