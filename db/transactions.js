@@ -3,6 +3,7 @@
 
 const { pool } = require('./auth');
 const { mapBasiqTransaction } = require('../lib/basiq-mapping');
+const { getEffectiveTransactions } = require('./transaction-detail');
 
 async function getTransactionIncrementalSince(userId, overlapDays = 7) {
   const { rows } = await pool.query(
@@ -118,13 +119,15 @@ async function getTxnsSince(userId, days = 400, limit = 1000) {
 
 async function getCashFlowTransactions(userId, days = 30) {
   const result = await pool.query(
-    `SELECT id, post_date, amount, status
-       FROM transactions
-      WHERE user_id = $1 AND post_date >= CURRENT_DATE - $2::int
-      ORDER BY post_date ASC, id ASC`,
+    `SELECT t.id, t.post_date, t.amount, t.status, t.description, c.category_group
+       FROM transactions t
+       LEFT JOIN transaction_categories c ON c.transaction_id = t.id AND c.user_id = $1
+      WHERE t.user_id = $1
+        AND t.post_date BETWEEN CURRENT_DATE - ($2::int - 1) AND CURRENT_DATE
+      ORDER BY t.post_date ASC, t.id ASC`,
     [userId, days]
   );
-  return result.rows;
+  return getEffectiveTransactions(userId, result.rows);
 }
 
 async function getTransactionsForQuality(userId) {

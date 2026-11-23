@@ -18,7 +18,7 @@ const { getSnapshots } = require('../db/snapshots');
 const { estimateTax } = require('../lib/tax');
 const { aggregateConnected } = require('../lib/connected');
 const assetsDb = require('../db/assets');
-const { getRecentTransactions, getTxnsSince } = require('../db/transactions');
+const { getRecentTransactions, getCashFlowTransactions } = require('../db/transactions');
 const researchDb = require('../db/research');
 const { runResearch } = require('../services/research');
 const radarDb = require('../db/radar');
@@ -161,7 +161,7 @@ router.get('/', async (req, res) => {
 
     // Signed transactions for the in/out cash-flow charting on the tiles
     let chartTxns = [];
-    try { chartTxns = await getTxnsSince(req.session.userId, 400); }
+    try { chartTxns = await getCashFlowTransactions(req.session.userId, 400); }
     catch (e) { /* table may not exist before migration */ }
 
     // Maal Score — single composite wellbeing score
@@ -253,13 +253,13 @@ router.post('/ask/message', aiLimiter, async (req, res) => {
 
     // Fetch enriched context for the advisor
     const [txns, snaps, goals] = await Promise.all([
-      getTxnsSince(req.session.userId, 30).catch(() => []),
+      getCashFlowTransactions(req.session.userId, 30).catch(() => []),
       getSnapshots(req.session.userId, 90).catch(() => []),
       goalsDb.listGoals(req.session.userId).catch(() => []),
     ]);
-    const cashSavings = Number(profile.cash_savings || 0);
-    const monthlyExpenses = Number(profile.monthly_expenses || 0);
-    const cashRunway = monthlyExpenses > 0 ? Math.round(cashSavings / monthlyExpenses) : null;
+    const { calculateCashRunway } = require('../lib/spending-cashflow');
+    const runway = calculateCashRunway(txns, profile.cash_savings, profile.monthly_expenses);
+    const cashRunway = runway.months == null ? null : Math.round(runway.months);
 
     // Legal/tax grounding via Isaacus (extractive — pulls the answer directly
     // out of the user's own Vault documents; only runs when there's actually
@@ -293,7 +293,7 @@ router.post('/ask/message', aiLimiter, async (req, res) => {
       }
     }
 
-    const extra = { transactions: txns, snapshots: snaps, goals, cashRunway, isaacusGrounding };
+    const extra = { transactions: txns, snapshots: snaps, goals, cashRunway, cashRunwayFromTransactions: runway.fromTransactions, isaacusGrounding };
 
     const reply = await advisor.chat(user, profile, maal, clean, docs, extra);
 

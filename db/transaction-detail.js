@@ -95,6 +95,52 @@ function attachExtras(rows, extras) {
   });
 }
 
+/**
+ * Read only the side-table fields needed by spending calculations. Read hidden
+ * flags and split parts in one statement so a bulk edit can't mix snapshots.
+ */
+async function getEffectiveTransactions(userId, rows) {
+  if (!rows.length) return [];
+  const ids = rows.map((row) => String(row.id));
+  const { rows: details } = await pool.query(
+    `SELECT t.id AS transaction_id, m.hidden AS transaction_hidden,
+            s.id, s.position, s.amount, s.category_group, s.category, s.hidden
+       FROM transactions t
+       LEFT JOIN transaction_meta m ON m.transaction_id = t.id AND m.user_id = $1
+       LEFT JOIN transaction_splits s ON s.transaction_id = t.id AND s.user_id = $1
+      WHERE t.user_id = $1 AND t.id = ANY($2::bigint[])
+      ORDER BY t.id, s.position`,
+    [userId, ids]
+  );
+  const byId = new Map();
+  for (const detail of details) {
+    const id = String(detail.transaction_id);
+    if (!byId.has(id)) byId.set(id, { hidden: !!detail.transaction_hidden, splits: [] });
+    if (detail.id != null) byId.get(id).splits.push(mapSplit(detail));
+  }
+
+  const { effectiveTransactions } = await import('../shared/transaction-splits.mjs');
+  return effectiveTransactions(rows.flatMap((row) => {
+    const detail = byId.get(String(row.id));
+    return detail ? [{ ...row, ...detail }] : [];
+  }));
+}
+
+/** Recurrence detection needs one dated payment per original bank movement. */
+async function getEffectivePayments(userId, rows) {
+  const effective = await getEffectiveTransactions(userId, rows);
+  const { toCents } = await import('../shared/transaction-splits.mjs');
+  const amountsById = new Map();
+  for (const row of effective) {
+    const id = String(row.split_of ?? row.id);
+    amountsById.set(id, (amountsById.get(id) || 0) + toCents(row.amount));
+  }
+  return rows.flatMap((row) => {
+    const id = String(row.id);
+    return amountsById.has(id) ? [{ ...row, amount: amountsById.get(id) / 100 }] : [];
+  });
+}
+
 /** One transaction with category, account/institution, meta, tags and splits. */
 async function getDetail(userId, transactionId) {
   const r = await pool.query(
@@ -286,6 +332,7 @@ async function bulkEdit(userId, ids, changes) {
 }
 
 module.exports = {
-  getExtras, attachExtras, getDetail, updateMeta, listTags, createTag, deleteTag,
+  getExtras, attachExtras, getEffectiveTransactions, getEffectivePayments,
+  getDetail, updateMeta, listTags, createTag, deleteTag,
   setTransactionTags, replaceSplits, clearSplits, bulkEdit,
 };
