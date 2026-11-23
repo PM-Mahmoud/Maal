@@ -37,7 +37,7 @@ Merge a reviewed pull request to `main` after Mahmoud approves it. Render deploy
 
 ## Local development
 
-Use a disposable local PostgreSQL database for migrations and sandbox credentials for integrations. Set `DATABASE_URL`, `SESSION_SECRET`, and `BASE_URL` in your shell before running these commands.
+Use a disposable local PostgreSQL database for migrations and sandbox credentials for integrations. Set `DATABASE_URL`, `SESSION_SECRET`, and `BASE_URL` in your shell. Until HEL-56 tracks the file, copy `client/tsconfig.json` from a configured Maal checkout before building. The build uses it to resolve client import aliases.
 
 ```bash
 npm ci --ignore-scripts
@@ -46,7 +46,7 @@ npm run build:client
 npm run dev
 ```
 
-`npm run build:client` installs the client dependencies before building, so the local startup commands work after installing only the root dependencies.
+`npm run build:client` installs the client dependencies before building.
 
 For a database-free preview with mock data, run `node scripts/preview-static.js`.
 
