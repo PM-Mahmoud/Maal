@@ -1,0 +1,152 @@
+/* ============================================================
+   Spending › Recurring (/app/spending/recurring) — redesign
+   session 2, HEL-104/105. Builds on home.css (.mh-*), the
+   overview's fortnight grid (.so-week*) and the settings drawer
+   buttons (.ss-*). Kind badges wear the shared category palette
+   (bills amber, subscriptions plum, income green). UI chrome stays
+   monochrome.
+   Prefix: .rc-
+   ============================================================ */
+
+/* Main card gets the wide column; card repayments sit on the right. */
+.rc-grid { align-items: start; }
+.rc-add-btn { color: var(--mh-ink); cursor: pointer; }
+
+.rc-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.rc-range { display: flex; align-items: center; gap: 2px; min-width: 0; flex-wrap: wrap; }
+.rc-range-label { margin: 0 0 0 6px; font-size: 16px; color: var(--mh-ink); }
+.rc-range-dates { color: var(--mh-muted); }
+.rc-today { font-size: 13px; margin-left: 10px; }
+.rc-warn { margin: 0 0 12px; padding: 10px 12px; border-radius: 8px; background: var(--mh-chip); font-size: 13px; color: var(--mh-muted); }
+
+/* Calendar: taller cells than the overview, badge + amount centred. */
+.rc-week .rc-cell { min-height: 108px; gap: 6px; }
+.rc-due { display: flex; flex-direction: column; align-items: center; gap: 3px; max-width: 100%; }
+.rc-due-amt { font-size: 11.5px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--mh-ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.rc-due-amt[data-in="true"], .rc-in, .rc-row-amt[data-in="true"] { color: var(--mh-good); }
+.rc-empty { width: min(320px, 86%); line-height: 1.5; }
+.rc-empty-link { display: block; margin: 6px auto 0; font-size: 13px; }
+
+/* Round kind badge: category tint + ink via .cat-chip (../category-colour.css). */
+.rc-badge { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 99px; background: var(--mh-ink); color: var(--mh-card); flex-shrink: 0; }
+.rc-badge[data-size="sm"] { width: 26px; height: 26px; }
+.rc-badge svg { width: 15px; height: 15px; }
+.rc-badge[data-size="sm"] svg { width: 13px; height: 13px; }
+.rc-badge[data-kind="income"] { background: var(--mh-good); color: #fff; }
+html.dark .rc-badge[data-kind="income"] { color: #06231A; }
+
+/* Window summary strip. */
+.rc-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin: 16px 0 0; border: 1px solid var(--mh-line); border-radius: 10px; overflow: hidden; }
+.rc-summary > div { padding: 14px 12px; text-align: center; border-left: 1px solid var(--mh-line); margin-left: -1px; border-top: 1px solid var(--mh-line); margin-top: -1px; }
+.rc-summary dt { font-size: 13px; color: var(--mh-muted); }
+.rc-summary dd { margin: 4px 0 0; font-size: 17px; font-variant-numeric: tabular-nums; }
+
+/* Rows. The list bleeds to the card edges like the design. */
+.rc-list { margin: 22px -20px -20px; }
+.rc-list-title { margin: 0; padding: 0 20px 12px; font-size: 16px; font-weight: 400; color: var(--mh-ink); }
+.rc-all section + section .rc-list-title { padding-top: 18px; }
+.rc-rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--mh-line); }
+.rc-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px 12px 20px; border-bottom: 1px solid var(--mh-line); }
+.rc-row-name { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 15px; }
+.rc-row-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rc-row-sub { display: block; font-size: 12.5px; color: var(--mh-muted); margin-top: 1px; }
+.rc-row-amt { font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rc-chip { display: inline-block; margin-left: 8px; vertical-align: 1px; line-height: 1.5; padding: 0 7px; border-radius: 99px; font-size: 11px; background: var(--mh-badge); color: var(--mh-badge-ink); }
+.rc-more { width: calc(100% - 40px); margin: 16px 20px 20px; }
+.rc-all .rc-month { margin: 18px 20px 20px; }
+.rc-list-empty { text-align: center; padding: 28px 0 8px; color: var(--mh-muted); }
+.rc-menu-danger, .rc-menu-danger svg { color: var(--mh-bad) !important; }
+.rc-menu { min-width: 220px; }
+.rc-menu .mh-menu-item { font-size: 15px; gap: 12px; }
+.rc-menu .mh-menu-item svg { width: 18px; height: 18px; }
+
+/* Credit card repayments. */
+.rc-cards-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; font-size: 14px; color: var(--mh-muted); padding: 8px 0 2px; }
+.rc-cards-empty > svg { width: 20px; height: 20px; color: var(--mh-ink); }
+.rc-cards-empty .mh-btn-wide { margin-top: 8px; height: 44px; font-size: 15px; }
+
+/* ---------- Add / edit dialog (centred modal) ---------- */
+.rc-dialog {
+  position: fixed; z-index: 51; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(712px, calc(100vw - 32px)); max-height: min(820px, calc(100dvh - 48px));
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--mh-card); color: var(--mh-ink); font-family: var(--mh-sans);
+  border-radius: 21px; box-shadow: 0 24px 60px rgba(0, 0, 0, .2); outline: none; animation: rc-pop .18s ease-out;
+}
+.rc-dialog[data-step="pick"] { height: min(820px, calc(100dvh - 48px)); }
+@keyframes rc-pop { from { opacity: 0; transform: translate(-50%, -48%); } }
+@media (prefers-reduced-motion: reduce) { .rc-dialog { animation: none; } }
+@media (max-width: 640px) {
+  .rc-dialog { width: 100vw; max-height: 100dvh; top: auto; bottom: 0; left: 0; transform: none; border-radius: 18px 18px 0 0; animation: none; }
+  .rc-dialog[data-step="pick"] { height: calc(100dvh - 24px); }
+}
+.rc-dialog-head { display: flex; align-items: center; gap: 8px; min-height: 64px; padding: 0 16px 0 20px; border-bottom: 1px solid var(--mh-line); flex: none; }
+
+.rc-pick { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.rc-pick-top { padding: 18px 16px 0; flex: none; }
+.rc-search { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 14px; border: 1px solid var(--mh-line-strong); border-radius: 10px; background: var(--mh-card); }
+.rc-search:focus-within { border-color: var(--mh-badge-ink); }
+.rc-search svg { width: 18px; height: 18px; color: var(--mh-muted); flex: none; }
+.rc-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; font-size: 16px; }
+.rc-manual { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 0; border: 0; background: none; color: var(--mh-ink); font: inherit; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.rc-manual svg { width: 15px; height: 15px; }
+.rc-eyebrow-sm { margin: 18px 0 10px; font-size: 11.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--mh-ink); }
+.rc-pick-list { flex: 1; overflow-y: auto; border-top: 1px solid var(--mh-line); overscroll-behavior: contain; }
+.rc-day-head { margin: 0; padding: 12px 16px; font-size: 14px; font-weight: 500; background: var(--mh-bg); border-bottom: 1px solid var(--mh-line); }
+.rc-txns { list-style: none; margin: 0; padding: 0; }
+.rc-txn { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 0 16px; border: 0; border-bottom: 1px solid var(--mh-line); background: var(--mh-card); color: inherit; font: inherit; font-size: 15px; text-align: left; cursor: pointer; }
+.rc-txn:hover { background: var(--mh-hover); }
+.rc-txn:focus-visible, .rc-manual:focus-visible { outline: 2px solid var(--mh-badge-ink); outline-offset: -2px; }
+.rc-txn-icon { width: 16px; height: 16px; color: var(--mh-muted); flex: none; }
+.rc-txn-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rc-txn-hidden { width: 16px; height: 16px; color: var(--mh-faint); flex: none; }
+.rc-txn-amt { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rc-txn-amt[data-in="true"] { color: var(--mh-good); }
+.rc-txn[data-muted="true"] .rc-txn-name, .rc-txn[data-muted="true"] .rc-txn-amt, .rc-txn[data-muted="true"] .rc-txn-icon { color: var(--mh-faint); }
+
+.rc-form { display: flex; flex-direction: column; gap: 14px; padding: 20px 16px 18px; overflow-y: auto; }
+.rc-form-merchant { display: flex; align-items: center; gap: 12px; margin: 0 0 2px; font-size: 16px; font-weight: 500; }
+.rc-form-merchant svg { width: 18px; height: 18px; color: var(--mh-muted); }
+.rc-field { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 9px 12px 8px; border: 1px solid var(--mh-line-strong); border-radius: 10px; background: var(--mh-card); }
+.rc-field:focus-within { border-color: var(--mh-badge-ink); box-shadow: 0 0 0 1px var(--mh-badge-ink); }
+.rc-field-label { font-size: 12px; color: var(--mh-muted); }
+.rc-field input, .rc-field select { width: 100%; min-width: 0; border: 0; outline: 0; padding: 0; background: transparent; color: inherit; font: inherit; font-size: 17px; line-height: 1.5; }
+.rc-field select { appearance: none; cursor: pointer; padding-right: 30px; }
+.rc-field select option { color: #121313; background: #fff; }
+.rc-field-row { display: flex; align-items: center; gap: 6px; font-size: 17px; }
+.rc-field--select > svg, .rc-field--date > svg { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; pointer-events: none; color: var(--mh-ink); }
+.rc-field--select:has(.rc-field-kind) select { padding-left: 28px; }
+.rc-field-kind { position: absolute; left: 12px; bottom: 11px; pointer-events: none; color: var(--mh-muted); }
+.rc-field-kind svg { width: 18px; height: 18px; }
+/* Native date picker icon is replaced by ours, but stays clickable underneath. */
+.rc-field--date input::-webkit-calendar-picker-indicator { opacity: 0; position: absolute; right: 8px; width: 32px; height: 32px; cursor: pointer; }
+html.dark .rc-field--date input { color-scheme: dark; }
+.rc-error { margin: 0; font-size: 14px; color: var(--mh-bad); }
+.rc-form-foot { display: flex; justify-content: flex-end; }
+.rc-form-foot .mh-btn-ink { min-width: 88px; }
+
+/* ---------- Toast ---------- */
+.rc-toast {
+  position: fixed; z-index: 70; top: 18px; right: 18px; display: flex; align-items: center; gap: 10px;
+  max-width: min(440px, calc(100vw - 32px)); padding: 12px 10px 12px 16px; border-radius: 12px;
+  background: var(--mh-card); color: var(--mh-ink); border: 1px solid var(--mh-line); box-shadow: 0 12px 32px rgba(0, 0, 0, .14);
+  font-size: 15px;
+}
+.rc-toast-icon { width: 20px; height: 20px; color: var(--mh-good); flex: none; }
+.rc-toast-msg { flex: 1; min-width: 0; }
+.rc-toast-undo { font-size: 14px; }
+@media (max-width: 640px) { .rc-toast { left: 16px; right: 16px; top: 12px; } }
+
+/* ---------- Phone ---------- */
+@media (max-width: 480px) {
+  .rc-week .rc-cell { min-height: 84px; padding: 4px 1px; gap: 4px; }
+  .rc-due-amt { font-size: 9.5px; letter-spacing: -.02em; }
+  .rc-badge[data-size="sm"] { width: 22px; height: 22px; }
+  .rc-badge[data-size="sm"] svg { width: 11px; height: 11px; }
+  .rc-range-label { font-size: 15px; }
+  .rc-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rc-summary dd { font-size: 15px; }
+  .rc-row { padding-left: 16px; padding-right: 8px; gap: 10px; }
+  .rc-list { margin-left: -20px; margin-right: -20px; }
+}
+html[data-privacy="on"] .rc-due-amt.mh-amount, html[data-privacy="on"] .rc-row-amt.mh-amount { filter: blur(6px); }

@@ -1,0 +1,27 @@
+/* ============================================================
+   Spending category colour utilities (shared/category-colours.mjs).
+   An element gets its category's vars inline (catVars(): --cat,
+   --cat-tint, --cat-ink, each a light-dark() pair that follows the
+   theme) plus one of these classes. Utility classes, so they win
+   over the monochrome component defaults they replace.
+   Only data and category visuals use them; buttons, text and UI
+   chrome stay monochrome.
+   ============================================================ */
+/* Data roles (DATA_COLOURS in shared/category-colours.mjs; the test
+   test/category-colours.test.js keeps these in sync). */
+:root {
+  --sp-income: light-dark(#16A958, #26A653);
+  --sp-expense: light-dark(#D35F12, #D76A1C);
+  --sp-negative: light-dark(#D14343, #E5625F);
+  --sp-income-tint: light-dark(#DEF3E8, #163721);
+  --sp-expense-tint: light-dark(#F9E9DE, #442713);
+}
+
+.cat-chip { background: var(--cat-tint) !important; color: var(--cat-ink) !important; border-color: transparent !important; }
+.cat-dot { background: var(--cat) !important; opacity: 1 !important; }
+.cat-stroke { stroke: var(--cat) !important; opacity: 1 !important; stroke-opacity: 1 !important; }
+.cat-fill { fill: var(--cat) !important; opacity: 1 !important; fill-opacity: 1 !important; }
+/* Progress bar: soft category track, solid category fill, red once over. */
+.cat-bar { background: var(--cat-tint) !important; }
+.cat-bar > i { background: var(--cat) !important; }
+.cat-bar > i[data-over="true"] { background: var(--mh-bad, #D14343) !important; }

@@ -167,7 +167,7 @@ async function withServer(fakeDb, fn) {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => { const u = req.headers['x-user']; req.session = u ? { userId: Number(u) } : {}; next(); });
-  app.use('/api', createSpendingSettingsRouter({ db: fakeDb }));
+  app.use('/api', createSpendingSettingsRouter({ db: fakeDb, categoriesDb: { customCategoryNames: async (uid) => (uid === 1 ? ['Pets'] : []) } }));
   const server = http.createServer(app);
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const base = `http://127.0.0.1:${server.address().port}/api/v1`;
@@ -211,6 +211,15 @@ test('budgets: list own only, upsert validates, total is a number', async () => 
     const u = await call('PUT', '/budgets', { user: 1, body: { monthly_amount: '$300' } });
     assert.strictEqual(u.json.budget.monthly_amount, 300);
     assert.strictEqual(u.json.budget.id, '10');
+  });
+});
+
+test('budgets: a custom category (Session 2) takes a budget; another user\'s custom name does not', async () => {
+  await withServer(makeFakeDb(), async (call) => {
+    const ok = await call('PUT', '/budgets', { user: 1, body: { category_group: 'Pets', monthly_amount: 80 } });
+    assert.strictEqual(ok.status, 200);
+    assert.strictEqual(ok.json.budget.category_group, 'Pets');
+    assert.strictEqual((await call('PUT', '/budgets', { user: 2, body: { category_group: 'Pets', monthly_amount: 80 } })).status, 400);
   });
 });
 

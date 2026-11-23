@@ -1208,16 +1208,217 @@ router.post('/v1/files/generate', async (req, res) => {
   }
 });
 
+// ─── Session 2 – Breakdown & budget (HEL-84..HEL-90) ─────────────────────
+// Custom categories + category groups (lib/spending-categories.js,
+// db/spending-categories.js, migration 1756900000000) and the "Create a budget
+// with Maal" suggestion. Budgets themselves stay in routes/spending-settings.js.
+// Every query is scoped to req.session.userId in SQL. Registered before the
+// generic /v1/:table handler.
+
+const spendCats = require('../lib/spending-categories');
+const spendCatsDb = () => require('../db/spending-categories');
+
+function s2Id(v) {
+  const s = String(v == null ? '' : v);
+  return /^[1-9]\d{0,17}$/.test(s) ? s : null;
+}
+function s2Fail(res, where, e) {
+  console.error(`[breakdown] ${where} failed:`, e && e.message);
+  if (e && e.code === '23505') return res.status(409).json({ error: 'That name is already in use.' });
+  res.status(500).json({ error: 'Something went wrong. Please try again.' });
+}
+
+// GET /v1/spending-categories → { categories: [custom], groups: [{ id, name, kind, color, categories }] }
+router.get('/v1/spending-categories', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const db = spendCatsDb();
+    const [custom, g] = await Promise.all([db.listCustomCategories(req.session.userId), db.listGroups(req.session.userId)]);
+    res.json({ categories: custom.map(spendCats.toCategory), groups: spendCats.toGroups(g.groups, g.members) });
+  } catch (e) { s2Fail(res, 'list categories', e); }
+});
+
+router.post('/v1/spending-categories', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const db = spendCatsDb();
+    const names = await db.customCategoryNames(req.session.userId);
+    const v = spendCats.validateCategoryInput(req.body, names);
+    if (v.error) return res.status(400).json({ error: v.error });
+    const row = await db.createCustomCategory(req.session.userId, v.category);
+    res.json({ category: spendCats.toCategory(row) });
+  } catch (e) { s2Fail(res, 'create category', e); }
+});
+
+router.patch('/v1/spending-categories/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const id = s2Id(req.params.id);
+  if (!id) return res.status(404).json({ error: 'Category not found' });
+  try {
+    const db = spendCatsDb();
+    const cur = await db.getCustomCategory(id, req.session.userId);
+    if (!cur) return res.status(404).json({ error: 'Category not found' });
+    const names = await db.customCategoryNames(req.session.userId);
+    const v = spendCats.validateCategoryInput(req.body, names, { partial: true, currentName: cur.name });
+    if (v.error) return res.status(400).json({ error: v.error });
+    const row = await db.updateCustomCategory(id, req.session.userId, v.category);
+    if (!row) return res.status(404).json({ error: 'Category not found' });
+    res.json({ category: spendCats.toCategory(row) });
+  } catch (e) { s2Fail(res, 'update category', e); }
+});
+
+router.delete('/v1/spending-categories/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const id = s2Id(req.params.id);
+  if (!id) return res.status(404).json({ error: 'Category not found' });
+  try {
+    const ok = await spendCatsDb().deleteCustomCategory(id, req.session.userId);
+    if (!ok) return res.status(404).json({ error: 'Category not found' });
+    res.json({ ok: true });
+  } catch (e) { s2Fail(res, 'delete category', e); }
+});
+
+async function s2KnownCategories(db, userId) {
+  const { GROUPS } = require('../lib/transaction-categories');
+  return [...GROUPS, ...(await db.customCategoryNames(userId))];
+}
+
+router.post('/v1/spending-category-groups', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const db = spendCatsDb();
+    const [known, g] = await Promise.all([s2KnownCategories(db, req.session.userId), db.listGroups(req.session.userId)]);
+    const v = spendCats.validateGroupInput(req.body, known, g.groups.map((x) => x.name));
+    if (v.error) return res.status(400).json({ error: v.error });
+    const row = await db.createGroup(req.session.userId, v.group);
+    res.json({ group: { id: String(row.id), name: row.name, kind: row.kind, color: row.color, categories: v.group.categories } });
+  } catch (e) { s2Fail(res, 'create group', e); }
+});
+
+router.patch('/v1/spending-category-groups/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const id = s2Id(req.params.id);
+  if (!id) return res.status(404).json({ error: 'Group not found' });
+  try {
+    const db = spendCatsDb();
+    const [known, g] = await Promise.all([s2KnownCategories(db, req.session.userId), db.listGroups(req.session.userId)]);
+    const cur = g.groups.find((x) => String(x.id) === id);
+    if (!cur) return res.status(404).json({ error: 'Group not found' });
+    const v = spendCats.validateGroupInput(req.body, known, g.groups.map((x) => x.name), { partial: true, currentName: cur.name });
+    if (v.error) return res.status(400).json({ error: v.error });
+    const row = await db.updateGroup(id, req.session.userId, v.group);
+    if (!row) return res.status(404).json({ error: 'Group not found' });
+    res.json({ group: { id: String(row.id), name: row.name, kind: row.kind, color: row.color } });
+  } catch (e) { s2Fail(res, 'update group', e); }
+});
+
+router.delete('/v1/spending-category-groups/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const id = s2Id(req.params.id);
+  if (!id) return res.status(404).json({ error: 'Group not found' });
+  try {
+    const ok = await spendCatsDb().deleteGroup(id, req.session.userId);
+    if (!ok) return res.status(404).json({ error: 'Group not found' });
+    res.json({ ok: true });
+  } catch (e) { s2Fail(res, 'delete group', e); }
+});
+
+// Transactions with their effective category (same rules as GET /v1/transactions,
+// minus learned suggestions) for server-side budget maths.
+async function s2CategorisedTransactions(userId) {
+  const txnDb = require('../db/transactions');
+  const { autoCategorize } = require('../lib/transaction-categories');
+  const { detectTransactionRelationships, indexRelationships } = require('../services/transaction-relationships');
+  const rows = await txnDb.getTransactionsWithCategory(userId, 2000);
+  const relationships = indexRelationships(detectTransactionRelationships(rows));
+  const out = rows.map((r) => {
+    const rel = relationships.get(String(r.id));
+    const row = rel ? { ...r, relationship_type: rel.type } : r;
+    if (row.category_group) return row;
+    const auto = autoCategorize(row.description, row.amount);
+    return auto ? { ...row, category_group: auto.group, category: auto.category } : row;
+  });
+  // Hidden rows drop out and split rows count per part (Transaction detail, shared/transaction-splits.mjs).
+  const detailDb = require('../db/transaction-detail');
+  const extras = await detailDb.getExtras(userId, out.map((r) => r.id));
+  const { effectiveTransactions } = await import('../shared/transaction-splits.mjs');
+  return effectiveTransactions(detailDb.attachExtras(out, extras));
+}
+
+// GET /v1/budgets/suggestion — HEL-86 "Create a budget with Maal".
+// The numbers come from shared/spending-breakdown.mjs suggestBudget() (pure,
+// tested). The model (gateway 'cheap' role) only writes an explanation, which
+// lib/budget-wording.js strips of any number it didn't receive. Works with no
+// AI key and on the Free plan: the suggestion is returned without wording.
+// When the wording is generated it uses one Ask Maal message from the plan.
+// ?wording=0 skips the model (e.g. when the user only re-opens the builder).
+// → { suggestion, wording: { summary, why[] } | null, wording_status }
+router.get('/v1/budgets/suggestion', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  let suggestion;
+  try {
+    const [rows, stored] = await Promise.all([
+      s2CategorisedTransactions(req.session.userId),
+      require('../db/budgets').getSettings(req.session.userId),
+    ]);
+    const { normaliseSettings } = require('../lib/spending-settings');
+    const { suggestBudget } = await import('../shared/spending-breakdown.mjs');
+    suggestion = suggestBudget(rows, new Date(), normaliseSettings(stored).excluded_groups);
+  } catch (e) { return s2Fail(res, 'budget suggestion', e); }
+
+  let wording = null;
+  let wordingStatus = 'skipped';
+  if (suggestion.enoughData && req.query.wording !== '0') {
+    const gateway = require('../services/gateway');
+    if (!gateway.hasRole('cheap')) wordingStatus = 'unavailable';
+    else {
+      let allowed = true;
+      try {
+        const user = await findUserById(req.session.userId);
+        const plan = await effectivePlanFor(user);
+        const limit = planLimits.limitFor(plan, 'advisor_messages');
+        if (limit <= 0) { allowed = false; wordingStatus = 'plan'; }
+        else if ((await usageDb.incrementIfUnder(req.session.userId, 'advisor_messages', limit)) === null) {
+          allowed = false; wordingStatus = 'limit';
+        }
+      } catch (e) {
+        console.error('[usage] metering failed open for budget wording:', e.message);
+      }
+      if (allowed) {
+        try {
+          const bw = require('../lib/budget-wording');
+          const { allowedFigures } = await import('../shared/spending-breakdown.mjs');
+          const raw = await gateway.completeAs('cheap', bw.buildMessages(suggestion), { maxTokens: 400, temperature: 0.3, timeoutMs: 12000 });
+          wording = bw.parseWording(raw, allowedFigures(suggestion));
+          wordingStatus = wording ? 'ok' : 'failed';
+        } catch (e) {
+          console.error('[breakdown] budget wording failed:', e.message);
+          wordingStatus = 'failed';
+        }
+      }
+    }
+  }
+  res.json({ suggestion, wording, wording_status: wordingStatus });
+});
+
 // ─── Transactions depth: categories, rules, subscriptions (PR 6) ───────────
 // All registered BEFORE /v1/:table so they aren't swallowed by the generic
 // handler. Scoped to req.session.userId. Categories live in a separate table,
 // so the protected `transactions` table is never altered.
 
 // GET /v1/transaction-categories — the 18-group taxonomy for pickers.
-router.get('/v1/transaction-categories', (req, res) => {
+// Session 2 – Breakdown & budget: the user's custom categories follow the 18
+// built-in groups as extra top-level groups ({ group, categories: [], custom: true,
+// id, kind, color, icon }) so every category picker offers them.
+router.get('/v1/transaction-categories', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
-  const { TAXONOMY } = require('../lib/transaction-categories');
-  res.json({ groups: TAXONOMY.map((t) => ({ group: t.group, categories: t.categories })) });
+  try {
+    const custom = await spendCatsDb().listCustomCategories(req.session.userId);
+    res.json({ groups: spendCats.mergeTaxonomy(custom) });
+  } catch (e) {
+    console.error('/api/v1/transaction-categories custom list failed:', e.message);
+    res.json({ groups: spendCats.mergeTaxonomy([]) });
+  }
 });
 
 // GET /v1/transactions — transactions with their category. Rows without a stored
@@ -1314,7 +1515,11 @@ router.get('/v1/transactions', async (req, res) => {
       const auto = autoCategorize(annotated.description, annotated.amount);
       return auto ? { ...annotated, category_group: auto.group, category: auto.category, category_source: 'auto' } : annotated;
     });
-    res.json(out);
+    // Session 2 – Transaction detail: additive hidden / reviewed / note /
+    // merchant_name / tags / splits fields (side tables, user-scoped).
+    const detailDb = require('../db/transaction-detail');
+    const extras = await detailDb.getExtras(req.session.userId, out.map((r) => r.id));
+    res.json(detailDb.attachExtras(out, extras));
   } catch (e) {
     console.error('/api/v1/transactions GET error:', e.message);
     res.status(500).json({ error: 'Could not load transactions' });
@@ -1335,6 +1540,15 @@ router.get('/v1/transactions/subscriptions', async (req, res) => {
   }
 });
 
+// ─── Session 2 – Recurring (HEL-104/105) ─────────────────────────────────
+// GET /v1/transactions/recurring merges auto-detected recurring bills,
+// subscriptions and income (services/transaction-rules.js) with the user's
+// manual items and decisions (recurring_items, db/recurring-items.js). Shape
+// stays backward compatible: { recurring: [...] } with the detector's fields;
+// each row gains additive `id`, `source: 'manual'|'detected'` and, for
+// detected rows, `confirmed`. Merge/projection maths: shared/recurring.mjs
+// (tested in test/recurring-items.test.js). All SQL is scoped to the session
+// user. Registered before the generic /v1/:table handler.
 router.get('/v1/transactions/recurring', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
@@ -1346,12 +1560,120 @@ router.get('/v1/transactions/recurring', async (req, res) => {
     const ordinaryRows = rows.map((row) => relationships.has(String(row.id))
       ? { ...row, relationship_type: relationships.get(String(row.id)).type }
       : row);
-    res.json({ recurring: detectRecurringTransactions(ordinaryRows) });
+    const detected = detectRecurringTransactions(ordinaryRows);
+    const { mergeRecurring } = await import('../shared/recurring.mjs');
+    let manualRows = [];
+    let manualError = false;
+    try {
+      manualRows = await require('../db/recurring-items').listRecurringItems(req.session.userId);
+    } catch (e) {
+      // Manual items are additive: still return detected rows, but flag it.
+      console.error('/api/v1/transactions/recurring manual items error:', e.message);
+      manualError = true;
+    }
+    const recurring = mergeRecurring(detected, manualRows);
+    res.json(manualError ? { recurring, manual_error: true } : { recurring });
   } catch (error) {
     console.error('/api/v1/transactions/recurring error:', error.message);
     res.status(500).json({ error: 'Could not detect recurring transactions' });
   }
 });
+
+// Serialise a recurring_items row for the client.
+async function recurringItemOut(row) {
+  const { manualToRecurring } = await import('../shared/recurring.mjs');
+  return { ...manualToRecurring(row), row_id: String(row.id), transaction_id: row.transaction_id || null };
+}
+
+// POST /v1/recurring-items/decisions — dismiss or confirm a detected row.
+// Body: { source_key, status: 'dismissed' | 'confirmed' }.
+router.post('/v1/recurring-items/decisions', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const sourceKey = String(req.body?.source_key || '').trim().slice(0, 80);
+  const status = req.body?.status;
+  if (!sourceKey) return res.status(400).json({ error: 'Missing recurring item.' });
+  if (status !== 'dismissed' && status !== 'confirmed') return res.status(400).json({ error: 'Unknown action.' });
+  try {
+    const row = await require('../db/recurring-items').setDetectedDecision(req.session.userId, sourceKey, status);
+    res.json({ ok: true, source_key: row.source_key, status: row.status });
+  } catch (e) {
+    console.error('/api/v1/recurring-items/decisions POST error:', e.message);
+    res.status(500).json({ error: 'Could not save that change.' });
+  }
+});
+
+// DELETE /v1/recurring-items/decisions/:sourceKey — undo a dismiss/confirm/edit
+// for a detected row (it shows as detected again).
+router.delete('/v1/recurring-items/decisions/:sourceKey', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const ok = await require('../db/recurring-items').clearDetectedDecision(req.session.userId, String(req.params.sourceKey).slice(0, 80));
+    res.json({ ok });
+  } catch (e) {
+    console.error('/api/v1/recurring-items/decisions DELETE error:', e.message);
+    res.status(500).json({ error: 'Could not undo that change.' });
+  }
+});
+
+// GET /v1/recurring-items — the user's manual items (active rows only).
+router.get('/v1/recurring-items', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const rows = await require('../db/recurring-items').listRecurringItems(req.session.userId);
+    res.json({ items: await Promise.all(rows.filter((r) => r.status === 'active').map(recurringItemOut)) });
+  } catch (e) {
+    console.error('/api/v1/recurring-items GET error:', e.message);
+    res.status(500).json({ error: 'Could not load your recurring items.' });
+  }
+});
+
+// POST /v1/recurring-items — add a manual recurring item.
+// Body: { name, amount, frequency, kind, next_date, category_group?, source_key?, transaction_id? }
+router.post('/v1/recurring-items', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const { validateRecurringInput } = await import('../shared/recurring.mjs');
+    const v = validateRecurringInput(req.body);
+    if (v.error) return res.status(400).json({ error: v.error });
+    const row = await require('../db/recurring-items').createRecurringItem(req.session.userId, v.item);
+    res.status(201).json({ item: await recurringItemOut(row) });
+  } catch (e) {
+    console.error('/api/v1/recurring-items POST error:', e.message);
+    res.status(500).json({ error: 'Could not save this recurring item.' });
+  }
+});
+
+// PATCH /v1/recurring-items/:id — edit a manual item the user owns.
+router.patch('/v1/recurring-items/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ error: 'Invalid recurring item.' });
+  try {
+    const { validateRecurringInput } = await import('../shared/recurring.mjs');
+    const v = validateRecurringInput(req.body, { partial: true });
+    if (v.error) return res.status(400).json({ error: v.error });
+    const row = await require('../db/recurring-items').updateRecurringItem(req.session.userId, req.params.id, v.item);
+    if (!row) return res.status(404).json({ error: 'Recurring item not found.' });
+    res.json({ item: await recurringItemOut(row) });
+  } catch (e) {
+    console.error('/api/v1/recurring-items PATCH error:', e.message);
+    res.status(500).json({ error: 'Could not update this recurring item.' });
+  }
+});
+
+// DELETE /v1/recurring-items/:id — remove a manual item the user owns.
+router.delete('/v1/recurring-items/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ error: 'Invalid recurring item.' });
+  try {
+    const ok = await require('../db/recurring-items').deleteRecurringItem(req.session.userId, req.params.id);
+    if (!ok) return res.status(404).json({ error: 'Recurring item not found.' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/v1/recurring-items DELETE error:', e.message);
+    res.status(500).json({ error: 'Could not remove this recurring item.' });
+  }
+});
+// ─── end Session 2 – Recurring ───────────────────────────────────────────
 
 // PATCH /v1/transactions/:id/category — manually (re)categorise one transaction.
 router.patch('/v1/transactions/:id/category', async (req, res) => {
@@ -1360,8 +1682,12 @@ router.patch('/v1/transactions/:id/category', async (req, res) => {
     const { isKnownGroup, isValidCategory } = require('../lib/transaction-categories');
     const txnDb = require('../db/transactions');
     const d = (req.body && req.body.data && typeof req.body.data === 'object') ? req.body.data : (req.body || {});
-    if (!isKnownGroup(d.category_group)) return res.status(400).json({ error: 'Unknown category group.' });
-    if (!isValidCategory(d.category_group, d.category)) return res.status(400).json({ error: 'Unknown category.' });
+    if (!isKnownGroup(d.category_group)) {
+      // Session 2 – Breakdown & budget: a custom category is a top-level group with no sub-category.
+      const customNames = await spendCatsDb().customCategoryNames(req.session.userId);
+      if (!spendCats.isAssignableCategory(d.category_group, d.category, customNames)) return res.status(400).json({ error: 'Unknown category group.' });
+      d.category = null;
+    } else if (!isValidCategory(d.category_group, d.category)) return res.status(400).json({ error: 'Unknown category.' });
     const ok = await txnDb.setTransactionCategory(req.session.userId, req.params.id, d.category_group, d.category, 'manual');
     if (!ok) return res.status(404).json({ error: 'Transaction not found.' });
     res.json({ ok: true });
@@ -1370,6 +1696,182 @@ router.patch('/v1/transactions/:id/category', async (req, res) => {
     res.status(500).json({ error: 'Could not update category' });
   }
 });
+
+// ─── Session 2 – Transaction detail (HEL-96..103) ──────────────────────────
+// Detail drawer + editing: reviewed / hidden / note / renamed merchant, tags,
+// splits. Side tables only (migration 1757000000000) — `transactions` is never
+// altered. Every handler is scoped to req.session.userId and the db layer
+// proves ownership of the transaction before writing (IDOR guard). Category
+// changes reuse PATCH /v1/transactions/:id/category above. Registered before
+// the generic /v1/:table handler.
+function txnDetailId(req, res) {
+  const { toId } = require('../lib/transaction-detail');
+  const id = toId(req.params.id);
+  if (!id) { res.status(404).json({ error: 'Transaction not found.' }); return null; }
+  return id;
+}
+
+// GET /v1/transactions/:id/detail — one transaction with account, meta, tags, splits.
+router.get('/v1/transactions/:id/detail', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const id = txnDetailId(req, res); if (!id) return;
+  try {
+    const row = await require('../db/transaction-detail').getDetail(req.session.userId, id);
+    if (!row) return res.status(404).json({ error: 'Transaction not found.' });
+    if (!row.category_group) {
+      const { autoCategorize } = require('../lib/transaction-categories');
+      const auto = autoCategorize(row.description, row.amount);
+      if (auto) Object.assign(row, { category_group: auto.group, category: auto.category, category_source: 'auto' });
+    }
+    res.json({ transaction: row });
+  } catch (e) {
+    console.error('/api/v1/transactions/:id/detail error:', e.message);
+    res.status(500).json({ error: 'Could not load this transaction.' });
+  }
+});
+
+// PATCH /v1/transactions/:id/meta — { hidden?, reviewed?, note?, merchant_name?, description? }
+router.patch('/v1/transactions/:id/meta', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const id = txnDetailId(req, res); if (!id) return;
+  const { validateMetaPatch } = require('../lib/transaction-detail');
+  const v = validateMetaPatch(req.body);
+  if (v.error) return res.status(400).json({ error: v.error });
+  try {
+    const db = require('../db/transaction-detail');
+    if (!(await db.updateMeta(req.session.userId, id, v.patch))) return res.status(404).json({ error: 'Transaction not found.' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/v1/transactions/:id/meta error:', e.message);
+    res.status(500).json({ error: 'Could not save that change.' });
+  }
+});
+
+// PUT /v1/transactions/:id/tags — { tag_ids: [] } replaces the transaction's tags.
+router.put('/v1/transactions/:id/tags', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const id = txnDetailId(req, res); if (!id) return;
+  const { validateTagIds } = require('../lib/transaction-detail');
+  const v = validateTagIds(req.body && req.body.tag_ids);
+  if (v.error) return res.status(400).json({ error: v.error });
+  try {
+    const db = require('../db/transaction-detail');
+    if (!(await db.setTransactionTags(req.session.userId, id, v.ids))) return res.status(404).json({ error: 'Transaction not found.' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/v1/transactions/:id/tags error:', e.message);
+    res.status(500).json({ error: 'Could not save tags.' });
+  }
+});
+
+// PUT /v1/transactions/:id/splits — { splits: [{ amount, category_group, category?, hidden? }] }
+// Parts must sum exactly to the transaction (shared/transaction-splits.mjs),
+// checked inside the DB transaction against the locked row.
+router.put('/v1/transactions/:id/splits', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const id = txnDetailId(req, res); if (!id) return;
+  const parts = req.body && req.body.splits;
+  const { isKnownGroup, isValidCategory } = require('../lib/transaction-categories');
+  // Session 2 – Breakdown & budget: the user's custom categories are valid parts too.
+  let customNames = [];
+  if (Array.isArray(parts) && parts.some((p) => p && p.category_group && !isKnownGroup(p.category_group))) {
+    try { customNames = await spendCatsDb().customCategoryNames(req.session.userId); }
+    catch (e) { console.error('[splits] custom categories unavailable:', e.message); }
+  }
+  if (Array.isArray(parts) && parts.some((p) => p && p.category_group
+    && (isKnownGroup(p.category_group) ? !isValidCategory(p.category_group, p.category || null)
+      : !spendCats.isAssignableCategory(p.category_group, p.category || null, customNames)))) {
+    return res.status(400).json({ error: 'Unknown category.' });
+  }
+  try {
+    const { validateSplits } = await import('../shared/transaction-splits.mjs');
+    const r = await require('../db/transaction-detail')
+      .replaceSplits(req.session.userId, id, (amount) => validateSplits(amount, parts));
+    if (r.notFound) return res.status(404).json({ error: 'Transaction not found.' });
+    if (r.error) return res.status(400).json({ error: r.error, partErrors: r.partErrors });
+    res.json({ splits: r.splits });
+  } catch (e) {
+    console.error('/api/v1/transactions/:id/splits error:', e.message);
+    res.status(500).json({ error: 'Could not save the split.' });
+  }
+});
+
+// DELETE /v1/transactions/:id/splits — remove a split (back to one transaction).
+router.delete('/v1/transactions/:id/splits', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const id = txnDetailId(req, res); if (!id) return;
+  try {
+    if (!(await require('../db/transaction-detail').clearSplits(req.session.userId, id))) {
+      return res.status(404).json({ error: 'Transaction not found.' });
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/v1/transactions/:id/splits DELETE error:', e.message);
+    res.status(500).json({ error: 'Could not remove the split.' });
+  }
+});
+
+// POST /v1/transactions/bulk-edit — { ids, changes } (lib/transaction-detail validateBulkEdit).
+// Used by the "Editing transactions" drawer (one or many selected rows).
+router.post('/v1/transactions/bulk-edit', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const { validateBulkEdit } = require('../lib/transaction-detail');
+  let customNames = [];
+  try { customNames = await spendCatsDb().customCategoryNames(req.session.userId); } // Session 2 – Breakdown & budget
+  catch (e) { console.error('[bulk-edit] custom categories unavailable:', e.message); }
+  const v = validateBulkEdit(req.body, customNames);
+  if (v.error) return res.status(400).json({ error: v.error });
+  try {
+    const r = await require('../db/transaction-detail').bulkEdit(req.session.userId, v.ids, v.changes);
+    if (!r.updated) return res.status(404).json({ error: 'Transaction not found.' });
+    res.json(r);
+  } catch (e) {
+    console.error('/api/v1/transactions/bulk-edit error:', e.message);
+    res.status(500).json({ error: 'Could not update those transactions.' });
+  }
+});
+
+// Tags: GET /v1/tags, POST /v1/tags { name, color }, DELETE /v1/tags/:id
+router.get('/v1/tags', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const { TAG_COLORS } = require('../lib/transaction-detail');
+    res.json({ tags: await require('../db/transaction-detail').listTags(req.session.userId), colors: TAG_COLORS });
+  } catch (e) {
+    console.error('/api/v1/tags error:', e.message);
+    res.status(500).json({ error: 'Could not load tags.' });
+  }
+});
+router.post('/v1/tags', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const { validateTag } = require('../lib/transaction-detail');
+  const v = validateTag(req.body);
+  if (v.error) return res.status(400).json({ error: v.error });
+  try {
+    const r = await require('../db/transaction-detail').createTag(req.session.userId, v.tag);
+    if (r.conflict) return res.status(409).json({ error: 'You already have a tag with that name.' });
+    res.json({ tag: r.tag });
+  } catch (e) {
+    console.error('/api/v1/tags POST error:', e.message);
+    res.status(500).json({ error: 'Could not create the tag.' });
+  }
+});
+router.delete('/v1/tags/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const { toId } = require('../lib/transaction-detail');
+  const id = toId(req.params.id);
+  if (!id) return res.status(404).json({ error: 'Tag not found.' });
+  try {
+    if (!(await require('../db/transaction-detail').deleteTag(req.session.userId, id))) {
+      return res.status(404).json({ error: 'Tag not found.' });
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/v1/tags DELETE error:', e.message);
+    res.status(500).json({ error: 'Could not delete the tag.' });
+  }
+});
+// ─── end Session 2 – Transaction detail ────────────────────────────────────
 
 // Rules CRUD + apply.
 router.get('/v1/transaction-rules', async (req, res) => {
@@ -1599,6 +2101,122 @@ function parseFilters(raw) {
   }
   return { where: clauses.length ? ' AND ' + clauses.join(' AND ') : '', vals };
 }
+
+// ─── Session 2 – Reports (/app/spending/reports, HEL-106/HEL-107) ──────────
+// Additive endpoints behind the Spending Reports page. Registered BEFORE the
+// generic /v1/:table handler so 'report-views' is never treated as a table.
+// Validation: lib/report-views.js (tested in test/spending-reports.test.js).
+// Every db call passes req.session.userId; db/reports.js filters by user_id.
+//
+//   GET    /v1/reports/transactions?from=YYYY-MM-DD&to=YYYY-MM-DD
+//            → { from, to, transactions, truncated }  (≤ 3-year range, paged
+//              server-side; GET /v1/transactions is unchanged)
+//   GET    /v1/report-views          → { views }
+//   POST   /v1/report-views          { name, config } → { view }
+//   PATCH  /v1/report-views/:id      { name?, config? } → { view }
+//   DELETE /v1/report-views/:id      → { ok }
+
+router.get('/v1/reports/transactions', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const rv = require('../lib/report-views');
+  const v = rv.validateRange(req.query.from, req.query.to);
+  if (v.error) return res.status(400).json({ error: v.error });
+  try {
+    const reportsDb = require('../db/reports');
+    const txnDb = require('../db/transactions');
+    const { autoCategorize } = require('../lib/transaction-categories');
+    const { computeLearnedSuggestions } = require('../services/transaction-rules');
+    const { detectTransactionRelationships, indexRelationships } = require('../services/transaction-relationships');
+    const [{ rows, truncated }, preferences] = await Promise.all([
+      reportsDb.getTransactionsInRange(req.session.userId, v.from, v.to),
+      txnDb.getLearnedCategoryPreferences(req.session.userId),
+    ]);
+    // Same annotation as GET /v1/transactions: own-account transfer legs,
+    // then learned, then keyword categories for rows without a stored one.
+    const learned = new Map(computeLearnedSuggestions(
+      preferences, rows.filter((row) => !row.category_group)
+    ).map((s) => [String(s.transaction_id), s]));
+    const relationships = indexRelationships(detectTransactionRelationships(rows));
+    const transactions = rows.map((r) => {
+      const rel = relationships.get(String(r.id));
+      const a = rel ? { ...r, relationship_type: rel.type, relationship_confidence: rel.confidence } : r;
+      if (a.category_group) return a;
+      const s = learned.get(String(r.id));
+      if (s) return { ...a, category_group: s.category_group, category: s.category, category_source: 'learned', category_confidence: s.confidence };
+      const auto = autoCategorize(a.description, a.amount);
+      return auto ? { ...a, category_group: auto.group, category: auto.category, category_source: 'auto' } : a;
+    });
+    // Same additive hidden / reviewed_at / note / merchant_name / tags /
+    // splits fields as GET /v1/transactions (Session 2 – Transaction detail),
+    // so the client can run shared/transaction-splits.mjs effectiveTransactions().
+    const detailDb = require('../db/transaction-detail');
+    const extras = await detailDb.getExtras(req.session.userId, transactions.map((r) => r.id));
+    res.json({ from: v.from, to: v.to, transactions: detailDb.attachExtras(transactions, extras), truncated });
+  } catch (e) {
+    console.error('/api/v1/reports/transactions error:', e.message);
+    res.status(500).json({ error: 'Could not load transactions for this report' });
+  }
+});
+
+router.get('/v1/report-views', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const rv = require('../lib/report-views');
+    const views = await require('../db/reports').listViews(req.session.userId);
+    res.json({ views: views.map(rv.toView) });
+  } catch (e) {
+    console.error('/api/v1/report-views GET error:', e.message);
+    res.status(500).json({ error: 'Could not load saved reports' });
+  }
+});
+
+router.post('/v1/report-views', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const rv = require('../lib/report-views');
+  const v = rv.validateViewInput(req.body);
+  if (v.error) return res.status(400).json({ error: v.error });
+  try {
+    const reportsDb = require('../db/reports');
+    if (await reportsDb.countViews(req.session.userId) >= rv.MAX_VIEWS) {
+      return res.status(400).json({ error: `You can save up to ${rv.MAX_VIEWS} reports. Delete one to save another.` });
+    }
+    const row = await reportsDb.createView(req.session.userId, v.view);
+    res.status(201).json({ view: rv.toView(row) });
+  } catch (e) {
+    console.error('/api/v1/report-views POST error:', e.message);
+    res.status(500).json({ error: 'Could not save this report' });
+  }
+});
+
+router.patch('/v1/report-views/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!/^\d{1,18}$/.test(req.params.id)) return res.status(404).json({ error: 'Saved report not found' });
+  const rv = require('../lib/report-views');
+  const v = rv.validateViewPatch(req.body);
+  if (v.error) return res.status(400).json({ error: v.error });
+  try {
+    const row = await require('../db/reports').updateView(req.params.id, req.session.userId, v.patch);
+    if (!row) return res.status(404).json({ error: 'Saved report not found' });
+    res.json({ view: rv.toView(row) });
+  } catch (e) {
+    console.error('/api/v1/report-views PATCH error:', e.message);
+    res.status(500).json({ error: 'Could not update this report' });
+  }
+});
+
+router.delete('/v1/report-views/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!/^\d{1,18}$/.test(req.params.id)) return res.status(404).json({ error: 'Saved report not found' });
+  try {
+    const ok = await require('../db/reports').deleteView(req.params.id, req.session.userId);
+    if (!ok) return res.status(404).json({ error: 'Saved report not found' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/v1/report-views DELETE error:', e.message);
+    res.status(500).json({ error: 'Could not delete this report' });
+  }
+});
+// ─── end Session 2 – Reports ───────────────────────────────────────────────
 
 router.all('/v1/:table', async (req, res) => {
   const { table } = req.params;
