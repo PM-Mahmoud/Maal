@@ -65,7 +65,7 @@ export const SERVICES: SubPage[] = [
   { to: "/app/services/brokerage", label: "Brokerage", icon: TrendingUp },
   { to: "/app/services/estate-planning", label: "Estate planning", icon: ScrollText, soon: true },
   { to: "/app/services/tax", label: "Tax", icon: Receipt, soon: true },
-  { to: "/app/services/financial-planner", label: "Financial planner", icon: NotebookPen, soon: true },
+  { to: "/app/services/financial-planner", label: "Financial planning", icon: NotebookPen, soon: true },
   { to: "/app/services/cfp-sessions", label: "CFP sessions", icon: Contact, soon: true },
   { to: "/app/services/id-protection", label: "ID protection", icon: ShieldCheck, soon: true },
 ];
