@@ -1329,18 +1329,19 @@ async function s2CategorisedTransactions(userId) {
   const txnDb = require('../db/transactions');
   const { autoCategorize } = require('../lib/transaction-categories');
   const { detectTransactionRelationships, indexRelationships } = require('../services/transaction-relationships');
+  const { getEffectiveTransactions } = require('../db/transaction-detail');
   const rows = await txnDb.getTransactionsWithCategory(userId, 2000);
   const relationships = indexRelationships(detectTransactionRelationships(rows));
-  const out = rows.map((r) => {
-    const rel = relationships.get(String(r.id));
-    const row = rel ? { ...r, relationship_type: rel.type } : r;
+  const annotated = rows.map((row) => ({
+    ...row,
+    relationship_type: relationships.get(String(row.id))?.type,
+  }));
+  const effective = await getEffectiveTransactions(userId, annotated);
+  return effective.map((row) => {
     if (row.category_group) return row;
     const auto = autoCategorize(row.description, row.amount);
     return auto ? { ...row, category_group: auto.group, category: auto.category } : row;
   });
-  // Hidden rows drop out and split rows count per part (Transaction detail, shared/transaction-splits.mjs).
-  const { getEffectiveTransactions } = require('../db/transaction-detail');
-  return getEffectiveTransactions(userId, out);
 }
 
 // GET /v1/budgets/suggestion — HEL-86 "Create a budget with Maal".

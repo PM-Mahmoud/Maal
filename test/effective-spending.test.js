@@ -23,21 +23,22 @@ const details = [
   { transaction_id: '2', id: '21', position: 0, amount: '17.25', category_group: 'Groceries' },
   { transaction_id: '2', id: '22', position: 1, amount: '2.75', category_group: 'Eating Out' },
   { transaction_id: '2', id: '23', position: 2, amount: '30.00', category_group: 'Other', hidden: true },
-  { transaction_id: '3', id: null },
-  { transaction_id: '4', id: null },
+  { transaction_id: '3', id: null, transaction_group: 'Income' },
+  { transaction_id: '4', id: null, transaction_group: 'Transfers' },
 ];
 
-function mockReads(t) {
+function mockReads(t, transactions = raw, spendingDetails = details) {
   return t.mock.method(pool, 'query', async (sql, args) => {
     assert.match(sql, /WHERE t\.user_id = \$1/);
     assert.equal(args[0], 8);
     if (sql.includes('FROM transactions t') && sql.includes('transaction_splits s')) {
       assert.match(sql, /m\.user_id = \$1/);
+      assert.match(sql, /c\.user_id = \$1/);
       assert.match(sql, /s\.user_id = \$1/);
-      assert.deepEqual(args[1], raw.map((row) => row.id));
-      return { rows: details };
+      assert.deepEqual(args[1], transactions.map((row) => row.id));
+      return { rows: spendingDetails };
     }
-    return { rows: raw };
+    return { rows: transactions };
   });
 }
 
@@ -78,4 +79,21 @@ test('recurrence uses one payment per parent and only the visible amount', async
   assert.deepEqual(payments.map(({ id, amount }) => [id, amount]), [
     ['2', -20], ['3', 200], ['4', -10],
   ]);
+});
+
+test('runway excludes paired own-account transfers and uses the category from the visibility read', async (t) => {
+  const rows = [
+    { id: '1', amount: '-1000', description: 'Rent', category_group: 'Transfers', post_date },
+    { id: '2', amount: '-9000', description: 'TFR SAVER', account_reference: 'everyday', post_date },
+    { id: '3', amount: '9000', description: 'TFR SAVER', account_reference: 'saver', post_date },
+  ];
+  mockReads(t, rows, [
+    { transaction_id: '1', id: null, transaction_group: 'Housing' },
+    { transaction_id: '2', id: null },
+    { transaction_id: '3', id: null },
+  ]);
+  const effective = await getCashFlowTransactions(8);
+  assert.equal(effective[0].category_group, 'Housing');
+  assert.equal(effective[1].relationship_type, 'internal_transfer');
+  assert.deepEqual(calculateCashRunway(effective, 10000, 0), { months: 10, fromTransactions: true });
 });

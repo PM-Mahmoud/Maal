@@ -22,9 +22,8 @@ async function getSnapshotsFrom(userId, fromDate) {
 // Read-only against the protected transactions table.
 async function getTransactionsBetween(userId, fromDate, toDate) {
   const r = await pool.query(
-    `SELECT t.id, t.description, t.amount, t.post_date::text AS post_date, c.category_group
+    `SELECT t.id, t.description, t.amount, t.post_date::text AS post_date
        FROM transactions t
-       LEFT JOIN transaction_categories c ON c.transaction_id = t.id AND c.user_id = t.user_id
       WHERE t.user_id = $1
         AND t.post_date >= $2::date AND t.post_date <= $3::date
       ORDER BY t.post_date ASC, t.id ASC

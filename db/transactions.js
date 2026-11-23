@@ -4,6 +4,7 @@
 const { pool } = require('./auth');
 const { mapBasiqTransaction } = require('../lib/basiq-mapping');
 const { getEffectiveTransactions } = require('./transaction-detail');
+const { detectTransactionRelationships, indexRelationships } = require('../services/transaction-relationships');
 
 async function getTransactionIncrementalSince(userId, overlapDays = 7) {
   const { rows } = await pool.query(
@@ -119,15 +120,22 @@ async function getTxnsSince(userId, days = 400, limit = 1000) {
 
 async function getCashFlowTransactions(userId, days = 30) {
   const result = await pool.query(
-    `SELECT t.id, t.post_date, t.amount, t.status, t.description, c.category_group
+    `SELECT t.id, t.post_date, t.amount, t.status, t.description, pd.account_reference
        FROM transactions t
-       LEFT JOIN transaction_categories c ON c.transaction_id = t.id AND c.user_id = $1
+       LEFT JOIN transaction_provider_details pd ON pd.transaction_id = t.id AND pd.user_id = $1
       WHERE t.user_id = $1
         AND t.post_date BETWEEN CURRENT_DATE - ($2::int - 1) AND CURRENT_DATE
       ORDER BY t.post_date ASC, t.id ASC`,
     [userId, days]
   );
-  return getEffectiveTransactions(userId, result.rows);
+  // Detect transfers from the original bank movements, before a split changes
+  // the amounts that must match across the two accounts.
+  const relationships = indexRelationships(detectTransactionRelationships(result.rows));
+  const rows = result.rows.map((row) => ({
+    ...row,
+    relationship_type: relationships.get(String(row.id))?.type,
+  }));
+  return getEffectiveTransactions(userId, rows);
 }
 
 async function getTransactionsForQuality(userId) {
