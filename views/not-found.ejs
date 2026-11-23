@@ -1,0 +1,75 @@
+<%
+  // "Page not found" for unknown public URLs, sent with status 404 by the SPA
+  // catch-all in server.js (lib/app-routes.js decides). Same design and copy as
+  // the React page (client/src/components/maal/not-found/NotFoundPage.tsx) and
+  // the same stylesheet (/css/not-found.css). The brick animation is the shared
+  // module shared/collapsing-mark.mjs, served at /js/collapsing-mark.mjs.
+  // Locals: signedIn (bool), cspNonce.
+  const signedIn = !!locals.signedIn;
+  const cells = [];
+  for (let r = 0; r < 7; r++) { cells.push([0, r], [6, r]); }
+  cells.push([1, 1], [5, 1], [2, 2], [4, 2], [3, 3]);
+%><!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<%- include('partials/v2-head', { title: 'Page not found' }) %>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/css/not-found.css">
+  <script nonce="<%= locals.cspNonce || '' %>">
+    // Theme before first paint; same rule as the React app (maal-theme =
+    // light | dark | system, default system).
+    (function () {
+      try {
+        var p = localStorage.getItem('maal-theme');
+        var dark = p === 'dark' || (p !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var el = document.documentElement;
+        el.setAttribute('data-theme', dark ? 'dark' : 'light');
+        el.style.colorScheme = dark ? 'dark' : 'light';
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body class="nf nf-page">
+  <header class="nf-top">
+    <a href="/" class="nf-logo" aria-label="Maal home"><%- include('partials/v2-mark', { size: 18 }) %><span>Maal</span></a>
+  </header>
+  <main class="nf-main">
+    <div class="nf-inner">
+      <button type="button" class="nf-mark" aria-label="The Maal logo, built from blocks that fall apart and rebuild. Press to rebuild it.">
+        <svg viewBox="-2.5 -1 12 8.8" aria-hidden="true" focusable="false"><g fill="currentColor"><% cells.forEach(function (c) { %><rect x="<%= c[0] + 0.05 %>" y="<%= c[1] + 0.05 %>" width="0.9" height="0.9" rx="0.07"/><% }) %></g></svg>
+      </button>
+      <h1>Page not found</h1>
+      <p class="nf-lines"><span>This page doesn't exist or has moved.</span> <span>Let's get you back on track.</span></p>
+      <div class="nf-actions">
+        <% if (signedIn) { %>
+          <a href="/app" class="nf-btn">Go back home</a>
+          <a href="/app/advisor" class="nf-link">Ask Maal</a>
+        <% } else { %>
+          <a href="/" class="nf-btn">Go back home</a>
+          <a href="/contact" class="nf-link">Contact support</a>
+        <% } %>
+      </div>
+    </div>
+  </main>
+  <footer class="nf-foot">
+    <p>Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.</p>
+  </footer>
+  <script type="module" nonce="<%= locals.cspNonce || '' %>">
+    import { mountCollapsingMark } from '/js/collapsing-mark.mjs';
+    const btn = document.querySelector('.nf-mark');
+    const svg = btn.querySelector('svg');
+    const mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    let cleanup = () => {};
+    const mount = () => {
+      cleanup();
+      const reduced = !!(mq && mq.matches);
+      btn.toggleAttribute('data-still', reduced);
+      btn.tabIndex = reduced ? -1 : 0;
+      if (reduced) btn.setAttribute('aria-label', 'The Maal logo with a few blocks fallen off');
+      cleanup = mountCollapsingMark(svg, { reducedMotion: reduced, target: btn });
+    };
+    mount();
+    if (mq && mq.addEventListener) mq.addEventListener('change', mount);
+  </script>
+</body>
+</html>

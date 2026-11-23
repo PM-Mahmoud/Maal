@@ -425,14 +425,28 @@ app.get(/^\/app(\/.*)?$/, (req, res, next) => {
 });
 
 // ─── React SPA catch-all ──────────────────────────────────────────────────
-// Serve React app for all routes not already handled by Express
+// Serve React app for all routes not already handled by Express. Real 404s
+// (HEL-110): lib/app-routes.js checks the path against the client's route
+// manifest (public/app/route-manifest.json, written by the client build).
+// Known client routes get the shell with 200; unknown /app/* paths get the
+// shell with 404 (React renders the not-found page in the app shell); other
+// unknown paths get the server-rendered not-found page with 404; file-like
+// paths get a plain 404. No manifest → the old behaviour (200), logged once.
 const reactBuild = path.join(__dirname, 'public', 'app', 'index.html');
 const fs = require('fs');
+const appRoutes = require('./lib/app-routes');
+const routeManifest = appRoutes.loadRouteManifest(path.join(__dirname, 'public', 'app', 'route-manifest.json'));
 app.use('*', (req, res, next) => {
   // Skip API, dashboard (EJS), billing, basiq, score, onboarding, admin paths
   const skip = ['/api/', '/dashboard', '/billing', '/basiq', '/onboarding', '/score', '/login', '/signup', '/logout', '/forgot-password', '/reset-password', '/verify-email', '/admin', '/health', '/feedback', '/internal'];
   if (skip.some(p => req.originalUrl.startsWith(p))) return next();
+  const kind = appRoutes.classifyRequest(routeManifest, req.originalUrl);
+  if (kind === 'asset') return res.status(404).type('text/plain').send('Not found');
+  if (kind === 'public-404') {
+    return res.status(404).render('not-found', { layout: false, signedIn: !!(req.session && req.session.userId) });
+  }
   if (fs.existsSync(reactBuild)) {
+    if (kind === 'spa-404') res.status(404);
     return require('./lib/security-headers').sendShell(res, reactBuild);
   }
   // Fallback: render EJS landing if no React build
