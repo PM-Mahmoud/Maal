@@ -1,6 +1,0 @@
-import{c as u}from"./createLucideIcon-zcbofnRo.js";import{r as a,j as n}from"./index-D6WBJed4.js";import{P as c}from"./index-BKXUr72h.js";import{c as l,a as m}from"./index-BAP7Ujm6.js";/**
- * @license lucide-react v0.503.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */const d=[["polyline",{points:"22 17 13.5 8.5 8.5 13.5 2 7",key:"1r2t7k"}],["polyline",{points:"16 17 22 17 22 11",key:"11uiuu"}]],M=u("trending-down",d);function N(e,[r,t]){return Math.min(t,Math.max(r,e))}function L(e){const r=a.useRef({value:e,previous:e});return a.useMemo(()=>(r.current.value!==e&&(r.current.previous=r.current.value,r.current.value=e),r.current.previous),[e])}var f="Label",s=a.forwardRef((e,r)=>n.jsx(c.label,{...e,ref:r,onMouseDown:t=>{var o;t.target.closest("button, input, select, textarea")||((o=e.onMouseDown)==null||o.call(e,t),!t.defaultPrevented&&t.detail>1&&t.preventDefault())}}));s.displayName=f;var i=s;const p=m("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"),x=a.forwardRef(({className:e,...r},t)=>n.jsx(i,{ref:t,className:l(p(),e),...r}));x.displayName=i.displayName;export{x as L,M as T,N as c,L as u};
