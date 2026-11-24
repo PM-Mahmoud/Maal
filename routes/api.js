@@ -1590,23 +1590,24 @@ router.get('/v1/transactions/recurring', async (req, res) => {
     const txnDb = require('../db/transactions');
     const { detectRecurringTransactions } = require('../services/transaction-rules');
     const { detectTransactionRelationships, indexRelationships } = require('../services/transaction-relationships');
-    const rows = await txnDb.getTransactionsWithCategory(req.session.userId, 2000);
+    const userId = req.session.userId;
+    const manual = require('../db/recurring-items').listRecurringItems(userId).then(
+      (rows) => ({ rows, failed: false }),
+      (e) => {
+        // Manual items are additive: still return detected rows, but flag it.
+        console.error('/api/v1/transactions/recurring manual items error:', e.message);
+        return { rows: [], failed: true };
+      }
+    );
+    const rows = await txnDb.getTransactionsWithCategory(userId, 2000);
     const relationships = indexRelationships(detectTransactionRelationships(rows));
     const ordinaryRows = rows.map((row) => relationships.has(String(row.id))
       ? { ...row, relationship_type: relationships.get(String(row.id)).type }
       : row);
     const { getEffectivePayments } = require('../db/transaction-detail');
-    const detected = detectRecurringTransactions(await getEffectivePayments(req.session.userId, ordinaryRows));
+    const detected = detectRecurringTransactions(await getEffectivePayments(userId, ordinaryRows));
     const { mergeRecurring } = await import('../shared/recurring.mjs');
-    let manualRows = [];
-    let manualError = false;
-    try {
-      manualRows = await require('../db/recurring-items').listRecurringItems(req.session.userId);
-    } catch (e) {
-      // Manual items are additive: still return detected rows, but flag it.
-      console.error('/api/v1/transactions/recurring manual items error:', e.message);
-      manualError = true;
-    }
+    const { rows: manualRows, failed: manualError } = await manual;
     const recurring = mergeRecurring(detected, manualRows);
     res.json(manualError ? { recurring, manual_error: true } : { recurring });
   } catch (error) {
