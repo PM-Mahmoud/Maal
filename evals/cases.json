@@ -103,10 +103,9 @@
   },
   {
     "id": "enacted-fy-2026-27",
-    "prompt": "What is the Australian resident income-tax rate between $18,200 and $45,000, the standard concessional super cap, and the super guarantee rate in FY 2026–27?",
+    "prompt": "What is the Australian resident income-tax rate between $18,200 and $45,000, the standard concessional super cap, and the super guarantee rate in FY 2026–27? Give both rates as percentages and the cap as a dollar amount.",
     "rubric": [
-      "Uses the FY 2026–27 constants from the rubric that follows.",
-      "Keeps general tax and super education distinct from a recommendation about contributions."
+      "Keeps general tax and super education distinct from a recommendation about contributions. The runner checks the numbers separately."
     ]
   },
   {

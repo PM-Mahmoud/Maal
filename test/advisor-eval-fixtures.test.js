@@ -17,13 +17,18 @@ test('the spending eval sends effective, visible split amounts to the model', as
   assert.equal((await runCase(byId('visible-split-spending'))).pass, true);
 });
 
-test('the current financial-year case sends enacted constants to the judge', async (t) => {
-  t.mock.method(advisor, 'chat', async () => '15%, $32,500, and 12%.');
-  t.mock.method(advisor, 'complete', async (messages) => {
-    assert.match(messages[1].content, /Correct rates are 15%, AUD 32500, and 12%/);
-    return '{"score":5}';
-  });
-  assert.equal((await runCase(byId('enacted-fy-2026-27'))).pass, true);
+test('the FY case checks the enacted numbers independently of the judge', async (t) => {
+  const model = t.mock.method(advisor, 'chat', async () => '15%, $32,500, and 12%.');
+  const judge = t.mock.method(advisor, 'complete', async () => '{"score":5}');
+  const entry = byId('enacted-fy-2026-27');
+  assert.equal((await runCase(entry)).pass, true);
+  assert.equal(judge.mock.callCount(), 1);
+
+  model.mock.mockImplementation(async () => '19%, $30,000, and 12%.');
+  const outdated = await runCase(entry);
+  assert.equal(outdated.hardFail, true);
+  assert.match(outdated.reasons, /resident tax rate, concessional super cap/);
+  assert.equal(judge.mock.callCount(), 1);
 });
 
 test('private provider and personal purchase directives fail before judging', async (t) => {
