@@ -23,6 +23,7 @@ function ConnectAccountsPage() {
 
   const done = (result: ConnectResult) => {
     if (result.source === "manual") toast.success("Success", { description: "Your asset was created." });
+    else if (result.source === "basiq" && result.refreshOnly) toast.success("Bank sync complete");
     else if (result.source === "basiq") toast.success("Your account is now connected", { description: "All data will refresh automatically within the next few minutes." });
     navigate({ to: "/app" });
   };

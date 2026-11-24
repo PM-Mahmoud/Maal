@@ -36,6 +36,7 @@ export interface ConnectResult {
   count: number;
   institution: InstitutionOption | null;
   owner: OwnerType;
+  refreshOnly?: boolean;
 }
 
 export interface ConnectAccountsFlowProps {
@@ -249,25 +250,34 @@ export function ConnectAccountsFlow({
         return;
       }
       const before = await accountsBeforeConsent.current;
-      if (!before) throw new Error("We couldn’t check your existing accounts. Close this and start connecting again.");
       const { accounts, runId } = await syncAndWait(ctrl.signal);
       if (ctrl.signal.aborted) return;
-      const known = new Set(before.map((account) => account.account_reference));
+      const known = new Set(before?.map((account) => account.account_reference));
       const institutionKeys = new Set([inst.id, inst.id?.replace(/^AU/, ""), inst.name, inst.shortName].filter(Boolean).map((key) => norm(String(key))));
-      const mine = accounts.filter((account) =>
-        account.account_reference?.startsWith("basiq:") && !known.has(account.account_reference)
-        && institutionKeys.has(norm(account.institution_name)));
-      if (!mine.length) {
-        setPhase("error");
-        setError(`We didn’t find any new ${inst.shortName} accounts yet. Finish connecting in the other tab, then try again.`);
+      const providerAccounts = accounts.filter((account) => account.account_reference?.startsWith("basiq:"));
+      const matching = providerAccounts.filter((account) => institutionKeys.has(norm(account.institution_name)));
+      // The fallback catalogue can open unscoped consent. Persist the choice
+      // only when the provider institution and a new account can be identified.
+      const attributable = inst.id && before ? matching.filter((account) => !known.has(account.account_reference)) : [];
+      if (attributable.length) {
+        await saveBasiqOwnership(runId, who, attributable.map((account) => String(account.account_reference)), ctrl.signal);
+        if (ctrl.signal.aborted) return;
+        finishWith(
+          { source: "basiq", linked: attributable, count: attributable.length, institution: inst, owner: who },
+          { title: "Your account is now connected", sub: "All data will refresh automatically within the next few minutes." },
+        );
         return;
       }
-      await saveBasiqOwnership(runId, who, mine.map((account) => String(account.account_reference)), ctrl.signal);
-      if (ctrl.signal.aborted) return;
-      finishWith(
-        { source: "basiq", linked: mine, count: mine.length, institution: inst, owner: who },
-        { title: "Your account is now connected", sub: "All data will refresh automatically within the next few minutes." },
-      );
+      const refreshedAccounts = matching.length ? matching : inst.id ? [] : providerAccounts;
+      if (refreshedAccounts.length) {
+        finishWith(
+          { source: "basiq", linked: refreshedAccounts, count: refreshedAccounts.length, institution: matching.length ? inst : null, owner: who, refreshOnly: true },
+          { title: "Bank sync complete", sub: "Your available accounts are up to date." },
+        );
+        return;
+      }
+      setPhase("error");
+      setError(`We didn’t find any ${inst.shortName} accounts yet. Finish connecting in the other tab, then try again.`);
     } catch (e) {
       if (ctrl.signal.aborted) return;
       setPhase("error");
@@ -474,7 +484,7 @@ export function ConnectAccountsFlow({
   const connectedBody = (
     <div className="cx-done">
       <h1 className="cx-h1">
-        Nice work{firstName ? `, ${firstName}` : ""}. You’ve successfully linked {lastName}.
+        Nice work{firstName ? `, ${firstName}` : ""}. {lastResult?.refreshOnly ? "Your bank sync is complete." : `You’ve successfully linked ${lastName}.`}
       </h1>
       <p className="cx-sub">Link more accounts for a fuller picture, or start exploring Maal.</p>
       <div className="cx-linked">
