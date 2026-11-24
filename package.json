@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
+    "test:route-smoke": "node scripts/smoke-routes.mjs",
     "start": "node server.js",
     "test:planning": "node --test test/planning.test.js",
     "dev": "node server.js",
