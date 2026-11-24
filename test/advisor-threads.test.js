@@ -82,6 +82,15 @@ test('validateMessages enforces roles, content and batch size; meta only on assi
   assert.deepStrictEqual(ok.messages[1].meta, { followUps: ['Tell me about HECS'] });
 });
 
+test('feedback validates only explicit votes or removal and bounds optional notes', () => {
+  assert.deepStrictEqual(t.validateFeedback({ rating: 'up', note: '  Clear  ' }), { rating: 'up', note: 'Clear' });
+  assert.deepStrictEqual(t.validateFeedback({ rating: null }), { rating: null, note: null });
+  for (const invalid of [{}, { rating: true }, { rating: 'maybe' }, { rating: 'down', note: {} },
+    { rating: 'up', note: 'x'.repeat(1001) }, { rating: 'up', note: 'bad\u0000text' }]) {
+    assert.ok(t.validateFeedback(invalid).error);
+  }
+});
+
 test('toThread shapes ids as strings and defaults the title', () => {
   assert.deepStrictEqual(
     t.toThread({ id: 5, title: null, is_favourite: null, created_at: 'c', updated_at: 'u' }),
@@ -144,31 +153,46 @@ test('getThreadMessages scopes the message query to the user too', async () => {
   assertScoped(calls[1], 9);
 });
 
-test('appendThreadMessages writes nothing when the thread is not the user\'s', async () => {
+test('appendThreadMessages only inserts from the ownership-checked thread', async () => {
   calls.length = 0;
   nextResults = [{ rows: [] }];
   const r = await db.appendThreadMessages('3', 9, [{ role: 'user', content: 'hi', meta: null }]);
   assert.strictEqual(r, null);
   assert.strictEqual(calls.length, 1);
-  assert.ok(!/INSERT/.test(calls[0].sql));
   assertScoped(calls[0], 9);
+  assert.ok(/FROM owned_thread thread/.test(calls[0].sql), calls[0].sql);
 });
 
-test('appendThreadMessages inserts each message guarded by an ownership EXISTS', async () => {
+test('appendThreadMessages writes a whole turn and returns IDs in insertion order', async () => {
   calls.length = 0;
-  nextResults = [{ rows: [{ id: 3, title: 'Salary sacrifice' }] }];
-  await db.appendThreadMessages('3', 9, [
+  nextResults = [{ rows: [{ id: 3, title: 'Salary sacrifice', message_ids: ['4', '5'] }] }];
+  const messages = [
     { role: 'user', content: 'hi', meta: null },
     { role: 'assistant', content: 'hello', meta: { followUps: ['x'] } },
-  ], { autoTitle: 'hi', defaultTitle: 'New chat' });
-  assert.strictEqual(calls.length, 3);
-  for (const c of calls.slice(1)) {
-    assert.ok(/WHERE EXISTS \(SELECT 1 FROM advisor_sessions WHERE id = \$1 AND user_id = \$5\)/.test(c.sql), c.sql);
-    assert.strictEqual(c.params[4], 9);
-  }
-  assert.strictEqual(calls[2].params[3], JSON.stringify({ followUps: ['x'] }));
+  ];
+  const row = await db.appendThreadMessages('3', 9, messages, { autoTitle: 'hi', defaultTitle: 'New chat' });
+  assert.deepStrictEqual(row.message_ids, ['4', '5']);
+  assert.strictEqual(calls.length, 1);
+  const call = lastCall();
+  assertScoped(call, 9);
+  assert.deepStrictEqual(JSON.parse(call.params[4]), messages);
+  assert.ok(/ORDER BY msg.position/.test(call.sql));
   // Auto-title never overwrites a user-chosen title.
-  assert.ok(/title IS NULL OR title = '' OR title = \$4/.test(calls[0].sql));
+  assert.ok(/title IS NULL OR title = '' OR title = \$4/.test(call.sql));
+});
+
+test('feedback upsert and removal always filter by thread, user and assistant role', async () => {
+  nextResults = [{ rows: [{ id: '5' }] }, { rows: [] }];
+  assert.strictEqual(await db.saveMessageFeedback('3', '5', 9, { rating: 'up', note: 'Clear' }), true);
+  assertScoped(lastCall(), 9);
+  assert.deepStrictEqual(lastCall().params, ['3', '5', 9, 'up', 'Clear']);
+  const ownership = /m.id = \$2 AND m.session_id = \$1 AND s.user_id = \$3 AND m.role = 'assistant'/;
+  assert.match(lastCall().sql, ownership);
+  assert.match(lastCall().sql, /ON CONFLICT \(message_id, user_id\)/);
+  assert.strictEqual(await db.saveMessageFeedback('3', '5', 9, { rating: null, note: null }), false);
+  assertScoped(lastCall(), 9);
+  assert.match(lastCall().sql, ownership);
+  assert.match(lastCall().sql, /DELETE FROM advisor_message_feedback .* AND user_id = \$3/);
 });
 
 // ─── 3. Router ───────────────────────────────────────────────────────────────
@@ -192,9 +216,16 @@ function makeFakeDb() {
     deleteThread: async (id, uid) => { const r = own(id, uid); if (r) threads.delete(String(id)); return !!r; },
     appendThreadMessages: async (id, uid, msgs, { autoTitle, defaultTitle } = {}) => {
       const r = own(id, uid); if (!r) return null;
-      msgs.forEach((m, i) => r.messages.push({ id: r.messages.length + i + 1, ...m }));
+      const inserted = msgs.map((m) => ({ ...m, id: seq++ }));
+      r.messages.push(...inserted);
       if (autoTitle && r.title === defaultTitle) r.title = autoTitle;
-      return r;
+      return { ...r, message_ids: inserted.map((m) => String(m.id)) };
+    },
+    saveMessageFeedback: async (id, messageId, userId, { rating }) => {
+      const message = own(id, userId)?.messages.find((m) => String(m.id) === messageId && m.role === 'assistant');
+      if (!message) return false;
+      message.rating = rating;
+      return true;
     },
   };
 }
@@ -285,12 +316,37 @@ test('router: create, append a turn (auto-titles), open with rich parts, delete'
       { role: 'assistant', content: 'Here is how…', meta: { followUps: ['What is the concessional cap?'] } },
     ] } });
     assert.strictEqual(a.status, 201);
+    assert.strictEqual(a.json.messageIds.length, 2);
     assert.strictEqual(a.json.thread.title, 'How does salary sacrifice into super work?');
     const g = await call('GET', `/${id}`, { user: 1 });
     assert.strictEqual(g.json.messages.length, 2);
+    assert.deepStrictEqual(a.json.messageIds, g.json.messages.map((m) => m.id));
     assert.deepStrictEqual(g.json.messages[1].followUps, ['What is the concessional cap?']);
     assert.strictEqual((await call('DELETE', `/${id}`, { user: 1 })).status, 200);
     assert.strictEqual((await call('GET', `/${id}`, { user: 1 })).status, 404);
+  });
+});
+
+test('router: feedback validates, persists, changes and clears an owned assistant vote', async () => {
+  await withServer(makeFakeDb(), async (call) => {
+    const result = await call('POST', '/10/messages', { user: 1, body: { messages: [
+      { role: 'user', content: 'How does super work?' },
+      { role: 'assistant', content: 'It is retirement savings.' },
+    ] } });
+    const [questionId, replyId] = result.json.messageIds;
+    const endpoint = `/10/messages/${replyId}/feedback`;
+    assert.strictEqual((await call('POST', endpoint, { body: { rating: 'up' } })).status, 401);
+    assert.strictEqual((await call('POST', endpoint, { user: 1, body: { rating: 'maybe' } })).status, 400);
+    assert.strictEqual((await call('POST', endpoint, { user: 2, body: { rating: 'up' } })).status, 404);
+    assert.strictEqual((await call('POST', `/10/messages/${questionId}/feedback`, { user: 1, body: { rating: 'up' } })).status, 404);
+    assert.strictEqual((await call('POST', '/10/messages/invalid/feedback', { user: 1, body: { rating: 'up' } })).status, 404);
+    for (const rating of ['up', 'down', null]) {
+      const saved = await call('POST', endpoint, { user: 1, body: { rating } });
+      assert.strictEqual(saved.status, 200);
+      assert.strictEqual(saved.json.rating, rating);
+      const loaded = await call('GET', '/10', { user: 1 });
+      assert.strictEqual(loaded.json.messages[1].rating, rating);
+    }
   });
 });
 

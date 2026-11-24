@@ -675,6 +675,33 @@ app.get('/api/v1/:table', (req, res, next) => {
   res.json(req.query.single ? (rows[0] ?? null) : rows);
 });
 
+// HEL-39: one local preview conversation for reviewing advisor reply feedback.
+{
+  const thread = { id: '1', title: 'How does super work?', updated_at: new Date().toISOString(), is_favourite: false };
+  const messages = [
+    { id: '1', role: 'user', content: 'How does super work?' },
+    { id: '2', role: 'assistant', content: 'Super is money set aside for your retirement. Your employer generally contributes to your super fund as you earn.', rating: null },
+  ];
+  app.get('/api/v1/advisor/threads', (_req, res) => res.json({ threads: [thread] }));
+  app.get('/api/v1/advisor/threads/1', (_req, res) => res.json({ thread, messages }));
+  app.post('/api/v1/advisor/threads/1/messages', express.json(), (req, res) => {
+    const inserted = req.body.messages.map((message, index) => ({
+      id: String(messages.length + index + 1), role: message.role, content: message.content,
+      ...message.meta,
+    }));
+    messages.push(...inserted);
+    res.status(201).json({ thread, messageIds: inserted.map((message) => message.id) });
+  });
+  app.post('/api/v1/advisor/threads/1/messages/:messageId/feedback', express.json(), (req, res) => {
+    const message = messages.find((row) => row.id === req.params.messageId && row.role === 'assistant');
+    if (!message) return res.status(404).json({ error: 'Reply not found' });
+    const { rating } = req.body;
+    if (![null, 'up', 'down'].includes(rating)) return res.status(400).json({ error: 'Invalid rating' });
+    message.rating = rating;
+    res.json({ rating });
+  });
+}
+
 // Mutations + advisor: canned successes so preview clicks never error
 app.post('/api/auth/login', (_req, res) => res.json({ user: PREVIEW_USER }));
 app.post('/api/auth/signup', (_req, res) => res.json({ user: PREVIEW_USER }));

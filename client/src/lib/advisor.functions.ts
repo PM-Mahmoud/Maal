@@ -6,6 +6,7 @@ import { handleUnauthenticated } from "@/integrations/api";
 
 export type Thread = { id: string; title: string; is_favourite: boolean; created_at?: string; updated_at: string };
 export type Citation = { label: string };
+export type FeedbackRating = "up" | "down" | null;
 export type Message = {
   id: string;
   role: "user" | "assistant";
@@ -14,6 +15,7 @@ export type Message = {
   widgets?: WidgetSpec[];
   followUps?: string[];
   citations?: Citation[];
+  rating?: FeedbackRating;
 };
 
 export const DEFAULT_THREAD_TITLE = "New chat";
@@ -107,6 +109,12 @@ export async function getThreadMessages(data?: unknown): Promise<Message[]> {
   return j.messages ?? [];
 }
 
+export async function saveMessageFeedback(threadId: string, messageId: string, rating: FeedbackRating): Promise<FeedbackRating> {
+  const path = `/${encodeURIComponent(threadId)}/messages/${encodeURIComponent(messageId)}/feedback`;
+  const j = await api<{ rating: FeedbackRating }>(path, { method: "POST", body: JSON.stringify({ rating }) }, "Couldn't save feedback.");
+  return j.rating;
+}
+
 // ─── Send ───────────────────────────────────────────────────────────────────
 export type AdvisorReply = {
   reply: string;
@@ -117,6 +125,7 @@ export type AdvisorReply = {
   /** true when the reply is a usage-limit upgrade prompt (402), not an answer */
   limited?: boolean;
   thread?: Thread;
+  messageId?: string;
 };
 
 export async function sendAdvisorMessage(
@@ -170,11 +179,10 @@ export async function sendAdvisorMessage(
   // Persist the turn (the upgrade prompt isn't stored as an answer).
   const toStore: { role: "user" | "assistant"; content: string; meta?: unknown }[] = [{ role: "user", content }];
   if (!limited) toStore.push({ role: "assistant", content: reply, meta: { widgets, followUps, citations } });
-  const thread = await persistTurn(threadId, toStore).catch(() => undefined);
-  return { reply, widgets, followUps, citations, limited, thread };
+  const saved = await persistTurn(threadId, toStore).catch(() => undefined);
+  return { reply, widgets, followUps, citations, limited, thread: saved?.thread, messageId: saved?.messageIds?.[1] };
 }
 
-async function persistTurn(threadId: string, messages: { role: "user" | "assistant"; content: string; meta?: unknown }[]): Promise<Thread> {
-  const j = await api<{ thread: Thread }>(`/${encodeURIComponent(threadId)}/messages`, { method: "POST", body: JSON.stringify({ messages }) });
-  return j.thread;
+async function persistTurn(threadId: string, messages: { role: "user" | "assistant"; content: string; meta?: unknown }[]) {
+  return api<{ thread: Thread; messageIds?: string[] }>(`/${encodeURIComponent(threadId)}/messages`, { method: "POST", body: JSON.stringify({ messages }) });
 }
