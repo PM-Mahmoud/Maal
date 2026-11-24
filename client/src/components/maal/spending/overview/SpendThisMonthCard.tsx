@@ -183,10 +183,11 @@ function MonthCalendar({ daily, year, month, today, privacy }: {
         const isToday = isCurrent && day === today.getDate();
         const future = v === null;
         return (
-          <div key={day} role="listitem" className="mh-day" data-today={isToday} data-future={future} data-past={!future && !isToday}
-            aria-label={`${day} ${name}: ${future ? "upcoming" : privacy ? "amount hidden" : aud(v ?? 0)}`}>
-            <span>{day}</span>
-            <b className={future ? undefined : "mh-amount"}>{future ? "–" : (v ?? 0) >= 1000 ? audCompact(v ?? 0) : aud(v ?? 0)}</b>
+          <div key={day} role="listitem" className="mh-day" data-today={isToday} data-future={future} data-past={!future && !isToday}>
+            <span>{day}<span className="sr-only"> {name}{future ? ", upcoming" : ""}</span></span>
+            <b className={future ? undefined : "mh-amount"} aria-hidden={future || privacy || undefined}>
+              {future ? "–" : (v ?? 0) >= 1000 ? audCompact(v ?? 0) : aud(v ?? 0)}
+            </b>
           </div>
         );
       })}

@@ -87,8 +87,11 @@ html:not(.dark) .bd-pcol[aria-pressed="true"] { background: #F1F2EE; }
   font: inherit; font-size: 15px; text-align: right; font-variant-numeric: tabular-nums;
 }
 .bd-tr > :first-child { text-align: left; }
-button.bd-tr { cursor: pointer; }
-button.bd-tr:hover { background: var(--mh-hover); }
+.bd-tr--action { position: relative; }
+.bd-tr--action:hover { background: var(--mh-hover); }
+.bd-row-button { width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: inherit; cursor: pointer; }
+.bd-row-button::after { content: ""; position: absolute; inset: 0; }
+.bd-row-button:focus-visible::after { outline: 2px solid var(--mh-badge-ink); outline-offset: -2px; }
 .bd-th { border-top: 0; font-size: 13.5px; color: var(--mh-muted); padding-top: 13px; padding-bottom: 13px; }
 .bd-tr--3 { grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr) minmax(0, 1fr); }
 .bd-tr--budget { grid-template-columns: minmax(0, 1.6fr) minmax(0, 2fr) minmax(0, .8fr) minmax(0, .9fr); }
