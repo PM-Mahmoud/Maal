@@ -13,6 +13,7 @@ npm-debug.log*
 !package-lock.json
 !evals/*.json
 !shared/au-constants.json
+!client/tsconfig.json
 # Client route list for real 404s (scripts/build-route-manifest.js, HEL-110).
 !public/app/route-manifest.json
 
