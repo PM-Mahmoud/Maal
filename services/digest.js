@@ -11,6 +11,7 @@ const assetsDb = require('../db/assets');
 const { computeMaalScore } = require('../lib/maal-score');
 const { snapshotValuesFromProfile, getSnapshots } = require('../db/snapshots');
 const { buildDigestModel } = require('../lib/digest');
+const { getCashFlowTransactions } = require('../db/transactions');
 const { sendPortfolioDigest } = require('./email');
 
 let _running = false;
@@ -29,8 +30,11 @@ async function runDailyDigest() {
         const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
         const snap = snapshotValuesFromProfile(profile);
         const maal = computeMaalScore(profile);
-        const snapshots = await getSnapshots(u.id, 30).catch(() => []);
-        const model = buildDigestModel({ snap, maal, snapshots, profile });
+        const [snapshots, transactions] = await Promise.all([
+          getSnapshots(u.id, 30).catch(() => []),
+          getCashFlowTransactions(u.id, 30).catch(() => []),
+        ]);
+        const model = buildDigestModel({ snap, maal, snapshots, profile, transactions });
         await sendPortfolioDigest(u, model);
         sent++;
       } catch (e) {

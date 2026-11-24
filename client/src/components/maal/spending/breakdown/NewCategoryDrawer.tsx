@@ -24,7 +24,6 @@ export function NewCategoryDrawer({ groups, defaultKind = "expense", onClose, on
   const [groupId, setGroupId] = useState("");
   const [color, setColor] = useState(CATEGORY_COLORS[4]);
   const [icon, setIcon] = useState("tag");
-  const [more, setMore] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const kindGroups = groups.filter((g) => g.kind === kind);
@@ -72,28 +71,7 @@ export function NewCategoryDrawer({ groups, defaultKind = "expense", onClose, on
               </select>
               <ChevronDown aria-hidden />
             </label>
-            <fieldset className="ss-card bd-pick">
-              <legend>Pick a colour</legend>
-              <div className="bd-swatches">
-                {CATEGORY_COLORS.map((c) => (
-                  <button key={c} type="button" className="bd-swatch-btn" style={{ background: c }} aria-pressed={color === c} aria-label={`Colour ${c}`} onClick={() => setColor(c)} />
-                ))}
-              </div>
-            </fieldset>
-            <fieldset className="ss-card bd-pick">
-              <legend>Pick an icon</legend>
-              <div className="bd-icons">
-                {(more ? CUSTOM_ICONS : CUSTOM_ICONS.slice(0, FIRST_ICONS)).map(([key, Icon, label]) => (
-                  <button key={key} type="button" className="bd-icon-btn" aria-pressed={icon === key} aria-label={label} title={label} onClick={() => setIcon(key)}
-                    style={icon === key ? { background: color, color: "#fff" } : undefined}>
-                    <Icon aria-hidden />
-                  </button>
-                ))}
-              </div>
-              <button type="button" className="mh-link-btn mh-small bd-more-icons" onClick={() => setMore((m) => !m)}>
-                {more ? <>Show fewer icons <ChevronUp aria-hidden size={14} /></> : <>Show more icons <ChevronDown aria-hidden size={14} /></>}
-              </button>
-            </fieldset>
+            <CategoryAppearancePicker color={color} icon={icon} setColor={setColor} setIcon={setIcon} />
             {err && <ErrorLine>{err}</ErrorLine>}
             <div className="bd-drawer-foot">
               <button type="submit" className="mh-btn-ink" disabled={!name.trim() || busy}>{busy ? "Creating…" : "Create category"}</button>
@@ -102,5 +80,40 @@ export function NewCategoryDrawer({ groups, defaultKind = "expense", onClose, on
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
+  );
+}
+
+export function CategoryAppearancePicker({ color, icon, setColor, setIcon }: {
+  color: string;
+  icon: string;
+  setColor: (color: string) => void;
+  setIcon: (icon: string) => void;
+}) {
+  const [more, setMore] = useState(() => CUSTOM_ICONS.findIndex(([key]) => key === icon) >= FIRST_ICONS);
+  return (
+    <>
+      <fieldset className="ss-card bd-pick">
+        <legend>Pick a colour</legend>
+        <div className="bd-swatches">
+          {CATEGORY_COLORS.map((c) => (
+            <button key={c} type="button" className="bd-swatch-btn" style={{ background: c }} aria-pressed={color === c} aria-label={`Colour ${c}`} onClick={() => setColor(c)} />
+          ))}
+        </div>
+      </fieldset>
+      <fieldset className="ss-card bd-pick">
+        <legend>Pick an icon</legend>
+        <div className="bd-icons">
+          {(more ? CUSTOM_ICONS : CUSTOM_ICONS.slice(0, FIRST_ICONS)).map(([key, Icon, label]) => (
+            <button key={key} type="button" className="bd-icon-btn" aria-pressed={icon === key} aria-label={label} title={label} onClick={() => setIcon(key)}
+              style={icon === key ? { background: color, color: "#fff" } : undefined}>
+              <Icon aria-hidden />
+            </button>
+          ))}
+        </div>
+        <button type="button" className="mh-link-btn mh-small bd-more-icons" onClick={() => setMore((m) => !m)}>
+          {more ? <>Show fewer icons <ChevronUp aria-hidden size={14} /></> : <>Show more icons <ChevronDown aria-hidden size={14} /></>}
+        </button>
+      </fieldset>
+    </>
   );
 }

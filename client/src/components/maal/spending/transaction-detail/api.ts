@@ -16,6 +16,7 @@ export type TxnDetail = {
   category_source?: string | null;
   account_reference?: string | null;
   institution_name?: string | null;
+  manual_account_label?: string | null;
   hidden: boolean;
   reviewed: boolean;
   reviewed_at?: string | null;
@@ -100,6 +101,16 @@ export async function listTags(): Promise<Tag[]> {
 export async function createTag(name: string, color: string): Promise<Tag> {
   const r = await fetch("/api/v1/tags", send("POST", { name, color }));
   return (await json<{ tag: Tag }>(r, "Couldn't create the tag.")).tag;
+}
+
+export async function updateTag(id: string, patch: Partial<Pick<Tag, "name" | "color">>): Promise<Tag> {
+  const r = await fetch(`/api/v1/tags/${enc(id)}`, send("PATCH", patch));
+  return (await json<{ tag: Tag }>(r, "Couldn't update the tag.")).tag;
+}
+
+export async function deleteTag(id: string) {
+  const r = await fetch(`/api/v1/tags/${enc(id)}`, send("DELETE"));
+  await json(r, "Couldn't delete the tag.");
 }
 
 export async function getCategoryGroups(): Promise<CategoryGroup[]> {

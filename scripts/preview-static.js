@@ -163,6 +163,18 @@ app.get('/api/v1/snapshots', (req, res) => {
   res.json(out);
 });
 
+// HEL-38 preview-only account history for Home's account filter.
+app.post('/api/v1/snapshots/accounts', express.json(), (req, res) => {
+  const sample = {
+    'cash:c1': 18600, 'cash:c2': 2400, 'investment:inv1': 12400, 'investment:inv2': 8200,
+    'super:s1': 68500, 'debt:d1': -23400, 'debt:d2': -11200,
+  };
+  const keys = (req.body?.account_keys || []).filter((key) => Object.hasOwn(sample, key));
+  if (!keys.length) return res.json([]);
+  const today = keys.reduce((sum, key) => sum + sample[key], 0);
+  return res.json([4, 3, 2, 1, 0].map((day) => ({ date: iso(day).slice(0, 10), value: today - day * keys.length * 10 })));
+});
+
 // Six months of deterministic transactions (category_group = the 18-group AU
 // taxonomy, as GET /api/v1/transactions returns). Feeds Home and the Spending
 // overview. ?spend=empty on the page URL previews the no-data states.
@@ -184,6 +196,8 @@ function previewTransactions() {
     add(at(15), 'Salary — Acme Pty Ltd', 3650, 'Income', 'Salary & wages');
     add(at(29), 'Salary — Acme Pty Ltd', 3650, 'Income', 'Salary & wages');
     add(at(3), 'Rent — Ray White', -1950, 'Housing', 'Rent');
+    const petCare = app.locals.previewPetCareName?.();
+    if (petCare && k === 0) add(at(1), 'Pet supplies', -42, petCare, null);
     add(at(6), 'Netflix', -18.99, 'Recurring & Subscriptions', 'Streaming');
     add(at(9), 'Spotify', -13.99, 'Recurring & Subscriptions', 'Streaming');
     add(at(8), 'AGL Energy', -132.55 + wobble(1), 'Bills & Utilities', 'Electricity');
@@ -210,9 +224,10 @@ function previewTransactions() {
   const sc = require('../lib/spending-categories');
   let pvSeq = 3;
   let pvCustom = [{ id: '1', name: 'Pet care', kind: 'expense', color: '#3E7C6B', icon: 'paw' }];
-  let pvGroups = [{ id: '2', name: 'Fun', kind: 'expense', color: '#4E6E94', categories: ['Shopping', 'Travel & Lifestyle'] }];
+  let pvGroups = [{ id: '2', name: 'Fun', kind: 'expense', color: '#4E6E94', categories: ['Shopping', 'Travel & Lifestyle', 'Pet care'] }];
   const names = () => pvCustom.map((c) => c.name);
   app.locals.pvCustomNames = names;
+  app.locals.previewPetCareName = () => pvCustom.find((category) => category.id === '1')?.name;
   app.get('/api/v1/spending-categories', (req, res) => res.json(previewEmpty(req) ? { categories: [], groups: [] } : { categories: pvCustom, groups: pvGroups }));
   app.post('/api/v1/spending-categories', express.json(), (req, res) => {
     const v = sc.validateCategoryInput(req.body, names());
@@ -221,11 +236,30 @@ function previewTransactions() {
     pvCustom = pvCustom.concat([c]);
     res.json({ category: c });
   });
+  // HEL-113 — mirror category edits and reassign the existing group's members
+  // and budget rows so the rename is visible across Spending previews.
+  app.patch('/api/v1/spending-categories/:id', express.json(), (req, res) => {
+    const current = pvCustom.find((category) => category.id === req.params.id);
+    if (!current) return res.status(404).json({ error: 'Category not found' });
+    const result = sc.validateCategoryInput(req.body, names(), { partial: true, currentName: current.name });
+    if (result.error) return res.status(400).json({ error: result.error });
+    const category = { ...current, ...result.category };
+    pvCustom = pvCustom.map((item) => item.id === current.id ? category : item);
+    if (category.name !== current.name) {
+      pvGroups = pvGroups.map((group) => ({
+        ...group,
+        categories: group.categories.map((name) => name === current.name ? category.name : name),
+      }));
+      app.locals.previewRenameCategoryBudget?.(current.name, category.name);
+    }
+    res.json({ category });
+  });
   app.delete('/api/v1/spending-categories/:id', (req, res) => {
     const c = pvCustom.find((x) => x.id === req.params.id);
     if (!c) return res.status(404).json({ error: 'Category not found' });
     pvCustom = pvCustom.filter((x) => x !== c);
     pvGroups = pvGroups.map((g) => ({ ...g, categories: g.categories.filter((n) => n !== c.name) }));
+    app.locals.previewRenameCategoryBudget?.(c.name);
     res.json({ ok: true });
   });
   const known = () => [...require('../lib/transaction-categories').GROUPS, ...names()];
@@ -271,6 +305,13 @@ function previewTransactions() {
   const onTxPage = (req) => /\/app\/transactions/.test(req.headers.referer || '');
   const txFlags = (req) => /tx=flags/.test(req.headers.referer || '');
   const txAdded = [];
+  // HEL-114 — preview-owned cash accounts include one account without a bank feed.
+  const txAccounts = [
+    { id: '101', label: 'Savings Maximiser', institution: 'ING', account_reference: 'basiq:ing-0412', balance: 18600 },
+    { id: '102', label: 'Everyday Smart Access', institution: 'CommBank', account_reference: 'basiq:cba-7781', balance: 2400 },
+    { id: '103', label: 'Cash wallet', institution: null, account_reference: null, balance: 75 },
+  ];
+  app.locals.previewAddedTransaction = (id) => txAdded.find((row) => String(row.id) === id);
   const txCats = new Map();
   const txAccount = (t) => {
     if (t.category === 'Cafes') return null; // manual entries
@@ -303,7 +344,17 @@ function previewTransactions() {
   app.post('/api/v1/transactions', express.json(), (req, res) => {
     const d = (req.body && req.body.data) || req.body || {};
     if (!d.description || !Number.isFinite(Number(d.amount)) || !d.occurred_on) return res.status(400).json({ error: 'Transaction description is required' });
-    const row = { id: 9000 + txAdded.length, description: String(d.description), amount: Number(d.amount), post_date: d.occurred_on, account_reference: null };
+    let accountId;
+    try { accountId = require('../lib/transaction-import').normalizeManualCashAccountId(d.cash_account_id); }
+    catch (error) { return res.status(400).json({ error: error.message }); }
+    const account = accountId ? txAccounts.find((item) => item.id === accountId) : null;
+    if (accountId && !account) return res.status(404).json({ error: 'Cash account not found.' });
+    const row = {
+      id: 9000 + txAdded.length, description: String(d.description), amount: Number(d.amount), post_date: d.occurred_on,
+      account_reference: account ? account.account_reference || `cash:${account.id}` : null,
+      institution_name: account?.institution ?? null,
+      manual_account_label: account?.label ?? null,
+    };
     txAdded.unshift(row);
     res.json(row);
   });
@@ -313,10 +364,7 @@ function previewTransactions() {
   });
   app.get('/api/v1/cash_accounts', (req, res, next) => {
     if (!onTxPage(req)) return next();
-    res.json([
-      { id: 'c1', label: 'Savings Maximiser', institution: 'ING', account_reference: 'basiq:ing-0412', balance: 18600 },
-      { id: 'c2', label: 'Everyday Smart Access', institution: 'CommBank', account_reference: 'basiq:cba-7781', balance: 2400 },
-    ]);
+    res.json(txAccounts);
   });
 }
 // ── end Session 2 – Transactions list ────────────────────────────────────────
@@ -347,12 +395,13 @@ function previewTransactions() {
       note: m.note || null, merchant_name: m.merchant_name || null, description_override: m.description || null,
       tags: (pvTxnTags.get(t.id) || []).map((id) => pvTags.find((g) => g.id === id)).filter(Boolean),
       splits: pvSplits.get(t.id) || [],
-      account_reference: '06-2000-12345678', institution_name: 'Commonwealth Bank',
+      account_reference: t.account_reference === undefined ? '06-2000-12345678' : t.account_reference,
+      institution_name: t.institution_name === undefined ? 'Commonwealth Bank' : t.institution_name,
     };
     if (m.merchant_name) out.merchant = m.merchant_name;
     return out;
   };
-  const find = (id) => previewTransactions().find((t) => t.id === id);
+  const find = (id) => app.locals.previewAddedTransaction?.(id) || previewTransactions().find((t) => t.id === id);
   app.locals.previewDecorate = decorate; // reused by the Reports preview block
   app.get('/api/v1/transactions', (req, res) => res.json(previewEmpty(req) ? [] : previewTransactions().map(decorate)));
   app.get('/api/v1/transactions/:id/detail', (req, res) => {
@@ -408,9 +457,12 @@ function previewTransactions() {
     if (!ids.length) return res.status(404).json({ error: 'Transaction not found.' });
     res.json({ updated: ids.length });
   });
+  // HEL-112 — mock tag management in the Spending settings and detail dialogs.
+  const countTagUses = (id) => [...pvTxnTags.values()].filter((ids) => ids.includes(id)).length;
+  const withUses = (tag) => ({ ...tag, uses: countTagUses(tag.id) });
   // ?tags=empty on the page URL previews the "no tags yet" state.
   app.get('/api/v1/tags', (req, res) => res.json({
-    tags: /tags=empty/.test(req.headers.referer || '') ? [] : pvTags, colors: td.TAG_COLORS,
+    tags: /tags=empty/.test(req.headers.referer || '') ? [] : pvTags.map(withUses), colors: td.TAG_COLORS,
   }));
   app.post('/api/v1/tags', express.json(), (req, res) => {
     const v = td.validateTag(req.body);
@@ -418,7 +470,25 @@ function previewTransactions() {
     if (pvTags.some((g) => g.name.toLowerCase() === v.tag.name.toLowerCase())) return res.status(409).json({ error: 'You already have a tag with that name.' });
     const tag = { id: String(pvTagSeq++), ...v.tag };
     pvTags = [...pvTags, tag];
-    res.json({ tag });
+    res.json({ tag: withUses(tag) });
+  });
+  app.patch('/api/v1/tags/:id', express.json(), (req, res) => {
+    const tag = pvTags.find((g) => g.id === req.params.id);
+    if (!tag) return res.status(404).json({ error: 'Tag not found.' });
+    const result = td.validateTagPatch(req.body);
+    if (result.error) return res.status(400).json({ error: result.error });
+    if (result.patch.name && pvTags.some((g) => g.id !== tag.id && g.name.toLowerCase() === result.patch.name.toLowerCase())) {
+      return res.status(409).json({ error: 'You already have a tag with that name.' });
+    }
+    Object.assign(tag, result.patch);
+    res.json({ tag: withUses(tag) });
+  });
+  app.delete('/api/v1/tags/:id', (req, res) => {
+    const id = req.params.id;
+    if (!pvTags.some((g) => g.id === id)) return res.status(404).json({ error: 'Tag not found.' });
+    pvTags = pvTags.filter((g) => g.id !== id);
+    for (const [txn, ids] of pvTxnTags) pvTxnTags.set(txn, ids.filter((tagId) => tagId !== id));
+    res.json({ ok: true });
   });
 }
 // ── end Session 2 – Transaction detail preview ─────────────────────────────
@@ -533,6 +603,11 @@ app.get('/api/v1/notifications', (_req, res) => res.json([]));
 app.get('/api/v1/notification-prefs', (_req, res) => res.json({}));
 app.get('/api/v1/advisor/memory', (_req, res) => res.json({ memory: null, customInstructions: null }));
 // ?banks=live on the page URL previews the live Basiq connect step.
+// HEL-117 — a completed mock run for the Transactions bank sync notice.
+app.get('/api/v1/import-runs/:id', (req, res) => {
+  if (req.params.id !== '1') return res.status(404).json({ error: 'Import run not found' });
+  res.json({ import_run: { id: '1', status: 'succeeded' } });
+});
 app.get('/api/v1/basiq/status', (req, res) => res.json({ connected: false, live: /banks=live/.test(req.headers.referer || '') }));
 app.patch('/api/v1/profile', express.json(), (req, res) => res.json({ ...req.body, ok: true }));
 // Spending settings preview (in-memory; mirrors routes/spending-settings.js shapes).
@@ -544,8 +619,15 @@ app.patch('/api/v1/profile', express.json(), (req, res) => res.json({ ...req.bod
     { id: 1, category_group: null, monthly_amount: '3800.00' },
     { id: 2, category_group: 'Food & Dining', monthly_amount: '650.00' },
     { id: 3, category_group: 'Shopping', monthly_amount: '200.00' },
+    { id: 4, category_group: 'Pet care', monthly_amount: '80.00' },
   ];
   let pvRules = [{ id: 1, name: null, match_type: 'contains', match_text: 'NETFLIX', category_group: 'Recurring & Subscriptions', category: 'Streaming', priority: 0, amount_direction: 'debit' }];
+  app.locals.previewRenameCategoryBudget = (from, to) => {
+    pvBudgets = pvBudgets.flatMap((budget) => {
+      if (budget.category_group !== from) return [budget];
+      return to === undefined ? [] : [{ ...budget, category_group: to }];
+    });
+  };
   app.get('/api/v1/spending-settings', (_req, res) => res.json({ settings: ss.normaliseSettings(pvSettings) }));
   app.patch('/api/v1/spending-settings', express.json(), (req, res) => {
     const v = ss.validateSettingsPatch(req.body);
@@ -674,6 +756,33 @@ app.get('/api/v1/:table', (req, res, next) => {
   if (!rows) return next();
   res.json(req.query.single ? (rows[0] ?? null) : rows);
 });
+
+// HEL-39: one local preview conversation for reviewing advisor reply feedback.
+{
+  const thread = { id: '1', title: 'How does super work?', updated_at: new Date().toISOString(), is_favourite: false };
+  const messages = [
+    { id: '1', role: 'user', content: 'How does super work?' },
+    { id: '2', role: 'assistant', content: 'Super is money set aside for your retirement. Your employer generally contributes to your super fund as you earn.', rating: null },
+  ];
+  app.get('/api/v1/advisor/threads', (_req, res) => res.json({ threads: [thread] }));
+  app.get('/api/v1/advisor/threads/1', (_req, res) => res.json({ thread, messages }));
+  app.post('/api/v1/advisor/threads/1/messages', express.json(), (req, res) => {
+    const inserted = req.body.messages.map((message, index) => ({
+      id: String(messages.length + index + 1), role: message.role, content: message.content,
+      ...message.meta,
+    }));
+    messages.push(...inserted);
+    res.status(201).json({ thread, messageIds: inserted.map((message) => message.id) });
+  });
+  app.post('/api/v1/advisor/threads/1/messages/:messageId/feedback', express.json(), (req, res) => {
+    const message = messages.find((row) => row.id === req.params.messageId && row.role === 'assistant');
+    if (!message) return res.status(404).json({ error: 'Reply not found' });
+    const { rating } = req.body;
+    if (![null, 'up', 'down'].includes(rating)) return res.status(400).json({ error: 'Invalid rating' });
+    message.rating = rating;
+    res.json({ rating });
+  });
+}
 
 // Mutations + advisor: canned successes so preview clicks never error
 app.post('/api/auth/login', (_req, res) => res.json({ user: PREVIEW_USER }));

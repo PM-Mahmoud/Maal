@@ -44,6 +44,16 @@ async function test(name, fn) {
     assert.strictEqual(byId['debt:6'].balance, -20000);
   });
 
+  await test('excluded rows never enter the Home net-worth selection or totals', () => {
+    const accounts = m.buildHomeAccounts({
+      cash: [{ id: 1, balance: '500', include_in_net_worth: false }],
+      properties: [{ id: 2, value: '1000', mortgage_balance: '400', include_in_net_worth: false }],
+      investments: [{ id: 3, value: '250', include_in_net_worth: null }],
+    });
+    assert.deepStrictEqual(accounts.map((a) => a.id), ['investment:3']);
+    assert.strictEqual(m.filteredTotals(accounts).netWorth, 250);
+  });
+
   await test('filteredTotals with no filter sums every account', () => {
     const t = m.filteredTotals(accounts, null);
     assert.strictEqual(t.cash, 10000);
@@ -78,18 +88,29 @@ async function test(name, fn) {
     assert.deepStrictEqual(s2.map((p) => p.value), [180000, 200000]);
   });
 
-  await test('filteredSeries scales partially selected categories by current share', () => {
-    // Only the CommBank account (2000 of 10000 cash = 20%).
-    const s = m.filteredSeries(snapshots, accounts, ['cash:1']);
-    assert.deepStrictEqual(s.map((p) => p.value), [1600, 2000]);
-    // The latest point always lands on the headline total.
-    assert.strictEqual(s[s.length - 1].value, m.filteredTotals(accounts, ['cash:1']).netWorth);
+  await test('persisted account history drives partial filters and starts at the first capture', () => {
+    const selected = ['cash:1', 'debt:6'];
+    assert.deepStrictEqual(m.filteredSeries(snapshots, accounts, selected), []);
+    assert.deepStrictEqual(m.filteredSeries(snapshots, accounts, selected, [
+      { date: '2026-11-20', value: '-17800' },
+      { date: '2026-11-21', value: '-17975.5' },
+    ]), [{ date: '2026-11-20', value: -17800 }, { date: '2026-11-21', value: -17975.5 }]);
   });
 
-  await test('filteredSeries includes whole categories that are fully selected', () => {
-    const sel = ['cash:1', 'cash:2', 'super:4'];
-    const s = m.filteredSeries(snapshots, accounts, sel);
-    assert.deepStrictEqual(s.map((p) => p.value), [8000 + 38000, 10000 + 40000]);
+  await test('account snapshots preserve signed cents and connected IDs across syncs', () => {
+    const captured = (cashId) => m.accountSnapshotValues(m.buildHomeAccounts({
+      cash: [{ id: cashId, account_reference: 'basiq:demo-saver', balance: '500.25' }],
+      properties: [{ id: 2, value: '1000.02', mortgage_balance: '1100.05' }],
+      debts: [{ id: 3, balance: '15.50' }],
+    }));
+    assert.deepStrictEqual(captured(1), [
+      { account_key: 'basiq:demo-saver', net_worth: 500.25 },
+      { account_key: 'property:2', net_worth: -100.03 },
+      { account_key: 'debt:3', net_worth: -15.50 },
+    ]);
+    assert.deepStrictEqual(captured(5), captured(1));
+    const duplicate = [{ historyKey: 'cash:1', balance: 0.1 }, { historyKey: 'cash:1', balance: 0.2 }];
+    assert.deepStrictEqual(m.accountSnapshotValues(duplicate), [{ account_key: 'cash:1', net_worth: 0.3 }]);
   });
 
   await test('rangeStart / sliceSeries', () => {

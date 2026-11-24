@@ -229,7 +229,7 @@ router.post('/v1/advisor/message', async (req, res) => {
     const assetsDb = require('../db/assets');
     const { computeMaalScore } = require('../lib/maal-score');
     const vaultDb = require('../db/vault');
-    const { getTxnsSince } = require('../db/transactions');
+    const { getCashFlowTransactions } = require('../db/transactions');
     const { getSnapshots } = require('../db/snapshots');
     const goalsDb = require('../db/goals');
     const isaacus = require('../services/isaacus');
@@ -245,13 +245,13 @@ router.post('/v1/advisor/message', async (req, res) => {
     catch (e) { console.error('vault docs for advisor failed:', e.message); }
 
     const [txns, snaps, goals] = await Promise.all([
-      getTxnsSince(req.session.userId, 30).catch(() => []),
+      getCashFlowTransactions(req.session.userId, 30).catch(() => []),
       getSnapshots(req.session.userId, 90).catch(() => []),
       goalsDb.listGoals(req.session.userId).catch(() => []),
     ]);
-    const cashSavings = Number(profile.cash_savings || 0);
-    const monthlyExpenses = Number(profile.monthly_expenses || 0);
-    const cashRunway = monthlyExpenses > 0 ? Math.round(cashSavings / monthlyExpenses) : null;
+    const { calculateCashRunway } = require('../lib/spending-cashflow');
+    const runway = calculateCashRunway(txns, profile.cash_savings, profile.monthly_expenses);
+    const cashRunway = runway.months == null ? null : Math.round(runway.months);
 
     // Legal/tax grounding from the user's own Vault docs (only when they have any).
     let isaacusGrounding = null;
@@ -280,7 +280,7 @@ router.post('/v1/advisor/message', async (req, res) => {
       ]);
     } catch (e) { console.error('[advisor] memory/instructions load failed:', e.message); }
 
-    const extra = { transactions: txns, snapshots: snaps, goals, cashRunway, isaacusGrounding, memory: memoryRow.content, customInstructions };
+    const extra = { transactions: txns, snapshots: snaps, goals, cashRunway, cashRunwayFromTransactions: runway.fromTransactions, isaacusGrounding, memory: memoryRow.content, customInstructions };
     // Rich web chat: reply text + generative-UI widgets (filled with the user's
     // real data server-side) + follow-up chips + internal-only citations.
     const rich = await advisor.chatRich(user, profile, maal, clean, docs, extra);
@@ -360,7 +360,7 @@ async function buildWidgetContext(userId) {
   const { getProfileByUserId } = require('../db/profiles');
   const assetsDb = require('../db/assets');
   const { computeMaalScore } = require('../lib/maal-score');
-  const { getTxnsSince } = require('../db/transactions');
+  const { getCashFlowTransactions } = require('../db/transactions');
   const { getSnapshots } = require('../db/snapshots');
   const goalsDb = require('../db/goals');
   const rawProfile = (await getProfileByUserId(userId)) || {};
@@ -368,7 +368,7 @@ async function buildWidgetContext(userId) {
   const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
   const maal = computeMaalScore(profile);
   const [transactions, snapshots, goals] = await Promise.all([
-    getTxnsSince(userId, 30).catch(() => []),
+    getCashFlowTransactions(userId, 30).catch(() => []),
     getSnapshots(userId, 90).catch(() => []),
     goalsDb.listGoals(userId).catch(() => []),
   ]);
@@ -475,6 +475,11 @@ router.get(
 // POST /api/v1/basiq/sync — trigger account + transaction sync, return JSON
 router.post('/v1/basiq/sync', async (req, res) => {
   return require('../services/imports').enqueueBasiqImportHandler(req, res);
+});
+
+// Save the ownership label on selected accounts after a completed Basiq import.
+router.post('/v1/basiq/ownership', (req, res) => {
+  return require('../services/imports').saveBasiqOwnershipHandler(req, res);
 });
 
 router.get('/v1/import-runs/:id', require('../services/imports').getImportRunHandler);
@@ -744,6 +749,25 @@ router.patch('/v1/profile', async (req, res) => {
 // ─── Net-worth snapshots (real history for the dashboard tiles/charts) ─────
 // GET /api/v1/snapshots?days=N → oldest-first immutable daily series.
 // Capture is performed by the authenticated daily cron sweep, never by reads.
+// Account-filtered history reads only stored observations. The selected IDs
+// travel in a JSON body so provider references stay out of request URLs.
+router.post('/v1/snapshots/accounts', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const { account_keys: keys, days: requestedDays } = req.body || {};
+  if (!Array.isArray(keys) || !keys.length || keys.length > 500
+    || !keys.every((key) => typeof key === 'string' && /^[a-z]+:[A-Za-z0-9_-]{1,200}$/.test(key))) {
+    return res.status(400).json({ error: 'Provide a valid account selection.' });
+  }
+  const days = Math.min(Math.max(parseInt(requestedDays, 10) || 3660, 1), 3660);
+  try {
+    const series = await require('../db/account-snapshots').listAccountSnapshotSeries(req.session.userId, [...new Set(keys)], days);
+    return res.json(series);
+  } catch (error) {
+    console.error('Could not load account snapshots:', error.code || 'unknown');
+    return res.status(500).json({ error: 'Could not load account history.' });
+  }
+});
+
 router.get('/v1/snapshots', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
@@ -1329,20 +1353,19 @@ async function s2CategorisedTransactions(userId) {
   const txnDb = require('../db/transactions');
   const { autoCategorize } = require('../lib/transaction-categories');
   const { detectTransactionRelationships, indexRelationships } = require('../services/transaction-relationships');
+  const { getEffectiveTransactions } = require('../db/transaction-detail');
   const rows = await txnDb.getTransactionsWithCategory(userId, 2000);
   const relationships = indexRelationships(detectTransactionRelationships(rows));
-  const out = rows.map((r) => {
-    const rel = relationships.get(String(r.id));
-    const row = rel ? { ...r, relationship_type: rel.type } : r;
+  const annotated = rows.map((row) => ({
+    ...row,
+    relationship_type: relationships.get(String(row.id))?.type,
+  }));
+  const effective = await getEffectiveTransactions(userId, annotated);
+  return effective.map((row) => {
     if (row.category_group) return row;
     const auto = autoCategorize(row.description, row.amount);
     return auto ? { ...row, category_group: auto.group, category: auto.category } : row;
   });
-  // Hidden rows drop out and split rows count per part (Transaction detail, shared/transaction-splits.mjs).
-  const detailDb = require('../db/transaction-detail');
-  const extras = await detailDb.getExtras(userId, out.map((r) => r.id));
-  const { effectiveTransactions } = await import('../shared/transaction-splits.mjs');
-  return effectiveTransactions(detailDb.attachExtras(out, extras));
 }
 
 // GET /v1/budgets/suggestion — HEL-86 "Create a budget with Maal".
@@ -1426,12 +1449,12 @@ router.get('/v1/transaction-categories', async (req, res) => {
 // Registered before the generic GET /v1/:table so it wins for this table.
 router.post('/v1/transactions', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
-  let row;
+  let row, cashAccountId;
   try {
-    const { normalizeImportedTransaction } = require('../lib/transaction-import');
-    row = normalizeImportedTransaction(
-      req.body?.data && typeof req.body.data === 'object' ? req.body.data : req.body
-    );
+    const { normalizeImportedTransaction, normalizeManualCashAccountId } = require('../lib/transaction-import');
+    const input = req.body?.data && typeof req.body.data === 'object' ? req.body.data : req.body;
+    row = normalizeImportedTransaction(input);
+    cashAccountId = normalizeManualCashAccountId(input?.cash_account_id);
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
@@ -1447,6 +1470,16 @@ router.post('/v1/transactions', async (req, res) => {
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
       [req.session.userId, row.description, row.amount, row.status, row.post_date]
     );
+    // HEL-114. Save the optional manual account link in this transaction and
+    // leave the provider-observed details used by reconciliation untouched.
+    if (cashAccountId) {
+      const { linkManualCashAccount } = require('../db/transactions');
+      const linked = await linkManualCashAccount(client, req.session.userId, inserted.rows[0].id, cashAccountId);
+      if (!linked) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Cash account not found.' });
+      }
+    }
     await client.query(
       `INSERT INTO raw_financial_records
          (user_id, source, entity_type, source_record_id, payload, payload_hash)
@@ -1532,8 +1565,10 @@ router.get('/v1/transactions/subscriptions', async (req, res) => {
   try {
     const txnDb = require('../db/transactions');
     const { detectSubscriptions } = require('../services/transaction-rules');
-    const txns = await txnDb.getTxnsForSubscriptions(req.session.userId, 400);
-    res.json({ subscriptions: detectSubscriptions(txns) });
+    const { getEffectivePayments } = require('../db/transaction-detail');
+    const userId = req.session.userId;
+    const txns = await txnDb.getTxnsForSubscriptions(userId, 400);
+    res.json({ subscriptions: detectSubscriptions(await getEffectivePayments(userId, txns)) });
   } catch (e) {
     console.error('/api/v1/transactions/subscriptions error:', e.message);
     res.status(500).json({ error: 'Could not detect subscriptions' });
@@ -1560,7 +1595,8 @@ router.get('/v1/transactions/recurring', async (req, res) => {
     const ordinaryRows = rows.map((row) => relationships.has(String(row.id))
       ? { ...row, relationship_type: relationships.get(String(row.id)).type }
       : row);
-    const detected = detectRecurringTransactions(ordinaryRows);
+    const { getEffectivePayments } = require('../db/transaction-detail');
+    const detected = detectRecurringTransactions(await getEffectivePayments(req.session.userId, ordinaryRows));
     const { mergeRecurring } = await import('../shared/recurring.mjs');
     let manualRows = [];
     let manualError = false;
@@ -1831,7 +1867,7 @@ router.post('/v1/transactions/bulk-edit', async (req, res) => {
   }
 });
 
-// Tags: GET /v1/tags, POST /v1/tags { name, color }, DELETE /v1/tags/:id
+// Tags: list and create, or edit and delete one of the user’s tags.
 router.get('/v1/tags', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
@@ -1854,6 +1890,23 @@ router.post('/v1/tags', async (req, res) => {
   } catch (e) {
     console.error('/api/v1/tags POST error:', e.message);
     res.status(500).json({ error: 'Could not create the tag.' });
+  }
+});
+router.patch('/v1/tags/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const { toId, validateTagPatch } = require('../lib/transaction-detail');
+  const id = toId(req.params.id);
+  if (!id) return res.status(404).json({ error: 'Tag not found.' });
+  const result = validateTagPatch(req.body);
+  if (result.error) return res.status(400).json({ error: result.error });
+  try {
+    const updated = await require('../db/transaction-detail').updateTag(req.session.userId, id, result.patch);
+    if (!updated) return res.status(404).json({ error: 'Tag not found.' });
+    if (updated.conflict) return res.status(409).json({ error: 'You already have a tag with that name.' });
+    res.json({ tag: updated.tag });
+  } catch (error) {
+    console.error('/api/v1/tags PATCH error:', error.code);
+    res.status(500).json({ error: 'Could not update the tag.' });
   }
 });
 router.delete('/v1/tags/:id', async (req, res) => {
@@ -1998,11 +2051,23 @@ router.get('/v1/goals', async (req, res) => {
   }
 });
 
+const GOAL_POST_FIELDS = new Set([
+  'id', 'name', 'category', 'description', 'source_type', 'target_kind',
+  'target_pct', 'target_amount', 'current_amount', 'target_date',
+]);
+
 router.post('/v1/goals', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
     const goalsDb = require('../db/goals');
     const body = req.body || {};
+    const unknownFields = Object.keys(body).filter((field) => !GOAL_POST_FIELDS.has(field));
+    if (unknownFields.length) {
+      return res.status(400).json({
+        error: 'Unknown fields on goals.',
+        unknown_fields: unknownFields,
+      });
+    }
     const name = String(body.name || '').trim();
     if (!name) return res.status(400).json({ error: 'A goal needs a name.' });
     // Upsert: the client's upsertGoal sends the id when editing.
@@ -2218,6 +2283,11 @@ router.delete('/v1/report-views/:id', async (req, res) => {
 });
 // ─── end Session 2 – Reports ───────────────────────────────────────────────
 
+// ─── Manual account net-worth fields ────────────────────────────────────────
+const MANUAL_NET_WORTH_TABLES = new Set([
+  'cash_accounts', 'investments', 'properties', 'debts', 'super_accounts', 'other_assets',
+]);
+
 router.all('/v1/:table', async (req, res) => {
   const { table } = req.params;
   if (!ASSET_TABLES.has(table)) {
@@ -2233,6 +2303,16 @@ router.all('/v1/:table', async (req, res) => {
   const raw = req.query.filter;
   const { where, vals } = parseFilters(raw);
   const isSingle = req.query.single === '1';
+
+  if (MANUAL_NET_WORTH_TABLES.has(table) && (req.method === 'POST' || req.method === 'PATCH')) {
+    const { start_date: start, include_in_net_worth: included } = req.body || {};
+    if (start != null && !require('../lib/data-quality').parsePostingDate(start)) {
+      return res.status(400).json({ error: 'Start date must be a valid YYYY-MM-DD date.' });
+    }
+    if (included != null && typeof included !== 'boolean') {
+      return res.status(400).json({ error: 'Show in net worth must be true or false.' });
+    }
+  }
 
   try {
     if (req.method === 'GET') {

@@ -4,6 +4,7 @@
 // Dates come back as ::text so pg never shifts a DATE through the host timezone.
 
 const { pool } = require('./auth');
+const { getEffectiveTransactions } = require('./transaction-detail');
 
 // The user's net-worth snapshots from `fromDate` (YYYY-MM-DD) onwards.
 async function getSnapshotsFrom(userId, fromDate) {
@@ -21,16 +22,15 @@ async function getSnapshotsFrom(userId, fromDate) {
 // Read-only against the protected transactions table.
 async function getTransactionsBetween(userId, fromDate, toDate) {
   const r = await pool.query(
-    `SELECT t.description, t.amount, t.post_date::text AS post_date, c.category_group
+    `SELECT t.id, t.description, t.amount, t.post_date::text AS post_date
        FROM transactions t
-       LEFT JOIN transaction_categories c ON c.transaction_id = t.id AND c.user_id = t.user_id
       WHERE t.user_id = $1
         AND t.post_date >= $2::date AND t.post_date <= $3::date
       ORDER BY t.post_date ASC, t.id ASC
       LIMIT 2000`,
     [userId, fromDate, toDate]
   );
-  return r.rows;
+  return getEffectiveTransactions(userId, r.rows);
 }
 
 // ─── market_briefs (global, not per-user) ─────────────────────────────────

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import {
   ArrowLeft, Check, Download, ListFilter, MoreVertical, Plus, Repeat, Scale, Search,
@@ -14,6 +14,7 @@ import {
   groupOf, presetFor, sortTransactions, summarise, transactionsToCsv, type SortKey, type TxnFilters,
 } from "../../../../../../shared/transactions-list.mjs";
 import { TransactionDetailMount } from "../transaction-detail/TransactionDetailMount";
+import { BankSyncNotice } from "./BankSyncNotice";
 import { AddTransactionDrawer } from "./AddTransactionDrawer";
 import { ExportDialog } from "./ExportDialog";
 import { FiltersDrawer } from "./FiltersDrawer";
@@ -38,6 +39,9 @@ type Toast = { tone: "ok" | "error"; text: string } | null;
  * so search, filters and export see the whole range, not just the latest 500.
  */
 export function TransactionsPage() {
+  const search = new URLSearchParams(useLocation({ select: (location) => location.searchStr }));
+  const importRun = search.get("basiq") === "queued" ? search.get("import_run") : null;
+  const bankSyncRunId = importRun && /^[1-9]\d{0,18}$/.test(importRun) ? importRun : null;
   const today = useMemo(() => new Date(), []);
   const [filters, setFilters] = useState<TxnFilters>(emptyFilters);
   const range = useMemo(() => fetchRange(filters, today), [filters.from, filters.to, today]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -132,6 +136,7 @@ export function TransactionsPage() {
         <h1 className="sr-only">Transactions</h1>
         <input ref={fileRef} type="file" accept=".csv,.pdf" className="sr-only" tabIndex={-1} aria-hidden onChange={onCsv} />
 
+        {bankSyncRunId && <BankSyncNotice key={bankSyncRunId} runId={bankSyncRunId} onComplete={refresh} />}
         {toast && (
           <div className="tx-toast" data-tone={toast.tone} role={toast.tone === "error" ? "alert" : "status"}>
             {toast.tone === "ok" && <Check aria-hidden className="tx-toast-icon" />}
@@ -258,7 +263,7 @@ export function TransactionsPage() {
 
       <FiltersDrawer open={filtersOpen} onOpenChange={setFiltersOpen} value={filters} onApply={setFilters}
         accounts={accountOptions} groups={groupOptions} flags={flags} today={today} />
-      <AddTransactionDrawer open={addOpen} onOpenChange={setAddOpen} groups={data.groups} today={today}
+      <AddTransactionDrawer open={addOpen} onOpenChange={setAddOpen} groups={data.groups} accounts={data.accounts} today={today}
         onAdded={(msg) => { say("ok", msg); void refresh(); }} />
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} count={sorted.length} filtered={narrowing}
         onExport={doExport} onOpenFilters={() => { setExportOpen(false); setFiltersOpen(true); }} />

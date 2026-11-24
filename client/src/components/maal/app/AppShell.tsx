@@ -45,6 +45,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [supportOpen, setSupportOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   // Home renders its own header (greeting + actions + notifications).
+  const isAdvisorRoute = location.pathname === "/app/advisor" || location.pathname.startsWith("/app/advisor/");
   const isHome = location.pathname === "/app" || location.pathname === "/app/";
 
   useEffect(() => {
@@ -114,7 +115,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="mh-side-foot space-y-3">
-          <button type="button" onClick={() => openAdvisorPopup()} className="mh-ask"><Sparkles className="size-4" aria-hidden /> Ask anything</button>
+          {!isAdvisorRoute && <button type="button" onClick={() => openAdvisorPopup()} className="mh-ask"><Sparkles className="size-4" aria-hidden /> Ask anything</button>}
           <div className="flex items-center justify-between gap-2">
             <p className="text-[11px] text-[var(--mh-muted)] truncate">{email}</p>
             <div className="flex items-center gap-1.5">
@@ -144,7 +145,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main className="mh-main flex-1 min-w-0"><SectionTabs />{children}</main>
-        <AdvisorPopup />
+        {!isAdvisorRoute && <AdvisorPopup />}
         <footer className="mh-gutter-x border-t border-[var(--mh-line)] py-4">
           <Disclaimer variant="inline" />
         </footer>
@@ -185,7 +186,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <button onClick={() => { setMobileNavOpen(false); setSupportOpen(true); }} className="mh-nav w-full bg-transparent border-0 text-left">
                   <LifeBuoy aria-hidden strokeWidth={NAV_STROKE} /> Support
                 </button>
-                <button type="button" onClick={() => { setMobileNavOpen(false); openAdvisorPopup(); }} className="mh-ask mt-3"><Sparkles className="size-4" aria-hidden /> Ask anything</button>
+                {!isAdvisorRoute && <button type="button" onClick={() => { setMobileNavOpen(false); openAdvisorPopup(); }} className="mh-ask mt-3"><Sparkles className="size-4" aria-hidden /> Ask anything</button>}
                 <div className="mt-2 flex items-center justify-between px-1 py-2">
                   <span className="truncate text-[11px] text-[var(--mh-muted)]">{email}</span>
                   <ThemeToggle />

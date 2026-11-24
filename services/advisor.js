@@ -55,7 +55,7 @@ function buildDocsSection(docs) {
 }
 
 function buildSystemPrompt(user, profile, maal, docs, extra = {}) {
-  const { transactions = [], snapshots = [], goals = [], cashRunway = null, isaacusGrounding = null, memory = '', customInstructions = '' } = extra;
+  const { transactions = [], snapshots = [], goals = [], cashRunway = null, cashRunwayFromTransactions = false, isaacusGrounding = null, memory = '', customInstructions = '' } = extra;
   const p = profile || {};
   const today = new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const lines = [
@@ -109,7 +109,10 @@ function buildSystemPrompt(user, profile, maal, docs, extra = {}) {
   }
   // Cash runway
   if (cashRunway !== null) {
-    lines.push('Cash runway: approximately ' + cashRunway + ' months at current monthly expenses.');
+    const basis = cashRunwayFromTransactions
+      ? 'based on visible spending over the past 30 days. Transaction history may be incomplete.'
+      : 'based on stated monthly expenses.';
+    lines.push('Cash runway: approximately ' + cashRunway + ' months ' + basis);
   }
   // Recent cashflow
   if (transactions.length > 0) {

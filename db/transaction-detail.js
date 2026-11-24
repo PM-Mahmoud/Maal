@@ -95,19 +95,85 @@ function attachExtras(rows, extras) {
   });
 }
 
+/**
+ * Read spending categories, hidden flags and splits in one statement so a
+ * bulk edit can't mix snapshots.
+ */
+async function loadSpendingDetails(userId, rows) {
+  if (!rows.length) return [];
+  const ids = rows.map((row) => String(row.id));
+  const { rows: details } = await pool.query(
+    `SELECT t.id AS transaction_id, c.category_group AS transaction_group,
+            c.category AS transaction_category, m.hidden AS transaction_hidden,
+            s.id, s.position, s.amount, s.category_group, s.category, s.hidden
+       FROM transactions t
+       LEFT JOIN transaction_categories c ON c.transaction_id = t.id AND c.user_id = $1
+       LEFT JOIN transaction_meta m ON m.transaction_id = t.id AND m.user_id = $1
+       LEFT JOIN transaction_splits s ON s.transaction_id = t.id AND s.user_id = $1
+      WHERE t.user_id = $1 AND t.id = ANY($2::bigint[])
+      ORDER BY t.id, s.position`,
+    [userId, ids]
+  );
+  const byId = new Map();
+  for (const detail of details) {
+    const id = String(detail.transaction_id);
+    if (!byId.has(id)) {
+      byId.set(id, {
+        category_group: detail.transaction_group ?? null,
+        category: detail.transaction_category ?? null,
+        hidden: !!detail.transaction_hidden,
+        splits: [],
+      });
+    }
+    if (detail.id != null) byId.get(id).splits.push(mapSplit(detail));
+  }
+
+  return rows.flatMap((row) => {
+    const detail = byId.get(String(row.id));
+    return detail ? [{ ...row, ...detail }] : [];
+  });
+}
+
+async function getEffectiveTransactions(userId, rows) {
+  const { effectiveTransactions } = await import('../shared/transaction-splits.mjs');
+  return effectiveTransactions(await loadSpendingDetails(userId, rows));
+}
+
+/** Recurrence detection needs one dated payment per original bank movement. */
+async function getEffectivePayments(userId, rows) {
+  const annotated = await loadSpendingDetails(userId, rows);
+  const { effectiveTransactions, toCents } = await import('../shared/transaction-splits.mjs');
+  const effective = effectiveTransactions(annotated);
+  const amountsById = new Map();
+  for (const row of effective) {
+    const id = String(row.split_of ?? row.id);
+    amountsById.set(id, (amountsById.get(id) || 0) + toCents(row.amount));
+  }
+  return annotated.flatMap(({ hidden, splits, ...row }) => {
+    const id = String(row.id);
+    return amountsById.has(id) ? [{ ...row, amount: amountsById.get(id) / 100 }] : [];
+  });
+}
+
 /** One transaction with category, account/institution, meta, tags and splits. */
 async function getDetail(userId, transactionId) {
   const r = await pool.query(
     `SELECT t.id, t.description, t.amount, t.status, t.post_date,
             c.category_group, c.category, c.source AS category_source,
-            pd.account_reference,
-            la.institution_name
+            COALESCE(pd.account_reference, ma.cash_account_reference, 'cash:' || ma.cash_account_id::text) AS account_reference,
+            COALESCE(la.institution_name, ca.institution) AS institution_name, ca.label AS manual_account_label
        FROM transactions t
        LEFT JOIN transaction_categories c ON c.transaction_id = t.id AND c.user_id = $2
        LEFT JOIN transaction_provider_details pd ON pd.transaction_id = t.id AND pd.user_id = $2
+       LEFT JOIN transaction_manual_accounts ma ON ma.transaction_id = t.id AND ma.user_id = $2
+       LEFT JOIN LATERAL (
+         SELECT institution, label FROM cash_accounts
+          WHERE user_id = $2 AND (id = ma.cash_account_id OR account_reference = ma.cash_account_reference)
+          ORDER BY id DESC LIMIT 1
+       ) ca ON TRUE
        LEFT JOIN LATERAL (
          SELECT institution_name FROM linked_accounts
-          WHERE user_id = $2 AND account_reference = pd.account_reference
+          WHERE user_id = $2 AND account_reference = COALESCE(pd.account_reference, ma.cash_account_reference)
           LIMIT 1
        ) la ON TRUE
       WHERE t.id = $1 AND t.user_id = $2`,
@@ -178,6 +244,25 @@ async function createTag(userId, { name, color }) {
   if (!r.rows[0]) return { conflict: true };
   const t = r.rows[0];
   return { tag: { id: String(t.id), name: t.name, color: t.color, uses: 0 } };
+}
+
+/** Update a tag owned by the user; uniqueness is enforced by the name index. */
+async function updateTag(userId, tagId, { name, color }) {
+  try {
+    const result = await pool.query(
+      `UPDATE tags AS g
+          SET name = COALESCE($3, name), color = COALESCE($4, color)
+        WHERE g.user_id = $1 AND g.id = $2
+      RETURNING g.id, g.name, g.color,
+        (SELECT COUNT(*)::int FROM transaction_tags tt WHERE tt.tag_id = g.id AND tt.user_id = $1) AS uses`,
+      [userId, tagId, name ?? null, color ?? null]
+    );
+    const tag = result.rows[0];
+    return tag ? { tag: { ...tag, id: String(tag.id) } } : null;
+  } catch (error) {
+    if (error.code === '23505') return { conflict: true };
+    throw error;
+  }
 }
 
 async function deleteTag(userId, tagId) {
@@ -286,6 +371,7 @@ async function bulkEdit(userId, ids, changes) {
 }
 
 module.exports = {
-  getExtras, attachExtras, getDetail, updateMeta, listTags, createTag, deleteTag,
+  getExtras, attachExtras, getEffectiveTransactions, getEffectivePayments,
+  getDetail, updateMeta, listTags, createTag, updateTag, deleteTag,
   setTransactionTags, replaceSplits, clearSplits, bulkEdit,
 };

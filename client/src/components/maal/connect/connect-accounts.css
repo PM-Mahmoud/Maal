@@ -292,8 +292,7 @@
 .cx-summary-top span:first-child { font-size: 16px; }
 .cx-summary-total { font-size: 21px; }
 .cx-summary-foot { padding-top: 14px; }
-.cx-summary-foot p:first-child { font-size: 14.5px; }
-.cx-summary-foot p + p { font-size: 13px; color: var(--cx-muted); }
+.cx-summary-foot .cx-net-worth-check { margin-top: 0; color: inherit; font-size: 14.5px; }
 .cx-form-actions { display: flex; justify-content: flex-end; border-top: 1px solid #CCC; padding-top: 20px; margin-top: 8px; }
 .cx-form-actions .cx-btn { min-width: 100px; height: 46px; }
 .cx-disclaimer p { color: inherit !important; }

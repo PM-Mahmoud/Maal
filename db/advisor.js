@@ -91,9 +91,10 @@ async function getThreadMessages(threadId, userId) {
   const thread = await getThread(threadId, userId);
   if (!thread) return null;
   const { rows } = await pool.query(
-    `SELECT m.id, m.role, m.content, m.meta, m.created_at
+    `SELECT m.id, m.role, m.content, m.meta, m.created_at, f.rating
      FROM advisor_messages m
      JOIN advisor_sessions s ON s.id = m.session_id
+     LEFT JOIN advisor_message_feedback f ON f.message_id = m.id AND f.user_id = $2
      WHERE m.session_id = $1 AND s.user_id = $2
      ORDER BY m.created_at ASC, m.id ASC`,
     [threadId, userId]
@@ -134,31 +135,65 @@ async function deleteThread(threadId, userId) {
 /**
  * Append validated messages to a thread the user owns. When `autoTitle` is
  * given, it replaces the default/blank title (first message names the chat)
- * but never overwrites a title the user chose. Returns the updated thread, or
- * null when the thread isn't the user's (nothing is written).
+ * but never overwrites a title the user chose. Returns the updated thread
+ * and the inserted message IDs in turn order. One statement keeps the title
+ * and full turn atomic and gets the IDs without querying the thread again.
  */
 async function appendThreadMessages(threadId, userId, messages, { autoTitle = null, defaultTitle = 'New chat' } = {}) {
   const { rows } = await pool.query(
-    `UPDATE advisor_sessions
-     SET updated_at = NOW(),
-         title = CASE WHEN $3::text IS NOT NULL AND (title IS NULL OR title = '' OR title = $4) THEN $3 ELSE title END
-     WHERE id = $1 AND user_id = $2
-     RETURNING ${THREAD_COLS}`,
-    [threadId, userId, autoTitle, defaultTitle]
+    `WITH owned_thread AS (
+       UPDATE advisor_sessions
+       SET updated_at = NOW(),
+           title = CASE WHEN $3::text IS NOT NULL AND (title IS NULL OR title = '' OR title = $4) THEN $3 ELSE title END
+       WHERE id = $1 AND user_id = $2
+       RETURNING ${THREAD_COLS}
+     ), inserted AS (
+       INSERT INTO advisor_messages (session_id, role, content, meta)
+       SELECT thread.id, msg.body->>'role', msg.body->>'content', NULLIF(msg.body->'meta', 'null'::jsonb)
+       FROM owned_thread thread
+       CROSS JOIN jsonb_array_elements($5::jsonb) WITH ORDINALITY AS msg(body, position)
+       ORDER BY msg.position
+       RETURNING id
+     )
+     SELECT owned_thread.*, ARRAY(SELECT id::text FROM inserted ORDER BY inserted.id) AS message_ids
+     FROM owned_thread`,
+    [threadId, userId, autoTitle, defaultTitle, JSON.stringify(messages)]
   );
-  if (!rows[0]) return null;
-  for (const m of messages) {
-    await pool.query(
-      `INSERT INTO advisor_messages (session_id, role, content, meta)
-       SELECT $1, $2, $3, $4
-       WHERE EXISTS (SELECT 1 FROM advisor_sessions WHERE id = $1 AND user_id = $5)`,
-      [threadId, m.role, m.content, m.meta ? JSON.stringify(m.meta) : null, userId]
+  return rows[0] || null;
+}
+
+/** Upsert or remove feedback only on an assistant reply in the user's thread. */
+async function saveMessageFeedback(threadId, messageId, userId, { rating, note }) {
+  const ownedMessage = `SELECT m.id
+    FROM advisor_messages m
+    JOIN advisor_sessions s ON s.id = m.session_id
+    WHERE m.id = $2 AND m.session_id = $1 AND s.user_id = $3 AND m.role = 'assistant'`;
+  if (rating === null) {
+    const { rows } = await pool.query(
+      `WITH owned_message AS (${ownedMessage}),
+       removed AS (
+         DELETE FROM advisor_message_feedback
+         WHERE message_id IN (SELECT id FROM owned_message) AND user_id = $3
+       )
+       SELECT id FROM owned_message`,
+      [threadId, messageId, userId]
     );
+    return rows.length > 0;
   }
-  return rows[0];
+  const { rows } = await pool.query(
+    `WITH owned_message AS (${ownedMessage})
+     INSERT INTO advisor_message_feedback (message_id, user_id, rating, note)
+     SELECT id, $3, $4, $5 FROM owned_message
+     ON CONFLICT (message_id, user_id)
+     DO UPDATE SET rating = EXCLUDED.rating, note = EXCLUDED.note, updated_at = NOW()
+     WHERE advisor_message_feedback.user_id = $3
+     RETURNING message_id`,
+    [threadId, messageId, userId, rating, note]
+  );
+  return rows.length > 0;
 }
 
 module.exports = {
   createSession, appendMessage, getMessages, listSessions, deleteSession,
-  listThreads, createThread, getThread, getThreadMessages, renameThread, setFavourite, deleteThread, appendThreadMessages,
+  listThreads, createThread, getThread, getThreadMessages, renameThread, setFavourite, deleteThread, appendThreadMessages, saveMessageFeedback,
 };

@@ -94,7 +94,7 @@ export function BreakdownPage({ search, setSearch }: { search: BreakdownSearch; 
       )}
       {search.panel === "manage" && (
         <ManageCategoriesDrawer custom={data.custom} groups={data.groups} onClose={() => setSearch({ panel: undefined })}
-          onChanged={async () => { await data.reloadCategories(); await data.reloadBudgets(); }}
+          onChanged={data.reload}
           onNewCategory={(k) => setNewCat(k)} />
       )}
       {newCat && (

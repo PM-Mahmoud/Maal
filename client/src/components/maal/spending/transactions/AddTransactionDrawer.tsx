@@ -4,27 +4,30 @@ import { addTransaction } from "@/lib/transactions.functions";
 import { setTransactionCategory, type CategoryGroup } from "@/lib/transactions-depth.functions";
 import { buildManualTransaction, isoDate, type ManualForm } from "../../../../../../shared/transactions-list.mjs";
 import { TxDrawer } from "./TxDrawer";
+import type { AccountInfo } from "./useTransactionsData";
 
 const blank = (today: Date): ManualForm => ({ type: "expense", description: "", amount: "", date: isoDate(today), group: "", category: "" });
 
 /**
  * Add transaction (HEL-95). Reuses POST /api/v1/transactions (the same
  * endpoint CSV import uses) and, when a category is chosen, the existing
- * PATCH /api/v1/transactions/:id/category. No new storage.
- * Manual entries aren't tied to a bank account, so the Account field is fixed.
+ * PATCH /api/v1/transactions/:id/category. The account is optional and
+ * saved alongside the transaction when selected.
  */
-export function AddTransactionDrawer({ open, onOpenChange, groups, onAdded, today }: {
+export function AddTransactionDrawer({ open, onOpenChange, groups, accounts, onAdded, today }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   groups: CategoryGroup[];
+  accounts: Map<string, AccountInfo>;
   onAdded: (message: string) => void;
   today: Date;
 }) {
   const [form, setForm] = useState<ManualForm>(() => blank(today));
   const [errors, setErrors] = useState<Partial<Record<"description" | "amount" | "date", string>>>({});
+  const [accountId, setAccountId] = useState("");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { if (open) { setForm(blank(today)); setErrors({}); setSaveError(null); } }, [open, today]);
+  useEffect(() => { if (open) { setForm(blank(today)); setAccountId(""); setErrors({}); setSaveError(null); } }, [open, today]);
 
   const set = (patch: Partial<ManualForm>) => {
     setForm((f) => ({ ...f, ...patch }));
@@ -37,6 +40,7 @@ export function AddTransactionDrawer({ open, onOpenChange, groups, onAdded, toda
       return next;
     });
   };
+  const accountOptions = [...accounts.values()].filter((account) => account.cashAccountId);
   const groupOptions = groups.filter((g) => (form.type === "income" ? true : g.group !== "Income"));
   const subcats = groups.find((g) => g.group === form.group)?.categories ?? [];
 
@@ -48,7 +52,8 @@ export function AddTransactionDrawer({ open, onOpenChange, groups, onAdded, toda
     setBusy(true);
     setSaveError(null);
     try {
-      const row = (await addTransaction({ data: built.body })) as { id?: number | string } | null;
+      const body = accountId ? { ...built.body, cash_account_id: accountId } : built.body;
+      const row = (await addTransaction({ data: body })) as { id?: number | string } | null;
       let note = "";
       if (built.category && row?.id != null) {
         const ok = await setTransactionCategory(Number(row.id), built.category.group, built.category.category);
@@ -126,12 +131,17 @@ export function AddTransactionDrawer({ open, onOpenChange, groups, onAdded, toda
 
         <div className="tx-divider" />
 
-        <Field label="Account" htmlFor="tx-add-acct">
-          <input id="tx-add-acct" value="Manual entry" readOnly aria-describedby="tx-add-acct-help" />
+        <Field label="Account (optional)" htmlFor="tx-add-acct">
+          <span className="tx-select">
+            <select id="tx-add-acct" value={accountId} onChange={(event) => setAccountId(event.target.value)}>
+              <option value="">Manual entry</option>
+              {accountOptions.map((account) => (
+                <option key={account.cashAccountId} value={account.cashAccountId}>{account.fullName || account.label}</option>
+              ))}
+            </select>
+            <ChevronDown aria-hidden />
+          </span>
         </Field>
-        <p id="tx-add-acct-help" className="tx-muted tx-small">
-          Manual entries count in your spending and reports but aren’t linked to a bank account. Connected accounts add transactions automatically.
-        </p>
 
         {saveError && <p className="tx-error" role="alert">{saveError}</p>}
       </form>
