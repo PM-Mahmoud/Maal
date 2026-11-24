@@ -265,11 +265,18 @@ async function sendGeneratedFile(user, file) {
 //
 // Callers must treat this as best-effort — the submission is already durable in
 // Postgres before this is invoked, so a mail outage must never fail the request.
-// Set FEEDBACK_EMAIL to route these somewhere else (e.g. hello@hellomaal.com to
-// keep every support thread in the one shared inbox).
-const FEEDBACK_INBOX = process.env.FEEDBACK_EMAIL || 'mahmoud121999@gmail.com';
+// Feedback remains saved even when the optional notification is unavailable.
+let warnedMissingFeedbackInbox = false;
 
 async function sendTeamNotification({ kind, message, from, page, replyTo }) {
+  const inbox = (process.env.FEEDBACK_EMAIL || '').trim();
+  if (!inbox) {
+    if (!warnedMissingFeedbackInbox) {
+      warnedMissingFeedbackInbox = true;
+      console.warn('[feedback] FEEDBACK_EMAIL is unset. Team notifications are skipped.');
+    }
+    return;
+  }
   const when = new Date().toISOString();
   const html = `<div style="font-family:system-ui,sans-serif;line-height:1.6;max-width:600px;">
     <h2 style="margin:0 0 12px;font-size:1rem;">New ${esc(kind)}</h2>
@@ -279,7 +286,7 @@ async function sendTeamNotification({ kind, message, from, page, replyTo }) {
     <div style="padding:16px;background:#f5f5f5;border-radius:8px;white-space:pre-wrap;font-size:0.9rem;">${esc(message)}</div>
   </div>`;
   const text = `New ${kind}\nFrom: ${from}\nPage: ${page || 'unknown'}\nWhen: ${when}\n\n${message}`;
-  return sendEmail({ to: FEEDBACK_INBOX, subject: `[Maal ${kind}] from ${from}`, html, text, replyTo });
+  return sendEmail({ to: inbox, subject: `[Maal ${kind}] from ${from}`, html, text, replyTo });
 }
 
 module.exports = { sendEmail, sendWaitlistConfirmation, sendWaitlistInvite, sendScoreReport, sendPortfolioDigest, sendResearchComplete, sendGeneratedFile, sendTeamNotification };
