@@ -35,6 +35,13 @@ Set environment values in Render. Keep credentials out of the repository. See th
 
 For an authorised release, commit the verified source and any generated client bundle, then merge the reviewed pull request to `main`. Render deploys automatically. Check the build logs for successful migrations and client build, then confirm `/health` returns HTTP 200 and `status: healthy`. Check the landing page and any affected routes. A failed build leaves the previous version serving, so confirm the deployed commit in Render or verify a release-specific change on the live site before reporting the build complete.
 
+### Production session cookie
+
+The HTTPS site uses `__Host-maal.sid` with `Secure`, `Path=/` and no domain
+attribute. Deploy the rename in a quiet window. Existing members will sign in
+once more. If the parked app-subdomain work resumes, plan for independent
+host-only cookies. Continue to use the default cookie on local HTTP.
+
 ## Local development
 
 Use a disposable local PostgreSQL database for migrations and sandbox credentials for integrations. Set `DATABASE_URL`, `SESSION_SECRET`, and `BASE_URL` in your shell.

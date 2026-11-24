@@ -1,5 +1,6 @@
 // routes/api.js — JSON API for the React SPA
 const { safeError } = require('../lib/safe-log');
+const { clearSessionCookie } = require('../lib/session-cookie');
 const express = require('express');
 const router = express.Router();
 const { findUserById, createUser } = require('../db/users');
@@ -93,7 +94,7 @@ router.post('/auth/signup', async (req, res) => {
 
 router.post('/auth/logout', (req, res) => {
   req.session.destroy(() => {
-    res.clearCookie('connect.sid');
+    clearSessionCookie(res);
     res.json({ ok: true });
   });
 });
