@@ -4,6 +4,7 @@ const assert = require('assert');
 const { Pool } = require('pg');
 const baseSnapshotsMigration = require('../migrations/1749600000000_snapshots_plan_basiq');
 const snapshotCashMigration = require('../migrations/1749770000000_snapshot_cash');
+const assetTablesMigration = require('../migrations/1750800000000_asset_tables');
 const transactionRulesMigration = require('../migrations/1752600000000_transaction_rules');
 const migration = require('../migrations/1753900000000_financial_integrity');
 const runsMigration = require('../migrations/1754000000000_data_quality_runs');
@@ -18,6 +19,9 @@ const categoryLearningMigration = require('../migrations/1754800000000_category_
 const reconciliationAdjustmentsMigration = require('../migrations/1754900000000_reconciliation_adjustments');
 const reliableSnapshotsMigration = require('../migrations/1755000000000_reliable_daily_snapshots');
 const monthlyCloseMigration = require('../migrations/1755100000000_monthly_financial_closes');
+const canonicalWealthMigration = require('../migrations/1755500000000_canonical_wealth');
+const wealthImportsMigration = require('../migrations/1755700000000_wealth_imports_and_links');
+const ruleConditionsMigration = require('../migrations/1756800000000_transaction_rule_conditions');
 
 async function expectPgError(fn, expectedCode) {
   let error;
@@ -79,6 +83,7 @@ async function main() {
     `);
     await baseSnapshotsMigration.up(pool);
     await snapshotCashMigration.up(pool);
+    await assetTablesMigration.up(pool);
     await transactionRulesMigration.up(pool);
     await migration.up(pool);
     await runsMigration.up(pool);
@@ -93,6 +98,9 @@ async function main() {
     await reconciliationAdjustmentsMigration.up(pool);
     await reliableSnapshotsMigration.up(pool);
     await monthlyCloseMigration.up(pool);
+    await canonicalWealthMigration.up(pool);
+    await wealthImportsMigration.up(pool);
+    await ruleConditionsMigration.up(pool);
 
     const firstUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
     const secondUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
