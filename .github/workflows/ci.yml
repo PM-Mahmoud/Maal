@@ -18,6 +18,84 @@ jobs:
       - run: npm ci
       - run: npm test
 
+  postgres-migrations:
+    name: PostgreSQL migrations (${{ matrix.variant }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: pgvector
+            image: pgvector/pgvector:0.8.7-pg17-bookworm
+            vector: 'true'
+          - variant: plain
+            image: postgres:17-bookworm
+            vector: 'false'
+    services:
+      postgres:
+        image: ${{ matrix.image }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: local-test-only
+          POSTGRES_DB: maal_test
+        ports:
+          - 5432/tcp
+        options: >-
+          --health-cmd "pg_isready -U postgres -d maal_test"
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      DATABASE_URL: postgresql://postgres:local-test-only@127.0.0.1:${{ job.services.postgres.ports[5432] }}/maal_test
+      EXPECT_PGVECTOR: ${{ matrix.vector }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - name: Run migrations twice
+        run: |
+          node migrate.js
+          node migrate.js
+      - name: Verify the expected knowledge schema
+        run: |
+          node <<'JS'
+          const assert = require('node:assert/strict');
+          const { Client } = require('pg');
+
+          async function verify() {
+            const client = new Client({ connectionString: process.env.DATABASE_URL });
+            try {
+              await client.connect();
+              const { rows: [schema] } = await client.query(`
+                SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') AS vector,
+                       EXISTS (
+                         SELECT 1 FROM pg_attribute
+                         WHERE attrelid = 'knowledge_chunks'::regclass
+                           AND attname = 'embedding'
+                           AND NOT attisdropped
+                       ) AS embedding,
+                       to_regclass('knowledge_chunks_embedding_idx') IS NOT NULL AS hnsw
+              `);
+              const expected = process.env.EXPECT_PGVECTOR === 'true';
+              assert.deepEqual(schema, { vector: expected, embedding: expected, hnsw: expected });
+            } finally {
+              await client.end();
+            }
+          }
+
+          verify().catch((error) => {
+            console.error(error.message);
+            process.exitCode = 1;
+          });
+          JS
+      # These contract tests deliberately reset public in the disposable DB.
+      - run: npm run test:integrity-db
+      - run: npm run test:collaboration-db
+      - run: npm run test:lunchflow-db
+
   secret-scan:
     name: Secret scan
     runs-on: ubuntu-latest
