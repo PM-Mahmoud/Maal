@@ -4,6 +4,9 @@ import { useState } from "react";
 import { generateReport, emailDataFile } from "@/lib/report.functions";
 import { Disclaimer } from "@/components/maal/Disclaimer";
 
+import { UsageLimitError } from "@/lib/usage-limit.mjs";
+import { UsageLimitPrompt } from "@/components/maal/UsageLimitPrompt";
+
 const DATASETS = [
   { v: "net_worth", label: "Net worth history" },
   { v: "balances", label: "Balance summary" },
@@ -75,16 +78,17 @@ function ReportPage() {
   const [fileType, setFileType] = useState<string>("csv");
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailMsg, setEmailMsg] = useState<string | null>(null);
+  const [emailLimit, setEmailLimit] = useState<string | null>(null);
   const [emailErr, setEmailErr] = useState<string | null>(null);
 
   async function emailFile() {
-    setEmailBusy(true); setEmailMsg(null); setEmailErr(null);
+    setEmailBusy(true); setEmailMsg(null); setEmailErr(null); setEmailLimit(null);
     try {
       const { emailedTo, filename } = await emailDataFile(fileType, dataset);
       setEmailMsg(`Sent ${filename} to ${emailedTo}.`);
     } catch (e: any) {
-      // 402 usage_limit carries an upgrade prompt as its message — surface it as-is.
-      setEmailErr(e?.message ?? "Could not generate the file.");
+      if (e instanceof UsageLimitError) setEmailLimit(e.message);
+      else setEmailErr(e?.message ?? "Could not generate the file.");
     } finally { setEmailBusy(false); }
   }
 
@@ -165,7 +169,8 @@ function ReportPage() {
           </button>
         </div>
         {emailMsg && <p className="mt-4 text-[12px] text-[var(--mint)]">{emailMsg}</p>}
-        {emailErr && <p className="mt-4 text-[12px] text-[var(--gold)]">{emailErr}</p>}
+        {emailLimit && <UsageLimitPrompt message={emailLimit} />}
+        {emailErr && <p role="alert" className="mt-4 text-[12px] text-[var(--gold)]">{emailErr}</p>}
       </div>
 
       <div className="mt-10"><Disclaimer variant="inline" /></div>

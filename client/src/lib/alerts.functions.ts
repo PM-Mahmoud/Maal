@@ -1,3 +1,5 @@
+import { usageLimitError } from "./usage-limit.mjs";
+
 // Error that carries the server's structured payload (e.g. a 402 usage-limit
 // response with code/upgradeUrl) so callers can route the user to billing,
 // while `message` stays the human-readable upgrade prompt for a toast.
@@ -19,7 +21,7 @@ export class ApiError extends Error {
 async function throwApiError(r: Response, fallback: string): Promise<never> {
   let payload: Record<string, unknown> | undefined;
   try { payload = await r.json(); } catch { /* non-JSON body */ }
-  throw new ApiError((payload?.error as string) || fallback, r.status, payload);
+  throw usageLimitError(r.status, payload) ?? new ApiError((payload?.error as string) || fallback, r.status, payload);
 }
 
 export async function listAlerts(): Promise<{ alerts: unknown[]; events: unknown[] }> {

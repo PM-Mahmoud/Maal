@@ -22,6 +22,44 @@ const host = process.env.MAAL_PREVIEW_HOST;
 // React build, /js/collapsing-mark.mjs, and plain 404s for missing files.
 require('../lib/static-assets').mountStatic(app, path.join(__dirname, '..', 'public'));
 
+// Set PREVIEW_USAGE_LIMIT=1 or open a preview page with ?usage_limit=1
+// to exercise the billing prompts with deterministic 402 responses.
+const previewLimits = {
+  'POST /api/v1/advisor/message': 'advisor_messages',
+  'POST /api/v1/advisor/stream': 'advisor_messages',
+  'POST /api/v1/research/generate': 'research_runs',
+  'POST /api/v1/alerts': 'active_radars',
+  'POST /api/v1/alerts/toggle': 'active_radars',
+  'POST /api/v1/files/generate': 'ai_files',
+  'GET /api/v1/budgets/suggestion': 'advisor_messages',
+};
+const { upgradeMessage } = require('../lib/plan-limits');
+function previewUsageLimit(req) {
+  const referer = new URL(req.get('Referer') || '/', 'http://localhost');
+  return process.env.PREVIEW_USAGE_LIMIT === '1' || req.query.usage_limit === '1' || referer.searchParams.get('usage_limit') === '1';
+}
+app.use((req, res, next) => {
+  const feature = previewLimits[`${req.method} ${req.path}`];
+  if (!feature || !previewUsageLimit(req)) return next();
+  if (req.path === '/api/v1/alerts/toggle') {
+    return express.json()(req, res, err => {
+      if (err) return next(err);
+      if (!(req.body?.data ?? req.body)?.active) return next();
+      sendPreviewUsageLimit(res, feature);
+    });
+  }
+  sendPreviewUsageLimit(res, feature);
+});
+function sendPreviewUsageLimit(res, feature) {
+  res.status(402).json({
+    code: 'usage_limit',
+    error: upgradeMessage('member', feature),
+    feature,
+    upgrade: true,
+    upgradeUrl: '/app/billing',
+  });
+}
+
 const { buildLandingContext } = require('../lib/landing-context');
 
 // ── Landing + auth ──────────────────────────────────────────
@@ -618,9 +656,10 @@ app.get('/api/v1/goals', (_req, res) => res.json([
 ]));
 app.get('/api/v1/vault', (_req, res) => res.json([]));
 app.get('/api/v1/widgets', (_req, res) => res.json([]));
-app.get('/api/v1/alerts', (_req, res) => res.json({
+app.get('/api/v1/alerts', (req, res) => res.json({
   alerts: [
     { id: 'a1', name: 'BHP price watch', prompt: 'Alert me if BHP drops more than 5% in a week', active: true, last_status: 'OK' },
+    ...(previewUsageLimit(req) ? [{ id: 'a2', name: 'Paused radar', prompt: 'Watch for an RBA rate decision', active: false, last_status: 'OK' }] : []),
   ],
   events: [],
 }));

@@ -9,6 +9,9 @@ import { exportEventPdf, exportAllEventsPdf } from "@/lib/radar-pdf";
 import { enablePush, disablePush, getPushStatus, pushSupported } from "@/lib/push-client";
 import { getNotificationPrefs, setNotificationPref } from "@/lib/notification-prefs.functions";
 
+import { UsageLimitError } from "@/lib/usage-limit.mjs";
+import { UsageLimitPrompt } from "@/components/maal/UsageLimitPrompt";
+
 export const Route = createFileRoute("/_authenticated/app/radar")({ component: RadarPage });
 
 const FREQS = ["daily", "weekly", "monthly"] as const;
@@ -39,6 +42,7 @@ function RadarPage() {
   const [time, setTime] = useState("09:00");
   const [busy, setBusy] = useState(false);
   const [evalBusy, setEvalBusy] = useState<string | null>(null);
+  const [limit, setLimit] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [showAbout, setShowAbout] = useState(false);
   const [pushStatus, setPushStatus] = useState<"unsupported" | "denied" | "granted" | "default">("default");
@@ -103,19 +107,28 @@ function RadarPage() {
     setTimeout(() => setToast(null), 3500);
   }
 
+  function showMutationError(error: unknown, fallback: string) {
+    if (error instanceof UsageLimitError) {
+      setLimit(error.message);
+      return;
+    }
+    setToast(error instanceof Error ? error.message : fallback);
+    setTimeout(() => setToast(null), 5000);
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!prompt.trim()) return;
     setBusy(true);
+    setLimit(null);
     try {
       await create({ data: { prompt: prompt.trim(), template: (templateSlug as any), frequency, notify_email: notifyEmail, notify_sms: notifySms, time_aest: time } } as any);
       setPrompt(""); setTemplateId(undefined); setTemplateSlug(undefined);
       setToast("Radar created. We'll email you when something changes.");
       setTimeout(() => setToast(null), 3500);
       refresh();
-    } catch (e: any) {
-      setToast(e?.message ?? "Couldn't create radar.");
-      setTimeout(() => setToast(null), 5000);
+    } catch (e) {
+      showMutationError(e, "Couldn't create radar.");
     } finally { setBusy(false); }
   }
 
@@ -173,6 +186,7 @@ function RadarPage() {
         </div>
       </header>
 
+      {limit && <div className="mb-4"><UsageLimitPrompt message={limit} /></div>}
       {toast && (
         <div className="mb-4 px-4 py-2 rounded-[8px] border border-mint/30 bg-mint/10 text-[12px] text-foreground">
           {toast}
@@ -286,8 +300,9 @@ function RadarPage() {
                               {evalBusy === a.id ? <span className="w-3 h-3 border-2 border-current border-r-transparent rounded-full animate-spin inline-block" /> : <Play className="w-3 h-3" />}
                             </button>
                             <button onClick={async () => {
+                              setLimit(null);
                               try { await toggle({ data: { id: a.id, active: !a.active } } as any); refresh(); }
-                              catch (e: any) { setToast(e?.message ?? "Couldn't update radar."); setTimeout(() => setToast(null), 5000); }
+                              catch (e) { showMutationError(e, "Couldn't update radar."); }
                             }}
                               className="text-[10px] text-muted-foreground hover:text-foreground">
                               {a.active ? "Pause" : "Resume"}
