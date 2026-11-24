@@ -47,7 +47,8 @@ jobs:
           --health-timeout 5s
           --health-retries 15
     env:
-      DATABASE_URL: postgresql://postgres:local-test-only@127.0.0.1:5432/maal_test
+      DATABASE_URL: postgresql://postgres@127.0.0.1:5432/maal_test
+      PGPASSWORD: local-test-only
       EXPECT_PGVECTOR: ${{ matrix.vector }}
     steps:
       - uses: actions/checkout@v4
