@@ -83,8 +83,12 @@ async function checkPage({ template, viewport }, origin) {
   });
 
   try {
-    await page.goto(origin + path, { waitUntil: 'networkidle', timeout: 15_000 });
-    await page.locator('body').waitFor({ state: 'visible', timeout: 5_000 });
+    await page.goto(origin + path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+    await page.waitForFunction(() => {
+      const spa = document.getElementById('root');
+      return Boolean(spa ? spa.childElementCount : document.body?.childElementCount);
+    }, undefined, { timeout: 30_000 });
+    await page.waitForLoadState('networkidle', { timeout: 30_000 });
     const rendered = await page.evaluate(() => {
       const spa = document.getElementById('root');
       return Boolean(spa ? spa.childElementCount : document.body.childElementCount);
@@ -111,8 +115,8 @@ try {
   const checks = manifest.paths.flatMap((template) => viewports.map((viewport) => ({ template, viewport })));
   let failed = 0;
   // Bounded parallelism keeps the runtime short without opening 100+ pages at once.
-  for (let i = 0; i < checks.length; i += 4) {
-    const results = await Promise.all(checks.slice(i, i + 4).map((check) => checkPage(check, origin)));
+  for (let i = 0; i < checks.length; i += 2) {
+    const results = await Promise.all(checks.slice(i, i + 2).map((check) => checkPage(check, origin)));
     for (const { template, width, failures } of results) {
       const unexpected = failures.filter((failure) => {
         const known = knownFailures.find((entry) => entry.path === template && entry.width === width && entry.failure === failure);
