@@ -31,6 +31,7 @@ export interface LinkedAccountSummary {
   id: string | number;
   institution_name: string;
   institution_type?: string | null;
+  account_reference?: string | null;
 }
 
 // Used only if /basiq/institutions can't be reached at all.
@@ -85,11 +86,17 @@ export function consentUrl(inst: InstitutionOption | null) {
   return inst?.id ? `/basiq/connect?institution=${encodeURIComponent(inst.id)}` : "/basiq/connect";
 }
 
-/**
- * Queue a Basiq import and wait for it (up to ~90s). Resolves with the user's
- * linked accounts. Throws a user-facing message on failure.
- */
-export async function syncAndWait(signal?: AbortSignal): Promise<{ accounts: LinkedAccountSummary[]; count: number }> {
+export async function fetchLinkedAccounts(signal?: AbortSignal): Promise<LinkedAccountSummary[]> {
+  const response = await fetch("/api/v1/linked_accounts", { credentials: "include", signal });
+  if (!response.ok) throw new Error("We couldn’t load your connected accounts. Please try again.");
+  const data = await response.json();
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  throw new Error("We couldn’t load your connected accounts. Please try again.");
+}
+
+/** Queue a refresh and wait for the imported accounts to be saved. */
+export async function syncAndWait(signal?: AbortSignal): Promise<{ accounts: LinkedAccountSummary[]; runId: string }> {
   const r = await fetch("/api/v1/basiq/sync", {
     method: "POST",
     credentials: "include",
@@ -98,21 +105,31 @@ export async function syncAndWait(signal?: AbortSignal): Promise<{ accounts: Lin
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.import_run_id) throw new Error(j.error || "We couldn’t start the import. Please try again.");
-  let count = 0;
+  const runId = String(j.import_run_id);
   for (let i = 0; i < 90; i++) {
     await new Promise((res) => setTimeout(res, 1000));
     if (signal?.aborted) throw new Error("Cancelled");
-    const s = await fetch(`/api/v1/import-runs/${encodeURIComponent(j.import_run_id)}`, { credentials: "include", signal });
+    const s = await fetch(`/api/v1/import-runs/${encodeURIComponent(runId)}`, { credentials: "include", signal });
     if (!s.ok) continue;
     const { import_run: run } = await s.json();
-    if (run?.status === "succeeded") { count = Number(run.summary?.accounts ?? 0); break; }
+    if (run?.status === "succeeded") return { runId, accounts: await fetchLinkedAccounts(signal) };
     if (run?.status === "dead") throw new Error("Your bank didn’t respond. Try again in a moment.");
   }
-  const la = await fetch("/api/v1/linked_accounts", { credentials: "include", signal })
-    .then((x) => (x.ok ? x.json() : []))
-    .catch(() => []);
-  const accounts: LinkedAccountSummary[] = Array.isArray(la) ? la : la?.data ?? [];
-  return { accounts, count };
+  throw new Error("Your accounts are still syncing. Please try again shortly.");
+}
+
+export async function saveBasiqOwnership(runId: string, owner: "self" | "joint", references: string[], signal: AbortSignal) {
+  const response = await fetch("/api/v1/basiq/ownership", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ import_run_id: runId, owner_type: owner, account_references: references }),
+    signal,
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || "We couldn’t save who owns these accounts. Please try again.");
+  }
 }
 
 // ---------- Manual accounts ----------
