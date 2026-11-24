@@ -202,13 +202,29 @@ router.get('/v1/usage', async (req, res) => {
 
 // ─── Advisor (AI chat) ────────────────────────────────────────────────────
 
-router.post('/v1/advisor/message', async (req, res) => {
+async function advisorMessage(req, res, { stream = false } = {}) {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const controller = stream ? new AbortController() : null;
+  const signal = controller?.signal;
+  const disconnect = () => controller.abort();
+  let heartbeat;
+  let streaming = false;
+  const event = (name, data) => {
+    signal?.throwIfAborted();
+    res.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+  const onStep = stream ? (stage, phase) => event('step', { stage, phase }) : undefined;
+  if (stream) res.once('close', disconnect);
   try {
     const advisor = require('../services/advisor');
-    const { message, history = [] } = req.body;
+    const { message, history = [] } = req.body || {};
+    if (stream && (typeof message !== 'string' || !message.trim() || !Array.isArray(history)
+      || history.slice(-10).some(turn => !turn || !['user', 'assistant'].includes(turn.role) || typeof turn.content !== 'string'))) {
+      return res.status(400).json({ error: 'Provide a valid message and history.' });
+    }
     if (!message) return res.status(400).json({ error: 'message required' });
     if (!advisor.hasAdvisor()) {
+      if (stream) return res.status(503).json({ error: 'The advisor is temporarily unavailable.' });
       // Env-var names stay in the server log; members see a plain message
       // (the reply renders as markdown, which mangled the underscored names).
       console.warn('[advisor] no model configured — set AZURE_OPENAI_API_KEY or GROQ_API_KEY in the host env');
@@ -221,6 +237,21 @@ router.post('/v1/advisor/message', async (req, res) => {
     // Metering: consume one advisor message (402 + upgrade prompt when over).
     const gate = await gateMonthlyAiUsage(req, res, 'advisor_messages');
     if (!gate) return;
+    signal?.throwIfAborted();
+    if (stream) {
+      res.set({
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
+      });
+      streaming = true;
+      res.flushHeaders();
+      onStep('retrieving_data', 'start');
+      heartbeat = setInterval(() => {
+        if (!signal.aborted && !res.destroyed) res.write(': keep-alive\n\n');
+      }, 15000);
+      heartbeat.unref();
+    }
 
     // Feed the advisor the SAME dashboard context the EJS /dashboard/ask/message
     // uses: merged effective profile, Maal Score, Vault docs, 30d transactions,
@@ -235,9 +266,11 @@ router.post('/v1/advisor/message', async (req, res) => {
     const goalsDb = require('../db/goals');
     const isaacus = require('../services/isaacus');
 
-    const user = await findUserById(req.session.userId);
+    const { user } = gate;
     const rawProfile = (await getProfileByUserId(req.session.userId)) || {};
+    signal?.throwIfAborted();
     const assetSummary = await assetsDb.getAssetSummary(req.session.userId);
+    signal?.throwIfAborted();
     const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
     const maal = computeMaalScore(profile);
 
@@ -245,11 +278,13 @@ router.post('/v1/advisor/message', async (req, res) => {
     try { docs = await vaultDb.getReadableDocs(req.session.userId); }
     catch (e) { console.error('vault docs for advisor failed:', safeError(e)); }
 
+    signal?.throwIfAborted();
     const [txns, snaps, goals] = await Promise.all([
       getCashFlowTransactions(req.session.userId, 30).catch(() => []),
       getSnapshots(req.session.userId, 90).catch(() => []),
       goalsDb.listGoals(req.session.userId).catch(() => []),
     ]);
+    signal?.throwIfAborted();
     const { calculateCashRunway } = require('../lib/spending-cashflow');
     const runway = calculateCashRunway(txns, profile.cash_savings, profile.monthly_expenses);
     const cashRunway = runway.months == null ? null : Math.round(runway.months);
@@ -258,13 +293,15 @@ router.post('/v1/advisor/message', async (req, res) => {
     let isaacusGrounding = null;
     if (isaacus.hasIsaacus() && docs.length) {
       try {
-        if ((await isaacus.classifyLegalIntent(message)) >= 0.35) {
-          const answer = await isaacus.extractAnswer(message, docs.map((d) => d.extracted_text));
+        if ((await isaacus.classifyLegalIntent(message, { signal })) >= 0.35) {
+          signal?.throwIfAborted();
+          const answer = await isaacus.extractAnswer(message, docs.map((d) => d.extracted_text), { signal });
           if (answer) isaacusGrounding = { text: answer.text, score: answer.score, filename: docs[answer.sourceIndex] ? docs[answer.sourceIndex].filename : null };
         }
-      } catch (e) { console.error('[isaacus] grounding lookup failed:', safeError(e)); }
+      } catch (e) { signal?.throwIfAborted(); console.error('[isaacus] grounding lookup failed:', safeError(e)); }
     }
 
+    signal?.throwIfAborted();
     const clean = [
       ...history.slice(-10).map((m) => ({ role: m.role, content: m.content })),
       { role: 'user', content: message },
@@ -284,8 +321,16 @@ router.post('/v1/advisor/message', async (req, res) => {
     const extra = { transactions: txns, snapshots: snaps, goals, cashRunway, cashRunwayFromTransactions: runway.fromTransactions, isaacusGrounding, memory: memoryRow.content, customInstructions };
     // Rich web chat: reply text + generative-UI widgets (filled with the user's
     // real data server-side) + follow-up chips + internal-only citations.
-    const rich = await advisor.chatRich(user, profile, maal, clean, docs, extra);
-    res.json({ ok: true, reply: rich.reply, widgets: rich.widgets, followUps: rich.followUps, citations: rich.citations, live: rich.live });
+    signal?.throwIfAborted();
+    const rich = await advisor.chatRich(user, profile, maal, clean, docs, extra, { signal, onStep, requireVerification: stream });
+    const { reply, widgets, followUps, citations, live } = rich;
+    if (stream) {
+      event('final', { reply, widgets, followUps, citations });
+      event('done', {});
+      res.end();
+    } else {
+      res.json({ ok: true, reply, widgets, followUps, citations, live });
+    }
 
     // Deferred memory merge (after the response is flushed, debounced) — updates
     // the user's memory from this turn without adding latency to the reply.
@@ -300,10 +345,25 @@ router.post('/v1/advisor/message', async (req, res) => {
       });
     }
   } catch (err) {
-    console.error('advisor message error:', safeError(err));
-    res.status(500).json({ reply: 'The advisor hit a snag — try again in a moment.', live: false });
+    if (signal?.aborted || (stream && res.destroyed)) return;
+    if (streaming) {
+      console.warn('[advisor] streaming answer could not be completed');
+      event('error', { message: 'The advisor couldn’t finish your answer. Please try again.' });
+      res.end();
+    } else if (stream) {
+      res.status(500).json({ error: 'The advisor couldn’t finish your answer. Please try again.' });
+    } else {
+      console.error('advisor message error:', safeError(err));
+      res.status(500).json({ reply: 'The advisor hit a snag — try again in a moment.', live: false });
+    }
+  } finally {
+    clearInterval(heartbeat);
+    if (stream) res.removeListener('close', disconnect);
   }
-});
+}
+
+router.post('/v1/advisor/message', (req, res) => advisorMessage(req, res));
+router.post('/v1/advisor/stream', (req, res) => advisorMessage(req, res, { stream: true }));
 
 // ─── Advisor memory + custom instructions (inspect / edit / clear) ─────────
 router.get('/v1/advisor/memory', async (req, res) => {

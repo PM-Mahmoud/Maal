@@ -852,6 +852,8 @@ app.get('/api/v1/:table', (req, res, next) => {
 app.post('/api/auth/login', (_req, res) => res.json({ user: PREVIEW_USER }));
 app.post('/api/auth/signup', (_req, res) => res.json({ user: PREVIEW_USER }));
 app.post('/api/auth/logout', (_req, res) => res.json({ ok: true }));
+// The static preview does not invoke the live advisor.
+app.post('/api/v1/advisor/stream', (_req, res) => res.sendStatus(501));
 app.post('/api/v1/advisor/message', (_req, res) => res.json({
   reply: 'This is the local design preview — once connected to the live backend, I answer questions about your real finances here.',
   widgets: [], followUps: [], citations: [],
