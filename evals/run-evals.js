@@ -123,13 +123,18 @@ async function caseContext(fixture) {
   };
 }
 
-function caseRubric(c) {
-  if (c.id !== 'enacted-fy-2026-27') return c.rubric || [];
+function missingFyValues(reply) {
   const { incomeTaxBrackets, super: superRules } = getConstants('2026-07-01');
+  const percent = (value) => {
+    const rate = Math.round(value * 10000) / 100;
+    return new RegExp(`(?<![\\d.])${rate}(?:\\.0+)?\\s*(?:%|per ?cent)`, 'i');
+  };
+  const cap = new RegExp(`(?<![\\d.])${superRules.concessionalCap.toLocaleString('en-AU').replace(',', '[, ]?')}(?!\\d)`);
   return [
-    ...c.rubric,
-    `Correct rates are ${incomeTaxBrackets[1].rate * 100}%, AUD ${superRules.concessionalCap}, and ${superRules.sgRate * 100}%, respectively.`,
-  ];
+    [percent(incomeTaxBrackets[1].rate), 'resident tax rate'],
+    [cap, 'concessional super cap'],
+    [percent(superRules.sgRate), 'super guarantee rate'],
+  ].filter(([pattern]) => !pattern.test(reply)).map(([, label]) => label);
 }
 
 async function runCase(c) {
@@ -172,7 +177,14 @@ async function runCase(c) {
     };
   }
 
-  const verdict = await judge(c.id, c.prompt, reply, caseRubric(c));
+  if (c.id === 'enacted-fy-2026-27') {
+    const missing = missingFyValues(reply);
+    if (missing.length) {
+      return { id: c.id, pass: false, hardFail: true, reply, reasons: 'missing FY constants: ' + missing.join(', ') };
+    }
+  }
+
+  const verdict = await judge(c.id, c.prompt, reply, c.rubric || []);
   return {
     id: c.id,
     pass: verdict.score >= JUDGE_THRESHOLD,
