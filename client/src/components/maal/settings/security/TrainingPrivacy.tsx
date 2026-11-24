@@ -1,12 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ShieldCheck, Lock, Eye, Landmark, Trash2, Sparkles } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { getTrainingConsent, setTrainingConsent, type TrainingConsent } from "@/lib/privacy.functions";
-
-export const Route = createFileRoute("/_authenticated/app/privacy")({
-  component: PrivacyPage,
-});
+import { useTrainingConsent } from "@/components/maal/app/TrainingConsentProvider";
 
 const SECURITY_POINTS = [
   { icon: Landmark, title: "Read-only bank access", body: "Bank connections use Australia's Consumer Data Right. Maal can read your accounts but can't move money or change anything." },
@@ -15,26 +10,13 @@ const SECURITY_POINTS = [
   { icon: Trash2, title: "You're in control", body: "Disconnect any account or delete your data at any time. Your data is never sold." },
 ];
 
-function PrivacyPage() {
-  const [consent, setConsent] = useState<TrainingConsent | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+export function TrainingPrivacy() {
+  const { consent, loading, saving, save } = useTrainingConsent();
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    getTrainingConsent()
-      .then((c) => setConsent(c))
-      .catch(() => { /* handled by the null state */ })
-      .finally(() => setLoading(false));
-  }, []);
-
   async function update(granted: boolean) {
-    setSaving(true);
     setError(null);
-    const next = await setTrainingConsent(granted, "settings").catch(() => null);
-    if (next) setConsent(next);
-    else setError("Couldn't save that change. Please try again.");
-    setSaving(false);
+    if (!await save(granted, "settings")) setError("Couldn't save that change. Please try again.");
   }
 
   const granted = !!consent?.general.granted;
@@ -88,8 +70,8 @@ function PrivacyPage() {
 
           <ul className="mt-5 space-y-2.5 text-[13px] text-muted-foreground leading-relaxed">
             <li><span className="font-semibold text-foreground">De-identified first.</span> Names, emails, account numbers, BSBs and addresses are removed or replaced, and nothing stays linked to your account.</li>
-            <li><span className="font-semibold text-foreground">Only from when you agreed.</span> Data from before you chose is never used. Turning this off removes your data from anything built afterwards.</li>
-            <li><span className="font-semibold text-foreground">Bank data is excluded.</span> Data from your bank through the Consumer Data Right is not used for this unless you give separate consent when connecting a bank. Maal doesn't ask for that today.</li>
+            <li><span className="font-semibold text-foreground">Only from when you agreed.</span> Data from before you agreed to the current policy is excluded. Turning this off removes your data from anything built afterwards.</li>
+            <li><span className="font-semibold text-foreground">Bank data is excluded.</span> Bank data needs separate consent even when it appears in a chat or upload. Maal doesn't ask for that consent today. Chats and files with unclear data origins are excluded.</li>
             <li><span className="font-semibold text-foreground">Never sold.</span> Your data isn't sold or used for advertising.</li>
           </ul>
           <a href="/ai-transparency" className="inline-block mt-4 text-[13px] font-medium underline underline-offset-2">

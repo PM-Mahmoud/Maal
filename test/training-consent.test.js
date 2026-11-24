@@ -55,7 +55,9 @@ test('a future-dated row does not count before its time', () => {
 test('general consent does not unlock CDR data', () => {
   const rows = [row('general', true, '10-21')];
   assert.strictEqual(isEligibleForSource(rows, 'bank_connection', D('11-01'), NOW), false);
-  assert.strictEqual(isEligibleForSource(rows, 'chat', D('11-01'), NOW), true);
+  assert.strictEqual(isEligibleForSource(rows, 'chat', D('11-01'), NOW), false);
+  assert.strictEqual(isEligibleForSource(rows, 'chat', D('11-01'), NOW, 'general'), true);
+  assert.strictEqual(isEligibleForSource(rows, 'chat', D('11-01'), NOW, 'cdr'), false);
 });
 
 test('CDR data needs an explicit cdr grant', () => {
@@ -87,7 +89,12 @@ test('summarize: current-policy row → no notice; older policy → notice again
   assert.strictEqual(summarize([row('general', true, '10-21')], NOW).general.needsNotice, false);
   const old = summarize([row('general', true, '10-21', '2026-01-01')], NOW);
   assert.strictEqual(old.general.needsNotice, true);
-  assert.strictEqual(old.general.granted, true);
+  assert.strictEqual(old.general.granted, false);
+  const rows = [row('general', true, '10-21', '2026-01-01')];
+  assert.strictEqual(isEligible(rows, 'general', D('11-01'), NOW), false);
+  const renewed = [...rows, row('general', true, '11-20')];
+  assert.strictEqual(isEligible(renewed, 'general', D('11-01'), NOW), false);
+  assert.strictEqual(isEligible(renewed, 'general', D('11-21'), NOW), true);
 });
 
 test('summarize: an opt-out on the current policy counts as noticed', () => {
@@ -98,3 +105,14 @@ test('summarize: an opt-out on the current policy counts as noticed', () => {
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);
+
+require('node:test').test('signup can proceed when consent storage is unavailable', async (t) => {
+  const pool = require('../db/pool');
+  const { recordSignupGrant } = require('../db/training-consents');
+  t.mock.method(pool, 'query', async () => {
+    throw Object.assign(new Error('Private query detail'), { code: '42P01' });
+  });
+  const log = t.mock.method(console, 'error', () => {});
+  await assert.doesNotReject(recordSignupGrant(42, 'signup'));
+  assert.ok(!JSON.stringify(log.mock.calls[0].arguments).includes('Private query detail'));
+});

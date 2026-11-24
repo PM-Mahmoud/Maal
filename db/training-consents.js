@@ -3,6 +3,7 @@
 // Every query is scoped by user_id in SQL (no RLS layer in Maal).
 
 const pool = require('./pool');
+const { safeError } = require('../lib/safe-log');
 const { POLICY_VERSION, SCOPES, SOURCES } = require('../lib/training-consent');
 
 async function listForUser(userId) {
@@ -32,7 +33,7 @@ async function recordSignupGrant(userId, source) {
   try {
     await record(userId, { scope: 'general', granted: true, source });
   } catch (e) {
-    console.error('[training-consent] signup grant not recorded:', e.message);
+    console.error('[training-consent] signup grant not recorded:', safeError(e));
   }
 }
 

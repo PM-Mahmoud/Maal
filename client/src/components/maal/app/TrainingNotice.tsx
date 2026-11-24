@@ -1,28 +1,20 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Sparkles } from "lucide-react";
-import { getTrainingConsent, setTrainingConsent } from "@/lib/privacy.functions";
+import { useTrainingConsent } from "./TrainingConsentProvider";
 
 // One-time notice for users who have not yet been shown the current
 // model-training policy (spec D4). Nothing of theirs is eligible until they
 // choose; "Allow" records an opt-in, "Turn off" records an opt-out.
 export function TrainingNotice() {
-  const [show, setShow] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const { consent, saving, save } = useTrainingConsent();
+  const [saveFailed, setSaveFailed] = useState(false);
 
-  useEffect(() => {
-    getTrainingConsent()
-      .then((c) => setShow(!!c?.general.needsNotice))
-      .catch(() => { /* never block the app on this */ });
-  }, []);
-
-  if (!show) return null;
+  if (!consent?.general.needsNotice) return null;
 
   async function choose(granted: boolean) {
-    setBusy(true);
-    const r = await setTrainingConsent(granted, "notice").catch(() => null);
-    setBusy(false);
-    if (r) setShow(false);
+    setSaveFailed(false);
+    if (!await save(granted, "notice")) setSaveFailed(true);
   }
 
   return (
@@ -33,14 +25,15 @@ export function TrainingNotice() {
         <span className="font-semibold">Help improve Maal.</span>{" "}
         Maal can use de-identified data from your chats, uploads and details you enter to improve its AI. Bank data
         from the Consumer Data Right is never included. You can change this anytime in{" "}
-        <Link to="/app/privacy" className="underline underline-offset-2">Privacy &amp; Security</Link>.
+        <Link to="/app/settings/security" className="underline underline-offset-2">Privacy &amp; Security</Link>.
+        {saveFailed && <span role="alert" className="block mt-1">Couldn’t save your choice. Please try again.</span>}
       </p>
       <div className="flex gap-2 shrink-0">
-        <button type="button" disabled={busy} onClick={() => choose(false)}
+        <button type="button" disabled={saving} onClick={() => choose(false)}
           className="h-8 px-3 rounded-[8px] border border-border text-[13px] font-medium disabled:opacity-50">
           Turn off
         </button>
-        <button type="button" disabled={busy} onClick={() => choose(true)}
+        <button type="button" disabled={saving} onClick={() => choose(true)}
           className="h-8 px-3 rounded-[8px] bg-foreground text-background text-[13px] font-medium disabled:opacity-50">
           Allow
         </button>

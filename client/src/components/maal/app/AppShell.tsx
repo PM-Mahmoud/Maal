@@ -7,6 +7,7 @@ import { Disclaimer } from "@/components/maal/Disclaimer";
 import { MaalMark } from "@/components/maal/MaalMark";
 import { ThemeToggle } from "@/components/maal/ThemeToggle";
 import { NotificationBell } from "@/components/maal/app/NotificationBell";
+import { TrainingConsentProvider } from "@/components/maal/app/TrainingConsentProvider";
 import { TrainingNotice } from "@/components/maal/app/TrainingNotice";
 import { LogoutIconButton, LogoutRow } from "@/components/maal/app/Logout";
 import { initPrivacy } from "@/components/maal/home/prefs";
@@ -145,7 +146,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </header>
-        <main className="mh-main flex-1 min-w-0"><SectionTabs /><TrainingNotice />{children}</main>
+        <main className="mh-main flex-1 min-w-0"><SectionTabs /><TrainingConsentProvider><TrainingNotice />{children}</TrainingConsentProvider></main>
         {!isAdvisorRoute && <AdvisorPopup />}
         <footer className="mh-gutter-x border-t border-[var(--mh-line)] py-4">
           <Disclaimer variant="inline" />
