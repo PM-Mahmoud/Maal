@@ -1833,7 +1833,7 @@ router.post('/v1/transactions/bulk-edit', async (req, res) => {
   }
 });
 
-// Tags: GET /v1/tags, POST /v1/tags { name, color }, DELETE /v1/tags/:id
+// Tags: list and create, or edit and delete one of the user’s tags.
 router.get('/v1/tags', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
@@ -1856,6 +1856,23 @@ router.post('/v1/tags', async (req, res) => {
   } catch (e) {
     console.error('/api/v1/tags POST error:', e.message);
     res.status(500).json({ error: 'Could not create the tag.' });
+  }
+});
+router.patch('/v1/tags/:id', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const { toId, validateTagPatch } = require('../lib/transaction-detail');
+  const id = toId(req.params.id);
+  if (!id) return res.status(404).json({ error: 'Tag not found.' });
+  const result = validateTagPatch(req.body);
+  if (result.error) return res.status(400).json({ error: result.error });
+  try {
+    const updated = await require('../db/transaction-detail').updateTag(req.session.userId, id, result.patch);
+    if (!updated) return res.status(404).json({ error: 'Tag not found.' });
+    if (updated.conflict) return res.status(409).json({ error: 'You already have a tag with that name.' });
+    res.json({ tag: updated.tag });
+  } catch (error) {
+    console.error('/api/v1/tags PATCH error:', error.code);
+    res.status(500).json({ error: 'Could not update the tag.' });
   }
 });
 router.delete('/v1/tags/:id', async (req, res) => {

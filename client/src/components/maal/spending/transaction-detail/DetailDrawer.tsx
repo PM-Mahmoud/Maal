@@ -11,6 +11,7 @@ import {
 } from "./api";
 import { CategoryEditor, EditFlow, TextEditor, type EditableRow } from "./EditFlow";
 import { CreateTagDialog, TagList } from "./pickers";
+import { ManageTagsDialog } from "./ManageTagsDialog";
 import { SplitPanel } from "./SplitPanel";
 import { ErrorNote, PanelHeader, Switch, TagChip, Toast, longDate, type ToastState } from "./ui";
 import "@/components/maal/home/home.css";
@@ -116,6 +117,7 @@ export function TransactionDetailDrawer({ id, onClose, onChanged }: { id: string
           onDismissError={() => setError(null)} onOpen={setPanel}
           onToggleHidden={(v) => void write(() => patchMeta(txn.id, { hidden: v }), v ? "Hidden from your spending" : "Shown in your spending")}
           onToggleReviewed={() => void write(() => patchMeta(txn.id, { reviewed: !txn.reviewed }), txn.reviewed ? "Marked as unreviewed" : "Marked as reviewed")}
+          onTagsChanged={(next) => { setTagList(next); void load(); onChanged?.(); }}
           onSaveTags={(ids) => write(() => setTags(txn.id, ids), "Tags saved")}
           onTagCreated={(t) => setTagList((l) => [...(l || []), t].sort((a, b) => a.name.localeCompare(b.name)))} />
       )}
@@ -174,16 +176,17 @@ export function TransactionDetailDrawer({ id, onClose, onChanged }: { id: string
   );
 }
 
-function DetailPanel({ txn, merchant, tags, tagsError, busy, error, onDismissError, onOpen, onToggleHidden, onToggleReviewed, onSaveTags, onTagCreated }: {
+function DetailPanel({ txn, merchant, tags, tagsError, busy, error, onDismissError, onOpen, onToggleHidden, onToggleReviewed, onSaveTags, onTagCreated, onTagsChanged }: {
   txn: TxnDetail; merchant: string; tags: Tag[] | null; tagsError: string | null; busy: boolean; error: string | null;
   onDismissError: () => void; onOpen: (p: Panel) => void; onToggleHidden: (v: boolean) => void; onToggleReviewed: () => void;
-  onSaveTags: (ids: string[]) => Promise<boolean>; onTagCreated: (t: Tag) => void;
+  onSaveTags: (ids: string[]) => Promise<boolean>; onTagCreated: (t: Tag) => void; onTagsChanged: (tags: Tag[]) => void;
 }) {
   const amount = Number(txn.amount) || 0;
   const Icon = iconForGroup(txn.category_group);
   const [tagOpen, setTagOpen] = useState(false);
   const [sel, setSel] = useState<string[]>(txn.tags.map((t) => t.id));
   const [creating, setCreating] = useState(false);
+  const [managing, setManaging] = useState(false);
   useEffect(() => { setSel(txn.tags.map((t) => t.id)); }, [txn.tags]);
   const split = txn.splits.length >= 2;
 
@@ -233,6 +236,7 @@ function DetailPanel({ txn, merchant, tags, tagsError, busy, error, onDismissErr
                   onToggle={(tid) => setSel((s) => s.includes(tid) ? s.filter((x) => x !== tid) : [...s, tid])} />
               )}
               <div className="td-actions td-actions-split">
+                <button type="button" className="td-btn-sm" onClick={() => setManaging(true)}>Manage tags</button>
                 {tags && tags.length > 0
                   ? <button type="button" className="td-btn-sm" onClick={() => setCreating(true)}>Create</button>
                   : <span />}
@@ -302,6 +306,7 @@ function DetailPanel({ txn, merchant, tags, tagsError, busy, error, onDismissErr
           {txn.status && txn.status !== "posted" && <p className="td-muted td-small m-0">Status: {txn.status}</p>}
         </div>
       </div>
+      {managing && <ManageTagsDialog onClose={() => setManaging(false)} onChanged={onTagsChanged} />}
       <CreateTagDialog open={creating} existing={tags || []} onClose={() => setCreating(false)}
         onCreated={(t) => { onTagCreated(t); setSel((s) => [...s, t.id]); setCreating(false); }} />
     </>

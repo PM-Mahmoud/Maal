@@ -240,6 +240,25 @@ async function createTag(userId, { name, color }) {
   return { tag: { id: String(t.id), name: t.name, color: t.color, uses: 0 } };
 }
 
+/** Update a tag owned by the user; uniqueness is enforced by the name index. */
+async function updateTag(userId, tagId, { name, color }) {
+  try {
+    const result = await pool.query(
+      `UPDATE tags AS g
+          SET name = COALESCE($3, name), color = COALESCE($4, color)
+        WHERE g.user_id = $1 AND g.id = $2
+      RETURNING g.id, g.name, g.color,
+        (SELECT COUNT(*)::int FROM transaction_tags tt WHERE tt.tag_id = g.id AND tt.user_id = $1) AS uses`,
+      [userId, tagId, name ?? null, color ?? null]
+    );
+    const tag = result.rows[0];
+    return tag ? { tag: { ...tag, id: String(tag.id) } } : null;
+  } catch (error) {
+    if (error.code === '23505') return { conflict: true };
+    throw error;
+  }
+}
+
 async function deleteTag(userId, tagId) {
   const r = await pool.query('DELETE FROM tags WHERE id = $1 AND user_id = $2', [tagId, userId]);
   return r.rowCount > 0;
@@ -347,6 +366,6 @@ async function bulkEdit(userId, ids, changes) {
 
 module.exports = {
   getExtras, attachExtras, getEffectiveTransactions, getEffectivePayments,
-  getDetail, updateMeta, listTags, createTag, deleteTag,
+  getDetail, updateMeta, listTags, createTag, updateTag, deleteTag,
   setTransactionTags, replaceSplits, clearSplits, bulkEdit,
 };

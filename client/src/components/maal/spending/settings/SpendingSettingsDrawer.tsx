@@ -8,6 +8,7 @@ import {
   type SpendingSettings,
 } from "./api";
 import { CreateRuleFlow } from "../rules/CreateRuleFlow";
+import { ManageTagsDialog } from "../transaction-detail/ManageTagsDialog";
 import "./spending-settings.css";
 
 /**
@@ -142,6 +143,7 @@ function MainPanel({ onOpen, onNavigate }: { onOpen: (p: Panel) => void; onNavig
   const [busyId, setBusyId] = useState<number | null>(null);
   // Opened by the "Add rule" button.
   const [createRuleOpen, setCreateRuleOpen] = useState(false);
+  const [manageTagsOpen, setManageTagsOpen] = useState(false);
 
   const refreshRules = useCallback(() => { listRules().then(setRules); }, []);
   useEffect(() => { refreshRules(); }, [refreshRules]);
@@ -207,17 +209,10 @@ function MainPanel({ onOpen, onNavigate }: { onOpen: (p: Panel) => void; onNavig
         </div>
       </section>
 
-      <section className="ss-card" aria-labelledby="ss-tags-h">
-        <h2 id="ss-tags-h" className="ss-card-head ss-eyebrow">Tags</h2>
-        <div className="ss-card-list">
-          <p className="ss-muted ss-pad">Tags are coming soon. You'll be able to label transactions across categories, like a holiday or a work trip.</p>
-        </div>
-        <div className="ss-card-foot">
-          <button type="button" className="ss-btn-line" disabled aria-disabled="true" title="Coming soon">
-            <Plus aria-hidden /> Add tag
-          </button>
-        </div>
+      <section className="ss-card" aria-label="Tags">
+        <Row onClick={() => setManageTagsOpen(true)}>Manage tags</Row>
       </section>
+      {manageTagsOpen && <ManageTagsDialog onClose={() => setManageTagsOpen(false)} />}
     </>
   );
 }

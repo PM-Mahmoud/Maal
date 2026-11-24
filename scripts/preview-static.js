@@ -408,9 +408,12 @@ function previewTransactions() {
     if (!ids.length) return res.status(404).json({ error: 'Transaction not found.' });
     res.json({ updated: ids.length });
   });
+  // HEL-112 — mock tag management in the Spending settings and detail dialogs.
+  const countTagUses = (id) => [...pvTxnTags.values()].filter((ids) => ids.includes(id)).length;
+  const withUses = (tag) => ({ ...tag, uses: countTagUses(tag.id) });
   // ?tags=empty on the page URL previews the "no tags yet" state.
   app.get('/api/v1/tags', (req, res) => res.json({
-    tags: /tags=empty/.test(req.headers.referer || '') ? [] : pvTags, colors: td.TAG_COLORS,
+    tags: /tags=empty/.test(req.headers.referer || '') ? [] : pvTags.map(withUses), colors: td.TAG_COLORS,
   }));
   app.post('/api/v1/tags', express.json(), (req, res) => {
     const v = td.validateTag(req.body);
@@ -418,7 +421,25 @@ function previewTransactions() {
     if (pvTags.some((g) => g.name.toLowerCase() === v.tag.name.toLowerCase())) return res.status(409).json({ error: 'You already have a tag with that name.' });
     const tag = { id: String(pvTagSeq++), ...v.tag };
     pvTags = [...pvTags, tag];
-    res.json({ tag });
+    res.json({ tag: withUses(tag) });
+  });
+  app.patch('/api/v1/tags/:id', express.json(), (req, res) => {
+    const tag = pvTags.find((g) => g.id === req.params.id);
+    if (!tag) return res.status(404).json({ error: 'Tag not found.' });
+    const result = td.validateTagPatch(req.body);
+    if (result.error) return res.status(400).json({ error: result.error });
+    if (result.patch.name && pvTags.some((g) => g.id !== tag.id && g.name.toLowerCase() === result.patch.name.toLowerCase())) {
+      return res.status(409).json({ error: 'You already have a tag with that name.' });
+    }
+    Object.assign(tag, result.patch);
+    res.json({ tag: withUses(tag) });
+  });
+  app.delete('/api/v1/tags/:id', (req, res) => {
+    const id = req.params.id;
+    if (!pvTags.some((g) => g.id === id)) return res.status(404).json({ error: 'Tag not found.' });
+    pvTags = pvTags.filter((g) => g.id !== id);
+    for (const [txn, ids] of pvTxnTags) pvTxnTags.set(txn, ids.filter((tagId) => tagId !== id));
+    res.json({ ok: true });
   });
 }
 // ── end Session 2 – Transaction detail preview ─────────────────────────────
