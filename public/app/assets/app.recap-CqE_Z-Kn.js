@@ -1,0 +1,1 @@
+import{u as e,j as o}from"./index-BOIvFdlZ.js";import{W as a}from"./WeeklyRecapStory-CTy5LVki.js";import"./parts-C7nFfkkY.js";import"./chevron-left-C3LzJ-hF.js";import"./chevron-right-DDIIF2tk.js";import"./sparkles-DWZKGTY3.js";function c(){const t=e();return o.jsx("div",{className:"mb mb-page",children:o.jsx(a,{onClose:()=>t({to:"/app"})})})}export{c as component};

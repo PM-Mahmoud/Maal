@@ -1,0 +1,6 @@
+import{c as u,r as a,j as o}from"./index-BOIvFdlZ.js";import{P as c}from"./index-baAV56pG.js";import{c as l,a as d}from"./index-BAP7Ujm6.js";/**
+ * @license lucide-react v0.503.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const m=[["polyline",{points:"22 17 13.5 8.5 8.5 13.5 2 7",key:"1r2t7k"}],["polyline",{points:"16 17 22 17 22 11",key:"11uiuu"}]],v=u("trending-down",m);function M(e,[r,t]){return Math.min(t,Math.max(r,e))}function N(e){const r=a.useRef({value:e,previous:e});return a.useMemo(()=>(r.current.value!==e&&(r.current.previous=r.current.value,r.current.value=e),r.current.previous),[e])}var f="Label",s=a.forwardRef((e,r)=>o.jsx(c.label,{...e,ref:r,onMouseDown:t=>{var n;t.target.closest("button, input, select, textarea")||((n=e.onMouseDown)==null||n.call(e,t),!t.defaultPrevented&&t.detail>1&&t.preventDefault())}}));s.displayName=f;var i=s;const p=d("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"),x=a.forwardRef(({className:e,...r},t)=>o.jsx(i,{ref:t,className:l(p(),e),...r}));x.displayName=i.displayName;export{x as L,v as T,M as c,N as u};

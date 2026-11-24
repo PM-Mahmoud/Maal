@@ -1,0 +1,1 @@
+import{j as t,L as i}from"./index-BOIvFdlZ.js";/* empty css                          */import{S as n}from"./settings-DsBIRpEV.js";function a(){return t.jsx(i,{to:"/app/spending/settings",className:"ss-cog","aria-label":"Spending settings",title:"Spending settings",children:t.jsx(n,{"aria-hidden":!0})})}export{a as S};
