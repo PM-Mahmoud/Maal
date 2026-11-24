@@ -12,15 +12,8 @@ async function createSession(userId, firstUserMessage) {
   return rows[0].id;
 }
 
-async function appendMessage(sessionId, role, content) {
-  await pool.query(
-    `INSERT INTO advisor_messages (session_id, role, content) VALUES ($1, $2, $3)`,
-    [sessionId, role, String(content)]
-  );
-  await pool.query(
-    `UPDATE advisor_sessions SET updated_at = NOW() WHERE id = $1`,
-    [sessionId]
-  );
+async function appendMessage(sessionId, userId, role, content) {
+  await appendThreadMessages(sessionId, userId, [{ role, content: String(content) }]);
 }
 
 async function getMessages(sessionId, userId) {
@@ -31,8 +24,11 @@ async function getMessages(sessionId, userId) {
   );
   if (!session.length) return null; // not found or wrong user
   const { rows } = await pool.query(
-    `SELECT role, content FROM advisor_messages WHERE session_id = $1 ORDER BY created_at ASC`,
-    [sessionId]
+    `SELECT m.role, m.content FROM advisor_messages m
+     JOIN advisor_sessions s ON s.id = m.session_id
+     WHERE m.session_id = $1 AND s.user_id = $2
+     ORDER BY m.created_at ASC`,
+    [sessionId, userId]
   );
   return rows;
 }

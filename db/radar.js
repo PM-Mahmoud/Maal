@@ -112,10 +112,10 @@ async function deleteRadar(id, userId) {
   await pool.query(`DELETE FROM radars WHERE id = $1 AND user_id = $2`, [id, userId]);
 }
 
-async function recordRun(id, { result, alerted }) {
+async function recordRun(id, userId, { result, alerted }) {
   await pool.query(
-    `UPDATE radars SET last_run_at = NOW(), last_result = $2, last_alerted = $3 WHERE id = $1`,
-    [id, result, !!alerted]
+    `UPDATE radars SET last_run_at = NOW(), last_result = $2, last_alerted = $3 WHERE id = $1 AND user_id = $4`,
+    [id, result, !!alerted, userId]
   );
 }
 
@@ -140,10 +140,11 @@ async function listEvents(userId, limit = 30) {
   return r.rows;
 }
 
-async function logEvent(radarId, alerted, summary) {
+async function logEvent(radarId, userId, alerted, summary) {
   await pool.query(
-    `INSERT INTO radar_events (radar_id, alerted, summary) VALUES ($1, $2, $3)`,
-    [radarId, !!alerted, summary]
+    `INSERT INTO radar_events (radar_id, alerted, summary)
+     SELECT id, $2, $3 FROM radars WHERE id = $1 AND user_id = $4`,
+    [radarId, !!alerted, summary, userId]
   );
 }
 

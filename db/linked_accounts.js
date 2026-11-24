@@ -21,11 +21,11 @@ async function getAccountsByUserId(userId) {
   return result.rows;
 }
 
-async function updateAccountStatus(accountId, status) {
+async function updateAccountStatus(accountId, userId, status) {
   const result = await pool.query(
     `UPDATE linked_accounts SET connection_status = $2, last_synced_at = NOW()
-     WHERE id = $1 RETURNING *`,
-    [accountId, status]
+     WHERE id = $1 AND user_id = $3 RETURNING *`,
+    [accountId, status, userId]
   );
   return result.rows[0] || null;
 }

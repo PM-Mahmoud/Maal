@@ -24,7 +24,10 @@ async function createRecurringItem(userId, item) {
   const vals = [userId, item.name, item.amount, item.frequency, item.kind, item.next_date,
     item.category_group ?? null, item.source_key ?? null, item.transaction_id ?? null];
   const insert = `INSERT INTO recurring_items (user_id, status, name, amount, frequency, kind, next_date, category_group, source_key, transaction_id)
-       VALUES ($1, 'active', $2, $3, $4, $5, $6, $7, $8, $9)`;
+       SELECT $1, 'active', $2, $3, $4, $5, $6, $7, $8, $9
+       WHERE $9::text IS NULL OR EXISTS (
+         SELECT 1 FROM transactions WHERE id::text = $9 AND user_id = $1
+       )`;
   const sql = item.source_key
     ? `${insert}
        ON CONFLICT (user_id, source_key) WHERE source_key IS NOT NULL
@@ -34,7 +37,7 @@ async function createRecurringItem(userId, item) {
        RETURNING ${COLS}`
     : `${insert} RETURNING ${COLS}`;
   const r = await pool.query(sql, vals);
-  return r.rows[0];
+  return r.rows[0] || null;
 }
 
 const UPDATABLE = ['name', 'amount', 'frequency', 'kind', 'next_date', 'category_group'];

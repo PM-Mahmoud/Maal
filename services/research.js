@@ -220,10 +220,10 @@ async function gather(question, tickers) {
 // The full async pipeline. Drives the job row through its phases and, on success,
 // writes the report to research_reports + stores the quant result on the job.
 // Never throws — failures are recorded on the job so the client can offer retry.
-async function runDeepResearch({ jobId, user, profile, maal, question }) {
+async function runDeepResearch({ jobId, userId, profile, maal, question }) {
   try {
     if (!advisor.hasAdvisor()) {
-      await researchDb.failJob(jobId, 'Research needs the AI engine configured (AZURE_OPENAI_* / gateway).');
+      await researchDb.failJob(jobId, userId, 'Research needs the AI engine configured (AZURE_OPENAI_* / gateway).');
       return;
     }
 
@@ -231,11 +231,11 @@ async function runDeepResearch({ jobId, user, profile, maal, question }) {
     const tickers = extractTickers(question);
 
     // GATHER
-    await researchDb.setJobPhase(jobId, 'gather');
+    await researchDb.setJobPhase(jobId, userId, 'gather');
     const { sources, contextChunks, seriesBySymbol } = await gather(question, tickers);
 
     // COMPUTE — benchmark = S&P 500 proxy if available, else empty (beta n/a).
-    await researchDb.setJobPhase(jobId, 'compute');
+    await researchDb.setJobPhase(jobId, userId, 'compute');
     let marketSeries = [];
     if (financialdatasets.hasFinancialDatasets()) {
       try { marketSeries = await financialdatasets.getCloseSeries('SPY', { days: 400 }); }
@@ -244,7 +244,7 @@ async function runDeepResearch({ jobId, user, profile, maal, question }) {
     const computed = computeQuant(seriesBySymbol, marketSeries);
 
     // WRITE
-    await researchDb.setJobPhase(jobId, 'write');
+    await researchDb.setJobPhase(jobId, userId, 'write');
     const evidence = [quantEvidence(computed), contextChunks.join('\n\n')].filter(Boolean).join('\n\n');
     const dataBlock = evidence
       ? `\n\nEvidence to ground your analysis (do NOT cite inline or list sources):\n${evidence}`
@@ -256,22 +256,22 @@ async function runDeepResearch({ jobId, user, profile, maal, question }) {
     let report = await advisor.complete(messages, { role: 'reasoner', maxTokens: 1800, temperature: 0.5 });
 
     // VERIFY (blocking critique + one revision; ships regardless).
-    await researchDb.setJobPhase(jobId, 'verify');
+    await researchDb.setJobPhase(jobId, userId, 'verify');
     try {
       const v = await gateway.verifyAndRevise({ messages, draft: report, opts: { role: 'reasoner', maxTokens: 1800 } });
       if (v && v.text) report = v.text;
     } catch (e) { console.error('deep research: verify failed (shipping draft):', e.message); }
 
     // RENDER — persist the report; the PDF is generated on demand by the route.
-    await researchDb.setJobPhase(jobId, 'render');
+    await researchDb.setJobPhase(jobId, userId, 'render');
     const seen = new Set();
     const uniqueSources = sources.filter((s) => s.url && !seen.has(s.url) && seen.add(s.url));
-    const reportId = await researchDb.createReport(user ? user.id : profile.user_id, question);
-    await researchDb.completeReport(reportId, report, uniqueSources);
-    await researchDb.completeJob(jobId, reportId, { quant: computed, tickers, sourceCount: uniqueSources.length });
+    const reportId = await researchDb.createReport(userId, question);
+    await researchDb.completeReport(reportId, userId, report, uniqueSources);
+    await researchDb.completeJob(jobId, userId, reportId, { quant: computed, tickers, sourceCount: uniqueSources.length });
   } catch (e) {
     console.error('deep research pipeline failed:', e.message);
-    await researchDb.failJob(jobId, 'The research engine hit a snag — please run it again.');
+    await researchDb.failJob(jobId, userId, 'The research engine hit a snag — please run it again.');
   }
 }
 
