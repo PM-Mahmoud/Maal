@@ -124,7 +124,7 @@ database connection settings:
 node - <<'NODE'
 require('dotenv').config();
 const pool = require('./db/pool');
-const { up } = require('./migrations/1757420000000_restore_knowledge_embeddings');
+const { up } = require('./migrations/1757420000000_knowledge_embedding_upgrade');
 
 async function restore() {
   try {
