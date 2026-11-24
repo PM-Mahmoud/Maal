@@ -34,6 +34,11 @@ export async function createCategory(input: Omit<CustomCategory, "id">): Promise
   return (await json<{ category: CustomCategory }>(r, "Couldn't create that category.")).category;
 }
 
+export async function updateCategory(id: string, patch: Partial<Pick<CustomCategory, "name" | "color" | "icon">>): Promise<CustomCategory> {
+  const r = await fetch(`/api/v1/spending-categories/${encodeURIComponent(id)}`, send("PATCH", patch));
+  return (await json<{ category: CustomCategory }>(r, "Couldn't update that category.")).category;
+}
+
 export async function deleteCategory(id: string): Promise<void> {
   const r = await fetch(`/api/v1/spending-categories/${encodeURIComponent(id)}`, send("DELETE"));
   await json(r, "Couldn't delete that category.");

@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Check, ChevronDown, Plus, Search, Trash2, X } from "lucide-react";
-import { CATEGORY_COLORS, createGroup, deleteCategory, deleteGroup, type CategoryGroupDef, type CustomCategory } from "./api";
+import { Check, ChevronDown, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { CATEGORY_COLORS, createGroup, deleteCategory, deleteGroup, updateCategory, updateGroup, type CategoryGroupDef, type CustomCategory } from "./api";
+import { CategoryAppearancePicker } from "./NewCategoryDrawer";
 import { BUILT_IN_GROUPS, CatIcon, ErrorLine, Toast } from "./parts";
 import "../settings/spending-settings.css";
 
@@ -12,7 +13,7 @@ const MOVEMENT = ["Transfers", "Credit Card Payments"];
  * Manage categories (HEL-90): every category, sorted into the user's groups
  * (then ungrouped), with Expense and Income sections. "Create group" opens the
  * new-group dialog (name, colour, categories); "Create category" opens HEL-89.
- * Custom categories and groups can be deleted here; built-in ones can't.
+ * Custom categories and groups can be edited or deleted here.
  */
 export function ManageCategoriesDrawer({ custom, groups, onClose, onChanged, onNewCategory }: {
   custom: CustomCategory[];
@@ -26,6 +27,19 @@ export function ManageCategoriesDrawer({ custom, groups, onClose, onChanged, onN
   const [toast, setToast] = useState<{ title: string; text?: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+
+  function startEdit(id: string) {
+    setErr(null);
+    setConfirm(null);
+    setEditing(id);
+  }
+
+  async function saved() {
+    setEditing(null);
+    await onChanged();
+    setToast({ title: "Changes saved" });
+  }
 
   const expenseAll = useMemo(() => [
     ...BUILT_IN_GROUPS.filter((g) => !INCOME_BUILT_IN.includes(g) && !MOVEMENT.includes(g)),
@@ -47,7 +61,7 @@ export function ManageCategoriesDrawer({ custom, groups, onClose, onChanged, onN
     finally { setConfirm(null); }
   }
 
-  function Section({ kind, all }: { kind: "expense" | "income"; all: string[] }) {
+  function renderSection(kind: "expense" | "income", all: string[]) {
     const kindGroups = groups.filter((g) => g.kind === kind);
     const grouped = new Set(kindGroups.flatMap((g) => g.categories));
     const ungrouped = all.filter((c) => !grouped.has(c));
@@ -63,37 +77,52 @@ export function ManageCategoriesDrawer({ custom, groups, onClose, onChanged, onN
         </div>
         {blocks.map((b) => {
           const items = b.items.filter(match);
-          if (q && !items.length) return null;
+          const group = b.group;
+          if (q && !items.length && (!group || !match(group.name))) return null;
           return (
             <div key={b.key} className="ss-card bd-mblock">
               <div className="bd-mblock-head">
-                {b.group && <i className="bd-dot" style={{ background: b.group.color }} aria-hidden />}
+                {group && <i className="bd-dot" style={{ background: group.color }} aria-hidden />}
                 <span className="bd-mblock-title">{b.title}</span>
-                {b.group && (confirm === `g${b.group.id}` ? (
+                {group && editing !== `g${group.id}` && (confirm === `g${group.id}` ? (
                   <span className="ss-confirm-actions">
-                    <button type="button" className="ss-btn-sm ss-btn-danger" onClick={() => removeGroup(b.group!)}>Delete group</button>
+                    <button type="button" className="ss-btn-sm ss-btn-danger" onClick={() => removeGroup(group)}>Delete group</button>
                     <button type="button" className="ss-btn-sm" onClick={() => setConfirm(null)}>Keep</button>
                   </span>
                 ) : (
-                  <button type="button" className="ss-iconbtn" onClick={() => setConfirm(`g${b.group!.id}`)} aria-label={`Delete group ${b.title}`}><Trash2 aria-hidden /></button>
+                  <>
+                    <button type="button" className="ss-iconbtn" onClick={() => startEdit(`g${group.id}`)} aria-label={`Rename group ${b.title}`}><Pencil aria-hidden /></button>
+                    <button type="button" className="ss-iconbtn" onClick={() => { setEditing(null); setConfirm(`g${group.id}`); }} aria-label={`Delete group ${b.title}`}><Trash2 aria-hidden /></button>
+                  </>
                 ))}
               </div>
+              {group && editing === `g${group.id}` && (
+                <InlineEditor item={group} onCancel={() => setEditing(null)} onSaved={saved} />
+              )}
               <ul className="ss-list">
                 {items.length === 0 && <li className="ss-list-row mh-muted mh-small">No categories in this group yet.</li>}
                 {items.map((name) => {
                   const c = custom.find((x) => x.name === name);
                   return (
-                    <li key={name} className="ss-list-row bd-mrow">
-                      <CatIcon name={name} custom={custom} size={30} />
-                      <span className="flex-1 min-w-0 bd-trunc">{name}</span>
-                      {c && (confirm === `c${c.id}` ? (
-                        <span className="ss-confirm-actions">
-                          <button type="button" className="ss-btn-sm ss-btn-danger" onClick={() => removeCategory(c)}>Delete</button>
-                          <button type="button" className="ss-btn-sm" onClick={() => setConfirm(null)}>Keep</button>
-                        </span>
-                      ) : (
-                        <button type="button" className="ss-iconbtn" onClick={() => setConfirm(`c${c.id}`)} aria-label={`Delete ${name}`}><Trash2 aria-hidden /></button>
-                      ))}
+                    <li key={c?.id ? `custom-${c.id}` : name}>
+                      <div className="ss-list-row bd-mrow">
+                        <CatIcon name={name} custom={custom} size={30} />
+                        <span className="flex-1 min-w-0 bd-trunc">{name}</span>
+                        {c && editing !== `c${c.id}` && (confirm === `c${c.id}` ? (
+                          <span className="ss-confirm-actions">
+                            <button type="button" className="ss-btn-sm ss-btn-danger" onClick={() => removeCategory(c)}>Delete</button>
+                            <button type="button" className="ss-btn-sm" onClick={() => setConfirm(null)}>Keep</button>
+                          </span>
+                        ) : (
+                          <>
+                            <button type="button" className="ss-iconbtn" onClick={() => startEdit(`c${c.id}`)} aria-label={`Edit category ${name}`}><Pencil aria-hidden /></button>
+                            <button type="button" className="ss-iconbtn" onClick={() => { setEditing(null); setConfirm(`c${c.id}`); }} aria-label={`Delete ${name}`}><Trash2 aria-hidden /></button>
+                          </>
+                        ))}
+                      </div>
+                      {c && editing === `c${c.id}` && (
+                        <InlineEditor item={c} onCancel={() => setEditing(null)} onSaved={saved} />
+                      )}
                     </li>
                   );
                 })}
@@ -122,8 +151,8 @@ export function ManageCategoriesDrawer({ custom, groups, onClose, onChanged, onN
               <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search categories" aria-label="Search categories" />
             </label>
             {err && <ErrorLine>{err}</ErrorLine>}
-            <Section kind="expense" all={expenseAll} />
-            <Section kind="income" all={incomeAll} />
+            {renderSection("expense", expenseAll)}
+            {renderSection("income", incomeAll)}
             <p className="mh-muted mh-small m-0">Transfers and card repayments move money between your own accounts, so they aren’t counted as spending and can’t be grouped.</p>
           </div>
           {newGroup && (
@@ -135,6 +164,55 @@ export function ManageCategoriesDrawer({ custom, groups, onClose, onChanged, onN
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
+  );
+}
+
+function InlineEditor({ item, onCancel, onSaved }: {
+  item: CustomCategory | CategoryGroupDef;
+  onCancel: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const category = "icon" in item ? item : null;
+  const [name, setName] = useState(item.name);
+  const [color, setColor] = useState(item.color);
+  const [icon, setIcon] = useState(category?.icon ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    try {
+      if (category) {
+        await updateCategory(category.id, {
+          name: name.trim(),
+          ...(color !== category.color ? { color } : {}),
+          ...(icon !== category.icon ? { icon } : {}),
+        });
+      } else {
+        await updateGroup(item.id, { name: name.trim() });
+      }
+      await onSaved();
+    } catch (error) {
+      setError((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="bd-inline-editor" onSubmit={(event) => { event.preventDefault(); if (name.trim() && !busy) void save(); }}>
+      <label className="bd-field bd-field-box">
+        <span>{category ? "Category name" : "Group name"}</span>
+        <input value={name} maxLength={40} autoFocus onChange={(event) => setName(event.target.value)} disabled={busy} />
+      </label>
+      {category && <CategoryAppearancePicker color={color} icon={icon} setColor={setColor} setIcon={setIcon} />}
+      {error && <ErrorLine>{error}</ErrorLine>}
+      <div className="bd-modal-foot">
+        <button type="button" className="ss-btn-sm" onClick={onCancel} disabled={busy}>Cancel</button>
+        <button type="submit" className="ss-btn-sm ss-btn-ink" disabled={!name.trim() || busy}>{busy ? "Saving…" : "Save changes"}</button>
+      </div>
+    </form>
   );
 }
 
