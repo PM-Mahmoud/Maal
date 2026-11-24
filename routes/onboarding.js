@@ -55,13 +55,6 @@ router.post('/session', requireAuth, async (req, res) => {
     let session = await getSessionByUserId(userId);
     if (!session) {
       session = await createSession(userId);
-    } else if (!session.user_id) {
-      const pool = require('../db/pool');
-      await pool.query(
-        'UPDATE onboarding_sessions SET user_id = $1 WHERE id = $2',
-        [userId, session.id]
-      );
-      session.user_id = userId;
     }
     res.json({ session_id: session.id, current_step: session.current_step, is_complete: session.is_complete });
   } catch (err) {
@@ -72,10 +65,10 @@ router.post('/session', requireAuth, async (req, res) => {
 
 // ─── API: get step data ────────────────────────────────────────────────────────
 
-router.get('/session/:sessionId/step/:step', async (req, res) => {
+router.get('/session/:sessionId/step/:step', requireAuth, async (req, res) => {
   try {
     const { sessionId, step } = req.params;
-    const data = await getResponseByStep(sessionId, parseInt(step, 10));
+    const data = await getResponseByStep(sessionId, req.session.userId, parseInt(step, 10));
     res.json({ data: data || {} });
   } catch (err) {
     console.error('GET step error:', err.message);
@@ -95,11 +88,12 @@ router.post('/step/:step', requireAuth, async (req, res) => {
     }
 
     const { session_id: _sid, ...stepData } = req.body;
-    const dataToSave = { ...stepData, user_id: req.session.userId };
-    await upsertResponse(session_id, step, dataToSave);
+    const userId = req.session.userId;
+    const saved = await upsertResponse(session_id, userId, step, stepData);
+    if (!saved) return res.status(404).json({ error: 'Onboarding session not found' });
 
     if (step < 7) {
-      await updateSessionStep(session_id, step + 1);
+      await updateSessionStep(session_id, userId, step + 1);
     }
 
     res.json({ ok: true, next_step: step < 7 ? step + 1 : null });
@@ -120,11 +114,12 @@ router.post('/complete', requireAuth, async (req, res) => {
     const userId = req.session.userId;
 
     // 1. Mark session complete
-    await markResponseComplete(session_id);
-    await completeSession(session_id);
+    const completed = await completeSession(session_id, userId);
+    if (!completed) return res.status(404).json({ error: 'Onboarding session not found' });
+    await markResponseComplete(session_id, userId);
 
     // 2. Get all step responses and merge into allData
-    const responses = await getResponsesBySession(session_id);
+    const responses = await getResponsesBySession(session_id, userId);
     const allData = {};
     for (const r of responses) {
       const skipKeys = ['id','session_id','step','is_complete','completed_at','created_at','updated_at'];
@@ -346,7 +341,7 @@ router.get('/profile/:userId', requireAuth, async (req, res) => {
     const session = await getSessionByUserId(parseInt(userId, 10));
     if (!session) return res.status(404).json({ error: 'No onboarding found' });
 
-    const responses = await getResponsesBySession(session.id);
+    const responses = await getResponsesBySession(session.id, req.session.userId);
     res.json({ session, responses });
   } catch (err) {
     console.error('GET /api/profile error:', err.message);

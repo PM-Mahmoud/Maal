@@ -10,19 +10,19 @@ async function createReport(userId, question) {
   return r.rows[0].id;
 }
 
-async function completeReport(id, report, sources) {
+async function completeReport(id, userId, report, sources) {
   await pool.query(
     `UPDATE research_reports
         SET status = 'complete', report = $2, sources = $3, completed_at = NOW()
-      WHERE id = $1`,
-    [id, report, JSON.stringify(sources || [])]
+      WHERE id = $1 AND user_id = $4`,
+    [id, report, JSON.stringify(sources || []), userId]
   );
 }
 
-async function failReport(id, message) {
+async function failReport(id, userId, message) {
   await pool.query(
-    `UPDATE research_reports SET status = 'error', report = $2, completed_at = NOW() WHERE id = $1`,
-    [id, message || 'Research failed.']
+    `UPDATE research_reports SET status = 'error', report = $2, completed_at = NOW() WHERE id = $1 AND user_id = $3`,
+    [id, message || 'Research failed.', userId]
   );
 }
 
@@ -121,29 +121,30 @@ async function createJob(userId, question) {
   return r.rows[0].id;
 }
 
-async function setJobPhase(id, phase) {
+async function setJobPhase(id, userId, phase) {
   await pool.query(
-    `UPDATE research_jobs SET phase = $2, updated_at = NOW() WHERE id = $1`,
-    [id, phase]
+    `UPDATE research_jobs SET phase = $2, updated_at = NOW() WHERE id = $1 AND user_id = $3`,
+    [id, phase, userId]
   );
 }
 
-async function completeJob(id, reportId, result) {
+async function completeJob(id, userId, reportId, result) {
   await pool.query(
     `UPDATE research_jobs
         SET status = 'complete', phase = 'done', report_id = $2,
             result = $3, updated_at = NOW(), completed_at = NOW()
-      WHERE id = $1`,
-    [id, reportId || null, result ? JSON.stringify(result) : null]
+      WHERE id = $1 AND user_id = $4
+        AND ($2 IS NULL OR EXISTS (SELECT 1 FROM research_reports WHERE id = $2 AND user_id = $4))`,
+    [id, reportId || null, result ? JSON.stringify(result) : null, userId]
   );
 }
 
-async function failJob(id, message) {
+async function failJob(id, userId, message) {
   await pool.query(
     `UPDATE research_jobs
         SET status = 'error', error = $2, updated_at = NOW(), completed_at = NOW()
-      WHERE id = $1`,
-    [id, String(message || 'Research failed.').slice(0, 500)]
+      WHERE id = $1 AND user_id = $3`,
+    [id, String(message || 'Research failed.').slice(0, 500), userId]
   );
 }
 

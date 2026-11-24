@@ -28,22 +28,23 @@ async function getSessionByUserId(userId) {
   return result.rows[0] || null;
 }
 
-async function updateSessionStep(sessionId, step) {
+async function updateSessionStep(sessionId, userId, step) {
   await pool.query(
     `UPDATE onboarding_sessions
      SET current_step = $2, last_active_at = NOW()
-     WHERE id = $1`,
-    [sessionId, step]
+     WHERE id = $1 AND user_id = $3`,
+    [sessionId, step, userId]
   );
 }
 
-async function completeSession(sessionId) {
-  await pool.query(
+async function completeSession(sessionId, userId) {
+  const result = await pool.query(
     `UPDATE onboarding_sessions
      SET is_complete = true, last_active_at = NOW()
-     WHERE id = $1`,
-    [sessionId]
+     WHERE id = $1 AND user_id = $2`,
+    [sessionId, userId]
   );
+  return result.rowCount > 0;
 }
 
 // ─── Responses ─────────────────────────────────────────────────────────────────
@@ -53,7 +54,6 @@ async function completeSession(sessionId) {
 // set is silently dropped to prevent SQL injection via crafted form fields.
 // Keep in sync with migrations/1747996000000_onboarding.js (onboarding_responses).
 const RESPONSE_COLUMNS = new Set([
-  'user_id',
   'role', 'employment_type', 'years_in_practice',
   'income_range', 'hecs_balance', 'hecs_remaining', 'other_personal_debt',
   'super_balance', 'super_fund_type', 'employer_contrib_rate', 'monthly_savings', 'emergency_months',
@@ -69,41 +69,36 @@ const RESPONSE_COLUMNS = new Set([
 const QUOTED_COLUMNS = new Set(['brokerageAccounts']);
 const quoteCol = (c) => (QUOTED_COLUMNS.has(c) ? `"${c}"` : c);
 
-async function upsertResponse(sessionId, step, data) {
-  const fields = Object.keys(data).filter((f) => RESPONSE_COLUMNS.has(f));
-  const values = fields.map((f) => data[f]);
-  if (fields.length === 0) {
-    // Nothing valid to write — still upsert the (session_id, step) skeleton row.
-    const result = await pool.query(
-      `INSERT INTO onboarding_responses (session_id, step, updated_at)
-       VALUES ($1, $2, NOW())
-       ON CONFLICT (session_id, step)
-       DO UPDATE SET updated_at = NOW()
-       RETURNING id`,
-      [sessionId, step]
-    );
-    return result.rows[0];
-  }
-  const cols = fields.map(quoteCol);
-  const assignments = cols.map((c, i) => `${c} = $${i + 3}`).join(', ');
+async function upsertResponse(sessionId, userId, step, data) {
+  const fields = Object.keys(data).filter((field) => RESPONSE_COLUMNS.has(field));
+  const columns = fields.map(quoteCol);
+  const values = fields.map((field) => data[field]);
+  const insertColumns = ['session_id', 'step', 'user_id', ...columns, 'updated_at'];
+  const insertValues = ['s.id', '$2', '$3', ...values.map((_, i) => `$${i + 4}`), 'NOW()'];
+  const assignments = ['user_id', ...columns].map((column) => `${column} = EXCLUDED.${column}`);
 
   const result = await pool.query(
-    `INSERT INTO onboarding_responses (session_id, step, ${cols.join(', ')}, updated_at)
-     VALUES ($1, $2, ${values.map((_, i) => `$${i + 3}`).join(', ')}, NOW())
+    `INSERT INTO onboarding_responses (${insertColumns.join(', ')})
+     SELECT ${insertValues.join(', ')}
+     FROM onboarding_sessions s
+     WHERE s.id = $1 AND s.user_id = $3
      ON CONFLICT (session_id, step)
-     DO UPDATE SET ${assignments}, updated_at = NOW()
+     DO UPDATE SET ${assignments.join(', ')}, updated_at = NOW()
+     WHERE onboarding_responses.user_id IS NULL OR onboarding_responses.user_id = EXCLUDED.user_id
      RETURNING id`,
-    [sessionId, step, ...values]
+    [sessionId, step, userId, ...values]
   );
-  return result.rows[0];
+  return result.rows[0] || null;
 }
 
-async function getResponsesBySession(sessionId) {
+async function getResponsesBySession(sessionId, userId) {
   const result = await pool.query(
-    `SELECT * FROM onboarding_responses
-     WHERE session_id = $1
-     ORDER BY step ASC`,
-    [sessionId]
+    `SELECT r.* FROM onboarding_responses r
+     JOIN onboarding_sessions s ON r.session_id = s.id
+     WHERE s.id = $1 AND s.user_id = $2
+       AND (r.user_id IS NULL OR r.user_id = s.user_id)
+     ORDER BY r.step ASC`,
+    [sessionId, userId]
   );
   return result.rows;
 }
@@ -113,6 +108,7 @@ async function getFullProfileByUserId(userId) {
     `SELECT r.* FROM onboarding_responses r
      JOIN onboarding_sessions s ON r.session_id = s.id
      WHERE s.user_id = $1 AND r.is_complete = true
+       AND (r.user_id IS NULL OR r.user_id = s.user_id)
      ORDER BY r.step ASC
      LIMIT 1`,
     [userId]
@@ -120,21 +116,25 @@ async function getFullProfileByUserId(userId) {
   return result.rows[0] || null;
 }
 
-async function getResponseByStep(sessionId, step) {
+async function getResponseByStep(sessionId, userId, step) {
   const result = await pool.query(
-    `SELECT * FROM onboarding_responses
-     WHERE session_id = $1 AND step = $2`,
-    [sessionId, step]
+    `SELECT r.* FROM onboarding_responses r
+     JOIN onboarding_sessions s ON r.session_id = s.id
+     WHERE s.id = $1 AND r.step = $2 AND s.user_id = $3
+       AND (r.user_id IS NULL OR r.user_id = s.user_id)`,
+    [sessionId, step, userId]
   );
   return result.rows[0] || null;
 }
 
-async function markResponseComplete(sessionId) {
+async function markResponseComplete(sessionId, userId) {
   await pool.query(
-    `UPDATE onboarding_responses
+    `UPDATE onboarding_responses r
      SET is_complete = true, completed_at = NOW()
-     WHERE session_id = $1`,
-    [sessionId]
+     FROM onboarding_sessions s
+     WHERE r.session_id = s.id AND s.id = $1 AND s.user_id = $2
+       AND (r.user_id IS NULL OR r.user_id = s.user_id)`,
+    [sessionId, userId]
   );
 }
 

@@ -100,8 +100,8 @@ async function runRadar(radarId, userId) {
   const user = await findUserById(userId);
   const profile = await getProfileByUserId(userId);
   const { alerted, summary } = await evaluateRadar(radar, user, profile);
-  await radarDb.recordRun(radar.id, { result: summary, alerted });
-  await radarDb.logEvent(radar.id, alerted, summary);
+  await radarDb.recordRun(radar.id, radar.user_id, { result: summary, alerted });
+  await radarDb.logEvent(radar.id, radar.user_id, alerted, summary);
   if (alerted) await notify(radar, user, summary);
   return { alerted, summary };
 }
@@ -127,8 +127,8 @@ async function runDueRadars() {
         const user = await findUserById(radar.user_id);
         const profile = await getProfileByUserId(radar.user_id);
         const { alerted, summary } = await evaluateRadar(radar, user, profile);
-        await radarDb.recordRun(radar.id, { result: summary, alerted });
-        await radarDb.logEvent(radar.id, alerted, summary);
+        await radarDb.recordRun(radar.id, radar.user_id, { result: summary, alerted });
+        await radarDb.logEvent(radar.id, radar.user_id, alerted, summary);
         if (alerted) { await notify(radar, user, summary); alerts++; }
         ran++;
       } catch (e) {

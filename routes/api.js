@@ -963,7 +963,6 @@ router.post('/v1/research/generate', async (req, res) => {
     const { computeMaalScore } = require('../lib/maal-score');
     const { runDeepResearch } = require('../services/research');
 
-    const user = await findUserById(userId);
     const rawProfile = (await getProfileByUserId(userId)) || {};
     const assetSummary = await assetsDb.getAssetSummary(userId);
     const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
@@ -972,7 +971,7 @@ router.post('/v1/research/generate', async (req, res) => {
     const jobId = await researchDb.createJob(userId, question);
     // Fire-and-forget: the pipeline records its own success/failure on the job.
     setImmediate(() => {
-      runDeepResearch({ jobId, user, profile, maal, question }).catch((e) => {
+      runDeepResearch({ jobId, userId, profile, maal, question }).catch((e) => {
         console.error('runDeepResearch crashed:', e.message);
       });
     });
@@ -1672,6 +1671,7 @@ router.post('/v1/recurring-items', async (req, res) => {
     const v = validateRecurringInput(req.body);
     if (v.error) return res.status(400).json({ error: v.error });
     const row = await require('../db/recurring-items').createRecurringItem(req.session.userId, v.item);
+    if (!row) return res.status(404).json({ error: 'Transaction not found.' });
     res.status(201).json({ item: await recurringItemOut(row) });
   } catch (e) {
     console.error('/api/v1/recurring-items POST error:', e.message);
@@ -2300,6 +2300,7 @@ router.all('/v1/:table', async (req, res) => {
 
   const uid = req.session.userId;
   const ucol = 'user_id';
+  const writableColumns = (body) => Object.keys(body).filter((key) => /^\w+$/.test(key) && key.toLowerCase() !== ucol);
   const raw = req.query.filter;
   const { where, vals } = parseFilters(raw);
   const isSingle = req.query.single === '1';
@@ -2324,20 +2325,18 @@ router.all('/v1/:table', async (req, res) => {
 
     if (req.method === 'POST') {
       const body = req.body || {};
-      body[ucol] = uid;
-      const keys = Object.keys(body).filter(k => /^\w+$/.test(k));
+      const keys = [...writableColumns(body), ucol];
       const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
       const { rows } = await pool.query(
         `INSERT INTO ${table} (${keys.join(', ')}) VALUES (${placeholders}) RETURNING *`,
-        keys.map(k => body[k])
+        keys.map(k => k === ucol ? uid : body[k])
       );
       return res.json(rows[0] || { ok: true });
     }
 
     if (req.method === 'PATCH') {
       const body = req.body || {};
-      delete body[ucol]; // never let client override user_id
-      const keys = Object.keys(body).filter(k => /^\w+$/.test(k));
+      const keys = writableColumns(body);
       if (!keys.length) return res.json({ ok: true });
       const setClause = keys.map((k, i) => `${k} = $${i + 2}`).join(', ');
       // BUG-3 FIX: rebuild filter placeholders offset after SET params to avoid collisions

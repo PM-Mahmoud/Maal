@@ -301,8 +301,8 @@ router.post('/ask/message', aiLimiter, async (req, res) => {
     const sessionId = req.body.sessionId ? Number(req.body.sessionId) : null;
     if (sessionId) {
       try {
-        await advisorDb.appendMessage(sessionId, 'user', latestUserMsg?.content || '');
-        await advisorDb.appendMessage(sessionId, 'assistant', reply);
+        await advisorDb.appendMessage(sessionId, req.session.userId, 'user', latestUserMsg?.content || '');
+        await advisorDb.appendMessage(sessionId, req.session.userId, 'assistant', reply);
       } catch (persistErr) {
         console.error('advisor persist error:', persistErr.message);
         // Non-fatal — don't fail the response
@@ -401,11 +401,11 @@ router.post('/research/run', async (req, res) => {
     const id = await researchDb.createReport(req.session.userId, question);
     try {
       const { report, sources } = await runResearch(user, profile, maal, question);
-      await researchDb.completeReport(id, report, sources);
+      await researchDb.completeReport(id, req.session.userId, report, sources);
       res.json({ ok: true, id, report, sources, question });
     } catch (e) {
       console.error('research run failed:', e.message);
-      await researchDb.failReport(id, 'The research engine hit a snag — please try again.');
+      await researchDb.failReport(id, req.session.userId, 'The research engine hit a snag — please try again.');
       res.status(500).json({ error: 'The research engine hit a snag — please try again.' });
     }
   } catch (err) {
