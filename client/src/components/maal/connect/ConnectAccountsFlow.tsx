@@ -7,7 +7,7 @@ import { InstitutionLogo } from "@/components/maal/InstitutionLogo";
 import { MaalMark } from "@/components/maal/MaalMark";
 import { Disclaimer } from "@/components/maal/Disclaimer";
 import {
-  consentUrl, fetchCatalogue, manualPayload, parseDollars, saveManual, searchCatalogue, syncAndWait,
+  consentUrl, fetchCatalogue, fetchLinkedAccounts, manualPayload, parseDollars, saveBasiqOwnership, saveManual, searchCatalogue, syncAndWait,
   type BankAccountType, type InstitutionCatalogue, type InstitutionCategory, type InstitutionOption,
   type LinkedAccountSummary, type ManualKind,
 } from "./api";
@@ -32,10 +32,11 @@ export interface ConnectResult {
   /** basiq = real CDR import, demo = walkthrough only, manual = typed-in account. */
   source: "basiq" | "demo" | "manual";
   linked: LinkedAccountSummary[];
-  /** Accounts the import run reported (basiq), else linked.length. */
+  /** Accounts added by this connection. */
   count: number;
   institution: InstitutionOption | null;
   owner: OwnerType;
+  refreshOnly?: boolean;
 }
 
 export interface ConnectAccountsFlowProps {
@@ -183,6 +184,7 @@ export function ConnectAccountsFlow({
   const [firstName, setFirstName] = useState(firstNameProp ?? "");
   const [manualKind, setManualKind] = useState<ManualKind>("bank");
   const abortRef = useRef<AbortController | null>(null);
+  const accountsBeforeConsent = useRef<Promise<LinkedAccountSummary[] | null> | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => { fetchCatalogue().then(setCatalogue); }, []);
@@ -247,19 +249,35 @@ export function ConnectAccountsFlow({
         );
         return;
       }
-      const { accounts, count } = await syncAndWait(ctrl.signal);
+      const before = await accountsBeforeConsent.current;
+      const { accounts, runId } = await syncAndWait(ctrl.signal);
       if (ctrl.signal.aborted) return;
-      if (!accounts.length && !count) {
-        setPhase("error");
-        setError(`We didn’t find any ${inst.shortName} accounts yet. Finish connecting in the other tab, then try again.`);
+      const known = new Set(before?.map((account) => account.account_reference));
+      const institutionKeys = new Set([inst.id, inst.id?.replace(/^AU/, ""), inst.name, inst.shortName].filter(Boolean).map((key) => norm(String(key))));
+      const providerAccounts = accounts.filter((account) => account.account_reference?.startsWith("basiq:"));
+      const matching = providerAccounts.filter((account) => institutionKeys.has(norm(account.institution_name)));
+      // The fallback catalogue can open unscoped consent. Persist the choice
+      // only when the provider institution and a new account can be identified.
+      const attributable = inst.id && before ? matching.filter((account) => !known.has(account.account_reference)) : [];
+      if (attributable.length) {
+        await saveBasiqOwnership(runId, who, attributable.map((account) => String(account.account_reference)), ctrl.signal);
+        if (ctrl.signal.aborted) return;
+        finishWith(
+          { source: "basiq", linked: attributable, count: attributable.length, institution: inst, owner: who },
+          { title: "Your account is now connected", sub: "All data will refresh automatically within the next few minutes." },
+        );
         return;
       }
-      const key = norm(inst.shortName);
-      const mine = accounts.filter((a) => { const n = norm(a.institution_name || ""); return key && (n.includes(key) || key.includes(n)); });
-      finishWith(
-        { source: "basiq", linked: mine.length ? mine : accounts, count: count || accounts.length, institution: inst, owner: who },
-        { title: "Your account is now connected", sub: "All data will refresh automatically within the next few minutes." },
-      );
+      const refreshedAccounts = matching.length ? matching : inst.id ? [] : providerAccounts;
+      if (refreshedAccounts.length) {
+        finishWith(
+          { source: "basiq", linked: refreshedAccounts, count: refreshedAccounts.length, institution: matching.length ? inst : null, owner: who, refreshOnly: true },
+          { title: "Bank sync complete", sub: "Your available accounts are up to date." },
+        );
+        return;
+      }
+      setPhase("error");
+      setError(`We didn’t find any ${inst.shortName} accounts yet. Finish connecting in the other tab, then try again.`);
     } catch (e) {
       if (ctrl.signal.aborted) return;
       setPhase("error");
@@ -274,6 +292,7 @@ export function ConnectAccountsFlow({
     setError(null);
     setStep("connecting");
     if (!live) { void runImport(inst, who); return; }
+    accountsBeforeConsent.current = fetchLinkedAccounts().catch(() => null);
     const w = window.open(consentUrl(inst), "_blank");
     if (w) { try { w.opener = null; } catch { /* cross-origin */ } }
     setPhase("waiting");
@@ -462,10 +481,13 @@ export function ConnectAccountsFlow({
   }, [linked]);
 
   const lastName = lastResult?.institution?.shortName ?? lastResult?.linked[0]?.institution_name ?? "your account";
+  const connectionSummary = lastResult?.source === "demo"
+    ? `You’ve added a demo account for ${lastName}.`
+    : lastResult?.refreshOnly ? "Your bank sync is complete." : `You’ve successfully linked ${lastName}.`;
   const connectedBody = (
     <div className="cx-done">
       <h1 className="cx-h1">
-        Nice work{firstName ? `, ${firstName}` : ""}. {lastResult?.source === "demo" ? `You’ve added a demo account for ${lastName}.` : `You’ve successfully linked ${lastName}.`}
+        Nice work{firstName ? `, ${firstName}` : ""}. {connectionSummary}
       </h1>
       <p className="cx-sub">Link more accounts for a fuller picture, or start exploring Maal.</p>
       <div className="cx-linked">

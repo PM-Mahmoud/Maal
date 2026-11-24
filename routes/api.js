@@ -477,6 +477,11 @@ router.post('/v1/basiq/sync', async (req, res) => {
   return require('../services/imports').enqueueBasiqImportHandler(req, res);
 });
 
+// Save the ownership label on selected accounts after a completed Basiq import.
+router.post('/v1/basiq/ownership', (req, res) => {
+  return require('../services/imports').saveBasiqOwnershipHandler(req, res);
+});
+
 router.get('/v1/import-runs/:id', require('../services/imports').getImportRunHandler);
 
 router.get(
