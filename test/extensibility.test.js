@@ -1,6 +1,8 @@
 'use strict';
 
 const assert = require('assert');
+const { EventEmitter } = require('node:events');
+const { postWebhook } = require('../lib/webhook-http');
 const {
   normaliseScopes, validateRuleInput, validateWebhookUrl, signWebhook,
   verifyWebhook, evaluateRule, encryptWebhookSecret, decryptWebhookSecret,
@@ -14,6 +16,8 @@ assert.throws(() => validateWebhookUrl('javascript:alert(1)'), /http\(s\)/);
 assert.throws(() => validateWebhookUrl('http://localhost/hook'), /local host/);
 assert.throws(() => validateWebhookUrl('http://169.254.169.254/latest/meta-data'), /local host/);
 assert.equal(validateWebhookUrl('https://hooks.example.test/maal'), 'https://hooks.example.test/maal');
+assert.throws(() => validateWebhookUrl('http://[::1]/hook'), /local host/);
+assert.equal(validateWebhookUrl('https://[2606:4700:4700::1111]/hook'), 'https://[2606:4700:4700::1111]/hook');
 const priorWebhookKey = process.env.WEBHOOK_SECRET_ENCRYPTION_KEY;
 process.env.WEBHOOK_SECRET_ENCRYPTION_KEY = 'test-only-key';
 const encryptedWebhookSecret = encryptWebhookSecret('webhook-secret');
@@ -36,6 +40,40 @@ assert.equal(verifyWebhook('{"ok":true}', signed, 'secret', '1700000000'), true)
 assert.equal(verifyWebhook('{"ok":true}', signed, 'wrong', '1700000000'), false);
 
 (async () => {
+  const endpoint = 'https://hooks.example.test/maal';
+  const options = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' };
+  const publicAnswer = { address: '93.184.216.34', family: 4 };
+  let requested = 0;
+  await assert.rejects(postWebhook(endpoint, options, {
+    lookup: async () => [publicAnswer, { address: '127.0.0.1', family: 4 }],
+    request: () => { requested++; },
+  }), /must resolve to public addresses/);
+  assert.equal(requested, 0);
+
+  const response = await postWebhook(endpoint, options, {
+    lookup: async () => [publicAnswer],
+    request: (url, out, onResponse) => {
+      requested++;
+      assert.equal(url.hostname, 'hooks.example.test');
+      out.lookup(url.hostname, { all: true }, (error, answers) => {
+        assert.ifError(error);
+        assert.deepEqual(answers, [publicAnswer]);
+      });
+      const req = new EventEmitter();
+      req.end = (body) => {
+        assert.equal(body, options.body);
+        const res = new EventEmitter();
+        res.statusCode = 302;
+        onResponse(res);
+        res.emit('end');
+      };
+      return req;
+    },
+  });
+  assert.equal(response.status, 302);
+  assert.equal(response.ok, false);
+  assert.equal(requested, 1);
+
   assert.deepStrictEqual(await resolvePrincipal({ session: { userId: 42 } }, { authenticateToken: async () => null }), { userId: 42, kind: 'session', scopes: null });
   const tokenPrincipal = await resolvePrincipal({ headers: { authorization: 'Bearer maal_test' } }, { authenticateToken: async (token) => ({ user_id: 42, scopes: ['read', 'export'] , token }) });
   assert.equal(tokenPrincipal.userId, 42);
@@ -79,6 +117,7 @@ assert.equal(verifyWebhook('{"ok":true}', signed, 'wrong', '1700000000'), false)
   assert.equal(notifications.length, 1);
   assert.equal(notifications[0][0], 42);
   assert.equal(requests[0].options.headers['X-Maal-Event'], 'data.updated');
+  assert.equal(requests[0].options.redirect, 'manual'); // SSRF: never follow a webhook redirect
   assert.equal(verifyWebhook(requests[0].options.body, requests[0].options.headers['X-Maal-Signature'], 'hook-secret', requests[0].options.headers['X-Maal-Timestamp']), true);
 
   const duplicate = await service.publishEvent(42, 'data.updated', { amount: 125 });
