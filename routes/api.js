@@ -229,7 +229,7 @@ router.post('/v1/advisor/message', async (req, res) => {
     const assetsDb = require('../db/assets');
     const { computeMaalScore } = require('../lib/maal-score');
     const vaultDb = require('../db/vault');
-    const { getTxnsSince } = require('../db/transactions');
+    const { getCashFlowTransactions } = require('../db/transactions');
     const { getSnapshots } = require('../db/snapshots');
     const goalsDb = require('../db/goals');
     const isaacus = require('../services/isaacus');
@@ -245,13 +245,13 @@ router.post('/v1/advisor/message', async (req, res) => {
     catch (e) { console.error('vault docs for advisor failed:', e.message); }
 
     const [txns, snaps, goals] = await Promise.all([
-      getTxnsSince(req.session.userId, 30).catch(() => []),
+      getCashFlowTransactions(req.session.userId, 30).catch(() => []),
       getSnapshots(req.session.userId, 90).catch(() => []),
       goalsDb.listGoals(req.session.userId).catch(() => []),
     ]);
-    const cashSavings = Number(profile.cash_savings || 0);
-    const monthlyExpenses = Number(profile.monthly_expenses || 0);
-    const cashRunway = monthlyExpenses > 0 ? Math.round(cashSavings / monthlyExpenses) : null;
+    const { calculateCashRunway } = require('../lib/spending-cashflow');
+    const runway = calculateCashRunway(txns, profile.cash_savings, profile.monthly_expenses);
+    const cashRunway = runway.months == null ? null : Math.round(runway.months);
 
     // Legal/tax grounding from the user's own Vault docs (only when they have any).
     let isaacusGrounding = null;
@@ -280,7 +280,7 @@ router.post('/v1/advisor/message', async (req, res) => {
       ]);
     } catch (e) { console.error('[advisor] memory/instructions load failed:', e.message); }
 
-    const extra = { transactions: txns, snapshots: snaps, goals, cashRunway, isaacusGrounding, memory: memoryRow.content, customInstructions };
+    const extra = { transactions: txns, snapshots: snaps, goals, cashRunway, cashRunwayFromTransactions: runway.fromTransactions, isaacusGrounding, memory: memoryRow.content, customInstructions };
     // Rich web chat: reply text + generative-UI widgets (filled with the user's
     // real data server-side) + follow-up chips + internal-only citations.
     const rich = await advisor.chatRich(user, profile, maal, clean, docs, extra);
@@ -360,7 +360,7 @@ async function buildWidgetContext(userId) {
   const { getProfileByUserId } = require('../db/profiles');
   const assetsDb = require('../db/assets');
   const { computeMaalScore } = require('../lib/maal-score');
-  const { getTxnsSince } = require('../db/transactions');
+  const { getCashFlowTransactions } = require('../db/transactions');
   const { getSnapshots } = require('../db/snapshots');
   const goalsDb = require('../db/goals');
   const rawProfile = (await getProfileByUserId(userId)) || {};
@@ -368,7 +368,7 @@ async function buildWidgetContext(userId) {
   const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
   const maal = computeMaalScore(profile);
   const [transactions, snapshots, goals] = await Promise.all([
-    getTxnsSince(userId, 30).catch(() => []),
+    getCashFlowTransactions(userId, 30).catch(() => []),
     getSnapshots(userId, 90).catch(() => []),
     goalsDb.listGoals(userId).catch(() => []),
   ]);
@@ -1329,20 +1329,19 @@ async function s2CategorisedTransactions(userId) {
   const txnDb = require('../db/transactions');
   const { autoCategorize } = require('../lib/transaction-categories');
   const { detectTransactionRelationships, indexRelationships } = require('../services/transaction-relationships');
+  const { getEffectiveTransactions } = require('../db/transaction-detail');
   const rows = await txnDb.getTransactionsWithCategory(userId, 2000);
   const relationships = indexRelationships(detectTransactionRelationships(rows));
-  const out = rows.map((r) => {
-    const rel = relationships.get(String(r.id));
-    const row = rel ? { ...r, relationship_type: rel.type } : r;
+  const annotated = rows.map((row) => ({
+    ...row,
+    relationship_type: relationships.get(String(row.id))?.type,
+  }));
+  const effective = await getEffectiveTransactions(userId, annotated);
+  return effective.map((row) => {
     if (row.category_group) return row;
     const auto = autoCategorize(row.description, row.amount);
     return auto ? { ...row, category_group: auto.group, category: auto.category } : row;
   });
-  // Hidden rows drop out and split rows count per part (Transaction detail, shared/transaction-splits.mjs).
-  const detailDb = require('../db/transaction-detail');
-  const extras = await detailDb.getExtras(userId, out.map((r) => r.id));
-  const { effectiveTransactions } = await import('../shared/transaction-splits.mjs');
-  return effectiveTransactions(detailDb.attachExtras(out, extras));
 }
 
 // GET /v1/budgets/suggestion — HEL-86 "Create a budget with Maal".
@@ -1532,8 +1531,10 @@ router.get('/v1/transactions/subscriptions', async (req, res) => {
   try {
     const txnDb = require('../db/transactions');
     const { detectSubscriptions } = require('../services/transaction-rules');
-    const txns = await txnDb.getTxnsForSubscriptions(req.session.userId, 400);
-    res.json({ subscriptions: detectSubscriptions(txns) });
+    const { getEffectivePayments } = require('../db/transaction-detail');
+    const userId = req.session.userId;
+    const txns = await txnDb.getTxnsForSubscriptions(userId, 400);
+    res.json({ subscriptions: detectSubscriptions(await getEffectivePayments(userId, txns)) });
   } catch (e) {
     console.error('/api/v1/transactions/subscriptions error:', e.message);
     res.status(500).json({ error: 'Could not detect subscriptions' });
@@ -1560,7 +1561,8 @@ router.get('/v1/transactions/recurring', async (req, res) => {
     const ordinaryRows = rows.map((row) => relationships.has(String(row.id))
       ? { ...row, relationship_type: relationships.get(String(row.id)).type }
       : row);
-    const detected = detectRecurringTransactions(ordinaryRows);
+    const { getEffectivePayments } = require('../db/transaction-detail');
+    const detected = detectRecurringTransactions(await getEffectivePayments(req.session.userId, ordinaryRows));
     const { mergeRecurring } = await import('../shared/recurring.mjs');
     let manualRows = [];
     let manualError = false;

@@ -202,7 +202,8 @@ async function sendPortfolioDigest(user, model) {
     ? 'Not enough history yet to show a weekly change.'
     : `${arrow} ${AUD(Math.abs(m.weekChangeAbs))} (${m.weekChangePct == null ? '' : (m.weekChangePct > 0 ? '+' : '') + m.weekChangePct + '%'}) over the past week`;
   const scoreLine = m.score == null ? '' : `<p style="margin:0 0 6px;color:#6B6F76;font-size:0.85rem;">Maal Score: <b>${m.score}/100</b> (${esc(m.band)})</p>`;
-  const runwayLine = m.runwayMonths == null ? '' : `<p style="margin:0;color:#6B6F76;font-size:0.85rem;">Cash runway: <b>${m.runwayMonths} months</b></p>`;
+  const runwayBasis = m.runwayFromTransactions ? ' (estimated from visible spending over the past 30 days)' : '';
+  const runwayLine = m.runwayMonths == null ? '' : `<p style="margin:0;color:#6B6F76;font-size:0.85rem;">Cash runway: <b>${m.runwayMonths} months</b>${runwayBasis}</p>`;
 
   const html = `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:auto;">
     <p style="font-size:1.2rem;font-weight:700;color:#12B5A6;margin:0 0 4px;"><img src="https://hellomaal.com/images/apple-touch-icon.png" width="28" height="28" alt="" style="display:inline-block;vertical-align:-6px;border-radius:6px;margin-right:6px;">Maal</p>
