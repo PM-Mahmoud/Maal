@@ -1,1 +1,0 @@
-import{j as t,L as i}from"./index-D4kmvE5W.js";/* empty css                          */import{S as n}from"./settings-BU-8BhPX.js";function a(){return t.jsx(i,{to:"/app/spending/settings",className:"ss-cog","aria-label":"Spending settings",title:"Spending settings",children:t.jsx(n,{"aria-hidden":!0})})}export{a as S};
