@@ -11,6 +11,7 @@
 //     anything that slips through).
 // The user can inspect ("what do you remember about me?"), edit, and clear it.
 
+const { safeError } = require('../lib/safe-log');
 const gateway = require('./gateway');
 
 const MEMORY_SECTIONS = ['Personal context', 'Financial situation', 'Preferences & instructions', 'Notable past discussions'];
@@ -57,7 +58,7 @@ async function mergeMemory(existing, transcript) {
       { role: 'user', content: '<existing_memory>\n' + String(existing || '(empty)').slice(0, 4000) + '\n</existing_memory>\n\n<new_conversation>\n' + convo + '\n</new_conversation>' },
     ], { maxTokens: 500, temperature: 0.2 });
   } catch (e) {
-    console.error('[advisor-memory] merge failed:', e.message);
+    console.error('[advisor-memory] merge failed:', safeError(e));
     return null;
   }
   const cleaned = redactSensitive(String(raw || '').trim());

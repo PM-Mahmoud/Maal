@@ -19,6 +19,7 @@
 // Mounted at /api in server.js BEFORE routes/api.js so the generic /v1/:table
 // handler never sees these paths. Every DB call is keyed by req.session.userId.
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const crypto = require('crypto');
 
@@ -75,7 +76,7 @@ function createAccountSecurityRouter({
   }
 
   function fail(res, where, e) {
-    console.error(`[account-security] ${where} failed:`, e && e.message);
+    console.error(`[account-security] ${where} failed:`, safeError(e));
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 
@@ -128,7 +129,7 @@ function createAccountSecurityRouter({
       await new Promise((ok, err) => req.session.save ? req.session.save((e) => (e ? err(e) : ok())) : ok());
       const mail = codeEmail(code, purpose);
       Promise.resolve(sendEmail({ to: u.user.email, ...mail }))
-        .catch((e) => console.error('[account-security] code email failed:', e && e.message));
+        .catch((e) => console.error('[account-security] code email failed:', safeError(e)));
       res.json({ ok: true, sentTo: maskEmail(u.user.email), expiresInSeconds: CODE_TTL_MS / 1000 });
     } catch (e) { fail(res, 'start', e); }
   });

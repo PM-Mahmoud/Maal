@@ -8,6 +8,7 @@
 // fails, so the pipeline degrades to Finnhub + Exa (or model-only) gracefully
 // and NEVER throws into the caller.
 
+const { safeError } = require('../lib/safe-log');
 const BASE = 'https://api.financialdatasets.ai';
 const TIMEOUT_MS = Number(process.env.FINANCIAL_DATASETS_TIMEOUT_MS) || 15000;
 
@@ -30,7 +31,7 @@ async function fdGet(path) {
     if (!res.ok) throw new Error('financialdatasets ' + res.status);
     return await res.json();
   } catch (e) {
-    console.error('financialdatasets: request failed:', e.message);
+    console.error('financialdatasets: request failed:', safeError(e));
     return null;
   } finally {
     clearTimeout(timer);

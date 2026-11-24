@@ -10,6 +10,7 @@
 // Safe to re-run: uses INSERT ... ON CONFLICT (article_slug, chunk_index) DO UPDATE.
 // Add --dry-run to preview chunks without writing to DB.
 
+const { safeError } = require('../lib/safe-log');
 const fs = require('fs');
 const path = require('path');
 const { Client } = require('pg');
@@ -87,10 +88,10 @@ async function main() {
   console.log(`Total chunks to embed: ${records.length}`);
 
   if (DRY_RUN) {
-    console.log('\n-- DRY RUN: first 3 chunks --');
+    console.log('\n-- DRY RUN: first 3 chunk summaries --');
     for (const r of records.slice(0, 3)) {
       console.log(`\n[${r.slug}] chunk ${r.chunkIndex} (${r.content.length} chars):`);
-      console.log(r.content.slice(0, 200) + '...');
+      console.log('Chunk body withheld from logs.');
     }
     return;
   }
@@ -159,7 +160,7 @@ async function runIngest(opts = {}) {
 
 // Run directly: node scripts/ingest-knowledge.js [--dry-run]
 if (require.main === module) {
-  main().catch(err => { console.error(err); process.exit(1); });
+  main().catch(err => { console.error("[ingest-knowledge] Operation failed:", safeError(err)); process.exit(1); });
 }
 
 module.exports = { runIngest };

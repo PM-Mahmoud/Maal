@@ -1,5 +1,6 @@
 'use strict';
 
+const { safeError } = require('../lib/safe-log');
 const crypto = require('crypto');
 const express = require('express');
 const lunchflow = require('../services/lunchflow');
@@ -48,7 +49,7 @@ function createHandlers(dependencies = {}) {
       });
       return res.redirect(url);
     } catch (error) {
-      console.error('Lunch Flow connect error:', error.message);
+      console.error('Lunch Flow connect error:', safeError(error));
       return res.redirect('/app/assets?lunchflow=error');
     }
     },
@@ -69,7 +70,7 @@ function createHandlers(dependencies = {}) {
       await connectionStore.recordEvent?.(req.session.userId, 'lunchflow', 'connected', { scopes: tokens.scope || null });
       return res.redirect('/app/assets?lunchflow=connected');
     } catch (error) {
-      console.error('Lunch Flow callback error:', error.message);
+      console.error('Lunch Flow callback error:', safeError(error));
       return res.redirect('/app/assets?lunchflow=error');
     }
     },
@@ -87,7 +88,7 @@ function createHandlers(dependencies = {}) {
           health: health || { provider: 'lunchflow', status: connection ? 'unknown' : 'reauthorization_required' },
         });
       } catch (error) {
-        console.error('Lunch Flow status error:', error.message);
+        console.error('Lunch Flow status error:', safeError(error));
         return res.status(500).json({ error: 'Could not load Lunch Flow status.' });
       }
     },
@@ -104,7 +105,7 @@ function createHandlers(dependencies = {}) {
         await connectionStore.recordEvent?.(req.session.userId, 'lunchflow', 'sync_started', { importRunId: run.id });
         return res.status(202).json({ ok: true, import_run_id: run.id, job_id: job.id, status: run.status });
       } catch (error) {
-        console.error('Lunch Flow sync error:', error.message);
+        console.error('Lunch Flow sync error:', safeError(error));
         const status = /No Lunch Flow provider connection/.test(error.message) ? 409 : 502;
         return res.status(status).json({
           error: status === 409
@@ -118,7 +119,7 @@ function createHandlers(dependencies = {}) {
         const connection = await connectionStore.getConnection(req.session.userId, 'lunchflow');
         let remoteRevokeFailed = false;
         try { await provider.revokeAccess?.(connection?.access_token); }
-        catch (error) { remoteRevokeFailed = true; console.error('Lunch Flow remote revoke failed:', error.message); }
+        catch (error) { remoteRevokeFailed = true; console.error('Lunch Flow remote revoke failed:', safeError(error)); }
         await connectionStore.deleteConnection(req.session.userId, 'lunchflow');
         await connectionStore.recordEvent?.(req.session.userId, 'lunchflow', 'revoked', {
           scopes: connection?.scopes, details: { remote_revoke_failed: remoteRevokeFailed },
@@ -129,7 +130,7 @@ function createHandlers(dependencies = {}) {
         });
         return res.json({ ok: true, connected: false, remote_revoke_failed: remoteRevokeFailed });
       } catch (error) {
-        console.error('Lunch Flow disconnect error:', error.message);
+        console.error('Lunch Flow disconnect error:', safeError(error));
         return res.status(500).json({ error: 'Could not disconnect Lunch Flow.' });
       }
     },

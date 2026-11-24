@@ -1,5 +1,6 @@
 'use strict';
 
+const { safeError } = require('../lib/safe-log');
 const https = require('https');
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -34,7 +35,7 @@ async function sendSms(to, body) {
       res.on('data', chunk => raw += chunk);
       res.on('end', () => {
         if (res.statusCode >= 400) {
-          console.error('[SMS] Twilio error', res.statusCode, raw);
+          console.error('[SMS] Twilio error:', safeError({ status: res.statusCode }));
           reject(new Error(`Twilio ${res.statusCode}`));
         } else {
           resolve(JSON.parse(raw));
@@ -84,7 +85,7 @@ async function handleInboundSms({ from, body }) {
     }
   } catch (e) {
     // Fail open on infra errors (consistent with the HTTP metering path).
-    console.error('[sms] metering failed open:', e.message);
+    console.error('[sms] metering failed open:', safeError(e));
   }
 
   const advisor = require('./advisor');

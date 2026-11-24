@@ -7,6 +7,7 @@
 //      database to notice a user asked for help. A mail failure never fails the
 //      request and never loses the submission.
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const router = express.Router();
 
@@ -37,16 +38,16 @@ router.post('/feedback', async (req, res) => {
           replyTo = user.email; // so hitting Reply answers the user directly
         }
       } catch (e) {
-        console.error('[feedback] Could not look up submitter:', e.message);
+        console.error('[feedback] Could not look up submitter:', safeError(e));
       }
       await sendTeamNotification({ kind, message, from, page, replyTo });
     })().catch(err => console.error(
-      `[feedback] Notification email failed (submission IS saved in Postgres): ${err.message}`
+      "[feedback] Notification email failed (submission IS saved in Postgres):", safeError(err)
     ));
 
     res.json({ ok: true });
   } catch (err) {
-    console.error('Feedback error:', err.message);
+    console.error('Feedback error:', safeError(err));
     res.status(500).json({ error: 'Could not save feedback.' });
   }
 });

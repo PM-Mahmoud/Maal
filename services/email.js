@@ -14,6 +14,7 @@
  * error is logged loudly — users will be stuck at /verify-email.
  */
 
+const { safeError } = require('../lib/safe-log');
 const https = require('https');
 
 // attachments: optional [{ filename, content }] where content is base64 (Resend's
@@ -55,7 +56,7 @@ async function sendEmail({ to, subject, html, text, attachments, replyTo }) {
           resolve(JSON.parse(body));
         } else {
           const err = new Error(`Resend API error ${res.statusCode}: ${body}`);
-          console.error('[email] Send failed:', err.message);
+          console.error('[email] Send failed:', safeError(err));
           reject(err);
         }
       });

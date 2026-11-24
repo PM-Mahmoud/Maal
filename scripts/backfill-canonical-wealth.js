@@ -4,6 +4,7 @@
 // Existing legacy tables remain untouched and continue to serve the UI during
 // compatibility rollout. Never logs PII.
 
+const { safeError } = require('../lib/safe-log');
 const { Client } = require('pg');
 const {
   projectLegacyWealthRows,
@@ -164,7 +165,7 @@ async function main() {
 
 if (require.main === module) {
   main().catch((error) => {
-    console.error(`backfill-canonical-wealth: ${error.message}`);
+    console.error("backfill-canonical-wealth:", safeError(error));
     process.exit(1);
   });
 }

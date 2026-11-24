@@ -20,9 +20,9 @@
 // Idempotent: a user who already has a source='backfill' row in a given
 // table is skipped for that table on re-run.
 //
-// Per CLAUDE.md's PII rule: never print more than a user id + numbers to
-// stdout. No emails, no names, no full profile dumps.
+// Log action names and aggregate counts. Keep profile IDs and balances out of stdout.
 
+const { safeError } = require('../lib/safe-log');
 const { Client } = require('pg');
 const assetsDb = require('../db/assets');
 
@@ -93,9 +93,9 @@ function computeVerificationDelta(profile, summary) {
 
 async function verifyUser(profile) {
   const summary = await assetsDb.getAssetSummary(profile.user_id);
-  const { oldTotal, newTotal, delta, matches } = computeVerificationDelta(profile, summary);
+  const { matches } = computeVerificationDelta(profile, summary);
   if (!matches) {
-    console.log(`MISMATCH user ${profile.user_id}: old=${oldTotal} new=${newTotal} delta=${delta}`);
+    console.log('MISMATCH between legacy and backfilled totals');
     return false;
   }
   return true;
@@ -125,7 +125,7 @@ async function main() {
     for (const profile of profiles) {
       const results = await backfillUser(profile);
       for (const r of results) {
-        console.log(`user ${r.userId}: ${r.table} — ${r.action}`);
+        console.log(`${r.table} — ${r.action.split(' (balance=')[0]}`);
         if (r.action.startsWith('inserted') || r.action.startsWith('would insert')) inserted++;
         else skipped++;
       }
@@ -148,7 +148,7 @@ async function main() {
 
 if (require.main === module) {
   main().catch((e) => {
-    console.error('backfill-assets: fatal error:', e.message);
+    console.error('backfill-assets: fatal error:', safeError(e));
     process.exit(1);
   });
 }

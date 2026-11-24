@@ -12,6 +12,7 @@
 // way. `extracted_text` always stays in Postgres (it's small text the advisor
 // reads, not the raw file).
 
+const { safeError } = require('../lib/safe-log');
 const { pool } = require('./auth');
 const storage = require('../services/storage');
 
@@ -99,7 +100,7 @@ async function deleteFile(id, userId) {
   const key = r.rows[0] && r.rows[0].storage_key;
   if (key) {
     try { await storage.deleteObject(key); }
-    catch (e) { console.error('[vault] object delete failed (row already removed):', e.message); }
+    catch (e) { console.error('[vault] object delete failed (row already removed):', safeError(e)); }
   }
 }
 

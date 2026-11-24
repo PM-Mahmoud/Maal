@@ -3,6 +3,7 @@
  * GET /api/waitlist/status (is signup invite-only right now?)
  * Does NOT own: user auth, invites (routes/admin.js), any other form submissions
  */
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const router = express.Router();
 const { saveWaitlistEmail } = require('../db/waitlist');
@@ -41,11 +42,11 @@ router.post('/', async (req, res) => {
     }
 
     sendWaitlistConfirmation(email).catch((err) => {
-      console.error('[waitlist] Confirmation email failed:', err.message);
+      console.error('[waitlist] Confirmation email failed:', safeError(err));
     });
     res.json({ ok: true });
   } catch (err) {
-    console.error('[waitlist] Error:', err.message);
+    console.error('[waitlist] Error:', safeError(err));
     res.status(500).json({ ok: false, error: 'Something went wrong. Please try again.' });
   }
 });

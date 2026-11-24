@@ -1,5 +1,6 @@
 'use strict';
 
+const { safeError } = require('../lib/safe-log');
 const crypto = require('crypto');
 const database = require('../db/wealth-statement-import');
 const { normalizeStatementImport } = require('../lib/wealth-statement-import');
@@ -25,7 +26,7 @@ function createStatementImportHandler(importStatement) {
       return res.status(201).json({ ok: true, ...result });
     } catch (error) {
       const validation = /Statement|Row \d+|Account name|Currency|asOf|stable statementId|non-AUD/.test(error.message);
-      if (!validation) console.error('wealth statement import error:', error.message);
+      if (!validation) console.error('wealth statement import error:', safeError(error));
       return res.status(validation ? 400 : 500).json({ error: validation ? error.message : 'Could not import statement' });
     }
   };

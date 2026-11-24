@@ -3,6 +3,7 @@
 // (undefined variables, bad property access) without needing a database.
 // Run: node scripts/render-test.js
 
+const { safeError } = require('../lib/safe-log');
 const ejs = require('ejs');
 const path = require('path');
 
@@ -55,7 +56,7 @@ async function main() {
     } catch (err) {
       if (err.code === 'ENOENT') { console.log('  SKIP ' + view + ' (no such view)'); continue; }
       failed++;
-      console.error('  FAIL ' + view + ' — ' + err.message.split('\n')[0]);
+      console.error(`  FAIL ${view}`, safeError(err));
     }
   }
   // Extra states of the auth pages (each state is its own branch of the view).
@@ -77,7 +78,7 @@ async function main() {
       console.log('  OK   ' + view + ' (state)');
     } catch (err) {
       failed++;
-      console.error('  FAIL ' + view + ' (state) — ' + err.message.split('\n')[0]);
+      console.error(`  FAIL ${view}`, safeError(err));
     }
   }
   console.log(failed ? `\n${failed} view(s) failed` : '\nAll views rendered cleanly');

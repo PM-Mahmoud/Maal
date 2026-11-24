@@ -1,5 +1,6 @@
 'use strict';
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
@@ -11,7 +12,7 @@ const service = createExtensibilityService();
 async function principal(req, res, scope) {
   let value;
   try { value = await resolvePrincipal(req); }
-  catch (error) { console.error('[extensibility] authentication error:', error.message); res.status(500).json({ error: 'Could not authenticate request' }); return null; }
+  catch (error) { console.error('[extensibility] authentication error:', safeError(error)); res.status(500).json({ error: 'Could not authenticate request' }); return null; }
   if (!value) { res.status(401).json({ error: 'Not authenticated' }); return null; }
   if (scope && !principalHasScope(value, scope)) { res.status(403).json({ error: `API token requires the ${scope} scope` }); return null; }
   return value;

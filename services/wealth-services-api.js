@@ -1,5 +1,6 @@
 'use strict';
 
+const { safeError } = require('../lib/safe-log');
 const { calculateZakat, canonicalZakatLines, METHODOLOGIES } = require('../lib/zakat');
 const { calculatePurification, METHODOLOGY } = require('../lib/purification');
 const { snapshotHash, evidenceDocument } = require('../lib/service-evidence');
@@ -7,7 +8,7 @@ const runs = require('../db/wealth-services');
 const partners = require('../db/partner-platform');
 
 function userId(req,res){if(!req.session?.userId){res.status(401).json({error:'Not authenticated'});return null;}return req.session.userId;}
-function fail(res,error){if(error.code&&String(error.code).length===5){console.error('wealth service database error:',error.message);return res.status(500).json({error:'An internal error occurred'});}res.status(error.statusCode||400).json({error:error.message});}
+function fail(res,error){if(error.code&&String(error.code).length===5){console.error('wealth service database error:',safeError(error));return res.status(500).json({error:'An internal error occurred'});}res.status(error.statusCode||400).json({error:error.message});}
 
 async function calculateZakatHandler(req,res){const uid=userId(req,res);if(!uid)return;try{
   const base=METHODOLOGIES[req.body.methodology || 'LUNAR_V1']; if(!base) throw new Error('Unsupported zakat methodology');

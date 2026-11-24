@@ -1,5 +1,6 @@
 'use strict';
 
+const { safeError } = require('../lib/safe-log');
 const crypto = require('crypto');
 const collaborationDb = require('../db/collaboration');
 const { deleteUser } = require('../db/users');
@@ -34,7 +35,7 @@ function bodyData(req) {
 
 function sendError(res, error, fallback = 'Could not update collaboration settings.') {
   const status = error.statusCode || (/^(Household name|Ownership|A valid grantee|Grant role|Grant scopes|Grant expiry|Tax year|Document type|Invalid)/.test(error.message) ? 400 : 500);
-  if (status >= 500) console.error('[collaboration]', error.message);
+  if (status >= 500) console.error('[collaboration]', safeError(error));
   res.status(status).json({ error: status < 500 ? error.message : fallback });
 }
 

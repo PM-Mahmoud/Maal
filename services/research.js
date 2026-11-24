@@ -4,6 +4,7 @@
 // that cites its sources. Degrades gracefully — with no data keys it still
 // produces a model-only answer; with no LLM it returns a clear message.
 
+const { safeError } = require('../lib/safe-log');
 const advisor = require('./advisor');
 const gateway = require('./gateway');
 const marketdata = require('./marketdata');
@@ -49,7 +50,7 @@ async function runResearch(user, profile, maal, question) {
           news.slice(0, 6).map((n) => `- ${n.headline} (${n.source})`).join('\n'));
         news.slice(0, 6).forEach((n) => { if (n.url) sources.push({ title: n.headline, url: n.url, source: n.source }); });
       }
-    } catch (e) { console.error('research: market news failed:', e.message); }
+    } catch (e) { console.error('research: market news failed:', safeError(e)); }
   }
 
   // 2. Web + news grounding (Bing)
@@ -63,7 +64,7 @@ async function runResearch(user, profile, maal, question) {
         contextChunks.push(`Source: ${r.title}\n${r.snippet}\n(${r.url})`);
         if (r.url) sources.push({ title: r.title, url: r.url, source: r.source });
       });
-    } catch (e) { console.error('research: grounding failed:', e.message); }
+    } catch (e) { console.error('research: grounding failed:', safeError(e)); }
   }
 
   const dataBlock = contextChunks.length
@@ -184,7 +185,7 @@ async function gather(question, tickers) {
         contextChunks.push(`Source: ${r.title}\n${r.snippet || r.text || ''}\n(${r.url})`);
         sources.push({ title: r.title, url: r.url, source: r.source });
       });
-    } catch (e) { console.error('deep research: grounding failed:', e.message); }
+    } catch (e) { console.error('deep research: grounding failed:', safeError(e)); }
   }
 
   // Live market news (Finnhub).
@@ -195,7 +196,7 @@ async function gather(question, tickers) {
         contextChunks.push('Recent market news (Finnhub):\n'
           + news.slice(0, 5).map((n) => `- ${n.headline} (${n.source})`).join('\n'));
       }
-    } catch (e) { console.error('deep research: market news failed:', e.message); }
+    } catch (e) { console.error('deep research: market news failed:', safeError(e)); }
   }
 
   // Depth: price series (Financial Datasets) for the quant phase + fundamentals.
@@ -210,7 +211,7 @@ async function gather(question, tickers) {
             + (facts.market_cap ? `, market cap ${aud(facts.market_cap)}` : '')
             + (facts.sector ? `, sector ${facts.sector}` : ''));
         }
-      } catch (e) { console.error(`deep research: fundamentals ${t} failed:`, e.message); }
+      } catch (e) { console.error('Deep research fundamentals request failed:', safeError(e)); }
     }
   }
 
@@ -260,7 +261,7 @@ async function runDeepResearch({ jobId, userId, profile, maal, question }) {
     try {
       const v = await gateway.verifyAndRevise({ messages, draft: report, opts: { role: 'reasoner', maxTokens: 1800 } });
       if (v && v.text) report = v.text;
-    } catch (e) { console.error('deep research: verify failed (shipping draft):', e.message); }
+    } catch (e) { console.error('deep research: verify failed (shipping draft):', safeError(e)); }
 
     // RENDER — persist the report; the PDF is generated on demand by the route.
     await researchDb.setJobPhase(jobId, userId, 'render');
@@ -270,7 +271,7 @@ async function runDeepResearch({ jobId, userId, profile, maal, question }) {
     await researchDb.completeReport(reportId, userId, report, uniqueSources);
     await researchDb.completeJob(jobId, userId, reportId, { quant: computed, tickers, sourceCount: uniqueSources.length });
   } catch (e) {
-    console.error('deep research pipeline failed:', e.message);
+    console.error('deep research pipeline failed:', safeError(e));
     await researchDb.failJob(jobId, userId, 'The research engine hit a snag — please run it again.');
   }
 }

@@ -2,6 +2,7 @@
 // Serves the onboarding wizard page and handles step-by-step data submission.
 // Does NOT own business logic — delegates to db/onboarding.js.
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const router = express.Router();
 const {
@@ -58,7 +59,7 @@ router.post('/session', requireAuth, async (req, res) => {
     }
     res.json({ session_id: session.id, current_step: session.current_step, is_complete: session.is_complete });
   } catch (err) {
-    console.error('POST /api/session error:', err.message);
+    console.error('POST /api/session error:', safeError(err));
     res.status(500).json({ error: 'Failed to create session' });
   }
 });
@@ -71,7 +72,7 @@ router.get('/session/:sessionId/step/:step', requireAuth, async (req, res) => {
     const data = await getResponseByStep(sessionId, req.session.userId, parseInt(step, 10));
     res.json({ data: data || {} });
   } catch (err) {
-    console.error('GET step error:', err.message);
+    console.error('GET step error:', safeError(err));
     res.status(500).json({ error: 'Failed to load step data' });
   }
 });
@@ -98,7 +99,7 @@ router.post('/step/:step', requireAuth, async (req, res) => {
 
     res.json({ ok: true, next_step: step < 7 ? step + 1 : null });
   } catch (err) {
-    console.error('POST /api/step error:', err.message);
+    console.error('POST /api/step error:', safeError(err));
     res.status(500).json({ error: 'Failed to save step' });
   }
 });
@@ -184,7 +185,7 @@ router.post('/complete', requireAuth, async (req, res) => {
         await assetsDb.createDebt(userId, { label: 'Other debt', kind: 'other', balance: profileData.total_debt, source: 'manual' });
       }
     } catch (e) {
-      console.error('onboarding asset seed error:', e.message);
+      console.error('onboarding asset seed error:', safeError(e));
       // Non-fatal — the flat profile columns above already saved successfully.
     }
 
@@ -313,9 +314,9 @@ router.post('/complete', requireAuth, async (req, res) => {
         subject: 'Your Financial Health Score is ready — Maal',
         html,
         text: `Your Financial Health Score is ${result.score}/100 (${result.grade}). View your dashboard: ${baseUrl}/dashboard`
-      }).catch(emailErr => console.error('Completion email failed:', emailErr.message));
+      }).catch(emailErr => console.error('Completion email failed:', safeError(emailErr)));
     } catch(emailErr) {
-      console.error('Completion email setup failed:', emailErr.message);
+      console.error('Completion email setup failed:', safeError(emailErr));
     }
 
     res.json({
@@ -325,7 +326,7 @@ router.post('/complete', requireAuth, async (req, res) => {
       superScore: superScoreValue
     });
   } catch (err) {
-    console.error('POST /api/complete error:', err.message);
+    console.error('POST /api/complete error:', safeError(err));
     res.status(500).json({ error: 'Failed to complete onboarding' });
   }
 });
@@ -344,7 +345,7 @@ router.get('/profile/:userId', requireAuth, async (req, res) => {
     const responses = await getResponsesBySession(session.id, req.session.userId);
     res.json({ session, responses });
   } catch (err) {
-    console.error('GET /api/profile error:', err.message);
+    console.error('GET /api/profile error:', safeError(err));
     res.status(500).json({ error: 'Failed to load profile' });
   }
 });
