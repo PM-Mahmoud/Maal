@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowUp, Check, ChevronDown, ChevronUp, Loader2, Mic, Plus, Sparkle, Square, ThumbsDown, ThumbsUp, X, CircleCheck } from "lucide-react";
-import { getThreadMessages, sendAdvisorMessage, type Citation, type Thread } from "@/lib/advisor.functions";
+import { getThreadMessages, saveMessageFeedback, sendAdvisorMessage, type Citation, type FeedbackRating, type Thread } from "@/lib/advisor.functions";
 import { addWidget, type WidgetSpec } from "@/lib/widgets.functions";
 import { WidgetRenderer } from "@/components/maal/WidgetRenderer";
 import { AdvisorMarkdown } from "./AdvisorMarkdown";
@@ -13,6 +13,7 @@ type Msg = {
   widgets?: WidgetSpec[];
   followUps?: string[];
   citations?: Citation[];
+  rating?: FeedbackRating;
   stopped?: boolean;
   limited?: boolean;
 };
@@ -36,7 +37,6 @@ const THINKING_STEPS = [
 ];
 
 const DRAFT_KEY = (id: string) => `maal_draft_${id}`;
-const FEEDBACK_KEY = (id: string) => `maal_fb_${id}`;
 const HINT_KEY = "maal_memory_hint_dismissed";
 
 function AddToDashboard({ widget }: { widget: WidgetSpec }) {
@@ -109,24 +109,34 @@ function ThinkingCard() {
   );
 }
 
-function Feedback({ keyId }: { keyId: string }) {
-  const [v, setV] = useState<"up" | "down" | null>(() => {
-    try { return (localStorage.getItem(FEEDBACK_KEY(keyId)) as "up" | "down" | null) || null; } catch { return null; }
-  });
-  const set = (next: "up" | "down") => {
-    const val = v === next ? null : next;
-    setV(val);
-    try { if (val) localStorage.setItem(FEEDBACK_KEY(keyId), val); else localStorage.removeItem(FEEDBACK_KEY(keyId)); } catch { /* ignore */ }
-  };
+function Feedback({ threadId, messageId, rating }: { threadId: string; messageId: string; rating?: FeedbackRating }) {
+  const [vote, setVote] = useState(rating ?? null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(false);
+
+  async function save(next: "up" | "down") {
+    if (saving) return;
+    setSaving(true);
+    setError(false);
+    try {
+      setVote(await saveMessageFeedback(threadId, messageId, vote === next ? null : next));
+    } catch {
+      setError(true);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="mx-adv-answer-foot">
-      <button type="button" className="mx-adv-fb" aria-label="Helpful" aria-pressed={v === "up"} onClick={() => set("up")}>
-        <ThumbsUp className="size-4" fill={v === "up" ? "currentColor" : "none"} />
+      <button type="button" className="mx-adv-fb" aria-label="Helpful" aria-pressed={vote === "up"} disabled={saving} onClick={() => save("up")}>
+        <ThumbsUp className="size-4" fill={vote === "up" ? "currentColor" : "none"} />
       </button>
-      <button type="button" className="mx-adv-fb" aria-label="Not helpful" aria-pressed={v === "down"} onClick={() => set("down")}
-        style={v === "down" ? { color: "var(--a-ink)" } : undefined}>
-        <ThumbsDown className="size-4" fill={v === "down" ? "currentColor" : "none"} />
+      <button type="button" className="mx-adv-fb" aria-label="Not helpful" aria-pressed={vote === "down"} disabled={saving} onClick={() => save("down")}
+        style={vote === "down" ? { color: "var(--a-ink)" } : undefined}>
+        <ThumbsDown className="size-4" fill={vote === "down" ? "currentColor" : "none"} />
       </button>
+      {error && <span className="mx-adv-error" role="status">Couldn't save feedback. Try again.</span>}
     </div>
   );
 }
@@ -339,7 +349,7 @@ export function ChatConversation({
         setMessages((m) => [...m, { role: "assistant", content: "Stopped.", stopped: true }]);
       } else {
         setMessages((m) => [...m, {
-          role: "assistant", content: res.reply, widgets: res.widgets, followUps: res.followUps, citations: res.citations, limited: res.limited,
+          id: res.messageId, role: "assistant", content: res.reply, widgets: res.widgets, followUps: res.followUps, citations: res.citations, limited: res.limited,
         }]);
       }
       onTurnSaved?.(res.thread);
@@ -404,7 +414,7 @@ export function ChatConversation({
                     ))}
                   </div>
                 )}
-                {!m.stopped && !m.limited && <Feedback keyId={m.id ?? `${threadId}-${i}`} />}
+                {m.role === "assistant" && m.id && !m.stopped && !m.limited && <Feedback threadId={threadId} messageId={m.id} rating={m.rating} />}
               </div>
             )
           ))}

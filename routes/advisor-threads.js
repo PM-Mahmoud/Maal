@@ -79,6 +79,7 @@ function createAdvisorThreadsRouter({ db = require('../db/advisor') } = {}) {
           content: m.content,
           created_at: m.created_at,
           ...(m.meta && typeof m.meta === 'object' ? m.meta : {}),
+          rating: m.rating ?? null,
         })),
       });
     } catch (e) { fail(res, 'get', e); }
@@ -128,8 +129,23 @@ function createAdvisorThreadsRouter({ db = require('../db/advisor') } = {}) {
         defaultTitle: t.DEFAULT_TITLE,
       });
       if (!row) return res.status(404).json({ error: 'Chat not found' });
-      res.status(201).json({ thread: t.toThread(row) });
+      res.status(201).json({ thread: t.toThread(row), messageIds: row.message_ids });
     } catch (e) { fail(res, 'append', e); }
+  });
+
+  // HEL-39: rate a persisted assistant message. This router is mounted before
+  // the generic table handlers. Foreign threads and messages return the same 404.
+  router.post('/v1/advisor/threads/:id/messages/:messageId/feedback', requireAuth, async (req, res) => {
+    const id = threadIdOr404(req, res); if (!id) return;
+    const messageId = t.parseThreadId(req.params.messageId);
+    if (!messageId) return res.status(404).json({ error: 'Reply not found' });
+    const feedback = t.validateFeedback(req.body);
+    if (feedback.error) return res.status(400).json({ error: feedback.error });
+    try {
+      const saved = await db.saveMessageFeedback(id, messageId, req.session.userId, feedback);
+      if (!saved) return res.status(404).json({ error: 'Reply not found' });
+      res.json({ rating: feedback.rating });
+    } catch (e) { fail(res, 'feedback', e); }
   });
 
   return router;
