@@ -111,3 +111,45 @@ SELECT name, applied_at FROM _migrations ORDER BY applied_at DESC LIMIT 20;
 ```
 Confirm the expected migrations are present, with recent `applied_at`, and that
 there are **no** duplicate `..._name 2` / `..._name 3` rows.
+
+## Enable knowledge search on a metadata-only database
+
+Run `CREATE EXTENSION IF NOT EXISTS vector;` as a database role with extension
+permissions. Then run `npm run migrate` against that database. If the migration
+runner already recorded the restoration migration during a plain Postgres deploy,
+run its idempotent upgrade explicitly from the repository root with the same
+database connection settings:
+
+```sh
+node - <<'NODE'
+require('dotenv').config();
+const pool = require('./db/pool');
+const { up } = require('./migrations/1757420000000_restore_knowledge_embeddings');
+
+async function restore() {
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await up(client);
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } finally {
+    await pool.end();
+  }
+}
+restore().catch((error) => {
+  console.error(error.message);
+  process.exitCode = 1;
+});
+NODE
+```
+
+After the column and index are present, run `node scripts/ingest-knowledge.js`
+with the configured embedding credentials to populate the vectors. The ingestion
+upserts existing chunks by article slug and chunk index.
