@@ -1998,11 +1998,23 @@ router.get('/v1/goals', async (req, res) => {
   }
 });
 
+const GOAL_POST_FIELDS = new Set([
+  'id', 'name', 'category', 'description', 'source_type', 'target_kind',
+  'target_pct', 'target_amount', 'current_amount', 'target_date',
+]);
+
 router.post('/v1/goals', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
     const goalsDb = require('../db/goals');
     const body = req.body || {};
+    const unknownFields = Object.keys(body).filter((field) => !GOAL_POST_FIELDS.has(field));
+    if (unknownFields.length) {
+      return res.status(400).json({
+        error: 'Unknown fields on goals.',
+        unknown_fields: unknownFields,
+      });
+    }
     const name = String(body.name || '').trim();
     if (!name) return res.status(400).json({ error: 'A goal needs a name.' });
     // Upsert: the client's upsertGoal sends the id when editing.
