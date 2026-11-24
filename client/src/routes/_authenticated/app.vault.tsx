@@ -254,8 +254,8 @@ function VaultPage() {
         <aside className="space-y-4">
           <div className="bg-[var(--surface)] border border-border rounded-[12px] p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[12px] font-semibold text-muted-foreground">Upload files to …</p>
-              <select value={target} onChange={(e) => setTarget(e.target.value)}
+              <label htmlFor="vault-upload-collection" className="text-[12px] font-semibold text-muted-foreground">Upload files to …</label>
+              <select id="vault-upload-collection" value={target} onChange={(e) => setTarget(e.target.value)}
                 className="text-[12px] font-medium bg-background border border-border rounded-[6px] px-2 py-1">
                 {collections.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>

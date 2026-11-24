@@ -375,7 +375,7 @@ function CategoryCard({ cat, onAdd, onEdit }: { cat: Cat; onAdd: (c: Cat) => voi
           <button
             onClick={() => onAdd(cat)}
             className="flex-1 flex flex-col items-center justify-center gap-2 p-6 text-muted-foreground hover:text-foreground hover:bg-[var(--secondary)]/40 transition-colors"
-            aria-label={`Add ${cat.title}`}
+            aria-label={`${cat.blurb}. Add ${cat.title}`}
           >
             <Plus className="h-6 w-6 opacity-40" />
             <span className="text-[11px]">{cat.blurb}</span>
@@ -396,7 +396,7 @@ function CategoryCard({ cat, onAdd, onEdit }: { cat: Cat; onAdd: (c: Cat) => voi
                     <div className="min-w-0">
                       <p className="text-[13px] font-medium truncate">{r[cat.nameKey] || "Untitled"}</p>
                       <p className="text-[11px] text-muted-foreground truncate">
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-[color:var(--accent)]/12 text-[color:var(--accent)] text-[10px] font-semibold mr-1.5">{sourceLabel(r.source)}</span>
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-secondary text-foreground text-[10px] font-semibold mr-1.5">{sourceLabel(r.source)}</span>
                         {r.institution || r.ticker || r.account_type || r.kind || cat.title}
                       </p>
                     </div>

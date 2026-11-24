@@ -21,9 +21,9 @@ export function CashFlowCard({ transactions, excluded, year, month, loading, err
       ) : (
         <dl className="bd-cf-list">
           <div><dt>Income</dt><dd className="mh-amount">{audCents(cf.income)}</dd>
-            <span className="mh-bar bd-cf-bar"><i data-alt="true" style={{ width: `${(cf.income / max) * 100}%` }} /></span></div>
+            <dd className="mh-bar bd-cf-bar" aria-hidden="true"><i data-alt="true" style={{ width: `${(cf.income / max) * 100}%` }} /></dd></div>
           <div><dt>Expenses</dt><dd className="mh-amount">{signedCents(-cf.expenses)}</dd>
-            <span className="mh-bar bd-cf-bar"><i style={{ width: `${(cf.expenses / max) * 100}%` }} /></span></div>
+            <dd className="mh-bar bd-cf-bar" aria-hidden="true"><i style={{ width: `${(cf.expenses / max) * 100}%` }} /></dd></div>
           <div className="bd-cf-net"><dt>Net cash flow</dt><dd className="mh-amount" data-neg={cf.net < 0}>{signedCents(cf.net)}</dd></div>
         </dl>
       )}

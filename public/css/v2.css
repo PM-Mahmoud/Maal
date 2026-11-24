@@ -55,7 +55,7 @@
 .v2-offer { text-align: center; }
 .v2-offer-big { font-family: var(--v2-serif); font-size: 84px; line-height: 1; margin-top: .4rem; color: var(--v2-ink); }
 .v2-offer-sub { font-family: var(--v2-serif); font-size: 40px; line-height: 1.15; color: var(--v2-muted); }
-.v2-offer-fine { margin-top: .5rem; font-size: 12.5px; color: var(--v2-faint); }
+.v2-offer-fine { margin-top: .5rem; font-size: 12.5px; color: var(--v2-muted); }
 .v2-offer-lede { margin-top: .6rem; font-size: 15px; line-height: 1.45; color: var(--v2-muted); }
 .v2-auth h1 { font-family: var(--v2-serif); font-size: 32px; line-height: 1.3; text-align: center; color: var(--v2-ink); margin-top: .4rem; }
 

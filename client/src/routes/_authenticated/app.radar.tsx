@@ -222,7 +222,7 @@ function RadarPage() {
                     </button>
                   ))}
                 </div>
-                <input type="time" value={time} onChange={(e) => setTime(e.target.value)}
+                <input type="time" aria-label="Radar update time" value={time} onChange={(e) => setTime(e.target.value)}
                   className="px-2 py-1 border border-border rounded-[8px] text-[12px] bg-transparent" />
               </div>
               <p className="text-[11px] text-muted-foreground">Updates sent to your email · education only</p>

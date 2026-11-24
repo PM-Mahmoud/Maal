@@ -18,7 +18,7 @@ export function AppearanceOptions({ name = "maal-appearance" }: { name?: string 
   return (
     <ul className="mt-rows" role="radiogroup" aria-label="Appearance">
       {OPTIONS.map(({ value, label, icon: Icon }) => (
-        <li key={value}>
+        <li key={value} role="presentation">
           <label className="mt-row">
             <Icon className="mt-row-icon" aria-hidden />
             <span className="mt-row-text">{label}</span>
