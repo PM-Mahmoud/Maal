@@ -465,7 +465,7 @@ export function ConnectAccountsFlow({
   const connectedBody = (
     <div className="cx-done">
       <h1 className="cx-h1">
-        Nice work{firstName ? `, ${firstName}` : ""}. You’ve successfully linked {lastName}.
+        Nice work{firstName ? `, ${firstName}` : ""}. {lastResult?.source === "demo" ? `You’ve added a demo account for ${lastName}.` : `You’ve successfully linked ${lastName}.`}
       </h1>
       <p className="cx-sub">Link more accounts for a fuller picture, or start exploring Maal.</p>
       <div className="cx-linked">
@@ -475,7 +475,7 @@ export function ConnectAccountsFlow({
             <div>
               <p className="cx-linked-name">{g.name}<span className="cx-dot" aria-label="Connected" /></p>
               <p className="cx-linked-sub">
-                {g.type === "Demo" ? "Demo account" : g.type === "Manual" ? "Added manually" : `${g.count} account${g.count === 1 ? "" : "s"} connected · read-only`}
+                {g.type === "Demo" ? `${g.count} demo account${g.count === 1 ? "" : "s"} added` : g.type === "Manual" ? "Added manually" : `${g.count} account${g.count === 1 ? "" : "s"} connected · read-only`}
               </p>
             </div>
           </div>
