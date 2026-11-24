@@ -2218,6 +2218,11 @@ router.delete('/v1/report-views/:id', async (req, res) => {
 });
 // ─── end Session 2 – Reports ───────────────────────────────────────────────
 
+// ─── Manual account net-worth fields ────────────────────────────────────────
+const MANUAL_NET_WORTH_TABLES = new Set([
+  'cash_accounts', 'investments', 'properties', 'debts', 'super_accounts', 'other_assets',
+]);
+
 router.all('/v1/:table', async (req, res) => {
   const { table } = req.params;
   if (!ASSET_TABLES.has(table)) {
@@ -2233,6 +2238,16 @@ router.all('/v1/:table', async (req, res) => {
   const raw = req.query.filter;
   const { where, vals } = parseFilters(raw);
   const isSingle = req.query.single === '1';
+
+  if (MANUAL_NET_WORTH_TABLES.has(table) && (req.method === 'POST' || req.method === 'PATCH')) {
+    const { start_date: start, include_in_net_worth: included } = req.body || {};
+    if (start != null && !require('../lib/data-quality').parsePostingDate(start)) {
+      return res.status(400).json({ error: 'Start date must be a valid YYYY-MM-DD date.' });
+    }
+    if (included != null && typeof included !== 'boolean') {
+      return res.status(400).json({ error: 'Show in net worth must be true or false.' });
+    }
+  }
 
   try {
     if (req.method === 'GET') {

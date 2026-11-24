@@ -400,18 +400,31 @@ async function listBasiqAccountsForQuality(userId) {
 // arrays, per CLAUDE.md's "financial calculations need a deterministic test"
 // rule. Postgres BIGINT/NUMERIC columns arrive as strings — always Number()
 // before summing (documented gotcha, bit this codebase once already).
+// Internal metadata prevents an explicitly excluded account from reappearing
+// through legacy profile fallbacks. A symbol leaves the API component keys intact.
+const excludedTotals = Symbol('excluded totals');
+
 function summarizeAssets({ cashAccounts = [], investments = [], properties = [], debts = [], superAccounts = [], incomes = [], otherAssets = [] } = {}) {
-  const sum = (rows, field) => rows.reduce((total, r) => total + (Number(r[field]) || 0), 0);
-  return {
-    cashTotal: sum(cashAccounts, 'balance'),
-    investmentsTotal: sum(investments, 'value'),
-    propertyTotal: sum(properties, 'value'),
-    propertyMortgageTotal: sum(properties, 'mortgage_balance'),
-    debtsTotal: sum(debts, 'balance'),
-    superTotal: sum(superAccounts, 'balance'),
+  const excluded = new Set();
+  const sum = (rows, column, totalField) => rows.reduce((total, row) => {
+    if (totalField && row.include_in_net_worth === false) {
+      excluded.add(totalField);
+      return total;
+    }
+    return total + (Number(row[column]) || 0);
+  }, 0);
+  const summary = {
+    cashTotal: sum(cashAccounts, 'balance', 'cashTotal'),
+    investmentsTotal: sum(investments, 'value', 'investmentsTotal'),
+    propertyTotal: sum(properties, 'value', 'propertyTotal'),
+    propertyMortgageTotal: sum(properties, 'mortgage_balance', 'propertyMortgageTotal'),
+    debtsTotal: sum(debts, 'balance', 'debtsTotal'),
+    superTotal: sum(superAccounts, 'balance', 'superTotal'),
     incomeTotal: sum(incomes, 'annual_amount'),
-    otherAssetsTotal: sum(otherAssets, 'value'),
+    otherAssetsTotal: sum(otherAssets, 'value', 'otherAssetsTotal'),
   };
+  if (excluded.size) summary[excludedTotals] = excluded;
+  return summary;
 }
 
 // Canonical wealth equation used by the wealth overview API. Property mortgages
@@ -437,13 +450,17 @@ function wealthTotalsFromSummary(summary = {}) {
 function mergeAssetSummaryIntoProfile(profile, assetSummary) {
   const p = profile || {};
   const s = assetSummary || {};
+  const totalOrProfile = (field, profileField) =>
+    s[excludedTotals]?.has(field) || s[field] > 0 ? s[field] : (Number(p[profileField]) || 0);
   return {
     ...p,
-    cash_savings: s.cashTotal > 0 ? s.cashTotal : (Number(p.cash_savings) || 0),
-    super_balance: s.superTotal > 0 ? s.superTotal : (Number(p.super_balance) || 0),
-    investment_portfolio: s.investmentsTotal > 0 ? s.investmentsTotal : (Number(p.investment_portfolio) || 0),
-    property_value: s.propertyTotal > 0 ? s.propertyTotal : (Number(p.property_value) || 0),
-    total_debt: s.debtsTotal > 0 ? s.debtsTotal : (Number(p.total_debt) || 0),
+    cash_savings: totalOrProfile('cashTotal', 'cash_savings'),
+    super_balance: totalOrProfile('superTotal', 'super_balance'),
+    investment_portfolio: totalOrProfile('investmentsTotal', 'investment_portfolio'),
+    property_value: totalOrProfile('propertyTotal', 'property_value'),
+    total_debt: totalOrProfile('debtsTotal', 'total_debt'),
+    property_mortgage_balance: s.propertyMortgageTotal ?? 0,
+    other_assets_total: s.otherAssetsTotal ?? 0,
     // Income was computed by summarizeAssets but never merged, so a user whose
     // income lives only in the `incomes` table scored as if they earned $0 —
     // which floors the savings, debt and trajectory pillars at once.
@@ -485,7 +502,9 @@ async function getAssetSummary(userId) {
   try {
     const { snapshot, error } = await canonical;
     if (error) throw error;
-    if (!snapshot.valuations.length || !canonicalSummaryMatchesLegacy(snapshot.summary, legacy)) return legacy;
+    // The canonical holdings inventory keeps all assets. Its totals do not
+    // carry the legacy register's user-selected display exclusions.
+    if (legacy[excludedTotals] || !snapshot.valuations.length || !canonicalSummaryMatchesLegacy(snapshot.summary, legacy)) return legacy;
     return {
       cashTotal: snapshot.summary.cashTotal,
       investmentsTotal: snapshot.summary.investmentsTotal,

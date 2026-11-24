@@ -44,6 +44,16 @@ async function test(name, fn) {
     assert.strictEqual(byId['debt:6'].balance, -20000);
   });
 
+  await test('excluded rows never enter the Home net-worth selection or totals', () => {
+    const accounts = m.buildHomeAccounts({
+      cash: [{ id: 1, balance: '500', include_in_net_worth: false }],
+      properties: [{ id: 2, value: '1000', mortgage_balance: '400', include_in_net_worth: false }],
+      investments: [{ id: 3, value: '250', include_in_net_worth: null }],
+    });
+    assert.deepStrictEqual(accounts.map((a) => a.id), ['investment:3']);
+    assert.strictEqual(m.filteredTotals(accounts).netWorth, 250);
+  });
+
   await test('filteredTotals with no filter sums every account', () => {
     const t = m.filteredTotals(accounts, null);
     assert.strictEqual(t.cash, 10000);

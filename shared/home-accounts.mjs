@@ -43,23 +43,29 @@ export function buildHomeAccounts(rows = {}) {
     out.push({ id, kind, name, institution: institution || null, categories: c, balance, ...extra });
   };
   for (const r of rows.cash || []) {
+    if (r.include_in_net_worth === false) continue;
     push(`cash:${r.id}`, "cash", r.label || "Bank account", r.institution || r.label, { cash: num(r.balance) }, {
       reference: r.account_reference ? String(r.account_reference).slice(-4) : null,
     });
   }
   for (const r of rows.investments || []) {
+    if (r.include_in_net_worth === false) continue;
     push(`investment:${r.id}`, "investment", r.name || r.ticker || "Investment", r.platform || r.institution || r.name, { investments: num(r.value) });
   }
   for (const r of rows.super || []) {
+    if (r.include_in_net_worth === false) continue;
     push(`super:${r.id}`, "super", r.fund_name || r.label || "Super account", r.fund_name || r.label, { super: num(r.balance) });
   }
   for (const r of rows.properties || []) {
+    if (r.include_in_net_worth === false) continue;
     push(`property:${r.id}`, "property", r.label || "Property", null, { other: num(r.value), debts: num(r.mortgage_balance) });
   }
   for (const r of rows.debts || []) {
+    if (r.include_in_net_worth === false) continue;
     push(`debt:${r.id}`, "debt", r.label || "Debt", r.lender || r.institution || r.label, { debts: num(r.balance) });
   }
   for (const r of rows.other || []) {
+    if (r.include_in_net_worth === false) continue;
     push(`other:${r.id}`, "other", r.label || "Other asset", null, { other: num(r.value) });
   }
   return out;
