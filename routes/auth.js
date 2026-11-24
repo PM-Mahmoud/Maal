@@ -1,5 +1,6 @@
 // routes/auth.js
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const router = express.Router();
 const { authLimiter, otpLimiter } = require('../lib/rate-limiters');
@@ -63,7 +64,7 @@ async function sendOtpEmail(email, name, otp) {
   </table>
 </body></html>`;
   sendEmail({ to: email, subject: 'Your Maal verification code', html, text: `Your Maal verification code: ${otp}\nExpires in 10 minutes.` })
-    .catch(err => console.error('[auth] OTP email FAILED — user will not receive their code and will be stuck at /verify-email. Check RESEND_API_KEY / EMAIL_FROM (verified domain) in the host env and Resend dashboard Logs. Error:', err.message));
+    .catch(err => console.error('[auth] OTP email FAILED — user will not receive their code and will be stuck at /verify-email. Check RESEND_API_KEY / EMAIL_FROM (verified domain) in the host env and Resend dashboard Logs. Error:', safeError(err)));
 }
 
 // ─── Page: /login ─────────────────────────────────────────────────────────────
@@ -140,7 +141,7 @@ router.post('/login', authLimiter,
       const otp = generateOtp();
       await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
       try { await sendOtpEmail(user.email, user.name, otp); }
-      catch (e) { console.error('[login] OTP email failed (continuing to /verify-email):', e.message); }
+      catch (e) { console.error('[login] OTP email failed (continuing to /verify-email):', safeError(e)); }
       req.session.pendingEmail = user.email;
       // Unverified existing account finishing signup verification → onboarding.
       req.session.otpPurpose = 'verify';
@@ -153,7 +154,7 @@ router.post('/login', authLimiter,
       const otp = generateOtp();
       await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
       try { await sendOtpEmail(user.email, user.name, otp); }
-      catch (e) { console.error('[login] 2FA OTP email failed (continuing to /verify-email):', e.message); }
+      catch (e) { console.error('[login] 2FA OTP email failed (continuing to /verify-email):', safeError(e)); }
       req.session.pendingEmail = user.email;
       // 2FA on an established account — completing it is a login, not signup.
       req.session.otpPurpose = 'login';
@@ -168,7 +169,7 @@ router.post('/login', authLimiter,
     const pendingLink = req.session.pendingGoogleLink || null;
     const next = requestedNext(req) || '/app';
     req.session.regenerate((regenErr) => {
-      if (regenErr) { console.error('[login] Session regenerate error:', regenErr); return res.status(500).render('error', { layout: false, message: 'Session error.' }); }
+      if (regenErr) { console.error('[login] Session regenerate error:', safeError(regenErr)); return res.status(500).render('error', { layout: false, message: 'Session error.' }); }
       req.session.userId = user.id;
       req.session.email = user.email;
       req.session.name = user.name;
@@ -184,15 +185,15 @@ router.post('/login', authLimiter,
             `UPDATE users SET provider_id = $1, provider = 'google', email_verified = true, updated_at = NOW() WHERE id = $2`,
             [googleId, user.id]
           ).then(() => {
-            console.log('[oauth] Linked Google account', googleId, 'to user', user.id, 'after password consent');
+            console.log('[oauth] Linked Google account after password consent');
           }).catch((linkErr) => {
-            console.error('[oauth] Google link failed after login:', linkErr.message);
+            console.error('[oauth] Google link failed after login:', safeError(linkErr));
           });
         }
       }
 
       req.session.save((err) => {
-        if (err) console.error('[login] Session save error:', err.message);
+        if (err) console.error('[login] Session save error:', safeError(err));
         // SECURITY: ?next= is validated by safeRedirectPath (no open redirect).
         res.redirect(next);
       });
@@ -256,7 +257,7 @@ router.post('/signup', authLimiter,
     try {
       await sendOtpEmail(email, name, otp);
     } catch (e) {
-      console.error('[signup] OTP email failed (user created, continuing to /verify-email):', e.message);
+      console.error('[signup] OTP email failed (user created, continuing to /verify-email):', safeError(e));
     }
 
     // Store pending email in session for the verify page. Set the purpose
@@ -265,7 +266,7 @@ router.post('/signup', authLimiter,
     req.session.pendingEmail = email;
     req.session.otpPurpose = 'signup';
     req.session.save((err) => {
-      if (err) console.error('[signup] Session save error:', err.message);
+      if (err) console.error('[signup] Session save error:', safeError(err));
       res.redirect('/verify-email');
     });
   }
@@ -329,7 +330,7 @@ router.post('/signup/email-code', authLimiter,
     req.session.pendingEmail = email;
     req.session.otpPurpose = 'signup';
     req.session.save((err) => {
-      if (err) console.error('[signup/email-code] Session save error:', err.message);
+      if (err) console.error('[signup/email-code] Session save error:', safeError(err));
       res.redirect('/verify-email');
     });
   }
@@ -384,14 +385,14 @@ router.post('/verify-email', otpLimiter, async (req, res) => {
 
   // SECURITY: regenerate session ID to prevent fixation
   req.session.regenerate((regenErr) => {
-    if (regenErr) { console.error('[verify-otp] Session regenerate error:', regenErr); return res.status(500).render('error', { layout: false, message: 'Session error.' }); }
+    if (regenErr) { console.error('[verify-otp] Session regenerate error:', safeError(regenErr)); return res.status(500).render('error', { layout: false, message: 'Session error.' }); }
     req.session.userId = user.id;
     req.session.email = user.email;
     req.session.name = user.name;
     req.session.provider = 'credentials';
     req.session.emailVerified = true;
     req.session.save((err) => {
-      if (err) console.error('[verify-otp] Session save error:', err.message);
+      if (err) console.error('[verify-otp] Session save error:', safeError(err));
       // React app owns both destinations now: the EJS /dashboard is retired and
       // the EJS /onboarding wizard is legacy — new users get the React flow.
       // New accounts go through the welcome flow (onboarding v2, PR 4).
@@ -421,7 +422,7 @@ router.post('/resend-otp', otpLimiter, async (req, res) => {
       await sendOtpEmail(email, user.name, otp);
     }
   } catch (e) {
-    console.error('[resend-otp] error:', e.message);
+    console.error('[resend-otp] error:', safeError(e));
   }
   res.json({ ok: true, message: 'If that email is registered and unverified, a new code has been sent.' });
 });
@@ -446,7 +447,7 @@ router.post('/resend-otp-sms', otpLimiter, async (req, res) => {
     await sendOtpSms(phone, otp);
     res.json({ ok: true });
   } catch (err) {
-    console.error('[auth] SMS send failed:', err.message);
+    console.error('[auth] SMS send failed:', safeError(err));
     res.status(500).json({ error: 'Failed to send SMS. Try email instead.' });
   }
 });
@@ -502,7 +503,7 @@ router.post('/forgot-password', authLimiter,
     }
     // Respond first; do the work after (constant response time, no enumeration).
     setImmediate(() => {
-      sendResetLink(req.body.email).catch((err) => console.error('[auth] Reset email failed:', err.message));
+      sendResetLink(req.body.email).catch((err) => console.error('[auth] Reset email failed:', safeError(err)));
     });
     res.render('auth-forgot-password', { layout: false, error: null, sent: true, email: '' });
   }
@@ -531,14 +532,14 @@ router.post('/api/account/delete', async (req, res) => {
         subject: 'Your Maal account has been deleted',
         text: 'Your Maal account and the financial data in it have been permanently deleted, and any active membership has been cancelled. If you did not ask for this, reply to this email straight away.',
         html: '<p>Your Maal account and the financial data in it have been permanently deleted, and any active membership has been cancelled.</p><p>If you did not ask for this, reply to this email straight away.</p>',
-      }).catch((e) => console.error('[account-delete] confirmation email failed:', e.message));
+      }).catch((e) => console.error('[account-delete] confirmation email failed:', safeError(e)));
     }
     req.session.destroy(() => res.json({ ok: true }));
   } catch (err) {
     if (err.code === 'billing_cancel_failed') {
       return res.status(502).json({ error: "We couldn't cancel your membership, so nothing has been deleted. Please try again, or contact support." });
     }
-    console.error('Delete account error:', err.message);
+    console.error('Delete account error:', safeError(err));
     res.status(500).json({ error: 'Failed to delete account.' });
   }
 });
@@ -565,7 +566,7 @@ router.post('/api/account/phone/send-code', otpLimiter, async (req, res) => {
   try {
     await sendOtpSms(phone, code);
   } catch (e) {
-    console.error('[phone-verify] SMS send failed:', e.message);
+    console.error('[phone-verify] SMS send failed:', safeError(e));
     return res.status(502).json({ error: "We couldn't send a text to that number. Check it and try again." });
   }
   req.session.phoneVerify = pd.createPhoneChallenge(phone, code);
@@ -586,7 +587,7 @@ router.post('/api/account/phone/verify', otpLimiter, async (req, res) => {
     delete req.session.phoneVerify;
     req.session.save(() => res.json({ ok: true, phone: result.phone }));
   } catch (e) {
-    console.error('[phone-verify] save failed:', e.message);
+    console.error('[phone-verify] save failed:', safeError(e));
     res.status(500).json({ error: 'Could not save your number. Please try again.' });
   }
 });
@@ -602,7 +603,7 @@ const SESSION_COOKIE = 'connect.sid';
 
 function logout(req, res) {
   req.session.destroy((err) => {
-    if (err) console.error('[logout] session destroy failed:', err.message);
+    if (err) console.error('[logout] session destroy failed:', safeError(err));
     res.clearCookie(SESSION_COOKIE, { path: '/' });
     res.redirect(303, '/login?signed_out=1');
   });

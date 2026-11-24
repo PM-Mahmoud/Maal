@@ -13,6 +13,7 @@
 //  - the page is no-store / no-referrer so the token doesn't leak via cache or
 //    the Referer header.
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const router = express.Router();
 const { authLimiter } = require('../lib/rate-limiters');
@@ -72,7 +73,7 @@ async function submitReset(req, res) {
   try {
     await sessions.destroyUserSessions(user.id, keepSid);
   } catch (e) {
-    console.error('[reset] could not revoke other sessions:', e.message);
+    console.error('[reset] could not revoke other sessions:', safeError(e));
   }
 
   render(res, { success: true, token: '' });

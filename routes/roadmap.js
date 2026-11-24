@@ -1,6 +1,7 @@
 // routes/roadmap.js
 // Product roadmap with community voting. Mounted at /dashboard/roadmap.
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const router = express.Router();
 
@@ -25,7 +26,7 @@ router.get('/', async (req, res) => {
       pageTitle: 'Roadmap',
     });
   } catch (err) {
-    console.error('/roadmap error:', err.message);
+    console.error('/roadmap error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Failed to load the roadmap.' });
   }
 });
@@ -38,7 +39,7 @@ router.post('/submit', async (req, res) => {
     const id = await addItem(req.session.userId, title, details);
     res.json({ ok: true, id });
   } catch (err) {
-    console.error('roadmap/submit error:', err.message);
+    console.error('roadmap/submit error:', safeError(err));
     res.status(500).json({ error: 'Could not submit your request.' });
   }
 });
@@ -51,7 +52,7 @@ router.post('/vote', async (req, res) => {
     const result = await castVote(itemId, req.session.userId, vote);
     res.json({ ok: true, vote: result });
   } catch (err) {
-    console.error('roadmap/vote error:', err.message);
+    console.error('roadmap/vote error:', safeError(err));
     res.status(500).json({ error: 'Could not record your vote.' });
   }
 });

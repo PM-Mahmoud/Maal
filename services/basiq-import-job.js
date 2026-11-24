@@ -1,3 +1,4 @@
+const { safeError } = require('../lib/safe-log');
 const importsDb = require('../db/import-runs');
 const { syncBasiqData } = require('./basiq-sync');
 const connectionHealth = require('./connection-health');
@@ -42,7 +43,7 @@ function createBasiqImportHandler({ imports, sync, health = null }) {
         await health?.checkBasiqConnection(userId);
         await health?.scheduleNextCheck(userId);
       } catch (healthError) {
-        console.error('Could not record Basiq connection success:', healthError.message);
+        console.error('Could not record Basiq connection success:', safeError(healthError));
       }
       return { import_run_id: runId, ...summary };
     } catch (error) {
@@ -51,7 +52,7 @@ function createBasiqImportHandler({ imports, sync, health = null }) {
         try {
           await health.recordImportFailure(userId, error);
         } catch (healthError) {
-          console.error('Could not record Basiq connection failure:', healthError.message);
+          console.error('Could not record Basiq connection failure:', safeError(healthError));
         }
       }
       await imports.failImportRun(

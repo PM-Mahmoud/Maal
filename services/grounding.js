@@ -15,6 +15,7 @@
 // services/research.js and services/radar.js keep working; deepSearch is new for
 // the PR 8 research Gather phase.
 
+const { safeError } = require('../lib/safe-log');
 const EXA_URL = 'https://api.exa.ai/search';
 const EXA_TIMEOUT_MS = Number(process.env.EXA_TIMEOUT_MS) || 20000;
 
@@ -53,7 +54,7 @@ async function exaSearch(query, { type = 'auto', numResults = 5, category, maxAg
     const data = await res.json();
     return Array.isArray(data && data.results) ? data.results : [];
   } catch (e) {
-    console.error('grounding: Exa search failed:', e.message);
+    console.error('grounding: Exa search failed:', safeError(e));
     return [];
   } finally {
     clearTimeout(timer);

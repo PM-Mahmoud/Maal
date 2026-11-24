@@ -1,6 +1,7 @@
 // routes/oauth.js — Google OAuth via raw redirect (no passport dependency)
 // Uses Google's OAuth 2.0 endpoint directly to avoid extra packages.
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const router = express.Router();
 const https = require('https');
@@ -145,21 +146,21 @@ router.get('/auth/google/callback', async (req, res) => {
 
     // SECURITY: regenerate session ID to prevent fixation
     req.session.regenerate((regenErr) => {
-      if (regenErr) { console.error('[oauth] Session regenerate error:', regenErr); return res.redirect('/login?error=google_failed'); }
+      if (regenErr) { console.error('[oauth] Session regenerate error:', safeError(regenErr)); return res.redirect('/login?error=google_failed'); }
       req.session.userId = user.id;
       req.session.email = user.email || profile.email;
       req.session.name = user.name || profile.name;
       req.session.provider = 'google';
       req.session.emailVerified = true;
       req.session.save((err) => {
-        if (err) console.error('[oauth] Session save error:', err.message);
+        if (err) console.error('[oauth] Session save error:', safeError(err));
         // New Google accounts go through the welcome flow; returning users
         // land straight on the React app.
         res.redirect(isNewUser ? '/welcome' : '/app');
       });
     });
   } catch (err) {
-    console.error('[oauth] Google callback error:', err.message);
+    console.error('[oauth] Google callback error:', safeError(err));
     res.redirect('/login?error=google_failed');
   }
 });

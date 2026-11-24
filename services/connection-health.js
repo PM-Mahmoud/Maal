@@ -1,3 +1,4 @@
+const { safeError } = require('../lib/safe-log');
 const db = require('../db/connection-health');
 const users = require('../db/users');
 const basiq = require('./basiq');
@@ -126,7 +127,7 @@ function createConnectionHealthHandler(database) {
           : null,
       });
     } catch (error) {
-      console.error('connection health lookup error:', error.message);
+      console.error('connection health lookup error:', safeError(error));
       return res.status(500).json({ error: 'Could not load connection health.' });
     }
   };

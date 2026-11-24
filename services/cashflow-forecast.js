@@ -1,3 +1,4 @@
+const { safeError } = require('../lib/safe-log');
 const db = require('../db/cashflow-forecast');
 const { forecastAccountBalances } = require('../lib/cashflow-forecast');
 const { detectRecurringTransactions, normaliseMerchantIdentity } = require('./transaction-rules');
@@ -22,7 +23,7 @@ function createForecastHandler(forecast) {
     try {
       const days = Math.min(Math.max(parseInt(req.query.days, 10) || 90, 1), 730);
       return res.json(await forecast(req.session.userId, { days }));
-    } catch (error) { console.error('/api/v1/cashflow-forecast:', error.message); return res.status(500).json({ error: 'Could not forecast balances.' }); }
+    } catch (error) { console.error('/api/v1/cashflow-forecast:', safeError(error)); return res.status(500).json({ error: 'Could not forecast balances.' }); }
   };
 }
 const cashflowForecast = createCashflowForecastService(db);

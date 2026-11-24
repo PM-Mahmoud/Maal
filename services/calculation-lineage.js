@@ -1,3 +1,4 @@
+const { safeError } = require('../lib/safe-log');
 const database = require('../db/financial-integrity');
 const {
   cashFlowLineage,
@@ -66,7 +67,7 @@ function createListLineageHandler(db) {
       });
       return res.json({ calculations });
     } catch (error) {
-      console.error('/api/v1/calculation-lineage error:', error.message);
+      console.error('/api/v1/calculation-lineage error:', safeError(error));
       return res.status(500).json({ error: 'Could not load calculation lineage.' });
     }
   };

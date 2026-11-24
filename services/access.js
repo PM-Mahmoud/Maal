@@ -6,6 +6,7 @@
 // (routes/api.js, services/sms.js) and the Plan & Usage endpoint ask here, so
 // trial users get member limits and expired trials hit the paywall.
 
+const { safeError } = require('../lib/safe-log');
 const membership = require('../lib/membership');
 const trialsDb = require('../db/trials');
 
@@ -20,7 +21,7 @@ async function forUser(user, now) {
   try {
     trial = await trialsDb.getOrStartTrial(user.id);
   } catch (e) {
-    console.error('[access] trial lookup failed, failing open:', e.message);
+    console.error('[access] trial lookup failed, failing open:', safeError(e));
     return membership.accessFor(user.plan, { ends_at: new Date(Date.now() + membership.DAY_MS) }, now);
   }
   return membership.accessFor(user.plan, trial, now);

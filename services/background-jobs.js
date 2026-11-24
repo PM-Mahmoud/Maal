@@ -1,3 +1,4 @@
+const { safeError } = require('../lib/safe-log');
 const database = require('../db/background-jobs');
 
 function createListJobsHandler(db) {
@@ -9,7 +10,7 @@ function createListJobsHandler(db) {
       const jobs = await db.listJobsForUser(req.session.userId, req.query.limit);
       return res.json({ jobs });
     } catch (error) {
-      console.error('/api/v1/background-jobs error:', error.message);
+      console.error('/api/v1/background-jobs error:', safeError(error));
       return res.status(500).json({ error: 'Could not load background jobs.' });
     }
   };

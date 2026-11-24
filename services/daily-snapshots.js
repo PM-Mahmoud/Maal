@@ -1,3 +1,4 @@
+const { safeError } = require('../lib/safe-log');
 const profiles = require('../db/profiles');
 const assets = require('../db/assets');
 const snapshots = require('../db/snapshots');
@@ -30,7 +31,7 @@ function createDailySnapshotSweep(database, createSnapshot) {
     const result = { captured: 0, failed: 0 };
     for (const userId of userIds) {
       try { await createSnapshot(userId); result.captured++; }
-      catch (error) { result.failed++; console.error(`[snapshots] user ${userId}:`, error.message); }
+      catch (error) { result.failed++; console.error('[snapshots] Could not write daily snapshot:', safeError(error)); }
     }
     return result;
   };

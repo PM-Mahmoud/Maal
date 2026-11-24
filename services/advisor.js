@@ -12,6 +12,7 @@
 // maps onto the reasoner role (strong selects Azure's LLM_MODEL_STRONG
 // deployment inside the gateway, exactly as before).
 
+const { safeError } = require('../lib/safe-log');
 const gateway = require('./gateway');
 const { buildConstantsPrompt } = require('../lib/au-constants');
 
@@ -193,7 +194,7 @@ async function runChat(user, profile, maal, messages, docs, extra, systemExtra) 
             '\n\nThe knowledge above is general background for explaining concepts. If any figure in it conflicts with the FY constants or the user\'s account data given earlier, the constants and the user\'s data are correct — never quote a rate, threshold or cap from the knowledge above.';
         }
       } catch (ragErr) {
-        console.error('[advisor] RAG retrieval failed:', ragErr.message);
+        console.error('[advisor] RAG retrieval failed:', safeError(ragErr));
       }
     }
   }

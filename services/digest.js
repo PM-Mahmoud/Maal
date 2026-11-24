@@ -5,6 +5,7 @@
 // an external scheduler once a day (GET /internal/digest/run, cron-secret gated).
 // Best-effort per user — one failure never aborts the sweep.
 
+const { safeError } = require('../lib/safe-log');
 const { usersWithDigestOptIn } = require('../db/users');
 const { getProfileByUserId } = require('../db/profiles');
 const assetsDb = require('../db/assets');
@@ -39,7 +40,7 @@ async function runDailyDigest() {
         sent++;
       } catch (e) {
         failed++;
-        console.error(`[digest] failed for user ${u.id}:`, e.message);
+        console.error('[digest] Delivery failed:', safeError(e));
       }
     }
     return { candidates: users.length, sent, failed };

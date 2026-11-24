@@ -11,6 +11,7 @@
 // The advisor reply itself still comes from POST /api/v1/advisor/message (usage
 // metering, guardrails, widgets); the client then persists the turn here.
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const t = require('../lib/advisor-threads');
 
@@ -29,7 +30,7 @@ function createAdvisorThreadsRouter({ db = require('../db/advisor') } = {}) {
   }
 
   function fail(res, where, e) {
-    console.error(`[advisor-threads] ${where} failed:`, e && e.message);
+    console.error(`[advisor-threads] ${where} failed:`, safeError(e));
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 

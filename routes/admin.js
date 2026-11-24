@@ -1,6 +1,7 @@
 // routes/admin.js — Password-protected admin dashboard
 // Set ADMIN_PASSWORD in Render env vars. Default is insecure — always override.
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const crypto = require('crypto');
 const { authLimiter } = require('../lib/rate-limiters');
@@ -210,7 +211,7 @@ router.post('/admin/waitlist/invite', requireAdmin, async (req, res) => {
   let failed = 0;
   for (const row of invited) {
     try { await sendWaitlistInvite(row.email, row.name); }
-    catch (e) { failed++; console.error('[admin] invite email failed for waitlist id ' + row.id + ':', e.message); }
+    catch (e) { failed++; console.error('[admin] Invite email failed:', safeError(e)); }
   }
   res.redirect(`/admin/waitlist?status=invited&invited=${invited.length}&failed=${failed}`);
 });

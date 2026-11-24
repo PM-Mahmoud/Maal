@@ -18,6 +18,7 @@
 // per-role models via GATEWAY_MODEL_REASONER / _CHEAP / _VERIFIER
 // (fallback GATEWAY_MODEL).
 
+const { safeError } = require('../lib/safe-log');
 const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-5';
 const ANTHROPIC_VERSION = '2023-06-01';
 
@@ -220,7 +221,7 @@ async function completeAs(role, messages, opts) {
     } catch (e) {
       lastErr = e;
       if (i < candidates.length - 1) {
-        console.warn('[gateway] ' + role + ' provider ' + candidates[i].label + ' failed (' + e.message + ') — trying ' + candidates[i + 1].label);
+        console.warn(`[gateway] ${role} provider ${candidates[i].label} failed. Trying ${candidates[i + 1].label}.`, safeError(e));
       }
     }
   }
@@ -287,7 +288,7 @@ async function verifyAndRevise({ messages, draft, opts }) {
       result.revised = true;
     }
   } catch (e) {
-    console.error('[gateway] verify pass failed (shipping draft):', e.message);
+    console.error('[gateway] verify pass failed (shipping draft):', safeError(e));
   }
   return result;
 }

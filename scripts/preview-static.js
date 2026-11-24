@@ -8,6 +8,7 @@
 // the React app at /app/*). This preview no longer renders those dead views —
 // the real dashboard lives in the React app (client/src, served at /app).
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const ejs = require('ejs');
 const path = require('path');
@@ -798,7 +799,7 @@ app.use('/api', (req, res) => {
 });
 
 app.use((err, _req, res, _next) => {
-  console.error(err);
+  console.error("[preview-static] Operation failed:", safeError(err));
   res.status(500).send('<pre>' + (err.stack || err.message) + '</pre>');
 });
 

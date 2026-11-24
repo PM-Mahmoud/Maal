@@ -3,6 +3,7 @@
 // ask Azure to judge whether the user's condition has triggered, and notify by
 // email/SMS when it has. Degrades gracefully without data/LLM keys.
 
+const { safeError } = require('../lib/safe-log');
 const advisor = require('./advisor');
 const marketdata = require('./marketdata');
 const grounding = require('./grounding');
@@ -86,10 +87,10 @@ async function notify(radar, user, summary) {
   const text = `Maal Radar alert\nWatching: ${radar.prompt}\n\n${summary}\n\n${BASE_URL}/dashboard/radar`;
 
   if (radar.notify_email && user.email) {
-    await sendEmail({ to: user.email, subject, html, text }).catch((e) => console.error('Radar email failed:', e.message));
+    await sendEmail({ to: user.email, subject, html, text }).catch((e) => console.error('Radar email failed:', safeError(e)));
   }
   if (radar.notify_sms && (user.phone || radar.user_phone)) {
-    await sendSms(user.phone || radar.user_phone, `Maal Radar: ${summary}`.slice(0, 320)).catch((e) => console.error('Radar SMS failed:', e.message));
+    await sendSms(user.phone || radar.user_phone, `Maal Radar: ${summary}`.slice(0, 320)).catch((e) => console.error('Radar SMS failed:', safeError(e)));
   }
 }
 
@@ -132,7 +133,7 @@ async function runDueRadars() {
         if (alerted) { await notify(radar, user, summary); alerts++; }
         ran++;
       } catch (e) {
-        console.error(`Radar ${radar.id} evaluation failed:`, e.message);
+        console.error('Radar evaluation failed:', safeError(e));
       }
     }
     return { ran, alerts };

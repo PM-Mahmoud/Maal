@@ -1,3 +1,4 @@
+const { safeError } = require('../lib/safe-log');
 const db = require('../db/reconciliation');
 const {
   AUD_RECONCILIATION_TOLERANCE,
@@ -88,7 +89,7 @@ function createAdjustmentHandler(database) {
       if (error.code === 'RECONCILIATION_NOT_FOUND') {
         return res.status(404).json({ error: 'Reconciliation not found.' });
       }
-      console.error('/api/v1/reconciliations adjustment error:', error.message);
+      console.error('/api/v1/reconciliations adjustment error:', safeError(error));
       return res.status(500).json({ error: 'Could not create reconciliation adjustment.' });
     }
   };
@@ -103,7 +104,7 @@ function createListAdjustmentsHandler(database) {
       );
       return res.json({ adjustments });
     } catch (error) {
-      console.error('/api/v1/reconciliations adjustments error:', error.message);
+      console.error('/api/v1/reconciliations adjustments error:', safeError(error));
       return res.status(500).json({ error: 'Could not load reconciliation adjustments.' });
     }
   };
@@ -119,7 +120,7 @@ function createListReconciliationsHandler(database) {
         reconciliations: await database.listReconciliations(req.session.userId),
       });
     } catch (error) {
-      console.error('/api/v1/reconciliations error:', error.message);
+      console.error('/api/v1/reconciliations error:', safeError(error));
       return res.status(500).json({ error: 'Could not load account reconciliations.' });
     }
   };

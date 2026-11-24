@@ -23,6 +23,7 @@
 // ordering and failure behaviour without a database, Stripe or a bucket.
 // Nothing here logs user PII — only counts.
 
+const { safeError } = require('../lib/safe-log');
 async function defaultDeps() {
   const pool = require('../db/pool');
   const storage = require('./storage');
@@ -62,7 +63,7 @@ async function deleteAccount(userId, deps) {
         subscriptionsCancelled += 1;
       }
     } catch (e) {
-      log.error('[account-deletion] Stripe cancellation failed; account NOT deleted:', e.message);
+      log.error('[account-deletion] Stripe cancellation failed; account NOT deleted:', safeError(e));
       const err = new Error('Could not cancel the subscription');
       err.code = 'billing_cancel_failed';
       throw err;
@@ -85,7 +86,7 @@ async function deleteAccount(userId, deps) {
     );
     sessionsPurged = r.rowCount || 0;
   } catch (e) {
-    log.error('[account-deletion] session purge failed:', e.message);
+    log.error('[account-deletion] session purge failed:', safeError(e));
   }
 
   // ── 5. Remove stored documents (best effort; the rows are already gone) ───

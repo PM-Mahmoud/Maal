@@ -1,3 +1,4 @@
+const { safeError } = require('../lib/safe-log');
 const defaultDatabase = require('../db/recommendation-actions');
 const { actionsFromHealthRules } = require('../lib/recommendation-actions');
 
@@ -47,8 +48,8 @@ function createRecommendationActionService(database = defaultDatabase, healthPro
 const service = createRecommendationActionService();
 function auth(req, res) { if (!req.session.userId) { res.status(401).json({ error: 'Not authenticated' }); return false; } return true; }
 function failure(res, error, fallback) { res.status(error.status || 500).json({ error: error.status ? error.message : fallback }); }
-async function listHandler(req, res) { if (!auth(req, res)) return; try { res.json(await service.list(req.session.userId)); } catch (error) { console.error('/api/v1/recommendation-actions:', error.message); failure(res, error, 'Could not load actions.'); } }
-async function refreshHandler(req, res) { if (!auth(req, res)) return; try { res.json(await service.refresh(req.session.userId)); } catch (error) { console.error('/api/v1/recommendation-actions/refresh:', error.message); failure(res, error, 'Could not refresh actions.'); } }
+async function listHandler(req, res) { if (!auth(req, res)) return; try { res.json(await service.list(req.session.userId)); } catch (error) { console.error('/api/v1/recommendation-actions:', safeError(error)); failure(res, error, 'Could not load actions.'); } }
+async function refreshHandler(req, res) { if (!auth(req, res)) return; try { res.json(await service.refresh(req.session.userId)); } catch (error) { console.error('/api/v1/recommendation-actions/refresh:', safeError(error)); failure(res, error, 'Could not refresh actions.'); } }
 async function statusHandler(req, res) { if (!auth(req, res)) return; try { res.json(await service.transition(req.session.userId, req.params.id, req.body?.status)); } catch (error) { failure(res, error, 'Could not update action.'); } }
 async function outcomeHandler(req, res) { if (!auth(req, res)) return; try { res.status(201).json(await service.checkIn(req.session.userId, req.params.id, req.body?.note)); } catch (error) { failure(res, error, 'Could not measure outcome.'); } }
 module.exports = { createRecommendationActionService, listHandler, refreshHandler, statusHandler, outcomeHandler };
