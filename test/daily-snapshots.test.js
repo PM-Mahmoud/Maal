@@ -30,5 +30,28 @@ assert.equal(snapshotDate(new Date('2026-08-06T16:30:00Z'), 'Australia/Perth'), 
     () => createDailySnapshotService({ loadSnapshotProfile: async () => ({ cash_savings: 'NaN' }) })(7),
     /Invalid financial value/
   );
+  const { captureAccountSnapshots } = require('../db/account-snapshots');
+  let capturedValues;
+  await captureAccountSnapshots({
+    async query(sql, params) {
+      assert.equal(params[0], 7);
+      if (sql.startsWith('SELECT')) {
+        assert.equal((sql.match(/account\.user_id = \$1/g) || []).length, 6);
+        return { rows: [
+          { kind: 'cash', account: { id: 1, balance: '543.25' } },
+          { kind: 'cash', account: { id: 2, balance: '100', include_in_net_worth: false } },
+          { kind: 'debts', account: { id: 1, balance: '99.50' } },
+        ] };
+      }
+      assert.match(sql, /ON CONFLICT \(user_id, account_key, snap_date\) DO NOTHING/);
+      assert.equal(params[1], '2026-08-07');
+      capturedValues = JSON.parse(params[2]);
+      return {};
+    },
+  }, 7, '2026-08-07');
+  assert.deepEqual(capturedValues, [
+    { account_key: 'cash:1', net_worth: 543.25 },
+    { account_key: 'debt:1', net_worth: -99.5 },
+  ]);
   console.log('✓ daily snapshots use local dates, cents, and validated financial inputs');
 })().catch((error) => { console.error(error); process.exit(1); });

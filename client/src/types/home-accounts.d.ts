@@ -4,6 +4,7 @@ declare module "*home-accounts.mjs" {
   export type HomeAccountKind = "cash" | "investment" | "super" | "property" | "debt" | "other";
   export type HomeAccount = {
     id: string;
+    historyKey: string;
     kind: HomeAccountKind;
     name: string;
     institution: string | null;
@@ -21,12 +22,12 @@ declare module "*home-accounts.mjs" {
     cash?: Row[]; investments?: Row[]; super?: Row[]; properties?: Row[]; debts?: Row[]; other?: Row[];
   }): HomeAccount[];
   export function filteredTotals(accounts: HomeAccount[], selectedIds?: string[] | null): HomeTotals;
-  export function categoryRatios(accounts: HomeAccount[], selectedIds?: string[] | null): Record<HomeCategory, number>;
   export function isPartialSelection(accounts: HomeAccount[], selectedIds: string[] | null): boolean;
   export function filteredSeries(
     snapshots: Array<{ date: string; netWorth: number; assets: number; cash: number; investments: number; super: number; debts: number }>,
     accounts: HomeAccount[],
     selectedIds?: string[] | null,
+    accountHistory?: SeriesPoint[],
   ): SeriesPoint[];
   export function rangeStart(range: HomeRange, now?: Date): string | null;
   export function sliceSeries(series: SeriesPoint[], range: HomeRange, now?: Date): SeriesPoint[];

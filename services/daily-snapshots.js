@@ -41,7 +41,7 @@ const database = {
     const profile = (await profiles.getProfileByUserId(userId)) || {};
     return assets.mergeAssetSummaryIntoProfile(profile, await assets.getAssetSummary(userId));
   },
-  recordSnapshot: snapshots.recordSnapshot,
+  recordSnapshot: snapshots.recordSnapshotWithAccounts,
   listSnapshotUserIds: snapshots.listSnapshotUserIds,
 };
 

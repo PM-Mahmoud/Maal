@@ -37,36 +37,35 @@ function emptyCategories() {
  */
 export function buildHomeAccounts(rows = {}) {
   const out = [];
-  const push = (id, kind, name, institution, categories, extra = {}) => {
+  const push = (row, id, kind, name, institution, categories, extra = {}) => {
+    if (row.include_in_net_worth === false) return;
     const c = { ...emptyCategories(), ...categories };
     const balance = c.cash + c.investments + c.super + c.other - c.debts;
-    out.push({ id, kind, name, institution: institution || null, categories: c, balance, ...extra });
+    // Linked providers can replace row IDs on every sync. Use their stable
+    // reference for history while retaining the UI's existing filter IDs.
+    const reference = String(row.account_reference || "");
+    const historyKey = /^(basiq|lunchflow):[A-Za-z0-9_-]+$/.test(reference) ? reference : id;
+    out.push({ id, historyKey, kind, name, institution: institution || null, categories: c, balance, ...extra });
   };
   for (const r of rows.cash || []) {
-    if (r.include_in_net_worth === false) continue;
-    push(`cash:${r.id}`, "cash", r.label || "Bank account", r.institution || r.label, { cash: num(r.balance) }, {
+    push(r, `cash:${r.id}`, "cash", r.label || "Bank account", r.institution || r.label, { cash: num(r.balance) }, {
       reference: r.account_reference ? String(r.account_reference).slice(-4) : null,
     });
   }
   for (const r of rows.investments || []) {
-    if (r.include_in_net_worth === false) continue;
-    push(`investment:${r.id}`, "investment", r.name || r.ticker || "Investment", r.platform || r.institution || r.name, { investments: num(r.value) });
+    push(r, `investment:${r.id}`, "investment", r.name || r.ticker || "Investment", r.platform || r.institution || r.name, { investments: num(r.value) });
   }
   for (const r of rows.super || []) {
-    if (r.include_in_net_worth === false) continue;
-    push(`super:${r.id}`, "super", r.fund_name || r.label || "Super account", r.fund_name || r.label, { super: num(r.balance) });
+    push(r, `super:${r.id}`, "super", r.fund_name || r.label || "Super account", r.fund_name || r.label, { super: num(r.balance) });
   }
   for (const r of rows.properties || []) {
-    if (r.include_in_net_worth === false) continue;
-    push(`property:${r.id}`, "property", r.label || "Property", null, { other: num(r.value), debts: num(r.mortgage_balance) });
+    push(r, `property:${r.id}`, "property", r.label || "Property", null, { other: num(r.value), debts: num(r.mortgage_balance) });
   }
   for (const r of rows.debts || []) {
-    if (r.include_in_net_worth === false) continue;
-    push(`debt:${r.id}`, "debt", r.label || "Debt", r.lender || r.institution || r.label, { debts: num(r.balance) });
+    push(r, `debt:${r.id}`, "debt", r.label || "Debt", r.lender || r.institution || r.label, { debts: num(r.balance) });
   }
   for (const r of rows.other || []) {
-    if (r.include_in_net_worth === false) continue;
-    push(`other:${r.id}`, "other", r.label || "Other asset", null, { other: num(r.value) });
+    push(r, `other:${r.id}`, "other", r.label || "Other asset", null, { other: num(r.value) });
   }
   return out;
 }
@@ -87,35 +86,15 @@ export function filteredTotals(accounts, selectedIds = null) {
   return { ...t, netWorth: t.cash + t.investments + t.super + t.other - t.debts };
 }
 
-/**
- * Share of each category's current balance held by the selected accounts.
- * With every account selected each ratio is exactly 1, so the filtered series
- * equals the recorded net-worth history. A category with no current balance
- * counts as included (1) if any selected account sits in it, else 0.
- */
-export function categoryRatios(accounts, selectedIds = null) {
-  const all = filteredTotals(accounts, null);
-  const sel = filteredTotals(accounts, selectedIds);
-  const ratios = {};
-  for (const k of CATEGORIES) {
-    if (all[k] > 0) ratios[k] = sel[k] / all[k];
-    else if (!selectedIds) ratios[k] = 1;
-    else {
-      const kinds = CATEGORY_KINDS[k];
-      ratios[k] = accounts.some((a) => isSelected(selectedIds, a.id) && kinds.includes(a.kind)) ? 1 : 0;
-    }
+/** Canonical captured amount per account, in AUD cents before aggregation. */
+export function accountSnapshotValues(accounts) {
+  const netWorth = new Map();
+  for (const account of accounts) {
+    const key = account.historyKey;
+    netWorth.set(key, (netWorth.get(key) || 0) + Math.round(num(account.balance) * 100));
   }
-  return ratios;
+  return [...netWorth].map(([account_key, cents]) => ({ account_key, net_worth: cents / 100 }));
 }
-
-// Which account kinds feed each snapshot category.
-const CATEGORY_KINDS = {
-  cash: ["cash"],
-  investments: ["investment"],
-  super: ["super"],
-  other: ["property", "other"],
-  debts: ["debt", "property"],
-};
 
 /** True when the selection is a strict subset of the accounts. */
 export function isPartialSelection(accounts, selectedIds) {
@@ -123,26 +102,12 @@ export function isPartialSelection(accounts, selectedIds) {
   return accounts.some((a) => !selectedIds.includes(a.id));
 }
 
-/**
- * Net-worth series for the selected accounts. Snapshots store category totals,
- * not per-account history, so a partially selected category is scaled by the
- * selected share of its current balance. With all accounts selected this is
- * the snapshot's own netWorth, untouched.
- *
- * @param {{date:string, netWorth:number, assets:number, cash:number, investments:number, super:number, debts:number}[]} snapshots oldest-first
- */
-export function filteredSeries(snapshots, accounts, selectedIds = null) {
-  const partial = isPartialSelection(accounts, selectedIds);
-  if (!partial) return snapshots.map((s) => ({ date: s.date, value: num(s.netWorth) }));
-  const r = categoryRatios(accounts, selectedIds);
-  return snapshots.map((s) => {
-    const cash = num(s.cash);
-    const inv = num(s.investments);
-    const sup = num(s.super);
-    const other = Math.max(0, num(s.assets) - cash - inv - sup);
-    const value = cash * r.cash + inv * r.investments + sup * r.super + other * r.other - num(s.debts) * r.debts;
-    return { date: s.date, value: Math.round(value * 100) / 100 };
-  });
+/** The filtered chart starts with the first captured point for its selection. */
+export function filteredSeries(snapshots, accounts, selectedIds = null, accountHistory = []) {
+  if (isPartialSelection(accounts, selectedIds)) {
+    return accountHistory.map((s) => ({ date: s.date, value: num(s.value) }));
+  }
+  return snapshots.map((s) => ({ date: s.date, value: num(s.netWorth) }));
 }
 
 /**
