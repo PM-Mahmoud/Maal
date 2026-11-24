@@ -71,7 +71,7 @@ app.get('/login', (req, res, next) => {
   // ?state=error | signedout previews the alert / notice banners.
   const s = req.query.state;
   ejs.renderFile(path.join(VIEWS, 'auth-login.ejs'), {
-    error: s === 'error' ? 'Incorrect password. 2 attempts remaining before lockout.' : null,
+    error: s === 'error' ? 'Email or password is incorrect' : null,
     notice: s === 'signedout' ? 'You’ve been logged out. See you soon.' : null,
     email: s === 'error' ? 'mahmoud@example.com' : '', next: '',
   }).then(html => res.send(html)).catch(next);
@@ -84,6 +84,15 @@ app.get('/signup', (req, res, next) => {
     error: null, email: '', name: '',
   }).then(html => res.send(html)).catch(next);
 });
+// Synthetic confirmation, success and expired-link states for HEL-79.
+app.get('/unlock-account', (req, res, next) => {
+  const success = req.query.state === 'success';
+  const error = req.query.state === 'expired' ? 'This unlock link is invalid or has expired. Try signing in again.' : null;
+  ejs.renderFile(path.join(VIEWS, 'auth-unlock-account.ejs'), {
+    success, error, token: success || error ? '' : 'a'.repeat(64),
+  }).then(html => res.send(html)).catch(next);
+});
+
 app.get('/forgot-password', (req, res, next) => {
   // ?state=sent previews "Check your email".
   ejs.renderFile(path.join(VIEWS, 'auth-forgot-password.ejs'), { error: null, sent: req.query.state === 'sent', email: '' })
@@ -850,7 +859,7 @@ app.get('/api/v1/:table', (req, res, next) => {
 
 // Mutations + advisor: canned successes so preview clicks never error
 app.post('/api/auth/login', (_req, res) => res.json({ user: PREVIEW_USER }));
-app.post('/api/auth/signup', (_req, res) => res.json({ user: PREVIEW_USER }));
+app.post('/api/auth/signup', (_req, res) => res.status(202).json({ next: '/verify-email' }));
 app.post('/api/auth/logout', (_req, res) => res.json({ ok: true }));
 // The static preview does not invoke the live advisor.
 app.post('/api/v1/advisor/stream', (_req, res) => res.sendStatus(501));
