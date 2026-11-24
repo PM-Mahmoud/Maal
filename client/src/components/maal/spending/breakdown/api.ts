@@ -1,5 +1,6 @@
 // Client for the Session 2 "Breakdown & budget" endpoints (routes/api.js,
 // "Session 2 – Breakdown & budget" block). Budgets reuse ../settings/api.
+import { usageLimitError } from "@/lib/usage-limit.mjs";
 import type { Suggestion } from "../../../../../../shared/spending-breakdown.mjs";
 import { PICKER_COLOURS } from "../../../../../../shared/category-colours.mjs";
 
@@ -66,7 +67,9 @@ export async function deleteBudget(id: string): Promise<void> {
 
 export async function getBudgetSuggestion(): Promise<SuggestionResponse> {
   const r = await fetch("/api/v1/budgets/suggestion", { credentials: "include" });
-  return json(r, "Couldn't work out a budget right now.");
+  const body = await r.json().catch(() => null);
+  if (!r.ok) throw usageLimitError(r.status, body) ?? new Error(body?.error || "Couldn't work out a budget right now.");
+  return body as SuggestionResponse;
 }
 
 // Swatches for new categories/groups: the shared category palette

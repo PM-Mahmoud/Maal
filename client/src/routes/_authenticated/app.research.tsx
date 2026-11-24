@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUp, ArrowLeft, Trash2, Download } from "lucide-react";
 import { startResearch, pollResearch, listResearch, deleteResearch, downloadResearchPdf } from "@/lib/research.functions";
 
+import { UsageLimitError } from "@/lib/usage-limit.mjs";
+import { UsageLimitPrompt } from "@/components/maal/UsageLimitPrompt";
+
 export const Route = createFileRoute("/_authenticated/app/research")({ component: ResearchPage });
 
 type Report = { id: string; topic: string; body: any; created_at: string };
@@ -42,6 +45,7 @@ function ResearchPage() {
   const [loading, setLoading] = useState(false);
   const [phase, setPhase] = useState<string | null>(null);
   const [active, setActive] = useState<Report | null>(null);
+  const [limit, setLimit] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const pollRef = useRef<number | null>(null);
@@ -74,6 +78,7 @@ function ResearchPage() {
     if (!q.trim() || loading) return;
     setLoading(true);
     setErr(null);
+    setLimit(null);
     setPhase("plan");
     const abort = new AbortController();
     abortRef.current = abort;
@@ -124,7 +129,8 @@ function ResearchPage() {
       pollRef.current = window.setTimeout(tick, 1500);
     } catch (e: any) {
       if (e?.name === "AbortError" || !mountedRef.current) return;
-      setErr(e?.message ?? "Failed");
+      if (e instanceof UsageLimitError) setLimit(e.message);
+      else setErr(e?.message ?? "Failed");
       setLoading(false);
       setPhase(null);
     }
@@ -275,7 +281,8 @@ function ResearchPage() {
               )}
             </button>
           </div>
-          {err && <p className="absolute left-6 -bottom-6 text-[11px] text-[var(--gold)]">{err}</p>}
+          {limit && <UsageLimitPrompt message={limit} />}
+          {err && <p role="alert" className="absolute left-6 -bottom-6 text-[11px] text-[var(--gold)]">{err}</p>}
         </form>
 
         {/* History */}

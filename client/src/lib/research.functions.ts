@@ -2,6 +2,8 @@
 // Real research over /api/v1/research. Callers pass a Lovable-style
 // { data: {...} } envelope, so unwrap it here before hitting the API.
 
+import { usageLimitError } from "./usage-limit.mjs";
+
 export async function listResearch(): Promise<unknown[]> {
   const r = await fetch('/api/v1/research', { credentials: 'include' });
   if (!r.ok) {
@@ -23,9 +25,8 @@ export async function startResearch(payload?: { data?: { topic?: string } }): Pr
     body: JSON.stringify({ topic }),
   });
   if (!r.ok) {
-    let msg = 'Research failed';
-    try { const j = await r.json(); msg = j.error || msg; } catch { /* ignore */ }
-    throw new Error(msg);
+    const payload = await r.json().catch(() => null);
+    throw usageLimitError(r.status, payload) ?? new Error(payload?.error || 'Research failed');
   }
   return r.json();
 }
