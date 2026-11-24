@@ -533,6 +533,11 @@ app.get('/api/v1/notifications', (_req, res) => res.json([]));
 app.get('/api/v1/notification-prefs', (_req, res) => res.json({}));
 app.get('/api/v1/advisor/memory', (_req, res) => res.json({ memory: null, customInstructions: null }));
 // ?banks=live on the page URL previews the live Basiq connect step.
+// HEL-117 — a completed mock run for the Transactions bank sync notice.
+app.get('/api/v1/import-runs/:id', (req, res) => {
+  if (req.params.id !== '1') return res.status(404).json({ error: 'Import run not found' });
+  res.json({ import_run: { id: '1', status: 'succeeded' } });
+});
 app.get('/api/v1/basiq/status', (req, res) => res.json({ connected: false, live: /banks=live/.test(req.headers.referer || '') }));
 app.patch('/api/v1/profile', express.json(), (req, res) => res.json({ ...req.body, ok: true }));
 // Spending settings preview (in-memory; mirrors routes/spending-settings.js shapes).
