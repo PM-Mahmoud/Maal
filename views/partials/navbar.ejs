@@ -6,7 +6,7 @@
         <span class="lv-wordmark-text">Maal</span>
       </a>
       <nav class="lv-nav">
-        <a href="/#how">How it Works</a>
+        <a href="/#how">How it works</a>
         <a href="/pricing">Pricing</a>
       </nav>
     </div>
@@ -21,7 +21,7 @@
       <a href="/login" class="lv-header-login">Log in</a>
       <a href="<%= navGated ? '/waitlist' : '/signup' %>" class="lv-header-signup"><%= navGated ? 'Join waitlist' : 'Sign up' %></a>
       <a href="/score" class="lv-header-cta">Get your free score</a>
-      <button class="lv-hamburger" id="lv-hamburger" aria-label="Toggle menu">
+      <button class="lv-hamburger" id="lv-hamburger" aria-label="Toggle menu" aria-controls="lv-mobile-nav" aria-expanded="false">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <line x1="3" y1="6" x2="21" y2="6"/>
           <line x1="3" y1="12" x2="21" y2="12"/>
@@ -33,14 +33,15 @@
 </header>
 <div class="lv-mobile-menu" id="lv-mobile-nav">
   <a href="/score" class="lv-mobile-cta">Get your free score</a>
-  <a href="/#how">How it Works</a>
+  <a href="/#how">How it works</a>
   <a href="/pricing">Pricing</a>
   <a href="<%= locals.waitlistGated !== false ? '/waitlist' : '/signup' %>"><%= locals.waitlistGated !== false ? 'Join waitlist' : 'Sign up' %></a>
   <a href="/login">Log in</a>
 </div>
 <script nonce="<%= locals.cspNonce || '' %>">
 function toggleMobileNav() {
-  document.getElementById('lv-mobile-nav').classList.toggle('open');
+  const open = document.getElementById('lv-mobile-nav').classList.toggle('open');
+  document.getElementById('lv-hamburger').setAttribute('aria-expanded', String(open));
 }
 // Bound here, not via onclick="" (Helmet CSP: script-src-attr 'none').
 document.getElementById('lv-hamburger').addEventListener('click', toggleMobileNav);

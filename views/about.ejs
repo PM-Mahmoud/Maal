@@ -1,17 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-AU">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#020109">
   <link rel="icon" type="image/png" href="/favicon.png">
   <title>About | Maal</title>
-  <meta name="description" content="See your spending, debts, super and investments in one place. Maal helps you understand your finances and explore profit-based ways to build wealth.">
+  <meta name="description" content="Bring your accounts, spending, super and debts together. See where you stand and what you want to work towards. Maal helps you understand your finances and explore profit-based ways to build wealth.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <%- include('partials/v2-public-styles') %>
   <link rel="stylesheet" href="/css/theme.css">
-  <link rel="stylesheet" href="/css/retro-theme.css">
   <style>
     body { background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
     main { flex: 1; }
@@ -31,15 +30,16 @@
     .ab-role { padding: 1.25rem 1rem; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); font-size: 13px; font-weight: 600; }
     .disclaimer-block { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; font-size: 11px; color: var(--fg-muted); line-height: 1.8; }
   </style>
+  <link rel="stylesheet" href="/css/public-v2.css">
 </head>
-<body>
+<body class="public-v2">
   <%- include('partials/navbar') %>
 
   <main>
     <section class="ab-section">
       <p class="ab-kicker">About Maal</p>
-      <h1 class="ab-h1">Financial clarity,<br>without the sales pitch.</h1>
-      <p class="ab-sub">See your spending, debts, super and investments in one place.</p>
+      <h1 class="ab-h1">A clearer picture of your money</h1>
+      <p class="ab-sub">Bring your accounts, spending, super and debts together. See where you stand and what you want to work towards.</p>
     </section>
 
     <div class="ab-body">
@@ -52,7 +52,7 @@
 
     <section class="ab-roles">
       <div class="ab-roles-inner">
-        <h2>Every part of your financial life, in one place</h2>
+        <h2>What you can track in Maal</h2>
         <div class="ab-role-grid">
           <div class="ab-role">Net worth &amp; assets</div>
           <div class="ab-role">Super &amp; retirement</div>

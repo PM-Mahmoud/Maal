@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-AU">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,9 +9,8 @@
   <meta name="description" content="Be first to get your Maal Score: a free 0–100 read of your savings, debt, super, wealth and protection.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <%- include('partials/v2-public-styles') %>
   <link rel="stylesheet" href="/css/theme.css">
-  <link rel="stylesheet" href="/css/retro-theme.css">
   <style>
     body { background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
     main { flex: 1; display: flex; align-items: center; }
@@ -46,8 +45,9 @@
     .wl-shape-item { display: flex; align-items: flex-start; gap: .625rem; font-size: 13px; color: var(--fg-muted); line-height: 1.5; }
     .wl-shape-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mint); flex-shrink: 0; margin-top: .45rem; }
   </style>
+  <link rel="stylesheet" href="/css/public-v2.css">
 </head>
-<body>
+<body class="public-v2">
   <%- include('partials/navbar') %>
 
   <main>
@@ -79,7 +79,7 @@
         </div>
         <div>
           <p class="wl-proof-big">100+ institutions</p>
-          <p class="wl-proof-small">Connected via Basiq open banking</p>
+          <p class="wl-proof-small">Read-only bank connections</p>
         </div>
         <div>
           <p class="wl-proof-big">FY-current</p>

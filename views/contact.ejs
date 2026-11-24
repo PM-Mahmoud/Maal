@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-AU">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,9 +8,8 @@
   <title>Contact | Maal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <%- include('partials/v2-public-styles') %>
   <link rel="stylesheet" href="/css/theme.css">
-  <link rel="stylesheet" href="/css/retro-theme.css">
   <style>
     body { background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
     main { flex: 1; }
@@ -31,23 +30,33 @@
     .ct-email a { color: var(--fg); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
     .disclaimer-block { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem 4rem; font-size: 11px; color: var(--fg-muted); line-height: 1.8; }
   </style>
+  <link rel="stylesheet" href="/css/public-v2.css">
 </head>
-<body>
+<body class="public-v2">
   <%- include('partials/navbar') %>
 
   <main>
     <section class="ct-section">
       <p class="ct-kicker">Contact</p>
-      <h1 class="ct-h1">Talk to us.</h1>
-      <p class="ct-sub">Questions, feedback, or want to talk to the team? Send us a message.</p>
+      <h1 class="ct-h1">Contact the Maal team</h1>
+      <p class="ct-sub">Send us a question, share feedback, or ask for help with your account.</p>
     </section>
 
     <div class="ct-wrap">
       <% if (locals.success) { %><div class="ct-success">Thanks, we've received your message and will get back to you soon.</div><% } %>
       <form action="/contact" method="POST" class="ct-form">
-        <input class="ct-input" type="text" name="name" placeholder="Your name" required value="<%= locals.name || '' %>">
-        <input class="ct-input" type="email" name="email" placeholder="you@example.com" required value="<%= locals.email || '' %>">
-        <textarea class="ct-textarea" name="message" placeholder="How can we help?" required><%= locals.message || '' %></textarea>
+        <div class="public-field">
+          <label class="public-label" for="contact-name">Name</label>
+          <input id="contact-name" class="ct-input" type="text" name="name" placeholder="Your name" required value="<%= locals.name || '' %>">
+        </div>
+        <div class="public-field">
+          <label class="public-label" for="contact-email">Email</label>
+          <input id="contact-email" class="ct-input" type="email" name="email" placeholder="you@example.com" required value="<%= locals.email || '' %>">
+        </div>
+        <div class="public-field">
+          <label class="public-label" for="contact-message">Message</label>
+          <textarea id="contact-message" class="ct-textarea" name="message" placeholder="How can we help?" required><%= locals.message || '' %></textarea>
+        </div>
         <button type="submit" class="ct-submit">Send message</button>
       </form>
       <p class="ct-email">Or email us directly at <a href="mailto:hello@hellomaal.com">hello@hellomaal.com</a></p>

@@ -15,19 +15,6 @@
 <%- include('partials/v2-head', { title: 'Page not found' }) %>
   <meta name="robots" content="noindex">
   <link rel="stylesheet" href="/css/not-found.css">
-  <script nonce="<%= locals.cspNonce || '' %>">
-    // Theme before first paint; same rule as the React app (maal-theme =
-    // light | dark | system, default system).
-    (function () {
-      try {
-        var p = localStorage.getItem('maal-theme');
-        var dark = p === 'dark' || (p !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        var el = document.documentElement;
-        el.setAttribute('data-theme', dark ? 'dark' : 'light');
-        el.style.colorScheme = dark ? 'dark' : 'light';
-      } catch (e) {}
-    })();
-  </script>
 </head>
 <body class="nf nf-page">
   <header class="nf-top">

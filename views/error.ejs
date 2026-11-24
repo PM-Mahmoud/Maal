@@ -1,31 +1,17 @@
 <!DOCTYPE html>
 <html lang="en-AU">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#020109">
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <title>Something went wrong — Maal</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/app.css">
-  <script nonce="<%= locals.cspNonce || '' %>">
-    (function() {
-      try {
-        document.documentElement.setAttribute('data-theme', localStorage.getItem('maal-theme') || 'light');
-      } catch (e) {}
-    })();
-  </script>
+  <%- include('partials/v2-head', { title: 'Something went wrong' }) %>
 </head>
-<body class="app-body" style="display:grid; place-items:center; min-height:100vh; padding:2rem;">
-  <div class="panel" style="max-width:440px; text-align:center; padding:2.5rem 2rem;">
-    <div style="font-size:2rem; margin-bottom:0.6rem;">◈</div>
-    <h1 style="font-family:'Playfair Display',serif; font-size:1.5rem; margin:0 0 0.6rem;">Something went wrong</h1>
-    <p style="color:var(--fg-muted); font-size:0.9rem; line-height:1.6; margin:0 0 1.4rem;">
-      <%= typeof message !== 'undefined' && message ? message : 'An unexpected error occurred. Please try again.' %>
-    </p>
-    <a href="/dashboard" class="btn btn-accent" style="text-decoration:none;">Back to dashboard</a>
-  </div>
+<body class="v2 v2-focus-page">
+  <%- include('partials/v2-focus-header', { backHref: '/' }) %>
+  <main class="v2-focus">
+    <div class="v2-focus-inner">
+      <h1 class="v2-focus-title">Something went wrong</h1>
+      <p class="v2-focus-sub"><%= locals.message || 'Please try again.' %></p>
+      <div class="v2-focus-actions"><a href="/app" class="v2-btn v2-btn-ink">Back to Maal</a></div>
+    </div>
+  </main>
+  <%- include('partials/v2-focus-footer') %>
 </body>
 </html>
