@@ -210,10 +210,28 @@
 
 /* ---------- Complete onboarding card + dialog ---------- */
 .ms-onb-card {
-  position: relative; border-radius: 21px; padding: 30px 21px 22px; color: #fff; cursor: pointer; text-align: left; width: 100%; border: 0;
+  position: relative; border-radius: 21px; padding: 30px 21px 22px; color: #fff; text-align: left; width: 100%; border: 0;
   background: linear-gradient(131deg, #4B660D 0%, #274200 33%, #3A5300 67%, #284200 83%);
 }
 .ms-onb-card:hover { filter: brightness(1.05); }
+.ms-onb-trigger {
+  position: absolute; inset: 0; border: 0; border-radius: inherit;
+  cursor: pointer; background: transparent;
+}
+.ms-onb-trigger:focus-visible { outline-color: #fff; outline-offset: -3px; }
+.ms-onb-card > .ms-icon-btn { z-index: 1; }
+.ms-onb-nudge {
+  position: relative; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.35);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  font-size: 14px; line-height: 1.5; pointer-events: none;
+}
+.ms-onb-add {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px;
+  border: 1px solid rgba(255,255,255,.75); border-radius: 8px; color: #fff;
+  text-decoration: none; font-weight: 500; pointer-events: auto;
+}
+.ms-onb-add:hover { background: rgba(255,255,255,.12); }
+.ms-onb-add:focus-visible { outline-color: #fff; }
 .ms-mono { font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; letter-spacing: .13em; text-transform: uppercase; }
 .ms-onb-card h3 { font-family: var(--ms-serif); font-size: clamp(22px, 1.6vw, 28px); margin-top: 42px; }
 .ms-segs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 5px; margin-top: 14px; }

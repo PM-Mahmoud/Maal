@@ -20,6 +20,7 @@ export type Txn = {
 export type HomeData = {
   name: string;
   accounts: HomeAccount[];
+  hasAssetOrLiabilityRows: boolean;
   investmentRows: Array<Record<string, any>>;
   snapshots: Snapshot[];
   transactions: Txn[];
@@ -51,13 +52,18 @@ async function loadAccounts() {
     if (res.error) failed = true;
     rows[TABLES[i][0]] = Array.isArray(res.data) ? (res.data as Array<Record<string, any>>) : [];
   });
-  return { accounts: buildHomeAccounts(rows), investmentRows: rows.investments, failed };
+  return {
+    accounts: buildHomeAccounts(rows),
+    hasAssetOrLiabilityRows: Object.values(rows).some((table) => table.length > 0),
+    investmentRows: rows.investments,
+    failed,
+  };
 }
 
 /** Everything the Home page reads, from the existing endpoints. */
 export function useHomeData() {
   const [data, setData] = useState<HomeData>({
-    name: "", accounts: [], investmentRows: [], snapshots: [], transactions: [], score: null,
+    name: "", accounts: [], hasAssetOrLiabilityRows: false, investmentRows: [], snapshots: [], transactions: [], score: null,
     errors: {}, loading: true, refreshedAt: null,
   });
 
@@ -77,6 +83,7 @@ export function useHomeData() {
     setData({
       name: prof?.display_name || (email ? email.split("@")[0] : ""),
       accounts: acc?.accounts ?? [],
+      hasAssetOrLiabilityRows: acc?.hasAssetOrLiabilityRows ?? false,
       investmentRows: acc?.investmentRows ?? [],
       snapshots: snapRes.status === "fulfilled" ? snapRes.value : [],
       transactions: txnRes.status === "fulfilled" ? (txnRes.value as Txn[]) : [],

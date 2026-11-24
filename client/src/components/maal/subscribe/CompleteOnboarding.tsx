@@ -1,4 +1,5 @@
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useId, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { Check, ChevronDown, X } from "lucide-react";
 import { getUsage } from "@/lib/usage.functions";
 import { listGoals } from "@/lib/goals.functions";
@@ -82,10 +83,17 @@ function Segments({ done, total }: { done: number; total: number }) {
   );
 }
 
-export function CompleteOnboardingCard({ autoOpen, onDismiss }: { autoOpen?: boolean; onDismiss?: () => void }) {
+export function CompleteOnboardingCard({ autoOpen, onDismiss, showAccountNudge }: {
+  autoOpen?: boolean;
+  onDismiss?: () => void;
+  showAccountNudge?: boolean;
+}) {
   const { tasks, done, total, pct } = useOnboardingTasks();
   const [dismissed, setDismissed] = useState(true);
   const [open, setOpen] = useState(false);
+  const labelId = useId();
+  const titleId = useId();
+  const progressId = useId();
 
   useEffect(() => {
     try { setDismissed(localStorage.getItem(CARD_DISMISS_KEY) === "1"); } catch { setDismissed(false); }
@@ -102,8 +110,7 @@ export function CompleteOnboardingCard({ autoOpen, onDismiss }: { autoOpen?: boo
 
   if (dismissed || !tasks || done === total) return null;
 
-  function dismiss(e: MouseEvent) {
-    e.stopPropagation();
+  function dismiss() {
     setDismissed(true);
     try { localStorage.setItem(CARD_DISMISS_KEY, "1"); } catch { /* ignore */ }
     onDismiss?.();
@@ -111,16 +118,22 @@ export function CompleteOnboardingCard({ autoOpen, onDismiss }: { autoOpen?: boo
 
   return (
     <div className="msub">
-      <div className="ms-onb-card" role="button" tabIndex={0} onClick={() => setOpen(true)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(true); } }}
-        aria-label={`Complete onboarding, ${pct}% complete`}>
-        <p className="ms-mono">Complete onboarding</p>
+      <div className="ms-onb-card">
+        <button type="button" className="ms-onb-trigger" aria-haspopup="dialog"
+          aria-labelledby={`${labelId} ${titleId} ${progressId}`} onClick={() => setOpen(true)} />
+        <p className="ms-mono" id={labelId}>Complete onboarding</p>
         <button type="button" className="ms-icon-btn" onClick={dismiss} aria-label="Hide onboarding card">
           <X className="size-5" strokeWidth={1.6} />
         </button>
-        <h3>Make the most of Maal</h3>
+        <h3 id={titleId}>Make the most of Maal</h3>
         <Segments done={done} total={total} />
-        <p className="ms-onb-pct">{pct}% complete</p>
+        <p className="ms-onb-pct" id={progressId}>{pct}% complete</p>
+        {showAccountNudge && !tasks.find((task) => task.id === "accounts")?.done && (
+          <div className="ms-onb-nudge">
+            <p>Add an account to start tracking your net worth.</p>
+            <Link to="/app/accounts/connect" className="ms-onb-add">Add an account</Link>
+          </div>
+        )}
       </div>
       {open && <CompleteOnboardingDialog tasks={tasks} onClose={() => setOpen(false)} />}
     </div>
