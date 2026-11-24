@@ -1426,12 +1426,12 @@ router.get('/v1/transaction-categories', async (req, res) => {
 // Registered before the generic GET /v1/:table so it wins for this table.
 router.post('/v1/transactions', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
-  let row;
+  let row, cashAccountId;
   try {
-    const { normalizeImportedTransaction } = require('../lib/transaction-import');
-    row = normalizeImportedTransaction(
-      req.body?.data && typeof req.body.data === 'object' ? req.body.data : req.body
-    );
+    const { normalizeImportedTransaction, normalizeManualCashAccountId } = require('../lib/transaction-import');
+    const input = req.body?.data && typeof req.body.data === 'object' ? req.body.data : req.body;
+    row = normalizeImportedTransaction(input);
+    cashAccountId = normalizeManualCashAccountId(input?.cash_account_id);
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
@@ -1447,6 +1447,16 @@ router.post('/v1/transactions', async (req, res) => {
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
       [req.session.userId, row.description, row.amount, row.status, row.post_date]
     );
+    // HEL-114. Save the optional manual account link in this transaction and
+    // leave the provider-observed details used by reconciliation untouched.
+    if (cashAccountId) {
+      const { linkManualCashAccount } = require('../db/transactions');
+      const linked = await linkManualCashAccount(client, req.session.userId, inserted.rows[0].id, cashAccountId);
+      if (!linked) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Cash account not found.' });
+      }
+    }
     await client.query(
       `INSERT INTO raw_financial_records
          (user_id, source, entity_type, source_record_id, payload, payload_hash)

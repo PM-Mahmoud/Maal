@@ -290,7 +290,12 @@ function DetailPanel({ txn, merchant, tags, tagsError, busy, error, onDismissErr
         </div>
 
         <div className="td-source">
-          {txn.institution_name ? (
+          {txn.manual_account_label ? (
+            <p className="td-source-acct">
+              {txn.institution_name && <InstitutionLogo name={txn.institution_name} size={22} />}
+              {txn.manual_account_label}
+            </p>
+          ) : txn.institution_name ? (
             <p className="td-source-acct"><InstitutionLogo name={txn.institution_name} size={22} />{txn.institution_name}
               {txn.account_reference ? <span className="td-muted"> ({String(txn.account_reference).slice(-4)})</span> : null}</p>
           ) : txn.account_reference ? (

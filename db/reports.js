@@ -73,10 +73,13 @@ async function getTransactionsInRange(userId, from, to, { pageSize = 1000, maxRo
     }
     const r = await pool.query(
       `SELECT t.id, t.description, t.amount, t.status, to_char(t.post_date, 'YYYY-MM-DD') AS post_date,
-              pd.account_reference, c.category_group, c.category, c.source AS category_source
+              COALESCE(pd.account_reference, ca.account_reference, 'cash:' || ca.id::text) AS account_reference,
+              c.category_group, c.category, c.source AS category_source
          FROM transactions t
-         LEFT JOIN transaction_provider_details pd ON pd.transaction_id = t.id
-         LEFT JOIN transaction_categories c ON c.transaction_id = t.id
+         LEFT JOIN transaction_provider_details pd ON pd.transaction_id = t.id AND pd.user_id = $1
+         LEFT JOIN transaction_manual_accounts ma ON ma.transaction_id = t.id AND ma.user_id = $1
+         LEFT JOIN cash_accounts ca ON ca.id = ma.cash_account_id AND ca.user_id = $1
+         LEFT JOIN transaction_categories c ON c.transaction_id = t.id AND c.user_id = $1
         WHERE t.user_id = $1
           AND t.post_date >= $2::date AND t.post_date <= $3::date
           ${keyset}

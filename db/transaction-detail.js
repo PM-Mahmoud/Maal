@@ -100,11 +100,13 @@ async function getDetail(userId, transactionId) {
   const r = await pool.query(
     `SELECT t.id, t.description, t.amount, t.status, t.post_date,
             c.category_group, c.category, c.source AS category_source,
-            pd.account_reference,
-            la.institution_name
+            COALESCE(pd.account_reference, ca.account_reference, 'cash:' || ca.id::text) AS account_reference,
+            COALESCE(la.institution_name, ca.institution) AS institution_name, ca.label AS manual_account_label
        FROM transactions t
        LEFT JOIN transaction_categories c ON c.transaction_id = t.id AND c.user_id = $2
        LEFT JOIN transaction_provider_details pd ON pd.transaction_id = t.id AND pd.user_id = $2
+       LEFT JOIN transaction_manual_accounts ma ON ma.transaction_id = t.id AND ma.user_id = $2
+       LEFT JOIN cash_accounts ca ON ca.id = ma.cash_account_id AND ca.user_id = $2
        LEFT JOIN LATERAL (
          SELECT institution_name FROM linked_accounts
           WHERE user_id = $2 AND account_reference = pd.account_reference
