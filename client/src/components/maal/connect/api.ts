@@ -125,6 +125,8 @@ export interface ManualInput {
   accountType: BankAccountType;
   name: string;
   amount: string;
+  startDate: string;
+  includeInNetWorth: boolean;
 }
 
 /** Whole dollars (the asset tables store BIGINT dollars). Strips $ and commas. */
@@ -137,23 +139,24 @@ export function parseDollars(raw: string): number {
 export function manualPayload(input: ManualInput): { table: string; body: Record<string, unknown> } {
   const label = input.name.trim().slice(0, 120);
   const amount = parseDollars(input.amount);
+  const preferences = { start_date: input.startDate || null, include_in_net_worth: input.includeInNetWorth };
   switch (input.kind) {
     case "bank":
       return input.accountType === "credit_card"
-        ? { table: "debts", body: { label: label || "Credit card", kind: "credit_card", balance: amount } }
-        : { table: "cash_accounts", body: { label: label || "Bank account", account_type: input.accountType, balance: amount, source: "manual" } };
+        ? { table: "debts", body: { ...preferences, label: label || "Credit card", kind: "credit_card", balance: amount } }
+        : { table: "cash_accounts", body: { ...preferences, label: label || "Bank account", account_type: input.accountType, balance: amount, source: "manual" } };
     case "cash":
-      return { table: "cash_accounts", body: { label: label || "Cash", account_type: "cash", balance: amount, source: "manual" } };
+      return { table: "cash_accounts", body: { ...preferences, label: label || "Cash", account_type: "cash", balance: amount, source: "manual" } };
     case "super":
-      return { table: "super_accounts", body: { label: label || "Super fund", fund_name: label || null, balance: amount } };
+      return { table: "super_accounts", body: { ...preferences, label: label || "Super fund", fund_name: label || null, balance: amount } };
     case "property":
-      return { table: "properties", body: { label: label || "Property", property_type: "ppor", value: amount } };
+      return { table: "properties", body: { ...preferences, label: label || "Property", property_type: "ppor", value: amount } };
     case "debt":
-      return { table: "debts", body: { label: label || "Debt", kind: "other", balance: amount } };
+      return { table: "debts", body: { ...preferences, label: label || "Debt", kind: "other", balance: amount } };
     case "vehicle":
     case "valuables":
     case "other":
-      return { table: "other_assets", body: { label: label || "Asset", kind: input.kind === "valuables" ? "collectible" : input.kind, value: amount } };
+      return { table: "other_assets", body: { ...preferences, label: label || "Asset", kind: input.kind === "valuables" ? "collectible" : input.kind, value: amount } };
   }
 }
 

@@ -623,6 +623,8 @@ function ManualForm({
   const [accountType, setAccountType] = useState<BankAccountType>("transaction");
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [includeInNetWorth, setIncludeInNetWorth] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const isLiability = kind === "debt" || (kind === "bank" && accountType === "credit_card");
@@ -634,7 +636,7 @@ function ManualForm({
     setBusy(true);
     setErr(null);
     try {
-      const input = { kind, accountType, name, amount };
+      const input = { kind, accountType, name, amount, startDate, includeInNetWorth };
       await saveManual(input);
       onSaved(String(manualPayload(input).body.label), isLiability ? "debt" : kind);
     } catch (ex) {
@@ -671,14 +673,20 @@ function ManualForm({
               <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" aria-label={copy.amount} />
             </span>
           </label>
+          <label className="cx-field">
+            <span className="cx-field-label">Start date (optional)</span>
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </label>
           <div className="cx-summary">
             <div className="cx-summary-top">
               <span>Total amount</span>
               <span className="cx-summary-total">{aud(total)}</span>
             </div>
             <div className="cx-summary-foot">
-              <p>Included in your net worth</p>
-              <p>{isLiability ? "Debts are subtracted from your net worth." : "Assets add up to your net worth."}</p>
+              <label className="cx-check cx-net-worth-check">
+                <input type="checkbox" checked={includeInNetWorth} onChange={(e) => setIncludeInNetWorth(e.target.checked)} />
+                Show in net worth
+              </label>
             </div>
           </div>
         </div>

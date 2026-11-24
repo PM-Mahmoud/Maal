@@ -55,8 +55,8 @@ function snapshotValuesFromProfile(profile, options = {}) {
   const investBalance = value('investment_portfolio');
   const propertyValue = value('property_value');
   const cashBalance = value('cash_savings');
-  const debtsTotal = value('hecs_balance') + value('total_debt');
-  const assetsTotal   = superBalance + investBalance + propertyValue + cashBalance;
+  const debtsTotal = value('hecs_balance') + value('total_debt') + value('property_mortgage_balance');
+  const assetsTotal = superBalance + investBalance + propertyValue + cashBalance + value('other_assets_total');
   return {
     netWorth: Math.round((assetsTotal - debtsTotal) * 100) / 100,
     assetsTotal: Math.round(assetsTotal * 100) / 100,

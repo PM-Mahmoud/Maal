@@ -163,5 +163,27 @@ test('null profile does not throw, produces zeros where no summary data exists',
   assert.strictEqual(merged.super_balance, 0);
 });
 
+test('hidden assets and liabilities are excluded from current and daily net worth', () => {
+  const { snapshotValuesFromProfile } = require('../db/snapshots');
+  const summary = summarizeAssets({
+    cashAccounts: [{ balance: '500', include_in_net_worth: false }],
+    investments: [{ value: '200', include_in_net_worth: null }],
+    properties: [
+      { value: '1000', mortgage_balance: '400', include_in_net_worth: true },
+      { value: '800', mortgage_balance: '300', include_in_net_worth: false },
+    ],
+    debts: [{ balance: '100', include_in_net_worth: false }],
+    otherAssets: [{ value: '80', include_in_net_worth: false }, { value: '20' }],
+  });
+  assert.deepStrictEqual(wealthTotalsFromSummary(summary), {
+    assetTotal: 1220, liabilityTotal: 400, netWorth: 820,
+  });
+  const profile = mergeAssetSummaryIntoProfile({ cash_savings: 500, total_debt: 100 }, summary);
+  assert.deepStrictEqual(snapshotValuesFromProfile(profile), {
+    netWorth: 820, assetsTotal: 1220, superBalance: 0,
+    investBalance: 200, debtsTotal: 400, cashBalance: 0,
+  });
+});
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);
