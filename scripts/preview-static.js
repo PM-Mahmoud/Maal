@@ -184,6 +184,8 @@ function previewTransactions() {
     add(at(15), 'Salary — Acme Pty Ltd', 3650, 'Income', 'Salary & wages');
     add(at(29), 'Salary — Acme Pty Ltd', 3650, 'Income', 'Salary & wages');
     add(at(3), 'Rent — Ray White', -1950, 'Housing', 'Rent');
+    const petCare = app.locals.previewPetCareName?.();
+    if (petCare && k === 0) add(at(1), 'Pet supplies', -42, petCare, null);
     add(at(6), 'Netflix', -18.99, 'Recurring & Subscriptions', 'Streaming');
     add(at(9), 'Spotify', -13.99, 'Recurring & Subscriptions', 'Streaming');
     add(at(8), 'AGL Energy', -132.55 + wobble(1), 'Bills & Utilities', 'Electricity');
@@ -210,9 +212,10 @@ function previewTransactions() {
   const sc = require('../lib/spending-categories');
   let pvSeq = 3;
   let pvCustom = [{ id: '1', name: 'Pet care', kind: 'expense', color: '#3E7C6B', icon: 'paw' }];
-  let pvGroups = [{ id: '2', name: 'Fun', kind: 'expense', color: '#4E6E94', categories: ['Shopping', 'Travel & Lifestyle'] }];
+  let pvGroups = [{ id: '2', name: 'Fun', kind: 'expense', color: '#4E6E94', categories: ['Shopping', 'Travel & Lifestyle', 'Pet care'] }];
   const names = () => pvCustom.map((c) => c.name);
   app.locals.pvCustomNames = names;
+  app.locals.previewPetCareName = () => pvCustom.find((category) => category.id === '1')?.name;
   app.get('/api/v1/spending-categories', (req, res) => res.json(previewEmpty(req) ? { categories: [], groups: [] } : { categories: pvCustom, groups: pvGroups }));
   app.post('/api/v1/spending-categories', express.json(), (req, res) => {
     const v = sc.validateCategoryInput(req.body, names());
@@ -221,11 +224,30 @@ function previewTransactions() {
     pvCustom = pvCustom.concat([c]);
     res.json({ category: c });
   });
+  // HEL-113 — mirror category edits and reassign the existing group's members
+  // and budget rows so the rename is visible across Spending previews.
+  app.patch('/api/v1/spending-categories/:id', express.json(), (req, res) => {
+    const current = pvCustom.find((category) => category.id === req.params.id);
+    if (!current) return res.status(404).json({ error: 'Category not found' });
+    const result = sc.validateCategoryInput(req.body, names(), { partial: true, currentName: current.name });
+    if (result.error) return res.status(400).json({ error: result.error });
+    const category = { ...current, ...result.category };
+    pvCustom = pvCustom.map((item) => item.id === current.id ? category : item);
+    if (category.name !== current.name) {
+      pvGroups = pvGroups.map((group) => ({
+        ...group,
+        categories: group.categories.map((name) => name === current.name ? category.name : name),
+      }));
+      app.locals.previewRenameCategoryBudget?.(current.name, category.name);
+    }
+    res.json({ category });
+  });
   app.delete('/api/v1/spending-categories/:id', (req, res) => {
     const c = pvCustom.find((x) => x.id === req.params.id);
     if (!c) return res.status(404).json({ error: 'Category not found' });
     pvCustom = pvCustom.filter((x) => x !== c);
     pvGroups = pvGroups.map((g) => ({ ...g, categories: g.categories.filter((n) => n !== c.name) }));
+    app.locals.previewRenameCategoryBudget?.(c.name);
     res.json({ ok: true });
   });
   const known = () => [...require('../lib/transaction-categories').GROUPS, ...names()];
@@ -544,8 +566,15 @@ app.patch('/api/v1/profile', express.json(), (req, res) => res.json({ ...req.bod
     { id: 1, category_group: null, monthly_amount: '3800.00' },
     { id: 2, category_group: 'Food & Dining', monthly_amount: '650.00' },
     { id: 3, category_group: 'Shopping', monthly_amount: '200.00' },
+    { id: 4, category_group: 'Pet care', monthly_amount: '80.00' },
   ];
   let pvRules = [{ id: 1, name: null, match_type: 'contains', match_text: 'NETFLIX', category_group: 'Recurring & Subscriptions', category: 'Streaming', priority: 0, amount_direction: 'debit' }];
+  app.locals.previewRenameCategoryBudget = (from, to) => {
+    pvBudgets = pvBudgets.flatMap((budget) => {
+      if (budget.category_group !== from) return [budget];
+      return to === undefined ? [] : [{ ...budget, category_group: to }];
+    });
+  };
   app.get('/api/v1/spending-settings', (_req, res) => res.json({ settings: ss.normaliseSettings(pvSettings) }));
   app.patch('/api/v1/spending-settings', express.json(), (req, res) => {
     const v = ss.validateSettingsPatch(req.body);

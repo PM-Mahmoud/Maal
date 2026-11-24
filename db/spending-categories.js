@@ -61,6 +61,9 @@ async function updateCustomCategory(id, userId, patch) {
     if (patch.name && patch.name !== oldName) {
       await client.query(`UPDATE budgets SET category_group = $3, updated_at = NOW() WHERE user_id = $1 AND category_group = $2`, [userId, oldName, row.name]);
       await client.query(`UPDATE transaction_categories SET category_group = $3, updated_at = NOW() WHERE user_id = $1 AND category_group = $2`, [userId, oldName, row.name]);
+      await client.query(`UPDATE transaction_splits SET category_group = $3 WHERE user_id = $1 AND category_group = $2`, [userId, oldName, row.name]);
+      await client.query(`UPDATE transaction_category_feedback SET category_group = $3, updated_at = NOW() WHERE user_id = $1 AND category_group = $2`, [userId, oldName, row.name]);
+      await client.query(`UPDATE recurring_items SET category_group = $3, updated_at = NOW() WHERE user_id = $1 AND category_group = $2`, [userId, oldName, row.name]);
       await client.query(`UPDATE spending_category_group_members SET category_name = $3 WHERE user_id = $1 AND category_name = $2`, [userId, oldName, row.name]);
     }
     await client.query('COMMIT');
