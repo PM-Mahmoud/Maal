@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowUp, Check, ChevronDown, ChevronUp, Loader2, Mic, Plus, Sparkle, Square, ThumbsDown, ThumbsUp, X, CircleCheck } from "lucide-react";
-import { getThreadMessages, saveMessageFeedback, sendAdvisorMessage, type Citation, type FeedbackRating, type Thread } from "@/lib/advisor.functions";
+import { ADVISOR_STAGES, getThreadMessages, saveMessageFeedback, sendAdvisorMessage, type AdvisorStage, type Citation, type FeedbackRating, type Thread } from "@/lib/advisor.functions";
 import { addWidget, type WidgetSpec } from "@/lib/widgets.functions";
 import { WidgetRenderer } from "@/components/maal/WidgetRenderer";
 import { AdvisorMarkdown } from "./AdvisorMarkdown";
@@ -26,15 +26,15 @@ export const ADVISOR_SUGGESTIONS = [
   "How can I build wealth?",
 ];
 
-// What the advisor actually does while it prepares an answer (server loads the
-// snapshot, applies FY constants, then the model drafts and a verifier checks).
-const THINKING_STEPS = [
-  { title: "Understanding your question", desc: "Working out what you're really asking and what matters for the answer." },
-  { title: "Reviewing your financial snapshot", desc: "Looking at your accounts, goals, recent cash flow and Maal Score." },
-  { title: "Applying Australian rules", desc: "Using this financial year's ATO, super and HECS settings." },
-  { title: "Weighing your options", desc: "Comparing the trade-offs for your situation." },
-  { title: "Checking the numbers", desc: "Double-checking figures before writing a plain-English answer." },
-];
+const THINKING_STEPS: Record<AdvisorStage, { title: string; desc: string }> = {
+  retrieving_data: { title: "Reviewing your financial snapshot", desc: "Gathering the financial data and background for your question." },
+  checking_constants: { title: "Applying Australian rules", desc: "Preparing the current financial year’s rules and figures." },
+  drafting: { title: "Drafting your answer", desc: "Considering your question alongside your financial snapshot." },
+  verifying: { title: "Checking the numbers", desc: "Checking claims and calculations against the supplied figures." },
+  revising: { title: "Revising your answer", desc: "Updating the answer based on those checks." },
+};
+
+type Progress = Partial<Record<AdvisorStage, "active" | "done">>;
 
 const DRAFT_KEY = (id: string) => `maal_draft_${id}`;
 const HINT_KEY = "maal_memory_hint_dismissed";
@@ -72,34 +72,38 @@ function AddToDashboard({ widget }: { widget: WidgetSpec }) {
   );
 }
 
-function ThinkingCard() {
-  const [step, setStep] = useState(0);
+function ThinkingCard({ progress }: { progress: Progress }) {
   const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const t = window.setInterval(() => setStep((s) => Math.min(s + 1, THINKING_STEPS.length - 1)), 1800);
-    return () => window.clearInterval(t);
-  }, []);
-  const current = THINKING_STEPS[step];
+  const active = ADVISOR_STAGES.find((stage) => progress[stage] === "active");
+  const visibleSteps = ADVISOR_STAGES.filter((stage) => progress[stage]);
+  const label = active ? THINKING_STEPS[active].title : "Working on your answer";
   return (
     <div className="mx-adv-think" aria-live="polite">
-      <button type="button" className="mx-adv-think-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <span className="inline-flex items-center gap-2.5">
-          {!open && <Loader2 className="size-4 mx-adv-spin" style={{ color: "#7C6FE0" }} />}
-          {open ? <span style={{ color: "var(--a-ink-soft)" }}>Working on your answer</span> : <span>{current.title}…</span>}
-        </span>
-        {open ? <ChevronUp className="size-5" /> : <ChevronDown className="size-5" />}
-      </button>
+      {visibleSteps.length === 0 ? (
+        <div className="mx-adv-think-head">
+          <span className="inline-flex items-center gap-2.5"><Loader2 className="size-4 mx-adv-spin" />{label}…</span>
+        </div>
+      ) : (
+        <button type="button" className="mx-adv-think-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+          <span className="inline-flex items-center gap-2.5">
+            {!open && <Loader2 className="size-4 mx-adv-spin" style={{ color: "#7C6FE0" }} />}
+            <span>{label}…</span>
+          </span>
+          {open ? <ChevronUp className="size-5" /> : <ChevronDown className="size-5" />}
+        </button>
+      )}
       {open && (
         <ol className="mx-adv-think-steps">
-          {THINKING_STEPS.map((s, i) => {
-            const state = i < step ? "done" : i === step ? "active" : "pending";
+          {visibleSteps.map((stage) => {
+            const step = THINKING_STEPS[stage];
+            const state = progress[stage];
             return (
-              <li key={s.title} className="mx-adv-step" data-state={state}>
+              <li key={stage} className="mx-adv-step" data-state={state}>
                 <span className="mx-adv-step-icon">
-                  {state === "done" ? <CircleCheck className="size-4" /> : state === "active" ? <Loader2 className="size-4 mx-adv-spin" /> : <span className="block size-4" />}
+                  {state === "done" ? <CircleCheck className="size-4" /> : <Loader2 className="size-4 mx-adv-spin" />}
                 </span>
-                <span className="mx-adv-step-title">{s.title}</span>
-                <span className="mx-adv-step-desc">{s.desc}</span>
+                <span className="mx-adv-step-title">{step.title}</span>
+                <span className="mx-adv-step-desc">{step.desc}</span>
               </li>
             );
           })}
@@ -273,6 +277,7 @@ export function ChatConversation({
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<Progress>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -338,15 +343,25 @@ export function ChatConversation({
     setError(null); setInput("");
     try { localStorage.removeItem(DRAFT_KEY(threadId)); } catch { /* ignore */ }
     setMessages((m) => [...m, { role: "user", content: t }]);
+    setProgress({});
     setBusy(true);
     const controller = new AbortController();
     abortRef.current = controller;
     scrollToEnd();
     try {
-      const res = await sendAdvisorMessage({ data: { threadId, content: t } }, { signal: controller.signal, history });
+      const res = await sendAdvisorMessage({ data: { threadId, content: t } }, {
+        signal: controller.signal,
+        history,
+        onProgress: ({ stage, phase }) => {
+          if (genRef.current === gen && !controller.signal.aborted) {
+            setProgress((steps) => ({ ...steps, [stage]: phase === "start" ? "active" : "done" }));
+          }
+        },
+      });
       if (genRef.current !== gen) return;
       if (res.aborted) {
-        setMessages((m) => [...m, { role: "assistant", content: "Stopped.", stopped: true }]);
+        setMessages((m) => [...m.slice(0, -1), { role: "assistant", content: "Stopped.", stopped: true }]);
+        onInput(t);
       } else {
         setMessages((m) => [...m, {
           id: res.messageId, role: "assistant", content: res.reply, widgets: res.widgets, followUps: res.followUps, citations: res.citations, limited: res.limited,
@@ -418,7 +433,7 @@ export function ChatConversation({
               </div>
             )
           ))}
-          {busy && <ThinkingCard />}
+          {busy && <ThinkingCard progress={progress} />}
           {!loaded && !error && <p className="mx-adv-stopped" style={{ fontStyle: "normal" }}>Loading chat…</p>}
           {error && <p className="mx-adv-error" role="alert">{error}</p>}
         </div>

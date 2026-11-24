@@ -115,11 +115,13 @@ const DEFAULT_TIMEOUT_MS = Number(process.env.GATEWAY_TIMEOUT_MS) || 60000;
 
 // fetch with a bounded abort timeout, so a hung provider socket can never wedge
 // a request forever (and lets completeAs move on to the next candidate).
-async function fetchWithTimeout(url, init, timeoutMs) {
+async function fetchWithTimeout(url, init, timeoutMs, signal) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs || DEFAULT_TIMEOUT_MS);
   try {
-    return await doFetch(url, Object.assign({}, init, { signal: controller.signal }));
+    signal?.throwIfAborted();
+    const combined = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
+    return await doFetch(url, Object.assign({}, init, { signal: combined }));
   } finally {
     clearTimeout(timer);
   }
@@ -132,7 +134,7 @@ async function azureComplete(cfg, messages, opts) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'api-key': cfg.apiKey },
     body: JSON.stringify(body),
-  }, opts.timeoutMs);
+  }, opts.timeoutMs, opts.signal);
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
     throw new Error('Azure OpenAI ' + res.status + ' (' + cfg.label + '): ' + detail.slice(0, 200));
@@ -147,7 +149,7 @@ async function openaiCompatComplete(cfg, messages, opts) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + cfg.apiKey },
     body: JSON.stringify({ model: cfg.model, messages, max_tokens: opts.maxTokens, temperature: opts.temperature }),
-  }, opts.timeoutMs);
+  }, opts.timeoutMs, opts.signal);
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
     throw new Error('LLM provider ' + res.status + ' (' + cfg.label + '): ' + detail.slice(0, 200));
@@ -175,7 +177,7 @@ async function anthropicComplete(cfg, messages, opts) {
       ...(system ? { system } : {}),
       messages: turns,
     }),
-  }, opts.timeoutMs);
+  }, opts.timeoutMs, opts.signal);
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
     throw new Error('Anthropic ' + res.status + ' (' + cfg.label + '): ' + detail.slice(0, 200));
@@ -203,12 +205,14 @@ function runProvider(cfg, messages, o) {
 // deadline, so total latency stays bounded regardless of candidate count.
 // Returns assistant text; throws the last error only if every candidate fails.
 async function completeAs(role, messages, opts) {
+  opts?.signal?.throwIfAborted();
   const candidates = resolveRoleCandidates(role);
   if (!candidates.length) throw new Error('gateway: no provider configured for role "' + role + '"');
   const totalBudget = (opts && opts.timeoutMs) || DEFAULT_TIMEOUT_MS;
   const deadline = Date.now() + totalBudget;
   const base = {
     maxTokens: (opts && opts.maxTokens) || 600,
+    signal: opts?.signal,
     temperature: opts && opts.temperature != null ? opts.temperature : 0.6,
   };
   let lastErr;
@@ -218,6 +222,7 @@ async function completeAs(role, messages, opts) {
     try {
       return await runProvider(candidates[i], messages, Object.assign({}, base, { timeoutMs: remaining }));
     } catch (e) {
+      opts?.signal?.throwIfAborted();
       lastErr = e;
       if (i < candidates.length - 1) {
         console.warn('[gateway] ' + role + ' provider ' + candidates[i].label + ' failed (' + e.message + ') — trying ' + candidates[i + 1].label);
@@ -242,8 +247,8 @@ const VERIFIER_SYSTEM = [
 // reasoner ONE revision round with the critique, then ship regardless.
 // Never blocks on verifier failure — any error returns the original draft.
 // Returns { text, verified, revised, issues }.
-async function verifyAndRevise({ messages, draft, opts }) {
-  const result = { text: draft, verified: false, revised: false, issues: [] };
+async function verifyAndRevise({ messages, draft, opts, onStep }) {
+  const result = { text: draft, verified: false, revised: false, issues: [], accepted: false };
   if (!hasRole('verifier')) {
     console.log('[gateway] verifier not configured (ANTHROPIC_API_KEY unset) — skipping verify pass');
     return result;
@@ -251,6 +256,7 @@ async function verifyAndRevise({ messages, draft, opts }) {
   try {
     const grounding = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
     const lastUser = [...messages].reverse().find(m => m.role === 'user');
+    onStep?.('verifying', 'start');
     const raw = await completeAs('verifier', [
       { role: 'system', content: VERIFIER_SYSTEM },
       {
@@ -260,17 +266,22 @@ async function verifyAndRevise({ messages, draft, opts }) {
           '<question>\n' + String(lastUser ? lastUser.content : '').slice(0, 4000) + '\n</question>\n\n' +
           '<draft>\n' + String(draft).slice(0, 12000) + '\n</draft>',
       },
-    ], { maxTokens: 500, temperature: 0 });
+    ], { maxTokens: 500, temperature: 0, signal: opts?.signal });
+    onStep?.('verifying', 'end');
 
     const m = String(raw || '').match(/\{[\s\S]*\}/);
     const verdict = m ? JSON.parse(m[0]) : null;
     if (!verdict || typeof verdict.pass !== 'boolean') return result; // unparseable → ship draft
     result.verified = true;
-    if (verdict.pass) return result;
+    if (verdict.pass) {
+      result.accepted = true;
+      return result;
+    }
 
     result.issues = Array.isArray(verdict.issues) ? verdict.issues.slice(0, 5).map(String) : [];
     if (!result.issues.length) return result;
 
+    onStep?.('revising', 'start');
     const revised = await completeAs('reasoner', [
       ...messages,
       { role: 'assistant', content: draft },
@@ -282,11 +293,15 @@ async function verifyAndRevise({ messages, draft, opts }) {
           '\n\nRewrite your answer correcting ONLY these issues. Keep everything else (length, tone, structure) the same. Reply with the corrected answer only — do not mention the review.',
       },
     ], opts || {});
+    onStep?.('revising', 'end');
     if (revised && revised.trim()) {
       result.text = revised;
       result.revised = true;
+      result.accepted = true;
     }
   } catch (e) {
+    opts?.signal?.throwIfAborted();
+    if (opts?.requireVerification) throw new Error('Advisor verification failed');
     console.error('[gateway] verify pass failed (shipping draft):', e.message);
   }
   return result;

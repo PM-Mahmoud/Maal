@@ -173,7 +173,9 @@ const FALLBACK_REPLY =
 // Assemble the verified answer text for a chat turn. `systemExtra` is appended
 // to the system prompt (e.g. widget instructions for the web surface). Returns
 // the final verified text (raw — including any generative-UI directives).
-async function runChat(user, profile, maal, messages, docs, extra, systemExtra) {
+async function runChat(user, profile, maal, messages, docs, extra, systemExtra, { signal, onStep, requireVerification } = {}) {
+  signal?.throwIfAborted();
+  if (requireVerification && !gateway.hasRole('verifier')) throw new Error('Advisor verifier unavailable');
   // RAG: retrieve relevant knowledge chunks for the latest user message. This is
   // BACKGROUND knowledge only — the FY constants and the user's app data always
   // override any figure in a chunk (enforced in the prompt + verifier).
@@ -182,7 +184,7 @@ async function runChat(user, profile, maal, messages, docs, extra, systemExtra) 
     var lastUserMsg = messages.slice().reverse().find(function(m) { return m.role === 'user'; });
     if (lastUserMsg) {
       try {
-        var ragResult = await retrieveAndFormat(lastUserMsg.content, { topK: 4, minScore: 0.35 });
+        var ragResult = await retrieveAndFormat(lastUserMsg.content, { topK: 4, minScore: 0.35, signal });
         if (ragResult.section) {
           // RAG audit (spec decision 12): knowledge chunks are BACKGROUND
           // concepts, not authoritative figures. Any number in a chunk is
@@ -193,19 +195,29 @@ async function runChat(user, profile, maal, messages, docs, extra, systemExtra) 
             '\n\nThe knowledge above is general background for explaining concepts. If any figure in it conflicts with the FY constants or the user\'s account data given earlier, the constants and the user\'s data are correct — never quote a rate, threshold or cap from the knowledge above.';
         }
       } catch (ragErr) {
+        signal?.throwIfAborted();
         console.error('[advisor] RAG retrieval failed:', ragErr.message);
       }
     }
   }
+  signal?.throwIfAborted();
+  onStep?.('retrieving_data', 'end');
+  onStep?.('checking_constants', 'start');
   const promptMessages = [
     { role: 'system', content: buildSystemPrompt(user, profile, maal, docs, extra) + knowledgeSection + (systemExtra || '') },
     ...messages.slice(-10),
   ];
-  const opts = { maxTokens: 700, temperature: 0.6 };
+  onStep?.('checking_constants', 'end');
+  const opts = { maxTokens: 700, temperature: 0.6, signal, requireVerification };
+  onStep?.('drafting', 'start');
   const draft = await gateway.completeAs('reasoner', promptMessages, opts);
+  signal?.throwIfAborted();
+  onStep?.('drafting', 'end');
   // Verify-and-revise pass (blocking, one revision round, ships regardless).
   // Checks math, AU constants, and claims-vs-user-data — never style.
-  const verdict = await gateway.verifyAndRevise({ messages: promptMessages, draft, opts });
+  const verdict = await gateway.verifyAndRevise({ messages: promptMessages, draft, opts, onStep });
+  signal?.throwIfAborted();
+  if (requireVerification && !verdict.accepted) throw new Error('Advisor verification did not complete');
   if (verdict.revised) {
     console.log('[advisor] verifier revised answer (' + verdict.issues.length + ' issue(s))');
   }
@@ -221,10 +233,10 @@ async function chat(user, profile, maal, messages, docs, extra = {}) {
 // Rich web chat: the model may emit widget + follow-up directives, which we
 // parse out and fill with the user's real data server-side. Returns
 // { reply, widgets, followUps, citations, live }.
-async function chatRich(user, profile, maal, messages, docs, extra = {}) {
+async function chatRich(user, profile, maal, messages, docs, extra = {}, options) {
   const widgets = require('./advisor-widgets');
   if (!hasAdvisor()) return { reply: FALLBACK_REPLY, widgets: [], followUps: [], citations: [], live: false };
-  const raw = await runChat(user, profile, maal, messages, docs, extra, widgets.widgetInstructions());
+  const raw = await runChat(user, profile, maal, messages, docs, extra, widgets.widgetInstructions(), options);
   const parsed = widgets.parseDirectives(raw);
   const ctx = { profile, maal, snapshots: extra.snapshots, transactions: extra.transactions, goals: extra.goals };
   const built = widgets.buildWidgets(parsed.widgetRequests, ctx);

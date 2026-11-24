@@ -1,5 +1,5 @@
 // Advisor — chats are stored server-side (routes/advisor-threads.js); the reply
-// itself comes from POST /api/v1/advisor/message (metering, guardrails, widgets),
+// comes from /api/v1/advisor/stream, with /message as a compatibility fallback,
 // after which the turn is persisted to the chat.
 import type { WidgetSpec } from "@/lib/widgets.functions";
 import { handleUnauthenticated } from "@/integrations/api";
@@ -128,9 +128,46 @@ export type AdvisorReply = {
   messageId?: string;
 };
 
+export const ADVISOR_STAGES = ["retrieving_data", "checking_constants", "drafting", "verifying", "revising"] as const;
+export type AdvisorStage = (typeof ADVISOR_STAGES)[number];
+type AdvisorProgress = { stage: AdvisorStage; phase: "start" | "end" };
+type AdvisorAnswer = Pick<AdvisorReply, "reply" | "widgets" | "followUps" | "citations">;
+
+async function readAdvisorStream(response: Response, onProgress?: (progress: AdvisorProgress) => void): Promise<AdvisorAnswer> {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("Advisor stream unavailable");
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let answer: AdvisorAnswer | undefined;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) throw new Error("Advisor stream ended before the answer was complete");
+      buffer += decoder.decode(value, { stream: true });
+      let separator: RegExpExecArray | null;
+      while ((separator = /\r?\n\r?\n/.exec(buffer))) {
+        const lines = buffer.slice(0, separator.index).split(/\r?\n/);
+        buffer = buffer.slice(separator.index + separator[0].length);
+        const event = lines.find((line) => line.startsWith("event:"))?.slice(6).trim();
+        if (event === "error") throw new Error("Advisor stream failed");
+        if (event === "done" && answer) return answer;
+        if (event !== "step" && event !== "final") continue;
+        const payload = JSON.parse(lines.filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trimStart()).join("\n"));
+        if (event === "final" && typeof payload?.reply === "string") answer = payload;
+        if (event === "step" && ADVISOR_STAGES.includes(payload?.stage) && (payload.phase === "start" || payload.phase === "end")) {
+          onProgress?.({ stage: payload.stage, phase: payload.phase });
+        }
+      }
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+    reader.releaseLock();
+  }
+}
+
 export async function sendAdvisorMessage(
   data?: unknown,
-  opts?: { signal?: AbortSignal; history?: { role: string; content: string }[] },
+  opts?: { signal?: AbortSignal; history?: { role: string; content: string }[]; onProgress?: (progress: AdvisorProgress) => void },
 ): Promise<AdvisorReply> {
   const { threadId, content } = unwrapArg<{ threadId?: string; content?: string }>(data);
   if (!threadId || !content) return { reply: "" };
@@ -141,46 +178,48 @@ export async function sendAdvisorMessage(
     catch { history = []; }
   }
 
-  let reply: string;
-  let widgets: WidgetSpec[] | undefined;
-  let followUps: string[] | undefined;
-  let citations: Citation[] | undefined;
-  let limited = false;
   try {
-    const r = await fetch("/api/v1/advisor/message", {
+    const request: RequestInit = {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: content, history: history.slice(-10) }),
       signal: opts?.signal,
-    });
-    if (r.status === 401) handleUnauthenticated();
-    const json = await r.json().catch(() => null);
-    // 402 usage_limit carries an upgrade prompt in `error` — surface it as the
-    // reply (an explanation with a path forward, never a raw error).
-    limited = r.status === 402 && json?.code === "usage_limit";
-    reply = r.ok
-      ? (json?.reply ?? json?.message ?? "I'm not able to respond right now.")
-      : (limited && json?.error
-          ? `${json.error} You can upgrade at Plan & Usage in the sidebar.`
-          : "I'm not able to respond right now.");
-    widgets = r.ok && Array.isArray(json?.widgets) && json.widgets.length ? json.widgets : undefined;
-    followUps = r.ok && Array.isArray(json?.followUps) && json.followUps.length ? json.followUps : undefined;
-    citations = r.ok && Array.isArray(json?.citations) && json.citations.length ? json.citations : undefined;
-  } catch (e: any) {
-    if (e?.name === "AbortError") {
-      // Keep the question in the chat even when the answer was stopped.
-      await persistTurn(threadId, [{ role: "user", content }]).catch(() => null);
-      return { reply: "", aborted: true };
+    };
+    let response = await fetch("/api/v1/advisor/stream", request);
+    const legacy = [404, 405, 501].includes(response.status);
+    if (legacy) {
+      await response.body?.cancel().catch(() => undefined);
+      response = await fetch("/api/v1/advisor/message", request);
     }
-    return { reply: "Unable to reach the advisor. Please check your connection and try again." };
-  }
+    if (response.status === 401) handleUnauthenticated();
 
-  // Persist the turn (the upgrade prompt isn't stored as an answer).
-  const toStore: { role: "user" | "assistant"; content: string; meta?: unknown }[] = [{ role: "user", content }];
-  if (!limited) toStore.push({ role: "assistant", content: reply, meta: { widgets, followUps, citations } });
-  const saved = await persistTurn(threadId, toStore).catch(() => undefined);
-  return { reply, widgets, followUps, citations, limited, thread: saved?.thread, messageId: saved?.messageIds?.[1] };
+    let answer: AdvisorAnswer;
+    let limited = false;
+    if (response.ok && response.headers.get("Content-Type")?.startsWith("text/event-stream")) {
+      answer = await readAdvisorStream(response, opts?.onProgress);
+    } else {
+      const json = await response.json().catch(() => null);
+      limited = response.status === 402 && json?.code === "usage_limit";
+      if (limited) {
+        answer = { reply: `${json.error || "You’ve reached your advisor message limit."} You can upgrade at Plan & Usage in the sidebar.` };
+      } else if (legacy && response.ok && typeof json?.reply === "string") {
+        answer = json;
+      } else {
+        throw new Error("Advisor reply unavailable");
+      }
+    }
+
+    opts?.signal?.throwIfAborted();
+    const { reply, widgets, followUps, citations } = answer;
+    const toStore: { role: "user" | "assistant"; content: string; meta?: unknown }[] = [{ role: "user", content }];
+    if (!limited) toStore.push({ role: "assistant", content: reply, meta: { widgets, followUps, citations } });
+    const saved = await persistTurn(threadId, toStore).catch(() => undefined);
+    return { reply, widgets, followUps, citations, limited, thread: saved?.thread, messageId: saved?.messageIds?.[1] };
+  } catch (error) {
+    if (opts?.signal?.aborted || (error instanceof Error && error.name === "AbortError")) return { reply: "", aborted: true };
+    return { reply: "The advisor couldn’t finish your answer. Please try again." };
+  }
 }
 
 async function persistTurn(threadId: string, messages: { role: "user" | "assistant"; content: string; meta?: unknown }[]) {

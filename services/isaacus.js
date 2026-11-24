@@ -18,7 +18,7 @@ function hasIsaacus() {
   return !!apiKey();
 }
 
-async function isaacusFetch(path, body) {
+async function isaacusFetch(path, body, signal) {
   const res = await fetch(ISAACUS_BASE + path, {
     method: 'POST',
     headers: {
@@ -26,6 +26,7 @@ async function isaacusFetch(path, body) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
+    signal,
   });
   const text = await res.text();
   let json = {};
@@ -40,12 +41,12 @@ async function isaacusFetch(path, body) {
 // Zero-shot classification: how well does `text` match the `query` statement?
 // Returns a 0-1 score (higher = stronger match). No training examples needed —
 // this is Isaacus's "universal classifier."
-async function classify(query, text) {
+async function classify(query, text, { signal } = {}) {
   const json = await isaacusFetch('/classifications/universal', {
     model: 'kanon-universal-classifier',
     query,
     texts: [String(text || '').slice(0, 8000)],
-  });
+  }, signal);
   const cls = json.classifications && json.classifications[0];
   return cls ? Number(cls.score) || 0 : 0;
 }
@@ -58,8 +59,8 @@ const LEGAL_INTENT_QUERY = 'This message asks a legal, tax, tenancy, contract, o
 
 // Convenience: is this advisor message a legal/tax question worth grounding in
 // a source document, rather than answering from the main LLM's general training?
-async function classifyLegalIntent(message) {
-  return classify(LEGAL_INTENT_QUERY, message);
+async function classifyLegalIntent(message, options) {
+  return classify(LEGAL_INTENT_QUERY, message, options);
 }
 
 // Extractive Q&A: pull the literal answer to `query` out of one or more
@@ -77,7 +78,7 @@ async function classifyLegalIntent(message) {
 //     alone with a 0.2+ cutoff silently discarded a right answer. Gate on
 //     inextractability_score instead; use answers[].score only to rank
 //     candidates against each other once we know an answer exists.
-async function extractAnswer(query, texts, { maxInextractability = 0.5 } = {}) {
+async function extractAnswer(query, texts, { maxInextractability = 0.5, signal } = {}) {
   const inputs = (texts || []).filter(Boolean).map((t) => String(t).slice(0, 20000));
   if (!inputs.length) return null;
 
@@ -85,7 +86,7 @@ async function extractAnswer(query, texts, { maxInextractability = 0.5 } = {}) {
     model: 'kanon-answer-extractor',
     query,
     texts: inputs,
-  });
+  }, signal);
 
   let best = null;
   (json.extractions || []).forEach((extraction, sourceIndex) => {

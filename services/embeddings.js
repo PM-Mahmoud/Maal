@@ -28,7 +28,7 @@ function hasEmbeddings() {
 }
 
 // Embed a single string. Returns Float32Array of 1536 dimensions.
-async function embedText(text) {
+async function embedText(text, { signal } = {}) {
   const cfg = embeddingConfig();
   if (!cfg) throw new Error('Embedding not configured: set AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, AZURE_OPENAI_EMBEDDING_DEPLOYMENT');
 
@@ -39,6 +39,7 @@ async function embedText(text) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'api-key': cfg.apiKey },
     body: JSON.stringify(body),
+    signal,
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
