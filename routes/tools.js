@@ -3,6 +3,7 @@
 // Owns: rendering the tools page with tier- and profile-aware filtering.
 // Does NOT own: subscription management, profile storage, user auth state.
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const router = express.Router();
 
@@ -58,7 +59,7 @@ router.get('/', async (req, res) => {
       pageTitle: 'Recommended Tools',
     });
   } catch (err) {
-    console.error('/dashboard/tools error:', err.message);
+    console.error('/dashboard/tools error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Failed to load tools.' });
   }
 });

@@ -2,6 +2,7 @@
 // Serves the onboarding wizard page and handles step-by-step data submission.
 // Does NOT own business logic — delegates to db/onboarding.js.
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const router = express.Router();
 const {
@@ -55,30 +56,23 @@ router.post('/session', requireAuth, async (req, res) => {
     let session = await getSessionByUserId(userId);
     if (!session) {
       session = await createSession(userId);
-    } else if (!session.user_id) {
-      const pool = require('../db/pool');
-      await pool.query(
-        'UPDATE onboarding_sessions SET user_id = $1 WHERE id = $2',
-        [userId, session.id]
-      );
-      session.user_id = userId;
     }
     res.json({ session_id: session.id, current_step: session.current_step, is_complete: session.is_complete });
   } catch (err) {
-    console.error('POST /api/session error:', err.message);
+    console.error('POST /api/session error:', safeError(err));
     res.status(500).json({ error: 'Failed to create session' });
   }
 });
 
 // ─── API: get step data ────────────────────────────────────────────────────────
 
-router.get('/session/:sessionId/step/:step', async (req, res) => {
+router.get('/session/:sessionId/step/:step', requireAuth, async (req, res) => {
   try {
     const { sessionId, step } = req.params;
-    const data = await getResponseByStep(sessionId, parseInt(step, 10));
+    const data = await getResponseByStep(sessionId, req.session.userId, parseInt(step, 10));
     res.json({ data: data || {} });
   } catch (err) {
-    console.error('GET step error:', err.message);
+    console.error('GET step error:', safeError(err));
     res.status(500).json({ error: 'Failed to load step data' });
   }
 });
@@ -95,16 +89,17 @@ router.post('/step/:step', requireAuth, async (req, res) => {
     }
 
     const { session_id: _sid, ...stepData } = req.body;
-    const dataToSave = { ...stepData, user_id: req.session.userId };
-    await upsertResponse(session_id, step, dataToSave);
+    const userId = req.session.userId;
+    const saved = await upsertResponse(session_id, userId, step, stepData);
+    if (!saved) return res.status(404).json({ error: 'Onboarding session not found' });
 
     if (step < 7) {
-      await updateSessionStep(session_id, step + 1);
+      await updateSessionStep(session_id, userId, step + 1);
     }
 
     res.json({ ok: true, next_step: step < 7 ? step + 1 : null });
   } catch (err) {
-    console.error('POST /api/step error:', err.message);
+    console.error('POST /api/step error:', safeError(err));
     res.status(500).json({ error: 'Failed to save step' });
   }
 });
@@ -120,11 +115,12 @@ router.post('/complete', requireAuth, async (req, res) => {
     const userId = req.session.userId;
 
     // 1. Mark session complete
-    await markResponseComplete(session_id);
-    await completeSession(session_id);
+    const completed = await completeSession(session_id, userId);
+    if (!completed) return res.status(404).json({ error: 'Onboarding session not found' });
+    await markResponseComplete(session_id, userId);
 
     // 2. Get all step responses and merge into allData
-    const responses = await getResponsesBySession(session_id);
+    const responses = await getResponsesBySession(session_id, userId);
     const allData = {};
     for (const r of responses) {
       const skipKeys = ['id','session_id','step','is_complete','completed_at','created_at','updated_at'];
@@ -189,7 +185,7 @@ router.post('/complete', requireAuth, async (req, res) => {
         await assetsDb.createDebt(userId, { label: 'Other debt', kind: 'other', balance: profileData.total_debt, source: 'manual' });
       }
     } catch (e) {
-      console.error('onboarding asset seed error:', e.message);
+      console.error('onboarding asset seed error:', safeError(e));
       // Non-fatal — the flat profile columns above already saved successfully.
     }
 
@@ -318,9 +314,9 @@ router.post('/complete', requireAuth, async (req, res) => {
         subject: 'Your Financial Health Score is ready — Maal',
         html,
         text: `Your Financial Health Score is ${result.score}/100 (${result.grade}). View your dashboard: ${baseUrl}/dashboard`
-      }).catch(emailErr => console.error('Completion email failed:', emailErr.message));
+      }).catch(emailErr => console.error('Completion email failed:', safeError(emailErr)));
     } catch(emailErr) {
-      console.error('Completion email setup failed:', emailErr.message);
+      console.error('Completion email setup failed:', safeError(emailErr));
     }
 
     res.json({
@@ -330,7 +326,7 @@ router.post('/complete', requireAuth, async (req, res) => {
       superScore: superScoreValue
     });
   } catch (err) {
-    console.error('POST /api/complete error:', err.message);
+    console.error('POST /api/complete error:', safeError(err));
     res.status(500).json({ error: 'Failed to complete onboarding' });
   }
 });
@@ -346,10 +342,10 @@ router.get('/profile/:userId', requireAuth, async (req, res) => {
     const session = await getSessionByUserId(parseInt(userId, 10));
     if (!session) return res.status(404).json({ error: 'No onboarding found' });
 
-    const responses = await getResponsesBySession(session.id);
+    const responses = await getResponsesBySession(session.id, req.session.userId);
     res.json({ session, responses });
   } catch (err) {
-    console.error('GET /api/profile error:', err.message);
+    console.error('GET /api/profile error:', safeError(err));
     res.status(500).json({ error: 'Failed to load profile' });
   }
 });

@@ -4,6 +4,7 @@
 // routes/oauth.js Google, routes/api.js JSON signup). Rules live in
 // lib/waitlist-gate.js; this just joins them to the waitlist table.
 
+const { safeError } = require('../lib/safe-log');
 const gate = require('../lib/waitlist-gate');
 const waitlistDb = require('../db/waitlist');
 
@@ -28,7 +29,7 @@ async function canSignUp(email, referralCode) {
   try {
     return !!(await require('./referrals').validInvite(referralCode, email));
   } catch (e) {
-    console.error('[waitlist] referral invite check failed:', e.message);
+    console.error('[waitlist] referral invite check failed:', safeError(e));
     return false;
   }
 }
@@ -39,7 +40,7 @@ async function recordJoined(email) {
     const entry = await findEntry(email);
     if (entry) await waitlistDb.markJoinedById(entry.id);
   } catch (e) {
-    console.error('[waitlist] markJoined failed:', e.message);
+    console.error('[waitlist] markJoined failed:', safeError(e));
   }
 }
 

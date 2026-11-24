@@ -8,6 +8,7 @@
 //   POST /api/v1/briefs/feedback       "More like this" / "Less like this" →
 //                                      the existing feedback table
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const router = express.Router();
 
@@ -39,7 +40,7 @@ router.get('/weekly-recap', async (req, res) => {
     ]);
     res.json(buildWeeklyRecap({ now, snapshots, transactions, goals }));
   } catch (e) {
-    console.error('[briefs] weekly recap failed:', e.message);
+    console.error('[briefs] weekly recap failed:', safeError(e));
     res.status(500).json({ error: 'Could not build your weekly recap.' });
   }
 });
@@ -48,7 +49,7 @@ router.get('/market-brief', async (req, res) => {
   try {
     res.json(await getDailyBrief());
   } catch (e) {
-    console.error('[briefs] market brief failed:', e.message);
+    console.error('[briefs] market brief failed:', safeError(e));
     res.status(500).json({ error: 'Could not load today’s market brief.' });
   }
 });
@@ -73,7 +74,7 @@ router.post('/feedback', async (req, res) => {
     );
     res.json({ ok: true });
   } catch (e) {
-    console.error('[briefs] feedback save failed:', e.message);
+    console.error('[briefs] feedback save failed:', safeError(e));
     res.status(500).json({ error: 'Could not save feedback.' });
   }
 });

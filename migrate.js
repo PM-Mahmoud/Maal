@@ -21,6 +21,7 @@
  *   };
  */
 const { Pool } = require('pg');
+const { safeError } = require('./lib/safe-log');
 const fs = require('fs');
 const path = require('path');
 
@@ -144,6 +145,6 @@ async function runFolderMigrations(client) {
 }
 
 migrate().catch(err => {
-  console.error('Migration failed:', err.message);
+  console.error('Migration failed:', safeError(err));
   process.exit(1);
 });

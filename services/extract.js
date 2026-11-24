@@ -9,6 +9,7 @@
 // missing dependency or a malformed file can never crash an upload — we just
 // store the file with no extracted text and the doc simply isn't readable yet.
 
+const { safeError } = require('../lib/safe-log');
 const TEXT_LIKE = /^(text\/|application\/(csv|json|xml))/i;
 
 async function extractText(buffer, mime, filename) {
@@ -30,7 +31,7 @@ async function extractText(buffer, mime, filename) {
       return clean(buffer.toString('utf8'));
     }
   } catch (e) {
-    console.error('extractText failed for', filename, '—', e.message);
+    console.error('Text extraction failed:', safeError(e));
   }
   return ''; // unsupported type (xlsx, images, scans) — no readable text yet
 }

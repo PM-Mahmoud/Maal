@@ -8,6 +8,7 @@
 // gracefully: with no keys the brief is a deterministic summary of whatever
 // data loaded (lib/market-brief.fallbackBrief), never invented figures.
 
+const { safeError } = require('../lib/safe-log');
 const marketdata = require('./marketdata');
 const grounding = require('./grounding');
 const gateway = require('./gateway');
@@ -143,7 +144,7 @@ async function generate(date) {
       brief = parseBriefJson(raw);
       ai = !!brief;
     } catch (e) {
-      console.error('[market-brief] model call failed, using data-only brief:', e.message);
+      console.error('[market-brief] model call failed, using data-only brief:', safeError(e));
     }
   }
   if (!brief) brief = fallbackBrief({ indices, aud, news });
@@ -168,7 +169,7 @@ async function getDailyBrief(now = new Date()) {
     const cached = await briefsDb.getMarketBrief(date);
     if (cached) return { ...cached.payload, generatedAt: cached.generated_at };
   } catch (e) {
-    console.error('[market-brief] cache read failed:', e.message);
+    console.error('[market-brief] cache read failed:', safeError(e));
   }
   if (inFlight.has(date)) return inFlight.get(date);
   const p = (async () => {
@@ -180,7 +181,7 @@ async function getDailyBrief(now = new Date()) {
         const row = await briefsDb.saveMarketBrief(date, payload);
         return { ...row.payload, generatedAt: row.generated_at };
       } catch (e) {
-        console.error('[market-brief] cache write failed:', e.message);
+        console.error('[market-brief] cache write failed:', safeError(e));
       }
     }
     return { ...payload, generatedAt: new Date().toISOString() };

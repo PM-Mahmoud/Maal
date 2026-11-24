@@ -8,6 +8,7 @@
 //                         "Connect your accounts" picker (static AU list
 //                         when BASIQ_API_KEY is not set)
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const router = express.Router();
 
@@ -30,7 +31,7 @@ router.get('/institutions', async (req, res) => {
       if (fromBasiq.length) { list = fromBasiq; source = 'basiq'; }
     } catch (err) {
       // Never log keys/tokens — the message only carries status + path.
-      console.error('Basiq institutions error:', String(err.message || '').slice(0, 160));
+      console.error('Basiq institutions error:', safeError(err));
     }
   }
   res.set('Cache-Control', 'private, max-age=3600');
@@ -67,7 +68,7 @@ router.get('/connect', async (req, res) => {
     const url = await basiq.getConsentUrl(basiqUserId, 'connect', { institutionId });
     res.redirect(url);
   } catch (err) {
-    console.error('Basiq connect error:', err.message);
+    console.error('Basiq connect error:', safeError(err));
     const reason = encodeURIComponent(String(err.message || 'unknown').slice(0, 140));
     res.redirect('/dashboard/transactions?basiq=error&reason=' + reason);
   }
@@ -81,7 +82,7 @@ router.get('/reauthorise', async (req, res) => {
     const basiqUserId = await ensureBasiqUser(req);
     res.redirect(await basiq.getConsentUrl(basiqUserId, 'reauthorise'));
   } catch (err) {
-    console.error('Basiq reauthorise error:', err.message);
+    console.error('Basiq reauthorise error:', safeError(err));
     res.redirect('/dashboard/transactions?basiq=error');
   }
 });
@@ -99,7 +100,7 @@ router.get('/callback', async (req, res) => {
     const { run } = await syncAccountsToDb(req);
     res.redirect('/dashboard/transactions?basiq=queued&import_run=' + run.id);
   } catch (err) {
-    console.error('Basiq callback error:', err.message);
+    console.error('Basiq callback error:', safeError(err));
     try {
       await require('../services/data-quality').recordDataQualityFailure(req.session.userId, {
         trigger: 'basiq_sync',
@@ -107,7 +108,7 @@ router.get('/callback', async (req, res) => {
         message: err.message,
       });
     } catch (qualityError) {
-      console.error('Could not record Basiq data-quality failure:', qualityError.message);
+      console.error('Could not record Basiq data-quality failure:', safeError(qualityError));
     }
     res.redirect('/dashboard/transactions?basiq=error');
   }
@@ -118,7 +119,7 @@ router.get('/sync', async (req, res) => {
     const { run } = await syncAccountsToDb(req);
     res.redirect('/dashboard/transactions?basiq=queued&import_run=' + run.id);
   } catch (err) {
-    console.error('Basiq sync error:', err.message);
+    console.error('Basiq sync error:', safeError(err));
     try {
       await require('../services/data-quality').recordDataQualityFailure(req.session.userId, {
         trigger: 'basiq_sync',
@@ -126,7 +127,7 @@ router.get('/sync', async (req, res) => {
         message: err.message,
       });
     } catch (qualityError) {
-      console.error('Could not record Basiq data-quality failure:', qualityError.message);
+      console.error('Could not record Basiq data-quality failure:', safeError(qualityError));
     }
     res.redirect('/dashboard/transactions?basiq=error');
   }

@@ -326,35 +326,35 @@ function NetWorthFlow() {
                 <Label className="text-[11px] text-muted-foreground">
                   Salary — <span className="text-foreground font-medium">{formatAUD(salary)}</span>
                 </Label>
-                <Slider value={[salary]} onValueChange={([v]) => setSalary(v)} min={0} max={30_000} step={500} />
+                <Slider aria-label="Salary" value={[salary]} onValueChange={([v]) => setSalary(v)} min={0} max={30_000} step={500} />
               </div>
 
               <div className="space-y-2">
                 <Label className="text-[11px] text-muted-foreground">
                   Locum — <span className="text-foreground font-medium">{formatAUD(locum)}</span>
                 </Label>
-                <Slider value={[locum]} onValueChange={([v]) => setLocum(v)} min={0} max={10_000} step={500} />
+                <Slider aria-label="Locum" value={[locum]} onValueChange={([v]) => setLocum(v)} min={0} max={10_000} step={500} />
               </div>
 
               <div className="space-y-2">
                 <Label className="text-[11px] text-muted-foreground">
                   Mortgage — <span className="text-foreground font-medium">{formatAUD(mortgage)}</span>
                 </Label>
-                <Slider value={[mortgage]} onValueChange={([v]) => setMortgage(v)} min={0} max={8_000} step={250} />
+                <Slider aria-label="Mortgage" value={[mortgage]} onValueChange={([v]) => setMortgage(v)} min={0} max={8_000} step={250} />
               </div>
 
               <div className="space-y-2">
                 <Label className="text-[11px] text-muted-foreground">
                   Super contrib — <span className="text-foreground font-medium">{formatAUD(superContrib)}</span>
                 </Label>
-                <Slider value={[superContrib]} onValueChange={([v]) => setSuperContrib(v)} min={0} max={5_000} step={250} />
+                <Slider aria-label="Super contribution" value={[superContrib]} onValueChange={([v]) => setSuperContrib(v)} min={0} max={5_000} step={250} />
               </div>
 
               <div className="space-y-2">
                 <Label className="text-[11px] text-muted-foreground">
                   Investments — <span className="text-foreground font-medium">{formatAUD(investments)}</span>
                 </Label>
-                <Slider value={[investments]} onValueChange={([v]) => setInvestments(v)} min={0} max={5_000} step={250} />
+                <Slider aria-label="Investments" value={[investments]} onValueChange={([v]) => setInvestments(v)} min={0} max={5_000} step={250} />
               </div>
 
               <div className="space-y-2">
@@ -362,7 +362,7 @@ function NetWorthFlow() {
                   Property equity — <span className="text-foreground font-medium">{formatAUD(propertyEquity)}</span>
                 </Label>
                 <Slider
-                  value={[propertyEquity]}
+                  aria-label="Property equity" value={[propertyEquity]}
                   onValueChange={([v]) => setPropertyEquity(v)}
                   min={0}
                   max={1_500_000}

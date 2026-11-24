@@ -1,3 +1,5 @@
+import { usageLimitError } from "./usage-limit.mjs";
+
 // lib/report.functions.ts
 // Report generation delegates to the server (POST /api/v1/report), so the AI
 // runs behind Maal's advisor guardrails (education-only, Isaacus, RAG) with the
@@ -51,7 +53,7 @@ export async function emailDataFile(type: string, dataset: string): Promise<{ em
   if (!r.ok) {
     let payload: Record<string, unknown> | undefined;
     try { payload = await r.json(); } catch { /* non-JSON */ }
-    throw new FileGenError((payload?.error as string) || 'Could not generate the file.', r.status, payload);
+    throw usageLimitError(r.status, payload) ?? new FileGenError((payload?.error as string) || 'Could not generate the file.', r.status, payload);
   }
   return r.json();
 }

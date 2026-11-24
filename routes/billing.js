@@ -11,6 +11,7 @@
 //   STRIPE_SECRET_KEY  — Stripe secret key (use the sk_test_ one for testing)
 //   BASE_URL           — e.g. https://hellomaal.com
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const router = express.Router();
 const { setUserPlan } = require('../db/users');
@@ -150,7 +151,7 @@ function getStripe() {
   try {
     return require('stripe')(process.env.STRIPE_SECRET_KEY);
   } catch (err) {
-    console.error('Stripe module not installed:', err.message);
+    console.error('Stripe module not installed:', safeError(err));
     return null;
   }
 }
@@ -177,12 +178,12 @@ router.post('/webhook',
 
     let event;
     try {
-      // Debug: log body type + first 100 chars to confirm raw buffer arrives
+      // Report the input shape without logging the signature or body.
       const bodyType = Buffer.isBuffer(req.body) ? `Buffer(${req.body.length})` : typeof req.body;
-      console.log(`[billing/webhook] body type=${bodyType} sig=${sig ? sig.slice(0,30) : 'MISSING'}`);
+      console.log(`[billing/webhook] body type=${bodyType} signature=${sig ? 'present' : 'missing'}`);
       event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
     } catch (err) {
-      console.error('[billing] Webhook signature verification failed:', err.message);
+      console.error('[billing] Webhook signature verification failed:', safeError(err));
       return res.status(400).json({ error: `Webhook Error: ${err.message}` });
     }
 
@@ -199,7 +200,7 @@ router.post('/webhook',
               if (session.customer) {
                 await pool.query('UPDATE users SET stripe_customer_id = $1 WHERE id = $2 AND (stripe_customer_id IS NULL OR stripe_customer_id != $1)', [session.customer, Number(userId)]);
               }
-              console.log(`[billing] Plan '${planKey}' applied to user ${userId} via webhook`);
+              console.log(`[billing] Plan '${planKey}' applied via webhook`);
               // Referral: count this first payment, grant/apply renewal rewards.
               await referrals.onPaid(Number(userId), stripe, session.subscription || undefined);
             }
@@ -217,7 +218,7 @@ router.post('/webhook',
             );
             if (rows.length) {
               await setUserPlan(rows[0].id, 'free');
-              console.log(`[billing] Downgraded user ${rows[0].id} to free via webhook (${event.type})`);
+              console.log(`[billing] Downgraded to free via webhook (${event.type})`);
             }
           }
           break;
@@ -226,7 +227,7 @@ router.post('/webhook',
           // Renewal — plan stays current. A yearly renewal uses up any
           // referral reward that was applied to it.
           const invoice = event.data.object;
-          console.log(`[billing] Invoice paid for customer ${invoice.customer}`);
+          console.log('[billing] Invoice paid');
           if (invoice.billing_reason === 'subscription_cycle' && invoice.customer) {
             const { rows } = await pool.query('SELECT id FROM users WHERE stripe_customer_id = $1', [invoice.customer]);
             if (rows.length) await referrals.onRenewalPaid(rows[0].id);
@@ -247,7 +248,7 @@ router.post('/webhook',
           break;
       }
     } catch (err) {
-      console.error('[billing] Webhook handler error:', err);
+      console.error('[billing] Webhook handler error:', safeError(err));
       return res.status(500).json({ error: 'Webhook handler failed' });
     }
 
@@ -323,11 +324,11 @@ router.post('/checkout', requireAuth, async (req, res) => {
     // Save Stripe customer ID for webhook lookups
     if (session.customer) {
       pool.query('UPDATE users SET stripe_customer_id = $1 WHERE id = $2', [session.customer, req.session.userId])
-        .catch(err => console.error('[billing] Failed to save stripe_customer_id:', err.message));
+        .catch(err => console.error('[billing] Failed to save stripe_customer_id:', safeError(err)));
     }
     return res.redirect(303, session.url);
   } catch (err) {
-    console.error('Stripe checkout error:', err.message);
+    console.error('Stripe checkout error:', safeError(err));
     return res.redirect(returnTarget === 'subscribe' ? '/subscribe?status=error&reason=stripe' : '/app/billing?billing=error_stripe');
   }
 });
@@ -356,7 +357,7 @@ router.get('/success', requireAuth, async (req, res) => {
     }
     res.redirect('/app/billing?billing=error');
   } catch (err) {
-    console.error('Billing success verify error:', err.message);
+    console.error('Billing success verify error:', safeError(err));
     res.redirect('/app/billing?billing=error');
   }
 });
@@ -395,7 +396,7 @@ router.get('/status', async (req, res) => {
     }
     return res.json({ state: verdict === 'pending' ? 'pending' : 'failed', plan, demo: false, offer });
   } catch (err) {
-    console.error('[billing] status check error:', err.message);
+    console.error('[billing] status check error:', safeError(err));
     // Transient: let the client keep polling rather than declare failure.
     return res.json({ state: 'pending', plan: null, demo: false, offer, retry: true });
   }
@@ -445,12 +446,12 @@ router.post('/downgrade', requireAuth, async (req, res) => {
 
     // Deliberately NOT calling setUserPlan here: they keep the plan they paid
     // for until the period ends. The webhook downgrades them when Stripe says so.
-    console.log(`[billing] Scheduled cancellation at period end for user ${req.session.userId}`);
+    console.log('[billing] Scheduled cancellation at period end');
     res.redirect('/app/billing?billing=cancel_scheduled');
   } catch (err) {
     // Never report success on failure — the user would believe they had
     // cancelled while the subscription kept billing.
-    console.error('Downgrade error:', err.message);
+    console.error('Downgrade error:', safeError(err));
     res.redirect('/app/billing?billing=error');
   }
 });

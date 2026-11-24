@@ -52,7 +52,7 @@ export function InviteFriendsCard() {
         Your link lets friends skip the waitlist. When 3 of them become members, your next yearly renewal is $4.99 instead of $49.99.
       </p>
 
-      <div className="mt-4 flex gap-1.5" aria-label={`${data.towardsNext} of ${data.needed} friends joined`}>
+      <div className="mt-4 flex gap-1.5" role="img" aria-label={`${data.towardsNext} of ${data.needed} friends joined`}>
         {Array.from({ length: data.needed }).map((_, i) => (
           <div key={i} className={`h-1.5 flex-1 rounded-full ${i < data.towardsNext ? "bg-foreground" : "bg-[var(--secondary)]"}`} />
         ))}

@@ -85,30 +85,30 @@ async function run() {
       const res = await fetch(base + '/page', { headers: { 'Sec-Fetch-Site': 'cross-site', 'Sec-Fetch-Mode': 'navigate' } });
       assert.strictEqual(res.status, 200);
     }],
-    ['CSP reports are logged without query strings and answered 204', async () => {
+    ['CSP report logs contain only directive and source classifications', async () => {
       const lines = [];
       console.warn = (m) => lines.push(m);
       const res = await fetch(base + '/csp-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/csp-report' },
         body: JSON.stringify({ 'csp-report': {
-          'document-uri': 'https://www.hellomaal.com/login?email=someone%40example.com',
+          'document-uri': 'https://www.hellomaal.com/login/someone%40example.com?mode=test',
           'effective-directive': 'script-src-elem',
-          'blocked-uri': 'https://evil.example/x.js?token=abc',
+          'blocked-uri': 'https://example.test/x.js?token=sample',
+          'script-sample': 'private text',
         } }),
       });
       console.warn = warn;
       assert.strictEqual(res.status, 204);
       assert.strictEqual(lines.length, 1);
-      assert.ok(lines[0].includes('page=https://www.hellomaal.com/login'), lines[0]);
-      assert.ok(!lines[0].includes('example.com') && !lines[0].includes('token'), lines[0]);
+      assert.deepStrictEqual(lines, ['[csp-report] script-src-elem blocked=other']);
     }],
     ['Reporting API batches are summarised too', async () => {
       const items = sec.summariseReport([
         { type: 'csp-violation', body: { documentURL: 'https://x.test/a?b=1', effectiveDirective: 'script-src-elem', blockedURL: 'inline', sample: 'alert(1)' } },
         { type: 'deprecation', body: {} },
       ]);
-      assert.deepStrictEqual(items, [{ directive: 'script-src-elem', blocked: 'inline', page: 'https://x.test/a', sample: 'alert(1)' }]);
+      assert.deepStrictEqual(items, [{ directive: 'script-src-elem', blocked: 'inline' }]);
     }],
   ];
 

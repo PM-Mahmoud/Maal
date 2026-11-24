@@ -8,17 +8,57 @@
 // the React app at /app/*). This preview no longer renders those dead views —
 // the real dashboard lives in the React app (client/src, served at /app).
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const ejs = require('ejs');
 const path = require('path');
 
 const VIEWS = path.join(__dirname, '..', 'views');
 const app = express();
-const port = process.env.PORT || 4173;
+const port = Number(process.env.PORT || 4173);
+const host = process.env.MAAL_PREVIEW_HOST;
 
 // Same static mounts as server.js (lib/static-assets.js): /assets/* for the
 // React build, /js/collapsing-mark.mjs, and plain 404s for missing files.
 require('../lib/static-assets').mountStatic(app, path.join(__dirname, '..', 'public'));
+
+// Set PREVIEW_USAGE_LIMIT=1 or open a preview page with ?usage_limit=1
+// to exercise the billing prompts with deterministic 402 responses.
+const previewLimits = {
+  'POST /api/v1/advisor/message': 'advisor_messages',
+  'POST /api/v1/advisor/stream': 'advisor_messages',
+  'POST /api/v1/research/generate': 'research_runs',
+  'POST /api/v1/alerts': 'active_radars',
+  'POST /api/v1/alerts/toggle': 'active_radars',
+  'POST /api/v1/files/generate': 'ai_files',
+  'GET /api/v1/budgets/suggestion': 'advisor_messages',
+};
+const { upgradeMessage } = require('../lib/plan-limits');
+function previewUsageLimit(req) {
+  const referer = new URL(req.get('Referer') || '/', 'http://localhost');
+  return process.env.PREVIEW_USAGE_LIMIT === '1' || req.query.usage_limit === '1' || referer.searchParams.get('usage_limit') === '1';
+}
+app.use((req, res, next) => {
+  const feature = previewLimits[`${req.method} ${req.path}`];
+  if (!feature || !previewUsageLimit(req)) return next();
+  if (req.path === '/api/v1/alerts/toggle') {
+    return express.json()(req, res, err => {
+      if (err) return next(err);
+      if (!(req.body?.data ?? req.body)?.active) return next();
+      sendPreviewUsageLimit(res, feature);
+    });
+  }
+  sendPreviewUsageLimit(res, feature);
+});
+function sendPreviewUsageLimit(res, feature) {
+  res.status(402).json({
+    code: 'usage_limit',
+    error: upgradeMessage('member', feature),
+    feature,
+    upgrade: true,
+    upgradeUrl: '/app/billing',
+  });
+}
 
 const { buildLandingContext } = require('../lib/landing-context');
 
@@ -123,6 +163,29 @@ const DAY = 86400000;
 const iso = (daysAgo) => new Date(Date.now() - daysAgo * DAY).toISOString();
 
 app.get('/api/me', (_req, res) => res.json(PREVIEW_USER));
+
+// Local-only fixtures for the checked-in app routes. Never call a provider.
+app.get('/billing/offer', (_req, res) => res.json(require('../routes/billing').offerSummary()));
+app.get('/basiq/institutions', (_req, res) => {
+  const catalogue = require('../services/basiq-institutions');
+  res.json({ live: false, source: 'static', popular: catalogue.pickPopular(catalogue.STATIC_INSTITUTIONS), institutions: catalogue.STATIC_INSTITUTIONS });
+});
+app.get('/lunchflow/status', (_req, res) => res.json({
+  live: false, connected: false, scopes: [], scopes_confirmed: false,
+}));
+app.get('/api/v1/planning', (_req, res) => res.json(
+  require('../lib/planning').buildPlanningSummary({ cash: 21000, monthlyEssentialExpenses: 3200 })
+));
+app.get('/api/v1/planning/history', (_req, res) => res.json([]));
+app.get('/api/v1/wealth-summary', (_req, res) => {
+  const { wealthTotalsFromSummary } = require('../db/assets');
+  const components = {
+    cashTotal: 21000, investmentsTotal: 20600, superTotal: 68500,
+    propertyTotal: 0, propertyMortgageTotal: 0, debtsTotal: 34600, otherAssetsTotal: 0,
+  };
+  res.json({ ...wealthTotalsFromSummary(components), components });
+});
+
 
 app.get('/api/v1/profile', (_req, res) => res.json({
   display_name: 'Alex Preview',
@@ -593,9 +656,10 @@ app.get('/api/v1/goals', (_req, res) => res.json([
 ]));
 app.get('/api/v1/vault', (_req, res) => res.json([]));
 app.get('/api/v1/widgets', (_req, res) => res.json([]));
-app.get('/api/v1/alerts', (_req, res) => res.json({
+app.get('/api/v1/alerts', (req, res) => res.json({
   alerts: [
     { id: 'a1', name: 'BHP price watch', prompt: 'Alert me if BHP drops more than 5% in a week', active: true, last_status: 'OK' },
+    ...(previewUsageLimit(req) ? [{ id: 'a2', name: 'Paused radar', prompt: 'Watch for an RBA rate decision', active: false, last_status: 'OK' }] : []),
   ],
   events: [],
 }));
@@ -788,6 +852,8 @@ app.get('/api/v1/:table', (req, res, next) => {
 app.post('/api/auth/login', (_req, res) => res.json({ user: PREVIEW_USER }));
 app.post('/api/auth/signup', (_req, res) => res.json({ user: PREVIEW_USER }));
 app.post('/api/auth/logout', (_req, res) => res.json({ ok: true }));
+// The static preview does not invoke the live advisor.
+app.post('/api/v1/advisor/stream', (_req, res) => res.sendStatus(501));
 app.post('/api/v1/advisor/message', (_req, res) => res.json({
   reply: 'This is the local design preview — once connected to the live backend, I answer questions about your real finances here.',
   widgets: [], followUps: [], citations: [],
@@ -798,7 +864,7 @@ app.use('/api', (req, res) => {
 });
 
 app.use((err, _req, res, _next) => {
-  console.error(err);
+  console.error("[preview-static] Operation failed:", safeError(err));
   res.status(500).send('<pre>' + (err.stack || err.message) + '</pre>');
 });
 
@@ -823,4 +889,6 @@ app.use('*', (req, res, next) => {
   }
 });
 
-app.listen(port, () => console.log(`Preview on http://localhost:${port}`));
+const server = app.listen(port, host, () => {
+  console.log(`Preview on http://${host || 'localhost'}:${server.address().port}`);
+});

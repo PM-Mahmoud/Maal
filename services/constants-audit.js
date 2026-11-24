@@ -127,7 +127,7 @@ async function runDriftCheck() {
   const status = discrepancies.length ? 'discrepancies' : (failures ? 'inconclusive' : 'clean');
   const report = { fy, checkedAt: new Date().toISOString(), status, failures, topics, discrepancies };
   if (status === 'discrepancies') {
-    console.warn('[constants-audit] ' + discrepancies.length + ' potential drift(s) found — human review needed:', JSON.stringify(discrepancies));
+    console.warn('[constants-audit] ' + discrepancies.length + ' potential drift(s) found — human review needed:', discrepancies.map(({ topic }) => topic));
   } else if (status === 'inconclusive') {
     console.warn('[constants-audit] INCONCLUSIVE — ' + failures + ' of ' + TOPICS.length + ' topics could not be fully checked (see topics[].status); not asserting clean for FY' + fy);
   } else {

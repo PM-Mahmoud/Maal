@@ -473,16 +473,23 @@ function mergeAssetSummaryIntoProfile(profile, assetSummary) {
 // wrapper around summarizeAssets() — keep new calculation logic in the pure
 // function above, not here, so it stays testable without a DB.
 async function getLegacyAssetSummary(userId) {
-  const [cashAccounts, investments, properties, debts, superAccounts, incomes, otherAssets] = await Promise.all([
-    listCashAccounts(userId),
-    listInvestments(userId),
-    listProperties(userId),
-    listDebts(userId),
-    listSuperAccounts(userId),
-    listIncomes(userId),
-    listOtherAssets(userId),
-  ]);
-  return summarizeAssets({ cashAccounts, investments, properties, debts, superAccounts, incomes, otherAssets });
+  const tables = [
+    ['cashAccounts', 'cash_accounts'],
+    ['investments', 'investments'],
+    ['properties', 'properties'],
+    ['debts', 'debts'],
+    ['superAccounts', 'super_accounts'],
+    ['incomes', 'incomes'],
+    ['otherAssets', 'other_assets'],
+  ];
+  const { rows } = await pool.query(
+    tables.map(([key, table]) =>
+      `SELECT '${key}' AS key, coalesce(json_agg(t ORDER BY t.created_at DESC), '[]') AS accounts
+         FROM ${table} t WHERE t.user_id = $1`
+    ).join(' UNION ALL '),
+    [userId]
+  );
+  return summarizeAssets(Object.fromEntries(rows.map(({ key, accounts }) => [key, accounts])));
 }
 
 function canonicalSummaryMatchesLegacy(canonical, legacy) {

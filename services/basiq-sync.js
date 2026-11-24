@@ -1,3 +1,4 @@
+const { safeError } = require('../lib/safe-log');
 const basiq = require('./basiq');
 const {
   basiqAccountReference,
@@ -268,7 +269,7 @@ async function syncBasiqDataWith(userId, dependencies, options = {}) {
         message: error.message,
       }));
     } catch (recordError) {
-      console.error('Could not record post-Basiq quality failure:', recordError.message);
+      console.error('Could not record post-Basiq quality failure:', safeError(recordError));
     }
   }
   if (!checkpoints.quality) {

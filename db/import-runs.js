@@ -17,7 +17,7 @@ async function enqueueImportRun(userId, {
     const active = await client.query(
       `SELECT run.*, job.id AS active_job_id
          FROM import_runs run
-         JOIN background_jobs job ON job.id = run.background_job_id
+         JOIN background_jobs job ON job.id = run.background_job_id AND job.user_id = run.user_id
         WHERE run.user_id=$1 AND run.provider=$2
           AND run.status IN ('queued','running','retrying')
           AND job.status IN ('queued','running')
@@ -25,7 +25,7 @@ async function enqueueImportRun(userId, {
       [userId, provider]
     );
     if (active.rows[0]) {
-      const job = (await client.query('SELECT * FROM background_jobs WHERE id=$1', [active.rows[0].background_job_id])).rows[0];
+      const job = (await client.query('SELECT * FROM background_jobs WHERE id = $1 AND user_id = $2', [active.rows[0].background_job_id, userId])).rows[0];
       await client.query('COMMIT');
       return { run: active.rows[0], job };
     }
@@ -40,8 +40,8 @@ async function enqueueImportRun(userId, {
     const run = runResult.rows[0];
     if (run.background_job_id) {
       const existingJob = await client.query(
-        'SELECT * FROM background_jobs WHERE id = $1',
-        [run.background_job_id]
+        'SELECT * FROM background_jobs WHERE id = $1 AND user_id = $2',
+        [run.background_job_id, userId]
       );
       await client.query('COMMIT');
       return { run, job: existingJob.rows[0] };
@@ -62,8 +62,8 @@ async function enqueueImportRun(userId, {
     const job = jobResult.rows[0];
     const linked = await client.query(
       `UPDATE import_runs SET background_job_id = $2, updated_at = NOW()
-        WHERE id = $1 RETURNING *`,
-      [run.id, job.id]
+        WHERE id = $1 AND user_id = $3 RETURNING *`,
+      [run.id, job.id, userId]
     );
     await client.query('COMMIT');
     return { run: linked.rows[0], job };
@@ -89,7 +89,7 @@ async function withImportFence(runId, userId, attempt, mutation) {
     const fence = await client.query(
       `SELECT 1
          FROM import_runs run
-         JOIN background_jobs job ON job.id = run.background_job_id
+         JOIN background_jobs job ON job.id = run.background_job_id AND job.user_id = run.user_id
         WHERE run.id = $1 AND run.user_id = $2 AND run.status = 'running'
           AND run.active_attempt_token = $3
           AND job.status = 'running' AND job.locked_by = run.active_worker_id
@@ -129,7 +129,7 @@ async function startImportRun(runId, userId, attempt) {
         AND background_job_id = $4
         AND EXISTS (
           SELECT 1 FROM background_jobs job
-           WHERE job.id = $4 AND job.status = 'running'
+           WHERE job.id = $4 AND job.user_id = $2 AND job.status = 'running'
              AND job.locked_by = $5 AND job.attempts = $6
              AND job.lease_expires_at > NOW()
         )
@@ -154,7 +154,7 @@ async function updateImportProgress(
         AND active_attempt_token = $6
         AND EXISTS (
           SELECT 1 FROM background_jobs job
-           WHERE job.id = background_job_id AND job.status = 'running'
+           WHERE job.id = background_job_id AND job.user_id = $2 AND job.status = 'running'
              AND job.locked_by = active_worker_id
              AND job.attempts = active_job_attempt
              AND job.lease_expires_at > NOW()
@@ -180,7 +180,7 @@ async function completeImportRun(runId, userId, attempt, summary) {
         AND active_attempt_token = $3
         AND EXISTS (
           SELECT 1 FROM background_jobs job
-           WHERE job.id = background_job_id AND job.status = 'running'
+           WHERE job.id = background_job_id AND job.user_id = $2 AND job.status = 'running'
              AND job.locked_by = active_worker_id
              AND job.attempts = active_job_attempt
              AND job.lease_expires_at > NOW()
@@ -203,7 +203,7 @@ async function failImportRun(runId, userId, attempt, error, willRetry) {
         AND active_attempt_token = $3
         AND EXISTS (
           SELECT 1 FROM background_jobs job
-           WHERE job.id = background_job_id AND job.status = 'running'
+           WHERE job.id = background_job_id AND job.user_id = $2 AND job.status = 'running'
              AND job.locked_by = active_worker_id
              AND job.attempts = active_job_attempt
              AND job.lease_expires_at > NOW()
@@ -228,7 +228,7 @@ async function getImportRunForUser(runId, userId) {
             job.status AS job_status, job.attempts AS job_attempts,
             job.max_attempts AS job_max_attempts, job.run_at AS next_retry_at
        FROM import_runs run
-       LEFT JOIN background_jobs job ON job.id = run.background_job_id
+       LEFT JOIN background_jobs job ON job.id = run.background_job_id AND job.user_id = run.user_id
       WHERE run.id = $1 AND run.user_id = $2`,
     [runId, userId]
   );

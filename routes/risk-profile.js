@@ -6,6 +6,7 @@
 // Mounted at /api in server.js BEFORE routes/api.js. Ownership: the user id
 // comes only from the session; db/risk-profile.js filters by user_id in SQL.
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const rp = require('../lib/risk-profile');
 
@@ -22,7 +23,7 @@ function createRiskProfileRouter({ db = require('../db/risk-profile'), now = () 
       const { riskProfile, ageBand } = await db.getRiskProfile(req.session.userId);
       res.json({ questions: rp.publicQuestions(), result: rp.toClient(riskProfile), ageBand });
     } catch (e) {
-      console.error('[risk-profile] load failed:', e && e.message);
+      console.error('[risk-profile] load failed:', safeError(e));
       res.status(500).json({ error: 'Could not load your risk profile.' });
     }
   });
@@ -37,7 +38,7 @@ function createRiskProfileRouter({ db = require('../db/risk-profile'), now = () 
       const saved = await db.saveRiskProfile(req.session.userId, record);
       res.json({ result: rp.toClient(saved || record) });
     } catch (e) {
-      console.error('[risk-profile] save failed:', e && e.message);
+      console.error('[risk-profile] save failed:', safeError(e));
       res.status(500).json({ error: 'Could not save your risk profile. Please try again.' });
     }
   });

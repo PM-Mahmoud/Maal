@@ -1,4 +1,5 @@
 // routes/api.js — JSON API for the React SPA
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const router = express.Router();
 const { findUserById, createUser } = require('../db/users');
@@ -19,7 +20,7 @@ router.get('/me', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Not found' });
     res.json({ id: user.id, email: user.email, name: user.name || null, plan: user.plan || 'free' });
   } catch (e) {
-    console.error('/api/me error:', e.message);
+    console.error('/api/me error:', safeError(e));
     res.status(500).json({ error: 'An internal error occurred' });
   }
 });
@@ -57,7 +58,7 @@ router.post('/auth/login', authLimiter, async (req, res) => {
     await new Promise((resolve, reject) => req.session.save(e => e ? reject(e) : resolve()));
     res.json({ user: { id: user.id, email: user.email, plan: user.plan || 'free' } });
   } catch (e) {
-    console.error('/api/auth/login error:', e.message);
+    console.error('/api/auth/login error:', safeError(e));
     res.status(500).json({ error: 'An internal error occurred' });
   }
 });
@@ -85,7 +86,7 @@ router.post('/auth/signup', async (req, res) => {
     await new Promise((ok, err) => req.session.save(e => e ? err(e) : ok()));
     res.json({ user: { id: user.id, email: user.email, plan: 'free' } });
   } catch (e) {
-    console.error('/api/auth/signup error:', e.message);
+    console.error('/api/auth/signup error:', safeError(e));
     res.status(500).json({ error: 'An internal error occurred' });
   }
 });
@@ -149,7 +150,7 @@ async function gateMonthlyAiUsage(req, res, feature) {
       return null;
     }
   } catch (e) {
-    console.error('[usage] metering failed open for ' + feature + ':', e.message);
+    console.error('[usage] metering failed open for ' + feature + ':', safeError(e));
   }
   return { user };
 }
@@ -194,20 +195,36 @@ router.get('/v1/usage', async (req, res) => {
       period, resetsOn, features,
     });
   } catch (e) {
-    console.error('/api/v1/usage error:', e.message);
+    console.error('/api/v1/usage error:', safeError(e));
     res.status(500).json({ error: 'Could not load usage' });
   }
 });
 
 // ─── Advisor (AI chat) ────────────────────────────────────────────────────
 
-router.post('/v1/advisor/message', async (req, res) => {
+async function advisorMessage(req, res, { stream = false } = {}) {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const controller = stream ? new AbortController() : null;
+  const signal = controller?.signal;
+  const disconnect = () => controller.abort();
+  let heartbeat;
+  let streaming = false;
+  const event = (name, data) => {
+    signal?.throwIfAborted();
+    res.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+  const onStep = stream ? (stage, phase) => event('step', { stage, phase }) : undefined;
+  if (stream) res.once('close', disconnect);
   try {
     const advisor = require('../services/advisor');
-    const { message, history = [] } = req.body;
+    const { message, history = [] } = req.body || {};
+    if (stream && (typeof message !== 'string' || !message.trim() || !Array.isArray(history)
+      || history.slice(-10).some(turn => !turn || !['user', 'assistant'].includes(turn.role) || typeof turn.content !== 'string'))) {
+      return res.status(400).json({ error: 'Provide a valid message and history.' });
+    }
     if (!message) return res.status(400).json({ error: 'message required' });
     if (!advisor.hasAdvisor()) {
+      if (stream) return res.status(503).json({ error: 'The advisor is temporarily unavailable.' });
       // Env-var names stay in the server log; members see a plain message
       // (the reply renders as markdown, which mangled the underscored names).
       console.warn('[advisor] no model configured — set AZURE_OPENAI_API_KEY or GROQ_API_KEY in the host env');
@@ -220,6 +237,21 @@ router.post('/v1/advisor/message', async (req, res) => {
     // Metering: consume one advisor message (402 + upgrade prompt when over).
     const gate = await gateMonthlyAiUsage(req, res, 'advisor_messages');
     if (!gate) return;
+    signal?.throwIfAborted();
+    if (stream) {
+      res.set({
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
+      });
+      streaming = true;
+      res.flushHeaders();
+      onStep('retrieving_data', 'start');
+      heartbeat = setInterval(() => {
+        if (!signal.aborted && !res.destroyed) res.write(': keep-alive\n\n');
+      }, 15000);
+      heartbeat.unref();
+    }
 
     // Feed the advisor the SAME dashboard context the EJS /dashboard/ask/message
     // uses: merged effective profile, Maal Score, Vault docs, 30d transactions,
@@ -234,21 +266,25 @@ router.post('/v1/advisor/message', async (req, res) => {
     const goalsDb = require('../db/goals');
     const isaacus = require('../services/isaacus');
 
-    const user = await findUserById(req.session.userId);
+    const { user } = gate;
     const rawProfile = (await getProfileByUserId(req.session.userId)) || {};
+    signal?.throwIfAborted();
     const assetSummary = await assetsDb.getAssetSummary(req.session.userId);
+    signal?.throwIfAborted();
     const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
     const maal = computeMaalScore(profile);
 
     let docs = [];
     try { docs = await vaultDb.getReadableDocs(req.session.userId); }
-    catch (e) { console.error('vault docs for advisor failed:', e.message); }
+    catch (e) { console.error('vault docs for advisor failed:', safeError(e)); }
 
+    signal?.throwIfAborted();
     const [txns, snaps, goals] = await Promise.all([
       getCashFlowTransactions(req.session.userId, 30).catch(() => []),
       getSnapshots(req.session.userId, 90).catch(() => []),
       goalsDb.listGoals(req.session.userId).catch(() => []),
     ]);
+    signal?.throwIfAborted();
     const { calculateCashRunway } = require('../lib/spending-cashflow');
     const runway = calculateCashRunway(txns, profile.cash_savings, profile.monthly_expenses);
     const cashRunway = runway.months == null ? null : Math.round(runway.months);
@@ -257,13 +293,15 @@ router.post('/v1/advisor/message', async (req, res) => {
     let isaacusGrounding = null;
     if (isaacus.hasIsaacus() && docs.length) {
       try {
-        if ((await isaacus.classifyLegalIntent(message)) >= 0.35) {
-          const answer = await isaacus.extractAnswer(message, docs.map((d) => d.extracted_text));
+        if ((await isaacus.classifyLegalIntent(message, { signal })) >= 0.35) {
+          signal?.throwIfAborted();
+          const answer = await isaacus.extractAnswer(message, docs.map((d) => d.extracted_text), { signal });
           if (answer) isaacusGrounding = { text: answer.text, score: answer.score, filename: docs[answer.sourceIndex] ? docs[answer.sourceIndex].filename : null };
         }
-      } catch (e) { console.error('[isaacus] grounding lookup failed:', e.message); }
+      } catch (e) { signal?.throwIfAborted(); console.error('[isaacus] grounding lookup failed:', safeError(e)); }
     }
 
+    signal?.throwIfAborted();
     const clean = [
       ...history.slice(-10).map((m) => ({ role: m.role, content: m.content })),
       { role: 'user', content: message },
@@ -278,13 +316,21 @@ router.post('/v1/advisor/message', async (req, res) => {
         memoryDb.getMemory(req.session.userId),
         memoryDb.getCustomInstructions(req.session.userId),
       ]);
-    } catch (e) { console.error('[advisor] memory/instructions load failed:', e.message); }
+    } catch (e) { console.error('[advisor] memory/instructions load failed:', safeError(e)); }
 
     const extra = { transactions: txns, snapshots: snaps, goals, cashRunway, cashRunwayFromTransactions: runway.fromTransactions, isaacusGrounding, memory: memoryRow.content, customInstructions };
     // Rich web chat: reply text + generative-UI widgets (filled with the user's
     // real data server-side) + follow-up chips + internal-only citations.
-    const rich = await advisor.chatRich(user, profile, maal, clean, docs, extra);
-    res.json({ ok: true, reply: rich.reply, widgets: rich.widgets, followUps: rich.followUps, citations: rich.citations, live: rich.live });
+    signal?.throwIfAborted();
+    const rich = await advisor.chatRich(user, profile, maal, clean, docs, extra, { signal, onStep, requireVerification: stream });
+    const { reply, widgets, followUps, citations, live } = rich;
+    if (stream) {
+      event('final', { reply, widgets, followUps, citations });
+      event('done', {});
+      res.end();
+    } else {
+      res.json({ ok: true, reply, widgets, followUps, citations, live });
+    }
 
     // Deferred memory merge (after the response is flushed, debounced) — updates
     // the user's memory from this turn without adding latency to the reply.
@@ -295,14 +341,29 @@ router.post('/v1/advisor/message', async (req, res) => {
           const transcript = memoryService.transcriptFromMessages([...clean, { role: 'assistant', content: rich.reply }]);
           const updated = await memoryService.mergeMemory(memoryRow.content, transcript);
           if (updated) await memoryDb.saveMemory(req.session.userId, updated);
-        } catch (e) { console.error('[advisor] deferred memory merge failed:', e.message); }
+        } catch (e) { console.error('[advisor] deferred memory merge failed:', safeError(e)); }
       });
     }
   } catch (err) {
-    console.error('advisor message error:', err.message);
-    res.status(500).json({ reply: 'The advisor hit a snag — try again in a moment.', live: false });
+    if (signal?.aborted || (stream && res.destroyed)) return;
+    if (streaming) {
+      console.warn('[advisor] streaming answer could not be completed');
+      event('error', { message: 'The advisor couldn’t finish your answer. Please try again.' });
+      res.end();
+    } else if (stream) {
+      res.status(500).json({ error: 'The advisor couldn’t finish your answer. Please try again.' });
+    } else {
+      console.error('advisor message error:', safeError(err));
+      res.status(500).json({ reply: 'The advisor hit a snag — try again in a moment.', live: false });
+    }
+  } finally {
+    clearInterval(heartbeat);
+    if (stream) res.removeListener('close', disconnect);
   }
-});
+}
+
+router.post('/v1/advisor/message', (req, res) => advisorMessage(req, res));
+router.post('/v1/advisor/stream', (req, res) => advisorMessage(req, res, { stream: true }));
 
 // ─── Advisor memory + custom instructions (inspect / edit / clear) ─────────
 router.get('/v1/advisor/memory', async (req, res) => {
@@ -315,7 +376,7 @@ router.get('/v1/advisor/memory', async (req, res) => {
     ]);
     res.json({ memory: mem.content || '', updatedAt: mem.updated_at || null, customInstructions: instructions });
   } catch (e) {
-    console.error('/api/v1/advisor/memory GET error:', e.message);
+    console.error('/api/v1/advisor/memory GET error:', safeError(e));
     res.status(500).json({ error: 'Could not load memory' });
   }
 });
@@ -330,7 +391,7 @@ router.put('/v1/advisor/memory', async (req, res) => {
     if (typeof d.customInstructions === 'string') await memoryDb.setCustomInstructions(req.session.userId, d.customInstructions);
     res.json({ ok: true });
   } catch (e) {
-    console.error('/api/v1/advisor/memory PUT error:', e.message);
+    console.error('/api/v1/advisor/memory PUT error:', safeError(e));
     res.status(500).json({ error: 'Could not save' });
   }
 });
@@ -342,7 +403,7 @@ router.delete('/v1/advisor/memory', async (req, res) => {
     await memoryDb.clearMemory(req.session.userId);
     res.json({ ok: true });
   } catch (e) {
-    console.error('/api/v1/advisor/memory DELETE error:', e.message);
+    console.error('/api/v1/advisor/memory DELETE error:', safeError(e));
     res.status(500).json({ error: 'Could not clear memory' });
   }
 });
@@ -391,7 +452,7 @@ router.get('/v1/widgets', async (req, res) => {
       .filter(Boolean);
     res.json({ widgets });
   } catch (e) {
-    console.error('/api/v1/widgets GET error:', e.message);
+    console.error('/api/v1/widgets GET error:', safeError(e));
     res.status(500).json({ error: 'Could not load widgets' });
   }
 });
@@ -407,7 +468,7 @@ router.post('/v1/widgets', async (req, res) => {
     const id = await widgetsDb.addWidget(req.session.userId, source, d.title);
     res.json({ ok: true, id });
   } catch (e) {
-    console.error('/api/v1/widgets POST error:', e.message);
+    console.error('/api/v1/widgets POST error:', safeError(e));
     res.status(500).json({ error: 'Could not save widget' });
   }
 });
@@ -419,7 +480,7 @@ router.delete('/v1/widgets/:id', async (req, res) => {
     await widgetsDb.removeWidget(req.params.id, req.session.userId);
     res.json({ ok: true });
   } catch (e) {
-    console.error('/api/v1/widgets DELETE error:', e.message);
+    console.error('/api/v1/widgets DELETE error:', safeError(e));
     res.status(500).json({ error: 'Could not remove widget' });
   }
 });
@@ -444,7 +505,7 @@ router.get('/v1/data-health', async (req, res) => {
     const quality = require('../services/data-quality');
     res.json(await quality.getDataHealth(req.session.userId));
   } catch (error) {
-    console.error('/api/v1/data-health error:', error.message);
+    console.error('/api/v1/data-health error:', safeError(error));
     res.status(500).json({ error: 'Could not load financial data health.' });
   }
 });
@@ -516,7 +577,7 @@ router.get('/v1/markets/earnings', async (req, res) => {
     );
     res.json(await getUpcomingEarnings(rows.map((r) => r.ticker)));
   } catch (e) {
-    console.error('/api/v1/markets/earnings error:', e.message);
+    console.error('/api/v1/markets/earnings error:', safeError(e));
     res.json([]);
   }
 });
@@ -540,7 +601,7 @@ router.get('/v1/notification-prefs', async (req, res) => {
     const prefs = (user && user.notification_prefs) || {};
     res.json({ daily_digest: prefs.daily_digest === true, ...prefs });
   } catch (e) {
-    console.error('/api/v1/notification-prefs GET error:', e.message);
+    console.error('/api/v1/notification-prefs GET error:', safeError(e));
     res.json({ daily_digest: false });
   }
 });
@@ -555,7 +616,7 @@ router.post('/v1/notification-prefs', async (req, res) => {
     await setNotificationPref(req.session.userId, key, !!d.value);
     res.json({ ok: true, key, value: !!d.value });
   } catch (e) {
-    console.error('/api/v1/notification-prefs POST error:', e.message);
+    console.error('/api/v1/notification-prefs POST error:', safeError(e));
     res.status(500).json({ error: 'Could not update preference.' });
   }
 });
@@ -585,7 +646,7 @@ router.get('/v1/score', async (req, res) => {
     const score = computeMaalScore(effectiveProfile);
     const lineage = require('../services/calculation-lineage')
       .recordScoreMetric(req.session.userId, score, effectiveProfile)
-      .catch((e) => console.error('/api/v1/score lineage error:', e.message));
+      .catch((e) => console.error('/api/v1/score lineage error:', safeError(e)));
 
     // Record today's score (upsert, at most one row/user/day) so the React
     // dashboard accrues a real daily history. Best-effort: recording or reading
@@ -596,20 +657,20 @@ router.get('/v1/score', async (req, res) => {
       try {
         await recordScoreSnapshot(req.session.userId, score);
       } catch (e) {
-        console.error('/api/v1/score record error:', e.message);
+        console.error('/api/v1/score record error:', safeError(e));
       }
     }
     try {
       const rows = await getScoreSnapshots(req.session.userId, 366);
       history = shapeScoreSnapshotHistory(rows);
     } catch (e) {
-      console.error('/api/v1/score history error:', e.message);
+      console.error('/api/v1/score history error:', safeError(e));
     }
     await lineage;
 
     res.json({ ok: true, ...score, history });
   } catch (e) {
-    console.error('/api/v1/score error:', e.message);
+    console.error('/api/v1/score error:', safeError(e));
     res.status(500).json({ ok: false, error: 'Could not compute score' });
   }
 });
@@ -632,7 +693,7 @@ router.get('/v1/profile', async (req, res) => {
     ]);
     res.json(normalizeProfile(row, user));
   } catch (e) {
-    console.error('/api/v1/profile GET error:', e.message);
+    console.error('/api/v1/profile GET error:', safeError(e));
     res.status(500).json({ error: 'Could not load profile' });
   }
 });
@@ -647,7 +708,7 @@ router.get('/v1/wealth-summary', async (req, res) => {
     const components = await assetsDb.getAssetSummary(req.session.userId);
     res.json({ ...assetsDb.wealthTotalsFromSummary(components), components });
   } catch (e) {
-    console.error('/api/v1/wealth-summary error:', e.message);
+    console.error('/api/v1/wealth-summary error:', safeError(e));
     res.status(500).json({ error: 'Could not load wealth summary' });
   }
 });
@@ -660,7 +721,7 @@ router.get('/v1/wealth/canonical', async (req, res) => {
   try {
     res.json(await require('../db/canonical-wealth').getCanonicalSnapshot(req.session.userId));
   } catch (e) {
-    console.error('/api/v1/wealth/canonical error:', e.message);
+    console.error('/api/v1/wealth/canonical error:', safeError(e));
     res.status(500).json({ error: 'Could not load canonical wealth records' });
   }
 });
@@ -676,7 +737,7 @@ router.post('/v1/wealth/valuations', async (req, res) => {
     const valuation = await require('../db/canonical-wealth').appendValuation(req.session.userId, data);
     res.status(201).json(valuation);
   } catch (e) {
-    console.error('/api/v1/wealth/valuations error:', e.message);
+    console.error('/api/v1/wealth/valuations error:', safeError(e));
     const status = e.message === 'Superseded valuation not found' ? 404 : (e.statusCode || 500);
     res.status(status).json({ error: status < 500 ? e.message : 'Could not append valuation' });
   }
@@ -741,7 +802,7 @@ router.patch('/v1/profile', async (req, res) => {
     const user = await findUserById(req.session.userId);
     res.json(normalizeProfile(row, user));
   } catch (e) {
-    console.error('/api/v1/profile PATCH error:', e.message);
+    console.error('/api/v1/profile PATCH error:', safeError(e));
     res.status(500).json({ error: 'Could not save profile' });
   }
 });
@@ -763,7 +824,7 @@ router.post('/v1/snapshots/accounts', async (req, res) => {
     const series = await require('../db/account-snapshots').listAccountSnapshotSeries(req.session.userId, [...new Set(keys)], days);
     return res.json(series);
   } catch (error) {
-    console.error('Could not load account snapshots:', error.code || 'unknown');
+    console.error('Could not load account snapshots:', safeError(error));
     return res.status(500).json({ error: 'Could not load account history.' });
   }
 });
@@ -789,7 +850,7 @@ router.get('/v1/snapshots', async (req, res) => {
       change: r.change,
     })));
   } catch (e) {
-    console.error('/api/v1/snapshots error:', e.message);
+    console.error('/api/v1/snapshots error:', safeError(e));
     res.status(500).json({ error: 'Could not load snapshots' });
   }
 });
@@ -841,7 +902,7 @@ router.get('/v1/vault', async (req, res) => {
       extracted: f.has_text ? { document_type: 'Readable' } : null,
     })));
   } catch (e) {
-    console.error('/api/v1/vault GET error:', e.message);
+    console.error('/api/v1/vault GET error:', safeError(e));
     res.status(500).json({ error: 'Could not list documents' });
   }
 });
@@ -859,7 +920,7 @@ router.post('/v1/vault',
     const { extractText } = require('../services/extract');
     let extractedText = '';
     try { extractedText = await extractText(req.file.buffer, req.file.mimetype, req.file.originalname); }
-    catch (e) { console.error('vault extract on upload failed:', e.message); }
+    catch (e) { console.error('vault extract on upload failed:', safeError(e)); }
     const safeMime = VAULT_ALLOWED_MIME.has(req.file.mimetype) ? req.file.mimetype : 'application/octet-stream';
     const id = await vaultDb.addFile(req.session.userId, {
       kind: 'vault',
@@ -871,7 +932,7 @@ router.post('/v1/vault',
     });
     res.json({ ok: true, id: String(id), filename: req.file.originalname, size_bytes: req.file.size, hasText: !!extractedText });
   } catch (err) {
-    console.error('/api/v1/vault POST error:', err.message);
+    console.error('/api/v1/vault POST error:', safeError(err));
     res.status(500).json({ error: 'Upload failed.' });
   }
 });
@@ -888,7 +949,7 @@ router.get('/v1/vault/:id', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
     res.send(f.content);
   } catch (err) {
-    console.error('/api/v1/vault/:id GET error:', err.message);
+    console.error('/api/v1/vault/:id GET error:', safeError(err));
     res.status(500).json({ error: 'Could not load the file.' });
   }
 });
@@ -901,7 +962,7 @@ router.delete('/v1/vault/:id', async (req, res) => {
     await vaultDb.deleteFile(req.params.id, req.session.userId);
     res.json({ ok: true });
   } catch (err) {
-    console.error('/api/v1/vault/:id DELETE error:', err.message);
+    console.error('/api/v1/vault/:id DELETE error:', safeError(err));
     res.status(500).json({ error: 'Could not delete the file.' });
   }
 });
@@ -923,7 +984,7 @@ router.post('/v1/vault/:id/extract', async (req, res) => {
     const { fields, reason } = await advisor.extractFigures(doc.extracted_text);
     res.json({ ok: true, fields: fields || [], reason, filename: doc.filename });
   } catch (err) {
-    console.error('/api/v1/vault/:id/extract error:', err.message);
+    console.error('/api/v1/vault/:id/extract error:', safeError(err));
     res.status(500).json({ error: 'Could not read that document.' });
   }
 });
@@ -939,7 +1000,7 @@ router.get('/v1/research', async (req, res) => {
     const rows = await researchDb.listReportsWithBody(req.session.userId, 20);
     res.json(rows.map(researchDb.rowToResearchReport));
   } catch (e) {
-    console.error('/api/v1/research GET error:', e.message);
+    console.error('/api/v1/research GET error:', safeError(e));
     res.status(500).json({ error: 'Could not load research' });
   }
 });
@@ -963,7 +1024,6 @@ router.post('/v1/research/generate', async (req, res) => {
     const { computeMaalScore } = require('../lib/maal-score');
     const { runDeepResearch } = require('../services/research');
 
-    const user = await findUserById(userId);
     const rawProfile = (await getProfileByUserId(userId)) || {};
     const assetSummary = await assetsDb.getAssetSummary(userId);
     const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
@@ -972,13 +1032,13 @@ router.post('/v1/research/generate', async (req, res) => {
     const jobId = await researchDb.createJob(userId, question);
     // Fire-and-forget: the pipeline records its own success/failure on the job.
     setImmediate(() => {
-      runDeepResearch({ jobId, user, profile, maal, question }).catch((e) => {
-        console.error('runDeepResearch crashed:', e.message);
+      runDeepResearch({ jobId, userId, profile, maal, question }).catch((e) => {
+        console.error('runDeepResearch crashed:', safeError(e));
       });
     });
     res.json({ jobId: String(jobId), status: 'running', phase: 'plan' });
   } catch (err) {
-    console.error('/api/v1/research/generate error:', err.message);
+    console.error('/api/v1/research/generate error:', safeError(err));
     res.status(500).json({ error: 'Could not start research.' });
   }
 });
@@ -999,7 +1059,7 @@ router.get('/v1/research/:id', async (req, res) => {
     }
     res.json(out);
   } catch (err) {
-    console.error('/api/v1/research/:id GET error:', err.message);
+    console.error('/api/v1/research/:id GET error:', safeError(err));
     res.status(500).json({ error: 'Could not load research status.' });
   }
 });
@@ -1013,7 +1073,7 @@ router.get('/v1/research/:id/pdf', async (req, res) => {
     if (!out) return res.status(404).json({ error: 'Report not found.' });
     res.json(out); // { filename, base64 } — client turns it into a download
   } catch (err) {
-    console.error('/api/v1/research/:id/pdf error:', err.message);
+    console.error('/api/v1/research/:id/pdf error:', safeError(err));
     res.status(500).json({ error: 'Could not generate the PDF.' });
   }
 });
@@ -1025,7 +1085,7 @@ router.delete('/v1/research/:id', async (req, res) => {
     await researchDb.deleteReport(req.params.id, req.session.userId);
     res.json({ ok: true });
   } catch (err) {
-    console.error('/api/v1/research/:id DELETE error:', err.message);
+    console.error('/api/v1/research/:id DELETE error:', safeError(err));
     res.status(500).json({ error: 'Could not delete report.' });
   }
 });
@@ -1046,7 +1106,7 @@ router.get('/v1/alerts', async (req, res) => {
     ]);
     res.json({ alerts: radars.map(radarDb.radarToAlert), events: events.map(radarDb.eventToAlertEvent) });
   } catch (e) {
-    console.error('/api/v1/alerts GET error:', e.message);
+    console.error('/api/v1/alerts GET error:', safeError(e));
     res.status(500).json({ error: 'Could not load radars' });
   }
 });
@@ -1083,7 +1143,7 @@ router.post('/v1/alerts', async (req, res) => {
     const row = await radarDb.getRadar(id, req.session.userId);
     res.json(radarDb.radarToAlert(row));
   } catch (e) {
-    console.error('/api/v1/alerts POST error:', e.message);
+    console.error('/api/v1/alerts POST error:', safeError(e));
     res.status(500).json({ error: 'Could not create radar.' });
   }
 });
@@ -1095,7 +1155,7 @@ router.delete('/v1/alerts/:id', async (req, res) => {
     await radarDb.deleteRadar(req.params.id, req.session.userId);
     res.json({ ok: true });
   } catch (e) {
-    console.error('/api/v1/alerts DELETE error:', e.message);
+    console.error('/api/v1/alerts DELETE error:', safeError(e));
     res.status(500).json({ error: 'Could not delete radar.' });
   }
 });
@@ -1123,7 +1183,7 @@ router.post('/v1/alerts/toggle', async (req, res) => {
     }
     res.json({ ok: true });
   } catch (e) {
-    console.error('/api/v1/alerts/toggle error:', e.message);
+    console.error('/api/v1/alerts/toggle error:', safeError(e));
     res.status(500).json({ error: 'Could not update radar.' });
   }
 });
@@ -1143,12 +1203,12 @@ router.post('/v1/alerts/evaluate', async (req, res) => {
       const radars = await radarDb.listRadars(req.session.userId);
       for (const radar of radars) {
         try { const r = await runRadar(radar.id, req.session.userId); if (r && r.alerted) fired++; }
-        catch (e) { console.error(`radar ${radar.id} run failed:`, e.message); }
+        catch (e) { console.error('Radar run failed:', safeError(e)); }
       }
     }
     res.json({ fired });
   } catch (e) {
-    console.error('/api/v1/alerts/evaluate error:', e.message);
+    console.error('/api/v1/alerts/evaluate error:', safeError(e));
     res.status(500).json({ error: 'Could not evaluate radars.' });
   }
 });
@@ -1164,7 +1224,7 @@ router.get('/v1/radar-templates', async (req, res) => {
     const radarDb = require('../db/radar');
     res.json({ templates: await radarDb.listTemplates() });
   } catch (e) {
-    console.error('/api/v1/radar-templates error:', e.message);
+    console.error('/api/v1/radar-templates error:', safeError(e));
     res.json({ templates: [] });
   }
 });
@@ -1180,7 +1240,7 @@ router.get('/v1/radar/readiness', async (req, res) => {
     const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
     res.json(computeRadarReadiness(profile));
   } catch (e) {
-    console.error('/api/v1/radar/readiness error:', e.message);
+    console.error('/api/v1/radar/readiness error:', safeError(e));
     res.json({ score: 0, missing: [], ready: false });
   }
 });
@@ -1196,7 +1256,7 @@ router.post('/v1/report', async (req, res) => {
     const out = await generateFinancialReport(req.session.userId);
     res.json(out);
   } catch (e) {
-    console.error('/api/v1/report error:', e.message);
+    console.error('/api/v1/report error:', safeError(e));
     res.status(500).json({ error: 'Could not generate report.' });
   }
 });
@@ -1222,12 +1282,12 @@ router.post('/v1/files/generate', async (req, res) => {
     try {
       out = await filegen.generateAndEmailFile(req.session.userId, { type, dataset });
     } catch (e) {
-      console.error('file generate/email failed:', e.message);
+      console.error('file generate/email failed:', safeError(e));
       return res.status(400).json({ error: 'Could not generate that file. Check the type and try again.' });
     }
     res.json({ ok: true, ...out });
   } catch (err) {
-    console.error('/api/v1/files/generate error:', err.message);
+    console.error('/api/v1/files/generate error:', safeError(err));
     res.status(500).json({ error: 'Could not generate the file.' });
   }
 });
@@ -1247,7 +1307,7 @@ function s2Id(v) {
   return /^[1-9]\d{0,17}$/.test(s) ? s : null;
 }
 function s2Fail(res, where, e) {
-  console.error(`[breakdown] ${where} failed:`, e && e.message);
+  console.error(`[breakdown] ${where} failed:`, safeError(e));
   if (e && e.code === '23505') return res.status(409).json({ error: 'That name is already in use.' });
   res.status(500).json({ error: 'Something went wrong. Please try again.' });
 }
@@ -1405,7 +1465,7 @@ router.get('/v1/budgets/suggestion', async (req, res) => {
           allowed = false; wordingStatus = 'limit';
         }
       } catch (e) {
-        console.error('[usage] metering failed open for budget wording:', e.message);
+        console.error('[usage] metering failed open for budget wording:', safeError(e));
       }
       if (allowed) {
         try {
@@ -1415,7 +1475,7 @@ router.get('/v1/budgets/suggestion', async (req, res) => {
           wording = bw.parseWording(raw, allowedFigures(suggestion));
           wordingStatus = wording ? 'ok' : 'failed';
         } catch (e) {
-          console.error('[breakdown] budget wording failed:', e.message);
+          console.error('[breakdown] budget wording failed:', safeError(e));
           wordingStatus = 'failed';
         }
       }
@@ -1439,7 +1499,7 @@ router.get('/v1/transaction-categories', async (req, res) => {
     const custom = await spendCatsDb().listCustomCategories(req.session.userId);
     res.json({ groups: spendCats.mergeTaxonomy(custom) });
   } catch (e) {
-    console.error('/api/v1/transaction-categories custom list failed:', e.message);
+    console.error('/api/v1/transaction-categories custom list failed:', safeError(e));
     res.json({ groups: spendCats.mergeTaxonomy([]) });
   }
 });
@@ -1497,7 +1557,7 @@ router.post('/v1/transactions', async (req, res) => {
         coverage: { accounts: 'complete', transactions: 'complete' },
       });
     } catch (qualityError) {
-      console.error('Post-transaction-import quality check failed:', qualityError.message);
+      console.error('Post-transaction-import quality check failed:', safeError(qualityError));
       try {
         await require('../services/data-quality').recordDataQualityFailure(req.session.userId, {
           trigger: 'transaction_import',
@@ -1505,13 +1565,13 @@ router.post('/v1/transactions', async (req, res) => {
           message: qualityError.message,
         });
       } catch (recordError) {
-        console.error('Could not record transaction-import quality failure:', recordError.message);
+        console.error('Could not record transaction-import quality failure:', safeError(recordError));
       }
     }
     return res.json(inserted.rows[0]);
   } catch (error) {
     if (client) await client.query('ROLLBACK').catch(() => {});
-    console.error('/api/v1/transactions POST error:', error.message);
+    console.error('/api/v1/transactions POST error:', safeError(error));
     return res.status(500).json({ error: 'Could not import transaction' });
   } finally {
     if (client) client.release();
@@ -1554,7 +1614,7 @@ router.get('/v1/transactions', async (req, res) => {
     const extras = await detailDb.getExtras(req.session.userId, out.map((r) => r.id));
     res.json(detailDb.attachExtras(out, extras));
   } catch (e) {
-    console.error('/api/v1/transactions GET error:', e.message);
+    console.error('/api/v1/transactions GET error:', safeError(e));
     res.status(500).json({ error: 'Could not load transactions' });
   }
 });
@@ -1570,7 +1630,7 @@ router.get('/v1/transactions/subscriptions', async (req, res) => {
     const txns = await txnDb.getTxnsForSubscriptions(userId, 400);
     res.json({ subscriptions: detectSubscriptions(await getEffectivePayments(userId, txns)) });
   } catch (e) {
-    console.error('/api/v1/transactions/subscriptions error:', e.message);
+    console.error('/api/v1/transactions/subscriptions error:', safeError(e));
     res.status(500).json({ error: 'Could not detect subscriptions' });
   }
 });
@@ -1590,27 +1650,28 @@ router.get('/v1/transactions/recurring', async (req, res) => {
     const txnDb = require('../db/transactions');
     const { detectRecurringTransactions } = require('../services/transaction-rules');
     const { detectTransactionRelationships, indexRelationships } = require('../services/transaction-relationships');
-    const rows = await txnDb.getTransactionsWithCategory(req.session.userId, 2000);
+    const userId = req.session.userId;
+    const manual = require('../db/recurring-items').listRecurringItems(userId).then(
+      (rows) => ({ rows, failed: false }),
+      (e) => {
+        // Manual items are additive: still return detected rows, but flag it.
+        console.error('/api/v1/transactions/recurring manual items error:', safeError(e));
+        return { rows: [], failed: true };
+      }
+    );
+    const rows = await txnDb.getTransactionsWithCategory(userId, 2000);
     const relationships = indexRelationships(detectTransactionRelationships(rows));
     const ordinaryRows = rows.map((row) => relationships.has(String(row.id))
       ? { ...row, relationship_type: relationships.get(String(row.id)).type }
       : row);
     const { getEffectivePayments } = require('../db/transaction-detail');
-    const detected = detectRecurringTransactions(await getEffectivePayments(req.session.userId, ordinaryRows));
+    const detected = detectRecurringTransactions(await getEffectivePayments(userId, ordinaryRows));
     const { mergeRecurring } = await import('../shared/recurring.mjs');
-    let manualRows = [];
-    let manualError = false;
-    try {
-      manualRows = await require('../db/recurring-items').listRecurringItems(req.session.userId);
-    } catch (e) {
-      // Manual items are additive: still return detected rows, but flag it.
-      console.error('/api/v1/transactions/recurring manual items error:', e.message);
-      manualError = true;
-    }
+    const { rows: manualRows, failed: manualError } = await manual;
     const recurring = mergeRecurring(detected, manualRows);
     res.json(manualError ? { recurring, manual_error: true } : { recurring });
   } catch (error) {
-    console.error('/api/v1/transactions/recurring error:', error.message);
+    console.error('/api/v1/transactions/recurring error:', safeError(error));
     res.status(500).json({ error: 'Could not detect recurring transactions' });
   }
 });
@@ -1633,7 +1694,7 @@ router.post('/v1/recurring-items/decisions', async (req, res) => {
     const row = await require('../db/recurring-items').setDetectedDecision(req.session.userId, sourceKey, status);
     res.json({ ok: true, source_key: row.source_key, status: row.status });
   } catch (e) {
-    console.error('/api/v1/recurring-items/decisions POST error:', e.message);
+    console.error('/api/v1/recurring-items/decisions POST error:', safeError(e));
     res.status(500).json({ error: 'Could not save that change.' });
   }
 });
@@ -1646,7 +1707,7 @@ router.delete('/v1/recurring-items/decisions/:sourceKey', async (req, res) => {
     const ok = await require('../db/recurring-items').clearDetectedDecision(req.session.userId, String(req.params.sourceKey).slice(0, 80));
     res.json({ ok });
   } catch (e) {
-    console.error('/api/v1/recurring-items/decisions DELETE error:', e.message);
+    console.error('/api/v1/recurring-items/decisions DELETE error:', safeError(e));
     res.status(500).json({ error: 'Could not undo that change.' });
   }
 });
@@ -1658,7 +1719,7 @@ router.get('/v1/recurring-items', async (req, res) => {
     const rows = await require('../db/recurring-items').listRecurringItems(req.session.userId);
     res.json({ items: await Promise.all(rows.filter((r) => r.status === 'active').map(recurringItemOut)) });
   } catch (e) {
-    console.error('/api/v1/recurring-items GET error:', e.message);
+    console.error('/api/v1/recurring-items GET error:', safeError(e));
     res.status(500).json({ error: 'Could not load your recurring items.' });
   }
 });
@@ -1672,9 +1733,10 @@ router.post('/v1/recurring-items', async (req, res) => {
     const v = validateRecurringInput(req.body);
     if (v.error) return res.status(400).json({ error: v.error });
     const row = await require('../db/recurring-items').createRecurringItem(req.session.userId, v.item);
+    if (!row) return res.status(404).json({ error: 'Transaction not found.' });
     res.status(201).json({ item: await recurringItemOut(row) });
   } catch (e) {
-    console.error('/api/v1/recurring-items POST error:', e.message);
+    console.error('/api/v1/recurring-items POST error:', safeError(e));
     res.status(500).json({ error: 'Could not save this recurring item.' });
   }
 });
@@ -1691,7 +1753,7 @@ router.patch('/v1/recurring-items/:id', async (req, res) => {
     if (!row) return res.status(404).json({ error: 'Recurring item not found.' });
     res.json({ item: await recurringItemOut(row) });
   } catch (e) {
-    console.error('/api/v1/recurring-items PATCH error:', e.message);
+    console.error('/api/v1/recurring-items PATCH error:', safeError(e));
     res.status(500).json({ error: 'Could not update this recurring item.' });
   }
 });
@@ -1705,7 +1767,7 @@ router.delete('/v1/recurring-items/:id', async (req, res) => {
     if (!ok) return res.status(404).json({ error: 'Recurring item not found.' });
     res.json({ ok: true });
   } catch (e) {
-    console.error('/api/v1/recurring-items DELETE error:', e.message);
+    console.error('/api/v1/recurring-items DELETE error:', safeError(e));
     res.status(500).json({ error: 'Could not remove this recurring item.' });
   }
 });
@@ -1728,7 +1790,7 @@ router.patch('/v1/transactions/:id/category', async (req, res) => {
     if (!ok) return res.status(404).json({ error: 'Transaction not found.' });
     res.json({ ok: true });
   } catch (e) {
-    console.error('/api/v1/transactions/:id/category error:', e.message);
+    console.error('/api/v1/transactions/:id/category error:', safeError(e));
     res.status(500).json({ error: 'Could not update category' });
   }
 });
@@ -1761,7 +1823,7 @@ router.get('/v1/transactions/:id/detail', async (req, res) => {
     }
     res.json({ transaction: row });
   } catch (e) {
-    console.error('/api/v1/transactions/:id/detail error:', e.message);
+    console.error('/api/v1/transactions/:id/detail error:', safeError(e));
     res.status(500).json({ error: 'Could not load this transaction.' });
   }
 });
@@ -1778,7 +1840,7 @@ router.patch('/v1/transactions/:id/meta', async (req, res) => {
     if (!(await db.updateMeta(req.session.userId, id, v.patch))) return res.status(404).json({ error: 'Transaction not found.' });
     res.json({ ok: true });
   } catch (e) {
-    console.error('/api/v1/transactions/:id/meta error:', e.message);
+    console.error('/api/v1/transactions/:id/meta error:', safeError(e));
     res.status(500).json({ error: 'Could not save that change.' });
   }
 });
@@ -1795,7 +1857,7 @@ router.put('/v1/transactions/:id/tags', async (req, res) => {
     if (!(await db.setTransactionTags(req.session.userId, id, v.ids))) return res.status(404).json({ error: 'Transaction not found.' });
     res.json({ ok: true });
   } catch (e) {
-    console.error('/api/v1/transactions/:id/tags error:', e.message);
+    console.error('/api/v1/transactions/:id/tags error:', safeError(e));
     res.status(500).json({ error: 'Could not save tags.' });
   }
 });
@@ -1812,7 +1874,7 @@ router.put('/v1/transactions/:id/splits', async (req, res) => {
   let customNames = [];
   if (Array.isArray(parts) && parts.some((p) => p && p.category_group && !isKnownGroup(p.category_group))) {
     try { customNames = await spendCatsDb().customCategoryNames(req.session.userId); }
-    catch (e) { console.error('[splits] custom categories unavailable:', e.message); }
+    catch (e) { console.error('[splits] custom categories unavailable:', safeError(e)); }
   }
   if (Array.isArray(parts) && parts.some((p) => p && p.category_group
     && (isKnownGroup(p.category_group) ? !isValidCategory(p.category_group, p.category || null)
@@ -1827,7 +1889,7 @@ router.put('/v1/transactions/:id/splits', async (req, res) => {
     if (r.error) return res.status(400).json({ error: r.error, partErrors: r.partErrors });
     res.json({ splits: r.splits });
   } catch (e) {
-    console.error('/api/v1/transactions/:id/splits error:', e.message);
+    console.error('/api/v1/transactions/:id/splits error:', safeError(e));
     res.status(500).json({ error: 'Could not save the split.' });
   }
 });
@@ -1842,7 +1904,7 @@ router.delete('/v1/transactions/:id/splits', async (req, res) => {
     }
     res.json({ ok: true });
   } catch (e) {
-    console.error('/api/v1/transactions/:id/splits DELETE error:', e.message);
+    console.error('/api/v1/transactions/:id/splits DELETE error:', safeError(e));
     res.status(500).json({ error: 'Could not remove the split.' });
   }
 });
@@ -1854,7 +1916,7 @@ router.post('/v1/transactions/bulk-edit', async (req, res) => {
   const { validateBulkEdit } = require('../lib/transaction-detail');
   let customNames = [];
   try { customNames = await spendCatsDb().customCategoryNames(req.session.userId); } // Session 2 – Breakdown & budget
-  catch (e) { console.error('[bulk-edit] custom categories unavailable:', e.message); }
+  catch (e) { console.error('[bulk-edit] custom categories unavailable:', safeError(e)); }
   const v = validateBulkEdit(req.body, customNames);
   if (v.error) return res.status(400).json({ error: v.error });
   try {
@@ -1862,7 +1924,7 @@ router.post('/v1/transactions/bulk-edit', async (req, res) => {
     if (!r.updated) return res.status(404).json({ error: 'Transaction not found.' });
     res.json(r);
   } catch (e) {
-    console.error('/api/v1/transactions/bulk-edit error:', e.message);
+    console.error('/api/v1/transactions/bulk-edit error:', safeError(e));
     res.status(500).json({ error: 'Could not update those transactions.' });
   }
 });
@@ -1874,7 +1936,7 @@ router.get('/v1/tags', async (req, res) => {
     const { TAG_COLORS } = require('../lib/transaction-detail');
     res.json({ tags: await require('../db/transaction-detail').listTags(req.session.userId), colors: TAG_COLORS });
   } catch (e) {
-    console.error('/api/v1/tags error:', e.message);
+    console.error('/api/v1/tags error:', safeError(e));
     res.status(500).json({ error: 'Could not load tags.' });
   }
 });
@@ -1888,7 +1950,7 @@ router.post('/v1/tags', async (req, res) => {
     if (r.conflict) return res.status(409).json({ error: 'You already have a tag with that name.' });
     res.json({ tag: r.tag });
   } catch (e) {
-    console.error('/api/v1/tags POST error:', e.message);
+    console.error('/api/v1/tags POST error:', safeError(e));
     res.status(500).json({ error: 'Could not create the tag.' });
   }
 });
@@ -1905,7 +1967,7 @@ router.patch('/v1/tags/:id', async (req, res) => {
     if (updated.conflict) return res.status(409).json({ error: 'You already have a tag with that name.' });
     res.json({ tag: updated.tag });
   } catch (error) {
-    console.error('/api/v1/tags PATCH error:', error.code);
+    console.error('/api/v1/tags PATCH error:', safeError(error));
     res.status(500).json({ error: 'Could not update the tag.' });
   }
 });
@@ -1920,7 +1982,7 @@ router.delete('/v1/tags/:id', async (req, res) => {
     }
     res.json({ ok: true });
   } catch (e) {
-    console.error('/api/v1/tags DELETE error:', e.message);
+    console.error('/api/v1/tags DELETE error:', safeError(e));
     res.status(500).json({ error: 'Could not delete the tag.' });
   }
 });
@@ -1933,7 +1995,7 @@ router.get('/v1/transaction-rules', async (req, res) => {
     const txnDb = require('../db/transactions');
     res.json({ rules: await txnDb.listRules(req.session.userId) });
   } catch (e) {
-    console.error('/api/v1/transaction-rules GET error:', e.message);
+    console.error('/api/v1/transaction-rules GET error:', safeError(e));
     res.status(500).json({ error: 'Could not load rules' });
   }
 });
@@ -1949,7 +2011,7 @@ router.post('/v1/transaction-rules', async (req, res) => {
     const id = await txnDb.createRule(req.session.userId, parsed.rule);
     res.json({ ok: true, id, rule: { id, ...parsed.rule } });
   } catch (e) {
-    console.error('/api/v1/transaction-rules POST error:', e.message);
+    console.error('/api/v1/transaction-rules POST error:', safeError(e));
     res.status(500).json({ error: 'Could not create rule' });
   }
 });
@@ -1961,7 +2023,7 @@ router.delete('/v1/transaction-rules/:id', async (req, res) => {
     await txnDb.deleteRule(req.params.id, req.session.userId);
     res.json({ ok: true });
   } catch (e) {
-    console.error('/api/v1/transaction-rules DELETE error:', e.message);
+    console.error('/api/v1/transaction-rules DELETE error:', safeError(e));
     res.status(500).json({ error: 'Could not delete rule' });
   }
 });
@@ -1984,7 +2046,7 @@ router.post('/v1/transaction-rules/apply', async (req, res) => {
     const applied = await txnDb.applyCategoryAssignments(req.session.userId, assignments);
     res.json({ ok: true, applied });
   } catch (e) {
-    console.error('/api/v1/transaction-rules/apply error:', e.message);
+    console.error('/api/v1/transaction-rules/apply error:', safeError(e));
     res.status(500).json({ error: 'Could not apply rules' });
   }
 });
@@ -2005,7 +2067,7 @@ router.post('/v1/transaction-rules/preview', async (req, res) => {
     const rows = await txnDb.getTransactionsWithCategory(req.session.userId, 2000);
     res.json(previewRuleMatches(parsed.rule, rows, { limit: body.limit, offset: body.offset }));
   } catch (e) {
-    console.error('/api/v1/transaction-rules/preview error:', e.message);
+    console.error('/api/v1/transaction-rules/preview error:', safeError(e));
     res.status(500).json({ error: 'Could not preview matches' });
   }
 });
@@ -2026,7 +2088,7 @@ router.post('/v1/transaction-rules/:id/apply', async (req, res) => {
     const applied = await txnDb.applyCategoryAssignments(req.session.userId, computeAssignments([rule], matches));
     res.json({ ok: true, applied });
   } catch (e) {
-    console.error('/api/v1/transaction-rules/:id/apply error:', e.message);
+    console.error('/api/v1/transaction-rules/:id/apply error:', safeError(e));
     res.status(500).json({ error: 'Could not apply rule' });
   }
 });
@@ -2046,7 +2108,7 @@ router.get('/v1/goals', async (req, res) => {
     const goalsDb = require('../db/goals');
     res.json(await goalsDb.listGoals(req.session.userId));
   } catch (e) {
-    console.error('/api/v1/goals GET error:', e.message);
+    console.error('/api/v1/goals GET error:', safeError(e));
     res.json([]);
   }
 });
@@ -2078,7 +2140,7 @@ router.post('/v1/goals', async (req, res) => {
     }
     res.json(await goalsDb.createGoal(req.session.userId, body));
   } catch (e) {
-    console.error('/api/v1/goals POST error:', e.message);
+    console.error('/api/v1/goals POST error:', safeError(e));
     res.status(500).json({ error: 'Could not save goal.' });
   }
 });
@@ -2091,7 +2153,7 @@ router.patch('/v1/goals/:id', async (req, res) => {
     if (!updated) return res.status(404).json({ error: 'Goal not found.' });
     res.json(updated);
   } catch (e) {
-    console.error('/api/v1/goals PATCH error:', e.message);
+    console.error('/api/v1/goals PATCH error:', safeError(e));
     res.status(500).json({ error: 'Could not update goal.' });
   }
 });
@@ -2103,7 +2165,7 @@ router.delete('/v1/goals/:id', async (req, res) => {
     await goalsDb.deleteGoal(req.params.id, req.session.userId);
     res.json({ ok: true });
   } catch (e) {
-    console.error('/api/v1/goals DELETE error:', e.message);
+    console.error('/api/v1/goals DELETE error:', safeError(e));
     res.status(500).json({ error: 'Could not delete goal.' });
   }
 });
@@ -2218,7 +2280,7 @@ router.get('/v1/reports/transactions', async (req, res) => {
     const extras = await detailDb.getExtras(req.session.userId, transactions.map((r) => r.id));
     res.json({ from: v.from, to: v.to, transactions: detailDb.attachExtras(transactions, extras), truncated });
   } catch (e) {
-    console.error('/api/v1/reports/transactions error:', e.message);
+    console.error('/api/v1/reports/transactions error:', safeError(e));
     res.status(500).json({ error: 'Could not load transactions for this report' });
   }
 });
@@ -2230,7 +2292,7 @@ router.get('/v1/report-views', async (req, res) => {
     const views = await require('../db/reports').listViews(req.session.userId);
     res.json({ views: views.map(rv.toView) });
   } catch (e) {
-    console.error('/api/v1/report-views GET error:', e.message);
+    console.error('/api/v1/report-views GET error:', safeError(e));
     res.status(500).json({ error: 'Could not load saved reports' });
   }
 });
@@ -2248,7 +2310,7 @@ router.post('/v1/report-views', async (req, res) => {
     const row = await reportsDb.createView(req.session.userId, v.view);
     res.status(201).json({ view: rv.toView(row) });
   } catch (e) {
-    console.error('/api/v1/report-views POST error:', e.message);
+    console.error('/api/v1/report-views POST error:', safeError(e));
     res.status(500).json({ error: 'Could not save this report' });
   }
 });
@@ -2264,7 +2326,7 @@ router.patch('/v1/report-views/:id', async (req, res) => {
     if (!row) return res.status(404).json({ error: 'Saved report not found' });
     res.json({ view: rv.toView(row) });
   } catch (e) {
-    console.error('/api/v1/report-views PATCH error:', e.message);
+    console.error('/api/v1/report-views PATCH error:', safeError(e));
     res.status(500).json({ error: 'Could not update this report' });
   }
 });
@@ -2277,7 +2339,7 @@ router.delete('/v1/report-views/:id', async (req, res) => {
     if (!ok) return res.status(404).json({ error: 'Saved report not found' });
     res.json({ ok: true });
   } catch (e) {
-    console.error('/api/v1/report-views DELETE error:', e.message);
+    console.error('/api/v1/report-views DELETE error:', safeError(e));
     res.status(500).json({ error: 'Could not delete this report' });
   }
 });
@@ -2300,6 +2362,7 @@ router.all('/v1/:table', async (req, res) => {
 
   const uid = req.session.userId;
   const ucol = 'user_id';
+  const writableColumns = (body) => Object.keys(body).filter((key) => /^\w+$/.test(key) && key.toLowerCase() !== ucol);
   const raw = req.query.filter;
   const { where, vals } = parseFilters(raw);
   const isSingle = req.query.single === '1';
@@ -2324,20 +2387,18 @@ router.all('/v1/:table', async (req, res) => {
 
     if (req.method === 'POST') {
       const body = req.body || {};
-      body[ucol] = uid;
-      const keys = Object.keys(body).filter(k => /^\w+$/.test(k));
+      const keys = [...writableColumns(body), ucol];
       const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
       const { rows } = await pool.query(
         `INSERT INTO ${table} (${keys.join(', ')}) VALUES (${placeholders}) RETURNING *`,
-        keys.map(k => body[k])
+        keys.map(k => k === ucol ? uid : body[k])
       );
       return res.json(rows[0] || { ok: true });
     }
 
     if (req.method === 'PATCH') {
       const body = req.body || {};
-      delete body[ucol]; // never let client override user_id
-      const keys = Object.keys(body).filter(k => /^\w+$/.test(k));
+      const keys = writableColumns(body);
       if (!keys.length) return res.json({ ok: true });
       const setClause = keys.map((k, i) => `${k} = $${i + 2}`).join(', ');
       // BUG-3 FIX: rebuild filter placeholders offset after SET params to avoid collisions
@@ -2379,7 +2440,7 @@ router.all('/v1/:table', async (req, res) => {
 
     res.status(405).json({ error: 'Method not allowed' });
   } catch (e) {
-    console.error(`api /v1/${table} ${req.method} error:`, e.message);
+    console.error(`api /v1/${table} ${req.method} error:`, safeError(e));
     if (req.method === 'GET') return res.json([]);
     if (req.method === 'POST') {
       const badField = unknownColumnMessage(e, table);

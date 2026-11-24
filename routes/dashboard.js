@@ -2,6 +2,7 @@
 // Serves all /dashboard/* pages. All routes require authentication.
 // Does NOT own Pool — delegates to db/*.
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
@@ -119,7 +120,7 @@ async function autoRecalcScores(userId, profile) {
       saveRecommendationsBatch(userId, result.recommendations).catch(() => {});
     }
   } catch (e) {
-    console.error('autoRecalcScores error:', e.message);
+    console.error('autoRecalcScores error:', safeError(e));
   }
 }
 
@@ -157,7 +158,7 @@ router.get('/', async (req, res) => {
     // Recent synced transactions for the dashboard widget
     let recentTransactions = [];
     try { recentTransactions = await getRecentTransactions(req.session.userId, 6); }
-    catch (e) { console.error('Recent transactions error (run migrations?):', e.message); }
+    catch (e) { console.error('Recent transactions error (run migrations?):', safeError(e)); }
 
     // Signed transactions for the in/out cash-flow charting on the tiles
     let chartTxns = [];
@@ -180,7 +181,7 @@ router.get('/', async (req, res) => {
           const sorted = quotes.slice().sort((a, b) => (b.percent || 0) - (a.percent || 0));
           movers = { top: sorted.slice(0, 3), bottom: sorted.slice(-3).reverse() };
         }
-      } catch (e) { console.error('movers error:', e.message); }
+      } catch (e) { console.error('movers error:', safeError(e)); }
     }
 
     // Daily snapshot writes happen in the cron sweep; dashboard reads are immutable.
@@ -189,7 +190,7 @@ router.get('/', async (req, res) => {
       // Daily history is captured by the cron sweep, not mutated by dashboard reads.
       snapshots = await getSnapshots(req.session.userId, 366);
     } catch (snapErr) {
-      console.error('Snapshot error (run migrations?):', snapErr.message);
+      console.error('Snapshot error (run migrations?):', safeError(snapErr));
     }
 
     res.render('dashboard-overview', {
@@ -205,7 +206,7 @@ router.get('/', async (req, res) => {
       pageTitle: 'Dashboard'
     });
   } catch (err) {
-    console.error('Dashboard error:', err.message);
+    console.error('Dashboard error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Failed to load dashboard.' });
   }
 });
@@ -233,7 +234,7 @@ router.post('/ask/message', aiLimiter, async (req, res) => {
     ];
     const latestUserMsg = [...clean].reverse().find(m => m.role === 'user');
     if (latestUserMsg && INJECTION_PATTERNS.some(p => p.test(latestUserMsg.content))) {
-      console.warn('[advisor] Possible prompt injection by user', req.session.userId);
+      console.warn('[advisor] Possible prompt injection');
       return res.json({ ok: true, reply: "I can only answer financial education questions about tax, super, investing, and wealth building in Australia. What would you like to learn about?", live: advisor.hasAdvisor() });
     }
 
@@ -249,7 +250,7 @@ router.post('/ask/message', aiLimiter, async (req, res) => {
     const maal = computeMaalScore(profile);
     let docs = [];
     try { docs = await vaultDb.getReadableDocs(req.session.userId); }
-    catch (e) { console.error('vault docs for advisor failed:', e.message); }
+    catch (e) { console.error('vault docs for advisor failed:', safeError(e)); }
 
     // Fetch enriched context for the advisor
     const [txns, snaps, goals] = await Promise.all([
@@ -289,7 +290,7 @@ router.post('/ask/message', aiLimiter, async (req, res) => {
           }
         }
       } catch (e) {
-        console.error('[isaacus] grounding lookup failed:', e.message);
+        console.error('[isaacus] grounding lookup failed:', safeError(e));
       }
     }
 
@@ -301,17 +302,17 @@ router.post('/ask/message', aiLimiter, async (req, res) => {
     const sessionId = req.body.sessionId ? Number(req.body.sessionId) : null;
     if (sessionId) {
       try {
-        await advisorDb.appendMessage(sessionId, 'user', latestUserMsg?.content || '');
-        await advisorDb.appendMessage(sessionId, 'assistant', reply);
+        await advisorDb.appendMessage(sessionId, req.session.userId, 'user', latestUserMsg?.content || '');
+        await advisorDb.appendMessage(sessionId, req.session.userId, 'assistant', reply);
       } catch (persistErr) {
-        console.error('advisor persist error:', persistErr.message);
+        console.error('advisor persist error:', safeError(persistErr));
         // Non-fatal — don't fail the response
       }
     }
 
     res.json({ ok: true, reply, live: advisor.hasAdvisor() });
   } catch (err) {
-    console.error('ask/message error:', err.message);
+    console.error('ask/message error:', safeError(err));
     res.status(500).json({ error: 'The advisor hit a snag — try again in a moment.' });
   }
 });
@@ -324,7 +325,7 @@ router.post('/ask/session', async (req, res) => {
     const sessionId = await advisorDb.createSession(req.session.userId, firstMsg);
     res.json({ ok: true, sessionId });
   } catch (err) {
-    console.error('create advisor session error:', err.message);
+    console.error('create advisor session error:', safeError(err));
     res.status(500).json({ error: 'Failed to create session.' });
   }
 });
@@ -334,7 +335,7 @@ router.get('/ask/sessions', async (req, res) => {
     const sessions = await advisorDb.listSessions(req.session.userId);
     res.json({ ok: true, sessions });
   } catch (err) {
-    console.error('list advisor sessions error:', err.message);
+    console.error('list advisor sessions error:', safeError(err));
     res.status(500).json({ error: 'Failed to load sessions.' });
   }
 });
@@ -345,7 +346,7 @@ router.get('/ask/session/:id', async (req, res) => {
     if (messages === null) return res.status(404).json({ error: 'Session not found.' });
     res.json({ ok: true, messages });
   } catch (err) {
-    console.error('get advisor session error:', err.message);
+    console.error('get advisor session error:', safeError(err));
     res.status(500).json({ error: 'Failed to load session.' });
   }
 });
@@ -355,7 +356,7 @@ router.delete('/ask/session/:id', async (req, res) => {
     await advisorDb.deleteSession(Number(req.params.id), req.session.userId);
     res.json({ ok: true });
   } catch (err) {
-    console.error('delete advisor session error:', err.message);
+    console.error('delete advisor session error:', safeError(err));
     res.status(500).json({ error: 'Failed to delete session.' });
   }
 });
@@ -367,7 +368,7 @@ router.get('/ask', async (req, res) => {
     const ctx = await dashboardContext(req);
     res.render('dashboard-ask', { ...ctx, pageTitle: 'Ask Maal' });
   } catch (err) {
-    console.error('/ask error:', err.message);
+    console.error('/ask error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Failed to load Ask Maal.' });
   }
 });
@@ -377,13 +378,13 @@ router.get('/research', async (req, res) => {
     const ctx = await dashboardContext(req);
     let reports = [];
     try { reports = await researchDb.listReports(req.session.userId, 20); }
-    catch (e) { console.error('research history error (run migrations?):', e.message); }
+    catch (e) { console.error('research history error (run migrations?):', safeError(e)); }
     res.render('dashboard-research', {
       ...ctx, pageTitle: 'Research', reports,
       advisorReady: advisor.hasAdvisor(),
     });
   } catch (err) {
-    console.error('/research error:', err.message);
+    console.error('/research error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Failed to load Research.' });
   }
 });
@@ -401,15 +402,15 @@ router.post('/research/run', async (req, res) => {
     const id = await researchDb.createReport(req.session.userId, question);
     try {
       const { report, sources } = await runResearch(user, profile, maal, question);
-      await researchDb.completeReport(id, report, sources);
+      await researchDb.completeReport(id, req.session.userId, report, sources);
       res.json({ ok: true, id, report, sources, question });
     } catch (e) {
-      console.error('research run failed:', e.message);
-      await researchDb.failReport(id, 'The research engine hit a snag — please try again.');
+      console.error('research run failed:', safeError(e));
+      await researchDb.failReport(id, req.session.userId, 'The research engine hit a snag — please try again.');
       res.status(500).json({ error: 'The research engine hit a snag — please try again.' });
     }
   } catch (err) {
-    console.error('research/run error:', err.message);
+    console.error('research/run error:', safeError(err));
     res.status(500).json({ error: 'Could not start research.' });
   }
 });
@@ -421,7 +422,7 @@ router.get('/research/:id', async (req, res) => {
     if (!r) return res.status(404).json({ error: 'Report not found.' });
     res.json({ ok: true, report: r.report, sources: r.sources || [], question: r.question, status: r.status });
   } catch (err) {
-    console.error('research/:id error:', err.message);
+    console.error('research/:id error:', safeError(err));
     res.status(500).json({ error: 'Could not load report.' });
   }
 });
@@ -431,12 +432,12 @@ router.get('/radar', async (req, res) => {
     const ctx = await dashboardContext(req);
     let radars = [];
     try { radars = await radarDb.listRadars(req.session.userId); }
-    catch (e) { console.error('radar list error (run migrations?):', e.message); }
+    catch (e) { console.error('radar list error (run migrations?):', safeError(e)); }
     res.render('dashboard-radar', {
       ...ctx, pageTitle: 'Radar', radars, advisorReady: advisor.hasAdvisor(),
     });
   } catch (err) {
-    console.error('/radar error:', err.message);
+    console.error('/radar error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Failed to load Radar.' });
   }
 });
@@ -455,7 +456,7 @@ router.post('/radar', async (req, res) => {
     });
     res.json({ ok: true, id });
   } catch (err) {
-    console.error('radar create error:', err.message);
+    console.error('radar create error:', safeError(err));
     res.status(500).json({ error: 'Could not create radar.' });
   }
 });
@@ -465,7 +466,7 @@ router.delete('/radar/:id', async (req, res) => {
     await radarDb.deleteRadar(req.params.id, req.session.userId);
     res.json({ ok: true });
   } catch (err) {
-    console.error('radar delete error:', err.message);
+    console.error('radar delete error:', safeError(err));
     res.status(500).json({ error: 'Could not delete radar.' });
   }
 });
@@ -477,7 +478,7 @@ router.post('/radar/:id/run', async (req, res) => {
     if (!result) return res.status(404).json({ error: 'Radar not found.' });
     res.json({ ok: true, ...result });
   } catch (err) {
-    console.error('radar run error:', err.message);
+    console.error('radar run error:', safeError(err));
     res.status(500).json({ error: 'Radar run failed — try again.' });
   }
 });
@@ -510,7 +511,7 @@ router.get('/assets', async (req, res) => {
       cashAccounts, investments, properties, debts, superAccounts, otherAssets,
     });
   } catch (err) {
-    console.error('/assets error:', err.message);
+    console.error('/assets error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Failed to load Assets & Liabilities.' });
   }
 });
@@ -520,10 +521,10 @@ router.get('/vault', async (req, res) => {
     const ctx = await dashboardContext(req);
     let files = [];
     try { files = await vaultDb.listFiles(req.session.userId, 'vault'); }
-    catch (e) { console.error('vault list error (run migrations?):', e.message); }
+    catch (e) { console.error('vault list error (run migrations?):', safeError(e)); }
     res.render('dashboard-vault', { ...ctx, pageTitle: 'Vault', files });
   } catch (err) {
-    console.error('/vault error:', err.message);
+    console.error('/vault error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Failed to load Vault.' });
   }
 });
@@ -537,7 +538,7 @@ router.post('/vault/upload', upload.single('file'), async (req, res) => {
     // Best-effort: failure just means the file is stored but not yet readable.
     let extractedText = '';
     try { extractedText = await extractText(req.file.buffer, req.file.mimetype, req.file.originalname); }
-    catch (e) { console.error('extract on upload failed:', e.message); }
+    catch (e) { console.error('extract on upload failed:', safeError(e)); }
     const ALLOWED_MIME = new Set([
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -555,7 +556,7 @@ router.post('/vault/upload', upload.single('file'), async (req, res) => {
     });
     res.json({ ok: true, id, filename: req.file.originalname, size: req.file.size, hasText: !!extractedText });
   } catch (err) {
-    console.error('vault upload error:', err.message);
+    console.error('vault upload error:', safeError(err));
     res.status(500).json({ error: 'Upload failed.' });
   }
 });
@@ -578,7 +579,7 @@ router.post('/vault/extract/:id', async (req, res) => {
     const { fields, reason } = await advisor.extractFigures(doc.extracted_text);
     res.json({ ok: true, fields: fields || [], reason, filename: doc.filename });
   } catch (err) {
-    console.error('vault extract error:', err.message);
+    console.error('vault extract error:', safeError(err));
     res.status(500).json({ error: 'Could not read that document.' });
   }
 });
@@ -590,7 +591,7 @@ router.get('/vault/list/:kind', async (req, res) => {
     const files = await vaultDb.listFiles(req.session.userId, kind);
     res.json({ ok: true, files });
   } catch (err) {
-    console.error('vault list error:', err.message);
+    console.error('vault list error:', safeError(err));
     res.status(500).json({ error: 'Could not list files.' });
   }
 });
@@ -607,7 +608,7 @@ router.get('/vault/file/:id', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
     res.send(f.content);
   } catch (err) {
-    console.error('vault download error:', err.message);
+    console.error('vault download error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Could not load the file.' });
   }
 });
@@ -617,7 +618,7 @@ router.delete('/vault/file/:id', async (req, res) => {
     await vaultDb.deleteFile(req.params.id, req.session.userId);
     res.json({ ok: true });
   } catch (err) {
-    console.error('vault delete error:', err.message);
+    console.error('vault delete error:', safeError(err));
     res.status(500).json({ error: 'Could not delete file.' });
   }
 });
@@ -635,7 +636,7 @@ router.get('/transactions', async (req, res) => {
           basiqService.getTransactions(ctx.user.basiq_user_id, 25),
         ]);
       } catch (e) {
-        console.error('Basiq fetch failed:', e.message);
+        console.error('Basiq fetch failed:', safeError(e));
       }
     }
     // Fall back to transactions persisted at sync time if the live call
@@ -667,7 +668,7 @@ router.get('/transactions', async (req, res) => {
       statementFiles,
     });
   } catch (err) {
-    console.error('/transactions error:', err.message);
+    console.error('/transactions error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Failed to load Transactions.' });
   }
 });
@@ -677,10 +678,10 @@ router.get('/goals', async (req, res) => {
     const ctx = await dashboardContext(req);
     let goals = [];
     try { goals = await goalsDb.listGoals(req.session.userId); }
-    catch (e) { console.error('goals list error (run migrations?):', e.message); }
+    catch (e) { console.error('goals list error (run migrations?):', safeError(e)); }
     res.render('dashboard-goals', { ...ctx, pageTitle: 'Goals', goals });
   } catch (err) {
-    console.error('/goals error:', err.message);
+    console.error('/goals error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Failed to load Goals.' });
   }
 });
@@ -700,7 +701,7 @@ router.post('/goals', async (req, res) => {
     });
     res.json({ ok: true, id: created && created.id });
   } catch (err) {
-    console.error('goal create error:', err.message);
+    console.error('goal create error:', safeError(err));
     res.status(500).json({ error: 'Could not create goal.' });
   }
 });
@@ -710,7 +711,7 @@ router.post('/goals/:id/progress', async (req, res) => {
     await goalsDb.updateGoalProgress(req.params.id, req.session.userId, Number(req.body.current) || 0);
     res.json({ ok: true });
   } catch (err) {
-    console.error('goal progress error:', err.message);
+    console.error('goal progress error:', safeError(err));
     res.status(500).json({ error: 'Could not update goal.' });
   }
 });
@@ -720,7 +721,7 @@ router.delete('/goals/:id', async (req, res) => {
     await goalsDb.deleteGoal(req.params.id, req.session.userId);
     res.json({ ok: true });
   } catch (err) {
-    console.error('goal delete error:', err.message);
+    console.error('goal delete error:', safeError(err));
     res.status(500).json({ error: 'Could not delete goal.' });
   }
 });
@@ -743,7 +744,7 @@ router.post('/assets/update', async (req, res) => {
     await autoRecalcScores(req.session.userId, merged).catch(() => {});
     res.json({ ok: true });
   } catch (err) {
-    console.error('assets/update error:', err.message);
+    console.error('assets/update error:', safeError(err));
     res.status(500).json({ error: 'Failed to save.' });
   }
 });
@@ -760,7 +761,7 @@ router.post('/assets/remove', async (req, res) => {
     await autoRecalcScores(req.session.userId, merged).catch(() => {});
     res.json({ ok: true });
   } catch (err) {
-    console.error('assets/remove error:', err.message);
+    console.error('assets/remove error:', safeError(err));
     res.status(500).json({ error: 'Failed to remove.' });
   }
 });
@@ -789,7 +790,7 @@ async function refreshScoreAfterAssetChange(userId) {
     const effectiveProfile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
     await autoRecalcScores(userId, effectiveProfile);
   } catch (e) {
-    console.error('refreshScoreAfterAssetChange error:', e.message);
+    console.error('refreshScoreAfterAssetChange error:', safeError(e));
   }
 }
 
@@ -801,7 +802,7 @@ router.post('/assets/:type', async (req, res) => {
     await refreshScoreAfterAssetChange(req.session.userId);
     res.json({ ok: true, row });
   } catch (err) {
-    console.error('asset create error:', err.message);
+    console.error('asset create error:', safeError(err));
     res.status(500).json({ error: 'Failed to save.' });
   }
 });
@@ -815,7 +816,7 @@ router.put('/assets/:type/:id', async (req, res) => {
     await refreshScoreAfterAssetChange(req.session.userId);
     res.json({ ok: true, row });
   } catch (err) {
-    console.error('asset update error:', err.message);
+    console.error('asset update error:', safeError(err));
     res.status(500).json({ error: 'Failed to save.' });
   }
 });
@@ -829,7 +830,7 @@ router.delete('/assets/:type/:id', async (req, res) => {
     await refreshScoreAfterAssetChange(req.session.userId);
     res.json({ ok: true });
   } catch (err) {
-    console.error('asset delete error:', err.message);
+    console.error('asset delete error:', safeError(err));
     res.status(500).json({ error: 'Failed to delete.' });
   }
 });
@@ -846,7 +847,7 @@ router.post('/settings/notifications', async (req, res) => {
     await setNotificationPref(req.session.userId, key, !!value);
     res.json({ ok: true });
   } catch (err) {
-    console.error('settings/notifications error:', err.message);
+    console.error('settings/notifications error:', safeError(err));
     res.status(500).json({ error: 'Failed to save preference.' });
   }
 });
@@ -860,7 +861,7 @@ router.post('/settings/2fa', async (req, res) => {
     await setTwoFactor(req.session.userId, enabled);
     res.json({ ok: true, enabled });
   } catch (err) {
-    console.error('settings/2fa error:', err.message);
+    console.error('settings/2fa error:', safeError(err));
     res.status(500).json({ error: 'Failed to update two-factor authentication.' });
   }
 });
@@ -878,7 +879,7 @@ router.get('/settings', async (req, res) => {
       billingPlanName: planNames[req.query.plan] || '',
     });
   } catch (err) {
-    console.error('/settings error:', err.message);
+    console.error('/settings error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Failed to load Settings.' });
   }
 });
@@ -903,7 +904,7 @@ router.get('/scores', async (req, res) => {
       pageTitle: 'Scores'
     });
   } catch (err) {
-    console.error('/scores error:', err.message);
+    console.error('/scores error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Failed to load scores.' });
   }
 });
@@ -978,7 +979,7 @@ router.post('/scores/recalculate', async (req, res) => {
 
     res.redirect('/dashboard/scores');
   } catch (err) {
-    console.error('recalculate error:', err.message);
+    console.error('recalculate error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Recalculation failed.' });
   }
 });
@@ -997,7 +998,7 @@ router.get('/recommendations', async (req, res) => {
       pageTitle: 'Recommendations'
     });
   } catch (err) {
-    console.error('/recommendations error:', err.message);
+    console.error('/recommendations error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Failed to load recommendations.' });
   }
 });
@@ -1012,7 +1013,7 @@ router.post('/recommendations/:id/status', async (req, res) => {
     await updateRecommendationStatus(req.params.id, status, req.session.userId);
     res.json({ ok: true });
   } catch (err) {
-    console.error('Update rec status error:', err.message);
+    console.error('Update rec status error:', safeError(err));
     res.status(500).json({ error: 'Failed to update recommendation.' });
   }
 });
@@ -1029,7 +1030,7 @@ router.get('/accounts', async (req, res) => {
       pageTitle: 'Linked Accounts'
     });
   } catch (err) {
-    console.error('/accounts error:', err.message);
+    console.error('/accounts error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Failed to load accounts.' });
   }
 });
@@ -1046,7 +1047,7 @@ router.post('/accounts', async (req, res) => {
     });
     res.json({ ok: true });
   } catch (err) {
-    console.error('Add account error:', err.message);
+    console.error('Add account error:', safeError(err));
     res.status(500).json({ error: 'Failed to add account.' });
   }
 });
@@ -1058,7 +1059,7 @@ router.delete('/accounts/:id', async (req, res) => {
     await deleteAccount(req.params.id, req.session.userId);
     res.json({ ok: true });
   } catch (err) {
-    console.error('Delete account error:', err.message);
+    console.error('Delete account error:', safeError(err));
     res.status(500).json({ error: 'Failed to delete account.' });
   }
 });
@@ -1069,7 +1070,7 @@ router.post('/accounts/:id/sync', async (req, res) => {
     await syncAccount(req.params.id, req.session.userId);
     res.json({ ok: true });
   } catch (err) {
-    console.error('Sync account error:', err.message);
+    console.error('Sync account error:', safeError(err));
     res.status(500).json({ error: 'Failed to sync account.' });
   }
 });
@@ -1086,7 +1087,7 @@ router.get('/profile', async (req, res) => {
       success: null, error: null
     });
   } catch (err) {
-    console.error('/profile error:', err.message);
+    console.error('/profile error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Failed to load profile.' });
   }
 });
@@ -1164,7 +1165,7 @@ router.post('/profile',
           await assetsDb.createSuperAccount(req.session.userId, { label: 'Superannuation', balance: merged.super_balance, source: 'manual' });
         }
       } catch (e) {
-        console.error('profile super sync error:', e.message);
+        console.error('profile super sync error:', safeError(e));
       }
 
       const { user, profile, session } = await dashboardContext(req);
@@ -1174,7 +1175,7 @@ router.post('/profile',
         success: 'Profile saved.', error: null
       });
     } catch (err) {
-      console.error('Update profile error:', err.message);
+      console.error('Update profile error:', safeError(err));
       const ctx = await dashboardContext(req);
       res.render('dashboard-profile', {
         ...ctx, pageTitle: 'Profile', error: 'Failed to save profile.', success: null
@@ -1195,7 +1196,7 @@ router.get('/history', async (req, res) => {
       pageTitle: 'History'
     });
   } catch (err) {
-    console.error('/history error:', err.message);
+    console.error('/history error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Failed to load history.' });
   }
 });
@@ -1264,7 +1265,7 @@ Mention projection uncertainty and that this is not financial advice.` }
       pageTitle: 'Projections'
     });
   } catch (err) {
-    console.error('/projections error:', err.message);
+    console.error('/projections error:', safeError(err));
     res.status(500).render('error', { layout: false, message: 'Failed to load Projections.' });
   }
 });
@@ -1289,7 +1290,7 @@ router.get('/projections/what-if', async (req, res) => {
 
     res.json({ ok: true, projection, mc, extra });
   } catch (err) {
-    console.error('/projections error:', err.message);
+    console.error('/projections error:', safeError(err));
     res.status(500).json({ error: 'Projection failed. Please try again.' });
   }
 });

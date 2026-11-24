@@ -1,3 +1,4 @@
+const { safeError } = require('../lib/safe-log');
 const os = require('os');
 const jobs = require('../db/background-jobs');
 const { createBackgroundWorker } = require('../services/background-worker');
@@ -35,6 +36,6 @@ async function run() {
 }
 
 run().then(() => process.exit(0)).catch((error) => {
-  console.error('Background worker stopped:', error);
+  console.error('Background worker stopped:', safeError(error));
   process.exit(1);
 });

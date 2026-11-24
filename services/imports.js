@@ -1,3 +1,4 @@
+const { safeError } = require('../lib/safe-log');
 const crypto = require('crypto');
 const database = require('../db/import-runs');
 
@@ -23,7 +24,7 @@ function createEnqueueBasiqImportHandler(db) {
         status: run.status,
       });
     } catch (error) {
-      console.error('basiq import enqueue error:', error.message);
+      console.error('basiq import enqueue error:', safeError(error));
       return res.status(500).json({ error: 'Could not queue sync. Please try again.' });
     }
   };
@@ -39,7 +40,7 @@ function createGetImportRunHandler(db) {
       if (!run) return res.status(404).json({ error: 'Import run not found' });
       return res.json({ import_run: run });
     } catch (error) {
-      console.error('import run lookup error:', error.message);
+      console.error('import run lookup error:', safeError(error));
       return res.status(500).json({ error: 'Could not load import run.' });
     }
   };
@@ -60,7 +61,7 @@ function createSaveBasiqOwnershipHandler(saveOwnerType) {
       if (!result) return res.status(404).json({ error: 'Completed import or connected accounts not found.' });
       return res.json(result);
     } catch (error) {
-      console.error('Basiq account ownership could not be saved:', error.code || 'unknown');
+      console.error('Basiq account ownership could not be saved:', safeError(error));
       return res.status(500).json({ error: 'Could not save who owns these accounts. Please try again.' });
     }
   };

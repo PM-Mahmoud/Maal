@@ -4,6 +4,7 @@
 // db/referrals.js. Nothing here ever blocks a sign-up or a payment: failures
 // are logged and the main flow continues.
 
+const { safeError } = require('../lib/safe-log');
 const rules = require('../lib/referrals');
 const db = require('../db/referrals');
 
@@ -29,7 +30,7 @@ async function onSignup(req, newUser) {
       await db.recordSignup(row.user_id, newUser.id, row.code);
     }
   } catch (e) {
-    console.error('[referrals] onSignup failed:', e.message);
+    console.error('[referrals] onSignup failed:', safeError(e));
   } finally {
     if (req.session) delete req.session.referralCode;
   }
@@ -68,7 +69,7 @@ async function applyPendingReward(userId, stripe, subscriptionId) {
   const coupon = await ensureRenewalCoupon(stripe);
   await stripe.subscriptions.update(subId, { discounts: [{ coupon: coupon.id }] });
   await db.markRewardApplied(reward.id, userId, subId);
-  console.log(`[referrals] renewal reward applied for user ${userId}`);
+  console.log('[referrals] Applied renewal reward');
   return true;
 }
 
@@ -84,25 +85,25 @@ async function onPaid(userId, stripe, subscriptionId) {
       const s = await db.stats(referrerId);
       if (rules.shouldGrantReward(s.paid, s.rewards, !!s.open_reward)) {
         await db.createReward(referrerId);
-        console.log(`[referrals] reward granted to user ${referrerId}`);
+        console.log('[referrals] Granted reward');
         await applyPendingReward(referrerId, stripe);
       }
     }
     await applyPendingReward(userId, stripe, subscriptionId);
   } catch (e) {
-    console.error('[referrals] onPaid failed:', e.message);
+    console.error('[referrals] onPaid failed:', safeError(e));
   }
 }
 
 /** A yearly renewal was paid: an applied reward has now been used. */
 async function onRenewalPaid(userId) {
   try { await db.markAppliedRewardUsed(userId); }
-  catch (e) { console.error('[referrals] onRenewalPaid failed:', e.message); }
+  catch (e) { console.error('[referrals] onRenewalPaid failed:', safeError(e)); }
 }
 
 async function onRefund(userId) {
   try { await db.markRefunded(userId); }
-  catch (e) { console.error('[referrals] onRefund failed:', e.message); }
+  catch (e) { console.error('[referrals] onRefund failed:', safeError(e)); }
 }
 
 /** What the "Invite friends" card shows. */

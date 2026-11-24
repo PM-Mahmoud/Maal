@@ -5,6 +5,7 @@
  * Does NOT own: email templates (services/email.js), waitlist rules
  * (lib/waitlist-gate.js), onboarding wizard, user auth
  */
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const router = express.Router();
 const { computeScore } = require('../lib/score-engine');
@@ -79,7 +80,7 @@ router.post('/calculate', async (req, res) => {
 
   // Persist async — don't block the render
   saveScoreSubmission({ formData, result }).catch((err) => {
-    console.error('[score] Submission save error:', err.message);
+    console.error('[score] Submission save error:', safeError(err));
   });
 
   res.render('score', { layout: false,
@@ -109,7 +110,7 @@ router.post('/save', authLimiter, async (req, res) => {
   saveScoreSubmission({
     formData: { profession: 'everyday Australian', stage: 'quick-score', age: report.inputs.age, annualIncome: report.inputs.income },
     result: { score: report.total, grade: report.band, components: report.pillars, recommendations: report.nextSteps },
-  }).catch((e) => console.error('[score/save] submission:', e.message));
+  }).catch((e) => console.error('[score/save] submission:', safeError(e)));
 
   let waitlisted = false;
   if (consent) {
@@ -117,7 +118,7 @@ router.post('/save', authLimiter, async (req, res) => {
       await saveWaitlistEmail(email, { name, consent: true, source: gate.normaliseSource(body.source), score: report.total });
       waitlisted = true;
     } catch (e) {
-      console.error('[score/save] waitlist:', e.message);
+      console.error('[score/save] waitlist:', safeError(e));
     }
   }
 
@@ -126,7 +127,7 @@ router.post('/save', authLimiter, async (req, res) => {
     await sendScoreReport(email, { name, report, waitlisted });
     emailed = true;
   } catch (e) {
-    console.error('[score/save] score email failed:', e.message);
+    console.error('[score/save] score email failed:', safeError(e));
   }
 
   if (!emailed && !waitlisted) {

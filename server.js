@@ -1,6 +1,7 @@
 // server.js
 // Application entry point. Wires middleware, mounts route groups, starts server.
 
+const { safeError } = require('./lib/safe-log');
 const express = require('express');
 const expressLayouts = require('express-ejs-layouts');
 const path = require('path');
@@ -8,11 +9,13 @@ const { buildLandingContext } = require('./lib/landing-context');
 const { sessionStore } = require('./db/auth');
 
 // ─── Process-level error handlers ─────────────────────────────────────────
-process.on('unhandledRejection', (reason) => console.error('Unhandled rejection:', reason));
-process.on('uncaughtException', (err) => { console.error('Uncaught exception:', err); process.exit(1); });
+process.on('unhandledRejection', (reason) => console.error('Unhandled rejection:', safeError(reason)));
+process.on('uncaughtException', (err) => { console.error('Uncaught exception:', safeError(err)); process.exit(1); });
 
 const app = express();
 const port = process.env.PORT || 3000;
+const queryMetrics = require('./db/query-metrics');
+if (queryMetrics.enabled) app.use('/api', queryMetrics.beginRequest);
 
 // ─── Security headers (Helmet + report-only strict CSP + CSRF guard) ───────
 // See lib/security-headers.js for what each piece does and why.
@@ -107,7 +110,7 @@ app.get('/health', async (_req, res) => {
     await pool.query('SELECT 1');
     dbOk = true;
   } catch (e) {
-    console.error('Health check DB error:', e.message);
+    console.error('Health check DB error:', safeError(e));
   }
   if (!dbOk) {
     return res.status(503).json({ status: 'unhealthy', db: false });
@@ -175,7 +178,7 @@ app.get('/internal/radar/run', async (req, res) => {
     const result = await runDueRadars();
     res.json({ ok: true, ...result });
   } catch (e) {
-    console.error('radar cron error:', e.message);
+    console.error('radar cron error:', safeError(e));
     res.status(500).json({ error: 'radar sweep failed' });
   }
 });
@@ -193,7 +196,7 @@ app.get('/internal/constants/drift', async (req, res) => {
     const report = await runDriftCheck();
     res.json({ ok: true, ...report });
   } catch (e) {
-    console.error('constants drift-check error:', e.message);
+    console.error('constants drift-check error:', safeError(e));
     res.status(500).json({ error: 'drift check failed' });
   }
 });
@@ -213,7 +216,7 @@ app.get('/internal/ingest-knowledge', (req, res) => {
       await runIngest({ verbose: true });
       console.log('[ingest] Knowledge base ingest completed successfully');
     } catch (e) {
-      console.error('[ingest] Knowledge base ingest failed:', e.message);
+      console.error('[ingest] Knowledge base ingest failed:', safeError(e));
     }
   });
 });
@@ -230,7 +233,7 @@ app.get('/internal/digest/run', async (req, res) => {
     const result = await runDailyDigest();
     res.json({ ok: true, ...result });
   } catch (e) {
-    console.error('digest sweep error:', e.message);
+    console.error('digest sweep error:', safeError(e));
     res.status(500).json({ error: 'digest sweep failed' });
   }
 });
@@ -264,7 +267,7 @@ app.post('/webhooks/twilio/sms', async (req, res) => {
     const { messages } = await handleInboundSms({ from: req.body.From, body: req.body.Body });
     return respondTwiml(messages);
   } catch (e) {
-    console.error('[twilio] inbound SMS failed:', e.message);
+    console.error('[twilio] inbound SMS failed:', safeError(e));
     return respondTwiml(['Sorry — something went wrong handling your message. Please try again shortly.']);
   }
 });
@@ -373,11 +376,11 @@ app.post('/contact', async (req, res) => {
       page: 'contact form',
       replyTo: email, // hitting Reply answers the sender directly
     }).catch(err => console.error(
-      `[contact] Notification email failed (message IS saved in Postgres): ${err.message}`
+      "[contact] Notification email failed (message IS saved in Postgres):", safeError(err)
     ));
     res.render('contact', { ...renderArgs, success: true, name: '', email: '', message: '' });
   } catch (err) {
-    console.error('[contact] Failed to save message:', err.message);
+    console.error('[contact] Failed to save message:', safeError(err));
     res.render('contact', renderArgs);
   }
 });
@@ -444,7 +447,7 @@ app.use('*', (req, res, next) => {
 // Must be registered after all routes. Catches any error passed to next(err)
 // or thrown in a synchronous route handler.
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
+  console.error('Unhandled error:', safeError(err));
   if (res.headersSent) return next(err);
   res.status(500).render('error', { layout: false, message: 'Something went wrong. Please try again.' });
 });
@@ -456,7 +459,7 @@ const server = app.listen(port, () => {
   // offer a retry instead of polling forever. Best-effort (pre-migration safe).
   require('./db/research').markOrphanJobsFailed()
     .then((n) => { if (n) console.log(`[research] reaped ${n} orphaned job(s) on boot`); })
-    .catch((e) => console.error('[research] orphan reap failed:', e.message));
+    .catch((e) => console.error('[research] orphan reap failed:', safeError(e)));
 });
 
 // ─── Graceful shutdown on SIGTERM (Render redeploys) ──────────────────────

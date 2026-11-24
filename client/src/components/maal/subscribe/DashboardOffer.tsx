@@ -75,7 +75,7 @@ export function DashboardOffer({ open, onClose, onJoin, usage: usageProp }: Dash
 
   return (
     <div className="msub ms-modal" role="dialog" aria-modal="true" aria-labelledby="ms-offer-price" onClick={(e) => { if (e.target === e.currentTarget) close(); }}>
-      <div className="ms-offer ms-sky">
+      <div className="ms-dashboard-offer ms-sky">
         <button type="button" className="ms-offer-close" onClick={close} aria-label="Close offer">
           <X className="size-5" strokeWidth={1.6} />
         </button>
@@ -90,7 +90,7 @@ export function DashboardOffer({ open, onClose, onJoin, usage: usageProp }: Dash
           <button type="button" className="ms-btn ms-btn-light" onClick={join}>Join today</button>
         </div>
         <p className="ms-offer-terms">
-          <button type="button" className="ms-link" style={{ color: "#C1DDE8", fontSize: 14 }} aria-expanded={termsOpen} onClick={() => setTermsOpen((o) => !o)}>
+          <button type="button" className="ms-link" aria-expanded={termsOpen} onClick={() => setTermsOpen((o) => !o)}>
             Terms apply
           </button>
         </p>

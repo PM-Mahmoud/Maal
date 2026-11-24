@@ -6,8 +6,10 @@ import { aud } from "@/components/maal/home/format";
 import { saveBudget } from "../settings/api";
 import { getBudgetSuggestion, type SuggestionResponse } from "./api";
 import { ErrorLine, monthLabel } from "./parts";
+import { UsageLimitError } from "@/lib/usage-limit.mjs";
+import { UsageLimitPrompt } from "@/components/maal/UsageLimitPrompt";
 
-type Step = "intro" | "loading" | "thin" | "error" | "gathered" | "suggested" | "finalise" | "done" | "categories";
+type Step = "intro" | "loading" | "thin" | "error" | "limit" | "gathered" | "suggested" | "finalise" | "done" | "categories";
 
 /**
  * Creating a budget with Maal (HEL-86). Full-screen flow:
@@ -56,7 +58,10 @@ export function AiBudgetBuilder({ onClose, onManual, onSaved }: {
       setValue(r.suggestion.suggested);
       setCats(r.suggestion.categories.map((c) => ({ group: c.group, budget: String(c.budget), on: true })));
       setStep("gathered");
-    } catch (e) { setErr((e as Error).message); setStep("error"); }
+    } catch (e) {
+      setErr((e as Error).message);
+      setStep(e instanceof UsageLimitError ? "limit" : "error");
+    }
   }
 
   async function setBudget() {
@@ -103,6 +108,14 @@ export function AiBudgetBuilder({ onClose, onManual, onSaved }: {
             <div className="bd-ai-center" aria-busy="true">
               <span className="bd-ai-spinner" aria-hidden />
               <h1 ref={titleRef} tabIndex={-1} className="bd-ai-sub">Looking at your last three months…</h1>
+            </div>
+          )}
+
+          {step === "limit" && (
+            <div className="bd-ai-center">
+              <h1 ref={titleRef} tabIndex={-1} className="bd-ai-title">Budget suggestions</h1>
+              <UsageLimitPrompt message={err || "You’ve reached your plan’s usage limit."} />
+              <button type="button" className="bd-ai-secondary" onClick={onManual}>Set my budget myself</button>
             </div>
           )}
 
@@ -169,7 +182,8 @@ export function AiBudgetBuilder({ onClose, onManual, onSaved }: {
                   {(wording?.why?.length ? wording.why : ruleWhy(s)).map((w) => <li key={w}>{w}</li>)}
                 </ul>
               </div>
-              {data?.wording_status === "plan" && <p className="bd-ai-note">Maal’s written explanation is part of membership. The numbers above are the same either way.</p>}
+              {data?.wording_status === "plan" && <UsageLimitPrompt message="Join Maal to get a written explanation alongside your suggested budget." />}
+              {data?.wording_status === "limit" && <UsageLimitPrompt message="You’ve reached this month’s Ask Maal limit for written explanations. Your suggested budget is ready to use." />}
               <button type="button" className="bd-ai-primary" onClick={() => go("finalise")}>Continue</button>
             </div>
           )}

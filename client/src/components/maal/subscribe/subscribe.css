@@ -15,7 +15,7 @@
   --ms-ink: #202321;
   --ms-ink-strong: #08090B;
   --ms-muted: #646663;
-  --ms-faint: #929491;
+  --ms-faint: #646663;
   --ms-hair: #E5E5E2;
   --ms-list: #EFEFEC;
   --ms-list-hair: #D7D8D4;
@@ -42,18 +42,18 @@
 .ms-sky {
   position: relative; overflow: hidden; color: #fff;
   background:
-    radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,.85), transparent 60%),
-    radial-gradient(1px 1px at 28% 62%, rgba(255,255,255,.6), transparent 60%),
-    radial-gradient(1.5px 1.5px at 41% 33%, rgba(255,255,255,.7), transparent 60%),
-    radial-gradient(1px 1px at 57% 12%, rgba(255,255,255,.75), transparent 60%),
-    radial-gradient(1.5px 1.5px at 66% 71%, rgba(255,255,255,.55), transparent 60%),
-    radial-gradient(1px 1px at 79% 27%, rgba(255,255,255,.8), transparent 60%),
-    radial-gradient(1px 1px at 88% 53%, rgba(255,255,255,.6), transparent 60%),
-    radial-gradient(1.5px 1.5px at 93% 84%, rgba(255,255,255,.5), transparent 60%),
-    radial-gradient(1px 1px at 7% 79%, rgba(255,255,255,.55), transparent 60%),
-    radial-gradient(1px 1px at 47% 90%, rgba(255,255,255,.45), transparent 60%),
-    radial-gradient(120% 70% at 50% 120%, rgba(150,196,220,.75), rgba(150,196,220,0) 70%),
-    linear-gradient(180deg, #0A1A24 0%, #12303F 38%, #2B5468 72%, #5F8EA4 100%);
+    radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,calc(.85 * var(--ms-sky-stars, 1))), transparent 60%),
+    radial-gradient(1px 1px at 28% 62%, rgba(255,255,255,calc(.6 * var(--ms-sky-stars, 1))), transparent 60%),
+    radial-gradient(1.5px 1.5px at 41% 33%, rgba(255,255,255,calc(.7 * var(--ms-sky-stars, 1))), transparent 60%),
+    radial-gradient(1px 1px at 57% 12%, rgba(255,255,255,calc(.75 * var(--ms-sky-stars, 1))), transparent 60%),
+    radial-gradient(1.5px 1.5px at 66% 71%, rgba(255,255,255,calc(.55 * var(--ms-sky-stars, 1))), transparent 60%),
+    radial-gradient(1px 1px at 79% 27%, rgba(255,255,255,calc(.8 * var(--ms-sky-stars, 1))), transparent 60%),
+    radial-gradient(1px 1px at 88% 53%, rgba(255,255,255,calc(.6 * var(--ms-sky-stars, 1))), transparent 60%),
+    radial-gradient(1.5px 1.5px at 93% 84%, rgba(255,255,255,calc(.5 * var(--ms-sky-stars, 1))), transparent 60%),
+    radial-gradient(1px 1px at 7% 79%, rgba(255,255,255,calc(.55 * var(--ms-sky-stars, 1))), transparent 60%),
+    radial-gradient(1px 1px at 47% 90%, rgba(255,255,255,calc(.45 * var(--ms-sky-stars, 1))), transparent 60%),
+    radial-gradient(120% 70% at 50% 120%, var(--ms-sky-glow, rgba(150,196,220,.75)), transparent 70%),
+    linear-gradient(180deg, #0A1A24 0%, #12303F 38%, #2B5468 72%, var(--ms-sky-end, #5F8EA4) 100%);
 }
 .ms-sky::after { /* fine grain so the gradient doesn't band */
   content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .18;
@@ -165,23 +165,48 @@
 .ms-blur { filter: blur(4px); pointer-events: none; user-select: none; }
 
 /* ---------- Dashboard offer (frame 01) ---------- */
-.ms-modal { position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; padding: 16px; background: rgba(248,249,246,.55); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
-.ms-offer {
-  position: relative; width: min(742px, 100%); border-radius: 21px; padding: 72px 24px 22px; text-align: center;
-  background-color: #052E41; box-shadow: 0 30px 80px rgba(5,46,65,.35);
+.ms-modal {
+  --ms-offer-gutter: 16px;
+  position: fixed; inset: 0; z-index: 55; display: grid; place-items: center;
+  padding: var(--ms-offer-gutter); background: rgba(6,17,24,.48);
+  backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
 }
-.ms-offer.ms-sky { background-color: #052E41; }
-.ms-offer-kicker { font-size: 12px; letter-spacing: .17em; text-transform: uppercase; color: #fff; }
-.ms-offer-badge { display: inline-flex; align-items: center; height: 36px; padding: 0 16px; border-radius: 11px; margin-top: 30px; background: #07718A; color: #BCE6F0; font-size: 15px; }
-.ms-offer-price { font-family: var(--ms-serif); font-size: clamp(84px, 12vw, 132px); line-height: 1; color: #fff; margin-top: 8px; letter-spacing: -0.02em; }
-.ms-offer-per { font-family: var(--ms-serif); font-size: clamp(28px, 4vw, 38px); line-height: 1.1; color: #fff; margin-top: 4px; }
-.ms-offer-renew { margin-top: 18px; font-size: 16px; color: #fff; }
-.ms-offer-cta { margin-top: 28px; }
-.ms-offer-terms { margin-top: 34px; font-size: 14px; color: #C1DDE8; }
-.ms-offer-terms a, .ms-offer-terms button { color: #C1DDE8; }
-.ms-offer-close { position: absolute; top: 16px; right: 16px; width: 38px; height: 38px; border-radius: 10px; border: 0; background: rgba(255,255,255,.08); color: #fff; display: grid; place-items: center; cursor: pointer; }
+.ms-dashboard-offer.ms-sky {
+  --ms-sky-stars: .22;
+  --ms-sky-glow: rgba(84,155,188,.22);
+  --ms-sky-end: #254E67;
+  position: relative; width: min(560px, 100%);
+  max-height: calc(100dvh - 2 * var(--ms-offer-gutter));
+  overflow-y: auto; overscroll-behavior: contain;
+  border-radius: 21px; padding: clamp(42px, 7vh, 56px) clamp(20px, 5vw, 40px) 24px;
+  text-align: center; box-shadow: 0 24px 68px rgba(5,30,45,.40);
+}
+.ms-dashboard-offer .ms-offer-kicker { margin: 0; font-size: 12px; line-height: 1.5; letter-spacing: .13em; text-transform: uppercase; color: #fff; }
+.ms-offer-badge {
+  display: inline-flex; align-items: center; min-height: 30px; padding: 5px 12px;
+  border-radius: 9px; margin-top: 16px; background: #064B5C; color: #fff; font-size: 14px;
+}
+.ms-dashboard-offer .ms-offer-price {
+  margin: 10px 0 0; font-family: var(--ms-serif); font-size: clamp(62px, 10vw, 94px);
+  line-height: 1; color: #fff; letter-spacing: -.035em;
+}
+.ms-dashboard-offer .ms-offer-per { margin: 5px 0 0; font-family: var(--ms-serif); font-size: clamp(25px, 4vw, 32px); line-height: 1.15; color: #fff; }
+.ms-dashboard-offer .ms-offer-renew { margin: 13px auto 0; max-width: 29rem; font-size: 15px; line-height: 1.5; color: #F4FAFE; }
+.ms-offer-cta { margin-top: 20px; }
+.ms-offer-cta .ms-btn-light { height: 48px; max-width: 100%; padding: 0 36px; font-size: 17px; }
+.ms-dashboard-offer .ms-offer-terms { margin: 18px 0 0; font-size: 14px; color: #fff; }
+.ms-offer-terms button { color: #fff; font-size: inherit; }
+.ms-dashboard-offer :focus-visible { outline-color: #BCECFF; }
+.ms-offer-close {
+  position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; border-radius: 10px;
+  border: 0; background: rgba(255,255,255,.08); color: #fff; display: grid; place-items: center; cursor: pointer;
+}
 .ms-offer-close:hover { background: rgba(255,255,255,.18); }
-@media (max-width: 480px) { .ms-offer { padding-top: 56px; } .ms-offer-renew { font-size: 14.5px; } }
+@media (max-width: 480px) {
+  .ms-modal { --ms-offer-gutter: 12px; }
+  .ms-dashboard-offer.ms-sky { padding-top: 52px; }
+}
+
 
 /* ---------- Complete onboarding card + dialog ---------- */
 .ms-onb-card {

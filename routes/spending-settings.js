@@ -12,6 +12,7 @@
 //
 // Every db call passes req.session.userId; db/budgets.js filters by user_id.
 
+const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const s = require('../lib/spending-settings');
 
@@ -25,7 +26,7 @@ function createSpendingSettingsRouter({ db = require('../db/budgets'), categorie
     next();
   }
   function fail(res, where, e) {
-    console.error(`[spending-settings] ${where} failed:`, e && e.message);
+    console.error(`[spending-settings] ${where} failed:`, safeError(e));
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 

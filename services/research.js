@@ -4,6 +4,7 @@
 // that cites its sources. Degrades gracefully — with no data keys it still
 // produces a model-only answer; with no LLM it returns a clear message.
 
+const { safeError } = require('../lib/safe-log');
 const advisor = require('./advisor');
 const gateway = require('./gateway');
 const marketdata = require('./marketdata');
@@ -49,7 +50,7 @@ async function runResearch(user, profile, maal, question) {
           news.slice(0, 6).map((n) => `- ${n.headline} (${n.source})`).join('\n'));
         news.slice(0, 6).forEach((n) => { if (n.url) sources.push({ title: n.headline, url: n.url, source: n.source }); });
       }
-    } catch (e) { console.error('research: market news failed:', e.message); }
+    } catch (e) { console.error('research: market news failed:', safeError(e)); }
   }
 
   // 2. Web + news grounding (Bing)
@@ -63,7 +64,7 @@ async function runResearch(user, profile, maal, question) {
         contextChunks.push(`Source: ${r.title}\n${r.snippet}\n(${r.url})`);
         if (r.url) sources.push({ title: r.title, url: r.url, source: r.source });
       });
-    } catch (e) { console.error('research: grounding failed:', e.message); }
+    } catch (e) { console.error('research: grounding failed:', safeError(e)); }
   }
 
   const dataBlock = contextChunks.length
@@ -184,7 +185,7 @@ async function gather(question, tickers) {
         contextChunks.push(`Source: ${r.title}\n${r.snippet || r.text || ''}\n(${r.url})`);
         sources.push({ title: r.title, url: r.url, source: r.source });
       });
-    } catch (e) { console.error('deep research: grounding failed:', e.message); }
+    } catch (e) { console.error('deep research: grounding failed:', safeError(e)); }
   }
 
   // Live market news (Finnhub).
@@ -195,7 +196,7 @@ async function gather(question, tickers) {
         contextChunks.push('Recent market news (Finnhub):\n'
           + news.slice(0, 5).map((n) => `- ${n.headline} (${n.source})`).join('\n'));
       }
-    } catch (e) { console.error('deep research: market news failed:', e.message); }
+    } catch (e) { console.error('deep research: market news failed:', safeError(e)); }
   }
 
   // Depth: price series (Financial Datasets) for the quant phase + fundamentals.
@@ -210,7 +211,7 @@ async function gather(question, tickers) {
             + (facts.market_cap ? `, market cap ${aud(facts.market_cap)}` : '')
             + (facts.sector ? `, sector ${facts.sector}` : ''));
         }
-      } catch (e) { console.error(`deep research: fundamentals ${t} failed:`, e.message); }
+      } catch (e) { console.error('Deep research fundamentals request failed:', safeError(e)); }
     }
   }
 
@@ -220,10 +221,10 @@ async function gather(question, tickers) {
 // The full async pipeline. Drives the job row through its phases and, on success,
 // writes the report to research_reports + stores the quant result on the job.
 // Never throws — failures are recorded on the job so the client can offer retry.
-async function runDeepResearch({ jobId, user, profile, maal, question }) {
+async function runDeepResearch({ jobId, userId, profile, maal, question }) {
   try {
     if (!advisor.hasAdvisor()) {
-      await researchDb.failJob(jobId, 'Research needs the AI engine configured (AZURE_OPENAI_* / gateway).');
+      await researchDb.failJob(jobId, userId, 'Research needs the AI engine configured (AZURE_OPENAI_* / gateway).');
       return;
     }
 
@@ -231,11 +232,11 @@ async function runDeepResearch({ jobId, user, profile, maal, question }) {
     const tickers = extractTickers(question);
 
     // GATHER
-    await researchDb.setJobPhase(jobId, 'gather');
+    await researchDb.setJobPhase(jobId, userId, 'gather');
     const { sources, contextChunks, seriesBySymbol } = await gather(question, tickers);
 
     // COMPUTE — benchmark = S&P 500 proxy if available, else empty (beta n/a).
-    await researchDb.setJobPhase(jobId, 'compute');
+    await researchDb.setJobPhase(jobId, userId, 'compute');
     let marketSeries = [];
     if (financialdatasets.hasFinancialDatasets()) {
       try { marketSeries = await financialdatasets.getCloseSeries('SPY', { days: 400 }); }
@@ -244,7 +245,7 @@ async function runDeepResearch({ jobId, user, profile, maal, question }) {
     const computed = computeQuant(seriesBySymbol, marketSeries);
 
     // WRITE
-    await researchDb.setJobPhase(jobId, 'write');
+    await researchDb.setJobPhase(jobId, userId, 'write');
     const evidence = [quantEvidence(computed), contextChunks.join('\n\n')].filter(Boolean).join('\n\n');
     const dataBlock = evidence
       ? `\n\nEvidence to ground your analysis (do NOT cite inline or list sources):\n${evidence}`
@@ -256,22 +257,22 @@ async function runDeepResearch({ jobId, user, profile, maal, question }) {
     let report = await advisor.complete(messages, { role: 'reasoner', maxTokens: 1800, temperature: 0.5 });
 
     // VERIFY (blocking critique + one revision; ships regardless).
-    await researchDb.setJobPhase(jobId, 'verify');
+    await researchDb.setJobPhase(jobId, userId, 'verify');
     try {
       const v = await gateway.verifyAndRevise({ messages, draft: report, opts: { role: 'reasoner', maxTokens: 1800 } });
       if (v && v.text) report = v.text;
-    } catch (e) { console.error('deep research: verify failed (shipping draft):', e.message); }
+    } catch (e) { console.error('deep research: verify failed (shipping draft):', safeError(e)); }
 
     // RENDER — persist the report; the PDF is generated on demand by the route.
-    await researchDb.setJobPhase(jobId, 'render');
+    await researchDb.setJobPhase(jobId, userId, 'render');
     const seen = new Set();
     const uniqueSources = sources.filter((s) => s.url && !seen.has(s.url) && seen.add(s.url));
-    const reportId = await researchDb.createReport(user ? user.id : profile.user_id, question);
-    await researchDb.completeReport(reportId, report, uniqueSources);
-    await researchDb.completeJob(jobId, reportId, { quant: computed, tickers, sourceCount: uniqueSources.length });
+    const reportId = await researchDb.createReport(userId, question);
+    await researchDb.completeReport(reportId, userId, report, uniqueSources);
+    await researchDb.completeJob(jobId, userId, reportId, { quant: computed, tickers, sourceCount: uniqueSources.length });
   } catch (e) {
-    console.error('deep research pipeline failed:', e.message);
-    await researchDb.failJob(jobId, 'The research engine hit a snag — please run it again.');
+    console.error('deep research pipeline failed:', safeError(e));
+    await researchDb.failJob(jobId, userId, 'The research engine hit a snag — please run it again.');
   }
 }
 

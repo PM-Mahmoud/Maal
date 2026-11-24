@@ -1,9 +1,11 @@
 // Shared pg Pool singleton
-const { Pool } = require('pg');
+const { Client, Pool } = require('pg');
+const queryMetrics = require('./query-metrics');
 const { databaseSsl } = require('./ssl');
 
 if (!global.__maalPool) {
   global.__maalPool = new Pool({
+    ...(queryMetrics.enabled ? { Client: queryMetrics.instrumentClient(Client) } : {}),
     connectionString: process.env.DATABASE_URL,
     ssl: databaseSsl(process.env.DATABASE_URL),
     // Single shared pool for the whole app (db/auth.js reuses this too).

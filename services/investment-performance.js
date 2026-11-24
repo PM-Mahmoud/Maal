@@ -1,3 +1,4 @@
+const { safeError } = require('../lib/safe-log');
 const db = require('../db/investment-performance');
 const { calculateModifiedDietz } = require('../lib/investment-performance');
 
@@ -37,7 +38,7 @@ function createInvestmentPerformanceHandler(calculate) {
       const days = Math.min(Math.max(parseInt(req.query.days, 10) || 365, 1), 3660);
       return res.json(await calculate(req.session.userId, days));
     } catch (error) {
-      console.error('/api/v1/investment-performance error:', error.message);
+      console.error('/api/v1/investment-performance error:', safeError(error));
       return res.status(500).json({ error: 'Could not calculate investment performance.' });
     }
   };
