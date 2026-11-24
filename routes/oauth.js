@@ -85,6 +85,7 @@ router.get('/auth/google', (req, res) => {
   const state = require('crypto').randomBytes(16).toString('hex');
   req.session.oauthState = state;
   req.session.oauthBase = requestBase(req);
+  req.session.oauthFromSignup = req.query.from === 'signup';
   req.session.save(() => res.redirect(googleAuthUrl(state, req.session.oauthBase)));
 });
 
@@ -135,6 +136,9 @@ router.get('/auth/google/callback', async (req, res) => {
         });
         require('../services/waitlist-access').recordJoined(profile.email);
         await require('../services/referrals').onSignup(req, user);
+        if (req.session.oauthFromSignup) {
+          await require('../db/training-consents').recordSignupGrant(user.id, 'signup_google');
+        }
         // Mark email verified immediately for OAuth users
         await require('../db/pool').query(
           `UPDATE users SET email_verified = true WHERE id = $1`, [user.id]

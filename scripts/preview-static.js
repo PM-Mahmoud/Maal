@@ -139,6 +139,10 @@ app.get('/about', (_req, res, next) => {
   ejs.renderFile(path.join(VIEWS, 'about.ejs'), { analyticsSnippet: '', user: null })
     .then(html => res.send(html)).catch(next);
 });
+app.get('/ai-transparency', (_req, res, next) => {
+  ejs.renderFile(path.join(VIEWS, 'ai-transparency.ejs'), { analyticsSnippet: '', user: null })
+    .then(html => res.send(html)).catch(next);
+});
 app.get('/security', (_req, res, next) => {
   ejs.renderFile(path.join(VIEWS, 'security.ejs'), { analyticsSnippet: '', user: null })
     .then(html => res.send(html)).catch(next);
@@ -656,6 +660,17 @@ app.get('/api/v1/goals', (_req, res) => res.json([
 ]));
 app.get('/api/v1/vault', (_req, res) => res.json([]));
 app.get('/api/v1/widgets', (_req, res) => res.json([]));
+// Local fixture for the account privacy page and first-run notice.
+const privacyConsent = require('../lib/training-consent');
+const previewConsents = [];
+app.get('/api/v1/privacy/training-consent', (_req, res) => res.json(privacyConsent.summarize(previewConsents)));
+app.post('/api/v1/privacy/training-consent', express.json(), (req, res) => {
+  if (typeof req.body?.granted !== 'boolean') return res.status(400).json({ error: 'granted must be true or false.' });
+  previewConsents.push({
+    scope: 'general', granted: req.body.granted, created_at: new Date(), policy_version: privacyConsent.POLICY_VERSION,
+  });
+  res.json(privacyConsent.summarize(previewConsents));
+});
 app.get('/api/v1/alerts', (req, res) => res.json({
   alerts: [
     { id: 'a1', name: 'BHP price watch', prompt: 'Alert me if BHP drops more than 5% in a week', active: true, last_status: 'OK' },
