@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as Popover from "@radix-ui/react-popover";
@@ -6,7 +6,7 @@ import { MoreVertical, RefreshCw, EyeOff, Eye, ListFilter, Settings, ChevronRigh
 import type { Snapshot } from "@/lib/snapshots";
 import {
   RANGES, filteredSeries, filteredTotals, isPartialSelection, seriesChange, sliceSeries,
-  type HomeAccount, type HomeRange,
+  type HomeAccount, type HomeRange, type SeriesPoint,
 } from "../../../../../shared/home-accounts.mjs";
 import { AreaChart } from "./AreaChart";
 import { AccountFilter } from "./AccountFilter";
@@ -44,15 +44,40 @@ export function NetWorthCard({
   }, [storedFilter, accounts]);
   const filtered = isPartialSelection(accounts, selected);
 
+  const historyKey = filtered
+    ? accounts.filter((account) => selected?.includes(account.id)).map((account) => account.historyKey).sort().join("|")
+    : "";
+  const [history, setHistory] = useState<{ key: string; points: SeriesPoint[]; failed: boolean } | null>(null);
+  useEffect(() => {
+    if (!historyKey) return;
+    const controller = new AbortController();
+    fetch("/api/v1/snapshots/accounts", {
+      method: "POST", credentials: "include", signal: controller.signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ account_keys: historyKey.split("|") }),
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Account history is unavailable");
+        const points = await response.json() as SeriesPoint[];
+        if (!Array.isArray(points)) throw new Error("Account history is unavailable");
+        if (!controller.signal.aborted) setHistory({ key: historyKey, points, failed: false });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setHistory({ key: historyKey, points: [], failed: true });
+      });
+    return () => controller.abort();
+  }, [historyKey]);
+  const selectedHistory = history?.key === historyKey ? history : null;
+
   const totals = useMemo(() => filteredTotals(accounts, selected), [accounts, selected]);
-  const series = useMemo(() => filteredSeries(snapshots, accounts, selected), [snapshots, accounts, selected]);
+  const series = useMemo(() => filteredSeries(snapshots, accounts, selected, selectedHistory?.points), [snapshots, accounts, selected, selectedHistory]);
   const visible = useMemo(() => {
     const s = sliceSeries(series, range);
-    // Snapshots are captured daily; pin the last point to today's live total
-    // so the line always ends on the headline figure.
-    if (s.length) s[s.length - 1] = { ...s[s.length - 1], value: totals.netWorth };
+    // Preserve the all-account chart's live endpoint. Filtered history uses
+    // captured points without replacing an older observation.
+    if (!filtered && s.length) s[s.length - 1] = { ...s[s.length - 1], value: totals.netWorth };
     return s;
-  }, [series, range, totals.netWorth]);
+  }, [series, range, totals.netWorth, filtered]);
   const { change, pct } = seriesChange(visible);
   const tone = change > 0 ? "up" : change < 0 ? "down" : "flat";
   const hasAccounts = accounts.length > 0;
@@ -159,8 +184,9 @@ export function NetWorthCard({
               label={filtered ? "Net worth for selected accounts" : "Net worth"}
               points={visible}
               emptyMessage={
-                hasAccounts
-                  ? "Maal records your balance once a day. Your graph fills in over the next few days."
+                filtered && !selectedHistory ? "Loading account history…"
+                  : selectedHistory?.failed ? "Couldn’t load account history."
+                  : hasAccounts ? "Maal records your balance once a day. Your graph fills in over the next few days."
                   : "Add an account to start tracking your net worth here."
               }
             />
@@ -173,7 +199,7 @@ export function NetWorthCard({
             </div>
             {filtered && (
               <p className="mh-faint mh-small -mt-2 mb-4 text-center">
-                Showing {selected?.length} of {accounts.length} accounts. History for part-selected categories is scaled from category totals.
+                Showing {selected?.length} of {accounts.length} accounts.
               </p>
             )}
           </>

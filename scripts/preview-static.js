@@ -163,6 +163,18 @@ app.get('/api/v1/snapshots', (req, res) => {
   res.json(out);
 });
 
+// HEL-38 preview-only account history for Home's account filter.
+app.post('/api/v1/snapshots/accounts', express.json(), (req, res) => {
+  const sample = {
+    'cash:c1': 18600, 'cash:c2': 2400, 'investment:inv1': 12400, 'investment:inv2': 8200,
+    'super:s1': 68500, 'debt:d1': -23400, 'debt:d2': -11200,
+  };
+  const keys = (req.body?.account_keys || []).filter((key) => Object.hasOwn(sample, key));
+  if (!keys.length) return res.json([]);
+  const today = keys.reduce((sum, key) => sum + sample[key], 0);
+  return res.json([4, 3, 2, 1, 0].map((day) => ({ date: iso(day).slice(0, 10), value: today - day * keys.length * 10 })));
+});
+
 // Six months of deterministic transactions (category_group = the 18-group AU
 // taxonomy, as GET /api/v1/transactions returns). Feeds Home and the Spending
 // overview. ?spend=empty on the page URL previews the no-data states.

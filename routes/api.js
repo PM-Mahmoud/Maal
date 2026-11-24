@@ -744,6 +744,25 @@ router.patch('/v1/profile', async (req, res) => {
 // ─── Net-worth snapshots (real history for the dashboard tiles/charts) ─────
 // GET /api/v1/snapshots?days=N → oldest-first immutable daily series.
 // Capture is performed by the authenticated daily cron sweep, never by reads.
+// Account-filtered history reads only stored observations. The selected IDs
+// travel in a JSON body so provider references stay out of request URLs.
+router.post('/v1/snapshots/accounts', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const { account_keys: keys, days: requestedDays } = req.body || {};
+  if (!Array.isArray(keys) || !keys.length || keys.length > 500
+    || !keys.every((key) => typeof key === 'string' && /^[a-z]+:[A-Za-z0-9_-]{1,200}$/.test(key))) {
+    return res.status(400).json({ error: 'Provide a valid account selection.' });
+  }
+  const days = Math.min(Math.max(parseInt(requestedDays, 10) || 3660, 1), 3660);
+  try {
+    const series = await require('../db/account-snapshots').listAccountSnapshotSeries(req.session.userId, [...new Set(keys)], days);
+    return res.json(series);
+  } catch (error) {
+    console.error('Could not load account snapshots:', error.code || 'unknown');
+    return res.status(500).json({ error: 'Could not load account history.' });
+  }
+});
+
 router.get('/v1/snapshots', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {

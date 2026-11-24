@@ -3,13 +3,13 @@
 
 const { pool } = require('./auth');
 
-async function recordSnapshot(userId, dateOrValues, maybeValues) {
+async function recordSnapshot(userId, dateOrValues, maybeValues, client = pool) {
   const values = maybeValues || dateOrValues;
   const snapDate = maybeValues ? dateOrValues : new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Australia/Perth', year: 'numeric', month: '2-digit', day: '2-digit',
   }).format(new Date());
   const { netWorth, assetsTotal, superBalance, investBalance, debtsTotal, cashBalance } = values;
-  const { rows } = await pool.query(
+  const { rows } = await client.query(
     `INSERT INTO net_worth_snapshots
        (user_id, snap_date, net_worth, assets_total, super_balance, invest_balance, debts_total, cash_balance)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -19,10 +19,27 @@ async function recordSnapshot(userId, dateOrValues, maybeValues) {
     [userId, snapDate, netWorth, assetsTotal, superBalance, investBalance, debtsTotal, cashBalance]
   );
   if (rows[0]) return rows[0];
-  return (await pool.query(
+  return (await client.query(
     `SELECT * FROM net_worth_snapshots WHERE user_id = $1 AND snap_date = $2`,
     [userId, snapDate]
   )).rows[0];
+}
+
+async function recordSnapshotWithAccounts(userId, date, values) {
+  const { captureAccountSnapshots } = require('./account-snapshots');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const snapshot = await recordSnapshot(userId, date, values, client);
+    await captureAccountSnapshots(client, userId, date);
+    await client.query('COMMIT');
+    return snapshot;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function getSnapshots(userId, days) {
@@ -68,4 +85,4 @@ async function listSnapshotUserIds() {
   return (await pool.query('SELECT id FROM users ORDER BY id')).rows.map((row) => row.id);
 }
 
-module.exports = { recordSnapshot, getSnapshots, snapshotValuesFromProfile, listSnapshotUserIds };
+module.exports = { recordSnapshot, recordSnapshotWithAccounts, getSnapshots, snapshotValuesFromProfile, listSnapshotUserIds };
