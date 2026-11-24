@@ -766,7 +766,6 @@ app.patch('/api/v1/profile', express.json(), (req, res) => res.json({ ...req.bod
 app.get('/api/v1/transaction-categories', (_req, res) => res.json([]));
 app.get('/api/v1/transaction-rules', (_req, res) => res.json([]));
 app.get('/api/v1/radar-templates', (_req, res) => res.json([]));
-app.get('/api/v1/radar-template-versions', (_req, res) => res.json([]));
 app.get('/api/v1/research', (_req, res) => res.json([]));
 app.get('/api/v1/referrals', (_req, res) => res.json({
   code: 'K7MQ2XRP', link: 'http://localhost:4173/r/K7MQ2XRP',
