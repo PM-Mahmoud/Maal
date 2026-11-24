@@ -5,6 +5,7 @@
 
 const { safeError } = require('../lib/safe-log');
 const ejs = require('ejs');
+const { existsSync } = require('node:fs');
 const path = require('path');
 
 const VIEWS = path.join(__dirname, '..', 'views');
@@ -47,6 +48,9 @@ const cases = {
 };
 
 async function main() {
+  if (existsSync(path.join(VIEWS, "onboarding.ejs"))) {
+    throw new Error("The retired onboarding template must not be rendered.");
+  }
   let failed = 0;
   for (const [view, locals] of Object.entries(cases)) {
     const file = path.join(VIEWS, view + '.ejs');

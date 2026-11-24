@@ -62,6 +62,8 @@ function sendPreviewUsageLimit(res, feature) {
 
 const { buildLandingContext } = require('../lib/landing-context');
 
+app.use('/onboarding', require('../routes/onboarding-redirect'));
+
 // ── Landing + auth ──────────────────────────────────────────
 app.get('/', (_req, res, next) => {
   ejs.renderFile(path.join(VIEWS, 'layout.ejs'), buildLandingContext())
