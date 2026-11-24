@@ -16,6 +16,7 @@ jobs:
         with:
           node-version: '20'
       - run: npm ci
+      - run: node scripts/check-test-chain.js
       - run: npm test
 
   secret-scan:
