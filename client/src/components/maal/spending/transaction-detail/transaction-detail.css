@@ -213,3 +213,9 @@ html.dark .td-error { background: #2A1717; color: #F07171; }
 .td-txn-open:disabled { cursor: default; }
 .td-txn-open:focus-visible { outline: 2px solid var(--mh-badge-ink, #006B87); outline-offset: 4px; border-radius: 6px; }
 .so-txn:has(.td-txn-open:not(:disabled):hover) { background: var(--mh-hover, #EEEFEC); }
+
+/* Manage tags reuses the transaction detail dialog, including its colour tokens. */
+.td-manage-tags { max-height: calc(100dvh - 32px); overflow-y: auto; }
+.td-tag-manager-list { list-style: none; }
+.td-tag-manager-label { display: flex; align-items: center; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+.td-tag-manager-list .td-actions { flex: none; }

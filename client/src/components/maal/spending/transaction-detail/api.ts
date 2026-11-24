@@ -102,6 +102,16 @@ export async function createTag(name: string, color: string): Promise<Tag> {
   return (await json<{ tag: Tag }>(r, "Couldn't create the tag.")).tag;
 }
 
+export async function updateTag(id: string, patch: Partial<Pick<Tag, "name" | "color">>): Promise<Tag> {
+  const r = await fetch(`/api/v1/tags/${enc(id)}`, send("PATCH", patch));
+  return (await json<{ tag: Tag }>(r, "Couldn't update the tag.")).tag;
+}
+
+export async function deleteTag(id: string) {
+  const r = await fetch(`/api/v1/tags/${enc(id)}`, send("DELETE"));
+  await json(r, "Couldn't delete the tag.");
+}
+
 export async function getCategoryGroups(): Promise<CategoryGroup[]> {
   const r = await fetch("/api/v1/transaction-categories", { credentials: "include" });
   const body = await json<{ groups?: CategoryGroup[] }>(r, "Couldn't load categories.");

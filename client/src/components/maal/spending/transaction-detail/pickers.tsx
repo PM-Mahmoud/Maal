@@ -3,7 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Search, X } from "lucide-react";
 import { iconForGroup } from "../overview/categoryIcons";
 import { catVars } from "../categoryColour";
-import { createTag, type CategoryGroup, type Tag } from "./api";
+import { createTag, updateTag, type CategoryGroup, type Tag } from "./api";
 import { ErrorNote, TAG_COLOR_KEYS, TAG_SWATCHES, TagDot } from "./ui";
 
 export type CategoryValue = { group: string; category: string | null };
@@ -103,22 +103,22 @@ export function TagList({ tags, selected, onToggle, onCreate, emptyHint }: {
 }
 
 /** "Create new tag" modal: name + colour swatches (HEL-103). */
-export function CreateTagDialog({ open, onClose, onCreated, existing }: {
-  open: boolean; onClose: () => void; onCreated: (t: Tag) => void; existing: Tag[];
+export function CreateTagDialog({ open, onClose, onCreated, existing, tag }: {
+  open: boolean; onClose: () => void; onCreated: (t: Tag) => void; existing: Tag[]; tag?: Tag;
 }) {
-  const [name, setName] = useState("");
-  const [color, setColor] = useState(TAG_COLOR_KEYS[0]);
+  const [name, setName] = useState(tag?.name ?? "");
+  const [color, setColor] = useState(tag?.color ?? TAG_COLOR_KEYS[0]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const nameId = useId();
   const trimmed = name.trim();
-  const dupe = existing.some((t) => t.name.toLowerCase() === trimmed.toLowerCase());
+  const dupe = existing.some((t) => t.id !== tag?.id && t.name.toLowerCase() === trimmed.toLowerCase());
 
   async function submit() {
     if (!trimmed || dupe) return;
     setSaving(true); setError(null);
     try {
-      const t = await createTag(trimmed, color);
+      const t = tag ? await updateTag(tag.id, { name: trimmed, color }) : await createTag(trimmed, color);
       setName(""); setColor(TAG_COLOR_KEYS[0]);
       onCreated(t);
     } catch (e) { setError((e as Error).message); }
@@ -126,13 +126,13 @@ export function CreateTagDialog({ open, onClose, onCreated, existing }: {
   }
 
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <DialogPrimitive.Root open={open} onOpenChange={(o) => { if (!o && !saving) onClose(); }}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="td-scrim td-scrim-top" />
         <DialogPrimitive.Content className="mh-shell td-modal" aria-describedby={undefined}
           onOpenAutoFocus={(e) => { e.preventDefault(); document.getElementById(nameId)?.focus(); }}>
           <header className="td-head td-head-modal">
-            <DialogPrimitive.Title className="td-eyebrow">Create new tag</DialogPrimitive.Title>
+            <DialogPrimitive.Title className="td-eyebrow">{tag ? "Edit tag" : "Create new tag"}</DialogPrimitive.Title>
             <span className="td-head-right">
               <DialogPrimitive.Close className="td-iconbtn" aria-label="Close"><X aria-hidden /></DialogPrimitive.Close>
             </span>
@@ -158,9 +158,9 @@ export function CreateTagDialog({ open, onClose, onCreated, existing }: {
               </div>
             </fieldset>
             <div className="td-actions">
-              <button type="button" className="td-btn-sm" onClick={onClose}>Cancel</button>
+              <button type="button" className="td-btn-sm" disabled={saving} onClick={onClose}>Cancel</button>
               <button type="submit" className="td-btn-sm td-btn-ink" disabled={!trimmed || dupe || saving}>
-                {saving ? "Creating…" : "Create new tag"}
+                {saving ? "Saving…" : tag ? "Save changes" : "Create new tag"}
               </button>
             </div>
           </form>
