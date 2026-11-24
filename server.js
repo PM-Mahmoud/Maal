@@ -14,6 +14,8 @@ process.on('uncaughtException', (err) => { console.error('Uncaught exception:', 
 
 const app = express();
 const port = process.env.PORT || 3000;
+const queryMetrics = require('./db/query-metrics');
+if (queryMetrics.enabled) app.use('/api', queryMetrics.beginRequest);
 
 // ─── Security headers (Helmet + report-only strict CSP + CSRF guard) ───────
 // See lib/security-headers.js for what each piece does and why.
