@@ -5,6 +5,8 @@ const test = require('node:test');
 const pool = require('../db/pool');
 const quality = require('../services/data-quality');
 const api = require('../routes/api');
+const { getTransactionsWithCategory } = require('../db/transactions');
+const accountLinkMigration = require('../migrations/1757400000114_transaction_manual_accounts');
 
 const handler = api.stack.find(({ route }) => route?.path === '/v1/transactions' && route.methods.post).route.stack[0].handle;
 const transaction = { description: 'Pet food', amount: -42, occurred_on: '2026-10-15' };
@@ -30,6 +32,8 @@ function transactionPool(t, { ownsAccount = true } = {}) {
       if (/INSERT INTO transaction_manual_accounts/.test(sql)) {
         assert.match(sql, /ca\.id = \$3 AND ca\.user_id = \$1/);
         assert.match(sql, /WHERE t\.id = \$2 AND t\.user_id = \$1/);
+        assert.match(sql, /CASE WHEN NULLIF\(ca\.account_reference, ''\) IS NULL THEN ca\.id END/);
+        assert.match(sql, /NULLIF\(ca\.account_reference, ''\)/);
         assert.deepEqual(params, [91, '84', '73']);
         return { rowCount: ownsAccount ? 1 : 0 };
       }
@@ -79,4 +83,26 @@ test('POST without an account keeps manual entry and CSV imports unlinked', asyn
   assert.equal((await post({ ...transaction, cash_account_id: null })).status, 200);
   assert.equal(db.queries.some(({ sql }) => sql.includes('transaction_manual_accounts')), false);
   assert.equal(db.queries.filter(({ sql }) => sql === 'COMMIT').length, 2);
+});
+
+test('connected-account links survive replacement of the cash-account mirror row', async (t) => {
+  let schema;
+  await accountLinkMigration.up({ query: async (sql) => { schema = sql; } });
+  assert.match(schema, /cash_account_id BIGINT REFERENCES cash_accounts/);
+  assert.match(schema, /cash_account_reference TEXT/);
+  assert.match(schema, /CHECK \(\(cash_account_id IS NULL\) <> \(cash_account_reference IS NULL\)\)/);
+  const storedLink = { account_reference: 'basiq:stable-saver' };
+  let currentCashAccountId = '73';
+  t.mock.method(pool, 'query', async (sql, params) => {
+    assert.match(sql, /COALESCE\(pd\.account_reference, ma\.cash_account_reference, 'cash:' \|\| ma\.cash_account_id::text\)/);
+    assert.match(sql, /ma\.user_id = \$1/);
+    assert.doesNotMatch(sql, /JOIN cash_accounts/);
+    assert.deepEqual(params, [91, 500]);
+    return { rows: [{ ...storedLink, cashAccountIdAtRead: currentCashAccountId }] };
+  });
+  const [before] = await getTransactionsWithCategory(91);
+  currentCashAccountId = '497';
+  const [after] = await getTransactionsWithCategory(91);
+  assert.notEqual(before.cashAccountIdAtRead, after.cashAccountIdAtRead);
+  assert.equal(after.account_reference, before.account_reference);
 });
