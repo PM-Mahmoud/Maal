@@ -33,11 +33,11 @@ Set environment values in Render. Keep credentials out of the repository. See th
 
 ## Deploy and verify
 
-Merge a reviewed pull request to `main` after Mahmoud approves it. Render deploys automatically. Check the build logs for successful migrations and client build, then confirm `/health` returns HTTP 200 and `status: healthy`. Check the landing page and any affected routes. A failed build leaves the previous version serving, so confirm the deployed commit in Render.
+For an authorised release, commit the verified source and any generated client bundle, then merge the reviewed pull request to `main`. Render deploys automatically. Check the build logs for successful migrations and client build, then confirm `/health` returns HTTP 200 and `status: healthy`. Check the landing page and any affected routes. A failed build leaves the previous version serving, so confirm the deployed commit in Render or verify a release-specific change on the live site before reporting the build complete.
 
 ## Local development
 
-Use a disposable local PostgreSQL database for migrations and sandbox credentials for integrations. Set `DATABASE_URL`, `SESSION_SECRET`, and `BASE_URL` in your shell. Until HEL-56 tracks the file, copy `client/tsconfig.json` from a configured Maal checkout before building. The build uses it to resolve client import aliases.
+Use a disposable local PostgreSQL database for migrations and sandbox credentials for integrations. Set `DATABASE_URL`, `SESSION_SECRET`, and `BASE_URL` in your shell.
 
 ```bash
 npm ci --ignore-scripts

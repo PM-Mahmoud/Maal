@@ -274,13 +274,7 @@ The KPI sparklines on the dashboard (`KpiSparkline` in `Dashboard.tsx`) mark the
 
 ## How To Deploy
 
-```bash
-git add -A
-git commit -m "Your message"
-git push origin main   # triggers Render auto-deploy
-```
-
-Build command on Render: `npm install && npm run migrate && npm run build:client`
+For an authorised release, commit the source changes and any generated client bundle, run the checks, and merge the verified PR to `main`. Render deploys from `main`. Confirm the deployment with `/health` and a smoke check of the changed behaviour before calling the build complete. See [DEPLOY.md](DEPLOY.md) for build and verification details.
 
 To run migrations locally: `node migrate.js`  
 To preview static (no DB): `node scripts/preview-static.js` (port 4173)
@@ -291,7 +285,7 @@ To preview static (no DB): `node scripts/preview-static.js` (port 4173)
 
 When working on this codebase as an agent:
 
-1. **Always build after React changes:** `cd client && npx vite build` — the built assets in `public/app/` must be committed.
+1. **Always build after React changes:** `cd client && npm run build` — the built assets in `public/app/` must be committed.
 2. **For new DB tables:** create a migration in `migrations/` with timestamp > 1750800000000, then add the table name to `ASSET_TABLES` in `routes/api.js`.
 3. **For new React pages:** add a route file in `client/src/routes/_authenticated/`, create a `*.functions.ts` in `client/src/lib/` that uses `fetch()` to the API, and add to the sidebar in `app.tsx`.
 4. **Advisor messages** go to `POST /api/v1/advisor/message`. The advisor service supports Azure OpenAI, Groq, DeepSeek, or any OpenAI-compatible provider.

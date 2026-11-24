@@ -24,8 +24,8 @@ Keep the mandatory disclaimer on every page. “Maal does not provide financial 
 ## Linear and pull requests
 
 - Pick issues marked `agent-ready` from the Hellomaal team. Issues marked `needs-Mahmoud` await Mahmoud’s decision. The [Website redesign: 85 flows project](https://linear.app/hellomaal/project/website-redesign-85-flows-5a70bee25fcf) tracks redesign progress.
-- Create one `hel-<number>-<slug>` branch per issue from the latest `origin/main`. Open a PR with `Fixes HEL-<number>` and comment on the Linear issue with verification and the PR link. Mahmoud approves merges to `main`.
-- In a fresh worktree, install dependencies with `npm ci --ignore-scripts` at the repo root and in `client/`. Run `npm test`, `node scripts/render-test.js` and `npx tsc --noEmit -p client`. Until HEL-56 is resolved, copy the ignored `client/tsconfig.json` from the main checkout.
+- Create one `hel-<number>-<slug>` branch per issue from the latest `origin/main`. Open a PR with `Fixes HEL-<number>` and comment on the Linear issue with verification and the PR link. When Mahmoud authorises the work to ship, commit the source and applicable generated assets, merge the verified PR to `main`, and confirm the Render deployment on production before calling the build complete.
+- In a fresh worktree, install dependencies with `npm ci --ignore-scripts` at the repo root and in `client/`. Run `npm test`, `node scripts/render-test.js` and `npx tsc --noEmit -p client`.
 - After the final client change, run `cd client && npm run build`. Commit the generated `public/app/` files, including `route-manifest.json`, in a separate commit. After a bundle conflict, rebase on `main` and rebuild the bundle.
 - Use Australian English and Australian context. Keep partner and reference app names out of public work. The private Maal Operating Manual holds account and cost information.
 
