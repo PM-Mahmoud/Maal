@@ -263,7 +263,7 @@ export function TransactionsPage() {
 
       <FiltersDrawer open={filtersOpen} onOpenChange={setFiltersOpen} value={filters} onApply={setFilters}
         accounts={accountOptions} groups={groupOptions} flags={flags} today={today} />
-      <AddTransactionDrawer open={addOpen} onOpenChange={setAddOpen} groups={data.groups} today={today}
+      <AddTransactionDrawer open={addOpen} onOpenChange={setAddOpen} groups={data.groups} accounts={data.accounts} today={today}
         onAdded={(msg) => { say("ok", msg); void refresh(); }} />
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} count={sorted.length} filtered={narrowing}
         onExport={doExport} onOpenFilters={() => { setExportOpen(false); setFiltersOpen(true); }} />

@@ -305,6 +305,13 @@ function previewTransactions() {
   const onTxPage = (req) => /\/app\/transactions/.test(req.headers.referer || '');
   const txFlags = (req) => /tx=flags/.test(req.headers.referer || '');
   const txAdded = [];
+  // HEL-114 — preview-owned cash accounts include one account without a bank feed.
+  const txAccounts = [
+    { id: '101', label: 'Savings Maximiser', institution: 'ING', account_reference: 'basiq:ing-0412', balance: 18600 },
+    { id: '102', label: 'Everyday Smart Access', institution: 'CommBank', account_reference: 'basiq:cba-7781', balance: 2400 },
+    { id: '103', label: 'Cash wallet', institution: null, account_reference: null, balance: 75 },
+  ];
+  app.locals.previewAddedTransaction = (id) => txAdded.find((row) => String(row.id) === id);
   const txCats = new Map();
   const txAccount = (t) => {
     if (t.category === 'Cafes') return null; // manual entries
@@ -337,7 +344,17 @@ function previewTransactions() {
   app.post('/api/v1/transactions', express.json(), (req, res) => {
     const d = (req.body && req.body.data) || req.body || {};
     if (!d.description || !Number.isFinite(Number(d.amount)) || !d.occurred_on) return res.status(400).json({ error: 'Transaction description is required' });
-    const row = { id: 9000 + txAdded.length, description: String(d.description), amount: Number(d.amount), post_date: d.occurred_on, account_reference: null };
+    let accountId;
+    try { accountId = require('../lib/transaction-import').normalizeManualCashAccountId(d.cash_account_id); }
+    catch (error) { return res.status(400).json({ error: error.message }); }
+    const account = accountId ? txAccounts.find((item) => item.id === accountId) : null;
+    if (accountId && !account) return res.status(404).json({ error: 'Cash account not found.' });
+    const row = {
+      id: 9000 + txAdded.length, description: String(d.description), amount: Number(d.amount), post_date: d.occurred_on,
+      account_reference: account ? account.account_reference || `cash:${account.id}` : null,
+      institution_name: account?.institution ?? null,
+      manual_account_label: account?.label ?? null,
+    };
     txAdded.unshift(row);
     res.json(row);
   });
@@ -347,10 +364,7 @@ function previewTransactions() {
   });
   app.get('/api/v1/cash_accounts', (req, res, next) => {
     if (!onTxPage(req)) return next();
-    res.json([
-      { id: 'c1', label: 'Savings Maximiser', institution: 'ING', account_reference: 'basiq:ing-0412', balance: 18600 },
-      { id: 'c2', label: 'Everyday Smart Access', institution: 'CommBank', account_reference: 'basiq:cba-7781', balance: 2400 },
-    ]);
+    res.json(txAccounts);
   });
 }
 // ── end Session 2 – Transactions list ────────────────────────────────────────
@@ -381,12 +395,13 @@ function previewTransactions() {
       note: m.note || null, merchant_name: m.merchant_name || null, description_override: m.description || null,
       tags: (pvTxnTags.get(t.id) || []).map((id) => pvTags.find((g) => g.id === id)).filter(Boolean),
       splits: pvSplits.get(t.id) || [],
-      account_reference: '06-2000-12345678', institution_name: 'Commonwealth Bank',
+      account_reference: t.account_reference === undefined ? '06-2000-12345678' : t.account_reference,
+      institution_name: t.institution_name === undefined ? 'Commonwealth Bank' : t.institution_name,
     };
     if (m.merchant_name) out.merchant = m.merchant_name;
     return out;
   };
-  const find = (id) => previewTransactions().find((t) => t.id === id);
+  const find = (id) => app.locals.previewAddedTransaction?.(id) || previewTransactions().find((t) => t.id === id);
   app.locals.previewDecorate = decorate; // reused by the Reports preview block
   app.get('/api/v1/transactions', (req, res) => res.json(previewEmpty(req) ? [] : previewTransactions().map(decorate)));
   app.get('/api/v1/transactions/:id/detail', (req, res) => {

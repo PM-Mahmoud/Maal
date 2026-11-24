@@ -155,14 +155,33 @@ async function getTransactionsForQuality(userId) {
 // Categories live in transaction_categories (FK to transactions) so the
 // protected transactions table is never altered. All scoped by user_id.
 
+// Link only a newly inserted transaction and a cash account that both belong
+// to the caller. A provider reference survives replacement of a bank mirror.
+// The caller rolls back the whole import if no row is inserted.
+async function linkManualCashAccount(client, userId, transactionId, cashAccountId) {
+  const result = await client.query(
+    `INSERT INTO transaction_manual_accounts (transaction_id, user_id, cash_account_id, cash_account_reference)
+     SELECT t.id, t.user_id,
+            CASE WHEN NULLIF(ca.account_reference, '') IS NULL THEN ca.id END,
+            NULLIF(ca.account_reference, '')
+       FROM transactions t
+       JOIN cash_accounts ca ON ca.id = $3 AND ca.user_id = $1
+      WHERE t.id = $2 AND t.user_id = $1`,
+    [userId, transactionId, cashAccountId]
+  );
+  return result.rowCount > 0;
+}
+
 // Transactions joined with their assigned category, newest first.
 async function getTransactionsWithCategory(userId, limit = 500) {
   const r = await pool.query(
-    `SELECT t.id, t.description, t.amount, t.status, t.post_date, pd.account_reference,
+    `SELECT t.id, t.description, t.amount, t.status, t.post_date,
+            COALESCE(pd.account_reference, ma.cash_account_reference, 'cash:' || ma.cash_account_id::text) AS account_reference,
             c.category_group, c.category, c.source AS category_source
        FROM transactions t
-       LEFT JOIN transaction_provider_details pd ON pd.transaction_id = t.id
-       LEFT JOIN transaction_categories c ON c.transaction_id = t.id
+       LEFT JOIN transaction_provider_details pd ON pd.transaction_id = t.id AND pd.user_id = $1
+       LEFT JOIN transaction_manual_accounts ma ON ma.transaction_id = t.id AND ma.user_id = $1
+       LEFT JOIN transaction_categories c ON c.transaction_id = t.id AND c.user_id = $1
       WHERE t.user_id = $1
       ORDER BY t.post_date DESC NULLS LAST, t.id DESC
       LIMIT $2`,
@@ -317,7 +336,7 @@ module.exports = {
   getRecentTransactions, getTxnsSince,
   getCashFlowTransactions,
   getTransactionsForQuality,
-  getTransactionsWithCategory, getTxnsForSubscriptions,
+  getTransactionsWithCategory, getTxnsForSubscriptions, linkManualCashAccount,
   listRules, getRule, createRule, deleteRule, setTransactionCategory,
   getLearnedCategoryPreferences, applyCategoryAssignments,
 };

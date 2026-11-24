@@ -16,6 +16,7 @@ export type TxnDetail = {
   category_source?: string | null;
   account_reference?: string | null;
   institution_name?: string | null;
+  manual_account_label?: string | null;
   hidden: boolean;
   reviewed: boolean;
   reviewed_at?: string | null;

@@ -27,7 +27,7 @@ export type Txn = {
 };
 
 /** What the Account column shows for an account_reference. */
-export type AccountInfo = { key: string; label: string; institution: string | null; fullName?: string };
+export type AccountInfo = { key: string; label: string; institution: string | null; fullName?: string; cashAccountId?: string };
 
 export type TransactionsData = {
   rows: Txn[];
@@ -55,10 +55,18 @@ async function loadAccountNames(): Promise<Map<string, AccountInfo>> {
     const rows = Array.isArray(res.data) ? (res.data as Array<Record<string, any>>) : [];
     for (const r of rows) {
       const ref = r.account_reference ? String(r.account_reference) : "";
-      if (!ref) continue;
+      const cashAccountId = r.id == null ? undefined : String(r.id);
+      if (!ref && !cashAccountId) continue;
+      const key = ref || `cash:${cashAccountId}`;
       const inst = r.institution || r.institution_name || null;
       const name = r.label || r.name || inst || "Bank account";
-      out.set(ref, { key: ref, label: `${inst || name} ••${last4(ref)}`, institution: inst || name, fullName: inst && name !== inst ? `${inst} ${name} ••${last4(ref)}` : undefined });
+      out.set(key, {
+        key,
+        label: ref ? `${inst || name} ••${last4(ref)}` : name,
+        institution: inst || (ref ? name : null),
+        fullName: ref && inst && name !== inst ? `${inst} ${name} ••${last4(ref)}` : undefined,
+        cashAccountId,
+      });
     }
   } catch { /* names are cosmetic; the column falls back to the reference */ }
   return out;
