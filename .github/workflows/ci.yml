@@ -41,14 +41,14 @@ jobs:
           POSTGRES_PASSWORD: local-test-only
           POSTGRES_DB: maal_test
         ports:
-          - 5432/tcp
+          - 5432:5432
         options: >-
           --health-cmd "pg_isready -U postgres -d maal_test"
           --health-interval 3s
           --health-timeout 5s
           --health-retries 15
     env:
-      DATABASE_URL: postgresql://postgres:local-test-only@127.0.0.1:${{ job.services.postgres.ports[5432] }}/maal_test
+      DATABASE_URL: postgresql://postgres:local-test-only@127.0.0.1:5432/maal_test
       EXPECT_PGVECTOR: ${{ matrix.vector }}
     steps:
       - uses: actions/checkout@v4
