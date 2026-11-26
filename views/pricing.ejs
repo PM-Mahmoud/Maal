@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-AU">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,9 +9,8 @@
   <meta name="description" content="One Maal membership: a 14-day free trial, then $4.99 for your first year and $49.99/year after. Prices in AUD.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <%- include('partials/v2-public-styles') %>
   <link rel="stylesheet" href="/css/theme.css">
-  <link rel="stylesheet" href="/css/retro-theme.css">
   <style>
     body { background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
     main { flex: 1; }
@@ -57,8 +56,9 @@
     .c-dash { color: var(--fg-muted); opacity: .35; }
     .disclaimer-block { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem 4rem; font-size: 11px; color: var(--fg-muted); line-height: 1.8; }
   </style>
+  <link rel="stylesheet" href="/css/public-v2.css">
 </head>
-<body>
+<body class="public-v2">
   <%- include('partials/navbar') %>
 
   <main>
@@ -72,7 +72,7 @@
     %>
     <section class="pr-section">
       <p class="pr-kicker">Pricing</p>
-      <h1 class="pr-h1">One membership.<br>Everything included.</h1>
+      <h1 class="pr-h1">One Maal membership</h1>
       <p class="pr-sub">Try every part of Maal free for <%= m.TRIAL_DAYS %> days, no card needed. Then <%= first %> for your first year and <%= renew %>/year after that. Cancel anytime. All amounts in AUD.</p>
     </section>
 
@@ -88,11 +88,10 @@
         </div>
         <p class="tier-desc">Then <%= renew %>/year, renewing automatically until you cancel. Starts with a <%= m.TRIAL_DAYS %>-day free trial, no card required.</p>
         <ul class="tier-list">
-          <li><span class="tier-check">&#10003;</span> Access to AI chat with Ask Maal</li>
-          <li><span class="tier-check">&#10003;</span> Your Maal Score, plan and net worth in one place</li>
-          <li><span class="tier-check">&#10003;</span> Connect bank accounts, super, property, crypto, vehicles and debt</li>
-          <li><span class="tier-check">&#10003;</span> Research reports and Radar alerts on what matters to you</li>
-          <li><span class="tier-check">&#10003;</span> Explore profit-based investment options from our partners <span style="opacity:.7">(coming soon, general information only)</span></li>
+          <li><span class="tier-check">&#10003;</span> Ask Maal about your finances</li>
+          <li><span class="tier-check">&#10003;</span> See your Maal Score, plan and net worth in one place</li>
+          <li><span class="tier-check">&#10003;</span> Track bank accounts, super, property, investments and debt</li>
+          <li><span class="tier-check">&#10003;</span> Explore cited research and set up Radar alerts</li>
         </ul>
         <a href="<%= ctaHref %>" class="tier-cta solid"><%= gated ? 'Join the waitlist' : 'Start your free trial' %></a>
         <p style="margin-top:.75rem;font-size:12px;opacity:.75;text-align:center;"><%= gated ? 'Maal is invite-only right now. Your invite includes the free trial.' : 'No card needed for the trial.' %></p>
@@ -104,9 +103,9 @@
         <h2>How it works</h2>
         <table class="compare-table">
           <tbody>
-            <tr><td>Days 1–<%= m.TRIAL_DAYS %></td><td>Full access, free. No card.</td></tr>
-            <tr><td>After your trial</td><td>Join for <%= first %> for your first year to keep using Maal.</td></tr>
-            <tr><td>Every year after</td><td><%= renew %>/year. Cancel anytime in Plan &amp; Usage before it renews.</td></tr>
+            <tr><th scope="row">Days 1–<%= m.TRIAL_DAYS %></th><td>Full access, free. No card.</td></tr>
+            <tr><th scope="row">After your trial</th><td>Join for <%= first %> for your first year to keep using Maal.</td></tr>
+            <tr><th scope="row">Every year after</th><td><%= renew %>/year. Cancel anytime in Plan &amp; Usage before it renews.</td></tr>
           </tbody>
         </table>
       </div>

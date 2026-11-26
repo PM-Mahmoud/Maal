@@ -242,3 +242,4 @@ html[data-theme="dark"] .v2 .v2-alert { color: #FDBA8C; border-color: rgba(253,1
   .v2-focus { align-items: flex-start; padding-top: 40px; }
   .v2-focus-page h1 { font-size: 28px; }
 }
+.v2-wrap-address { overflow-wrap: anywhere; }
