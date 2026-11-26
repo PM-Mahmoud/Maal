@@ -3,6 +3,7 @@ import { AskMaalTile } from "@/components/maal/dashboard/AskMaalTile";
 import { CompleteOnboardingCard, DashboardOffer } from "@/components/maal/subscribe";
 import { HomeBriefCards } from "@/components/maal/briefs";
 import { filteredTotals } from "../../../../../shared/home-accounts.mjs";
+import { HomeBudgetCard } from "./HomeBudgetCard";
 import { HomeHeader } from "./HomeHeader";
 import { NetWorthCard } from "./NetWorthCard";
 import { SpendingCard } from "./SpendingCard";
@@ -44,6 +45,7 @@ export function HomeDashboard() {
             <CompleteOnboardingCard />
             <HomeBriefCards />
             <MaalScoreCard score={data.score} error={data.errors.score} />
+            <HomeBudgetCard budget={data.budget} loading={data.loading} error={data.errors.budget} />
             <MarketWatchCard />
           </aside>
         </div>
