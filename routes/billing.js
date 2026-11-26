@@ -110,9 +110,11 @@ function gstIncludedCents(cents) {
 // Everything the subscribe screens print about the price, computed here so the
 // copy can never drift from what Stripe charges. Integer cents throughout.
 function offerSummary() {
+  const termsUrl = require('../lib/public-terms').publicTermsUrl();
   const first = membership.MEMBERSHIP.firstYearCents;
   const renewal = membership.MEMBERSHIP.yearCents;
   return {
+    ...(termsUrl ? { termsUrl } : {}),
     currency: 'AUD',
     gstInclusive: true,
     firstYearCents: first,

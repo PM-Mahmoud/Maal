@@ -302,6 +302,17 @@ app.use('/api/waitlist', require('./routes/waitlist'));
 app.use(require('./routes/referrals'));
 
 // Public pages
+const { publicTermsUrl, termsLocals } = require('./lib/public-terms');
+app.locals.publicTermsUrl = publicTermsUrl();
+
+app.get('/terms', (_req, res) => {
+  const terms = termsLocals();
+  if (terms.draft) {
+    res.set({ 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store' });
+  }
+  res.render('terms', { layout: false, ...terms });
+});
+
 app.get('/pricing', (req, res) => {
   const { buildAnalyticsSnippet } = require('./lib/landing-context');
   res.render('pricing', { layout: false,

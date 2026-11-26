@@ -60,11 +60,13 @@ function sendPreviewUsageLimit(res, feature) {
   });
 }
 
+const { publicTermsUrl, termsLocals } = require('../lib/public-terms');
+const previewTerms = { publicTermsUrl: publicTermsUrl() };
 const { buildLandingContext } = require('../lib/landing-context');
 
 // ── Landing + auth ──────────────────────────────────────────
 app.get('/', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'layout.ejs'), buildLandingContext())
+  ejs.renderFile(path.join(VIEWS, 'layout.ejs'), { ...buildLandingContext(), ...previewTerms })
     .then(html => res.send(html)).catch(next);
 });
 app.get('/login', (req, res, next) => {
@@ -81,7 +83,7 @@ app.get('/signup', (req, res, next) => {
     // ?ref=1 previews arriving through a friend's referral link.
     referred: req.query.ref === '1', gated: req.query.ref !== '1',
     membership: require('../lib/membership'),
-    error: null, email: '', name: '',
+    error: null, email: '', name: '', ...previewTerms,
   }).then(html => res.send(html)).catch(next);
 });
 app.get('/forgot-password', (req, res, next) => {
@@ -116,7 +118,7 @@ app.get('/google-link', (_req, res, next) => {
 app.get('/score', (req, res, next) => {
   ejs.renderFile(path.join(VIEWS, 'score.ejs'), {
     analyticsSnippet: '',
-    themeCSS: '<link rel="stylesheet" href="/css/theme.css">',
+    ...previewTerms, themeCSS: '<link rel="stylesheet" href="/css/theme.css">',
     kiosk: req.query.kiosk === '1',
     result: null, formData: null, error: null,
   }).then(html => res.send(html)).catch(next);
@@ -127,30 +129,36 @@ app.post('/score/save', express.json(), (req, res) => {
   const consent = req.body && (req.body.consent === true || req.body.consent === 'on');
   res.json({ ok: true, emailed: true, waitlisted: !!consent, score: computeQuickScore(req.body).total });
 });
+app.get('/terms', (_req, res, next) => {
+  const terms = termsLocals();
+  if (terms.draft) res.set('X-Robots-Tag', 'noindex, nofollow');
+  ejs.renderFile(path.join(VIEWS, 'terms.ejs'), terms)
+    .then(html => res.send(html)).catch(next);
+});
 app.get('/pricing', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'pricing.ejs'), { analyticsSnippet: '', user: null, membership: require('../lib/membership') })
+  ejs.renderFile(path.join(VIEWS, 'pricing.ejs'), { ...previewTerms, analyticsSnippet: '', user: null, membership: require('../lib/membership') })
     .then(html => res.send(html)).catch(next);
 });
 app.get('/waitlist', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'waitlist.ejs'), { analyticsSnippet: '', user: null })
+  ejs.renderFile(path.join(VIEWS, 'waitlist.ejs'), { ...previewTerms, analyticsSnippet: '', user: null })
     .then(html => res.send(html)).catch(next);
 });
 app.get('/about', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'about.ejs'), { analyticsSnippet: '', user: null })
+  ejs.renderFile(path.join(VIEWS, 'about.ejs'), { ...previewTerms, analyticsSnippet: '', user: null })
     .then(html => res.send(html)).catch(next);
 });
 app.get('/security', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'security.ejs'), { analyticsSnippet: '', user: null })
+  ejs.renderFile(path.join(VIEWS, 'security.ejs'), { ...previewTerms, analyticsSnippet: '', user: null })
     .then(html => res.send(html)).catch(next);
 });
 app.get('/financial-wellbeing-score', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'financial-wellbeing-score.ejs'), { analyticsSnippet: '', user: null })
+  ejs.renderFile(path.join(VIEWS, 'financial-wellbeing-score.ejs'), { ...previewTerms, analyticsSnippet: '', user: null })
     .then(html => res.send(html)).catch(next);
 });
 app.get('/contact', (_req, res, next) => {
   ejs.renderFile(path.join(VIEWS, 'contact.ejs'), {
     analyticsSnippet: '',
-    user: null, success: false, name: '', email: '', message: '',
+    ...previewTerms, user: null, success: false, name: '', email: '', message: '',
   }).then(html => res.send(html)).catch(next);
 });
 
@@ -771,6 +779,7 @@ app.get('/api/v1/research', (_req, res) => res.json([]));
 app.get('/api/v1/referrals', (_req, res) => res.json({
   code: 'K7MQ2XRP', link: 'http://localhost:4173/r/K7MQ2XRP',
   signedUp: 4, paid: 2, towardsNext: 2, needed: 3, rewardStatus: null,
+  ...(previewTerms.publicTermsUrl ? { termsUrl: previewTerms.publicTermsUrl } : {}),
 }));
 // ?state=trial (default) | ended | member — preview each Plan & Usage state.
 app.get('/api/v1/usage', (req, res) => res.json({

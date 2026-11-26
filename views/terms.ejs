@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+  <%- include('partials/v2-head', { title: 'Terms and conditions' }) %>
+  <% if (draft) { %><meta name="robots" content="noindex, nofollow"><% } %>
+</head>
+<body class="v2 v2-focus-page">
+  <%- include('partials/v2-focus-header', { backHref: '/' }) %>
+  <main class="v2-terms">
+    <h1 class="v2-focus-title">Terms and conditions</h1>
+    <% if (draft) { %><p class="v2-alert"><strong>DRAFT</strong> · Pending legal review</p><% } %>
+
+    <section>
+      <h2>Free trial</h2>
+      <p>New accounts get <%= trialDays %> days of membership access. You don’t need a card to start your trial. To keep using membership features after the trial, choose a paid membership.</p>
+    </section>
+
+    <section>
+      <h2>Membership and renewal</h2>
+      <p>New members pay <%= firstYear %> for the first year. Membership renews automatically at <%= renewal %> a year unless you cancel before the renewal date. Prices are in Australian dollars and include GST.</p>
+      <p>You can cancel from Plan &amp; Usage. Cancel before your next renewal to avoid being charged for another year.</p>
+    </section>
+
+    <section>
+      <h2>Referral rewards</h2>
+      <p>For every <%= requiredPaid %> friends who sign up with your referral link and become paying members, you can earn a <%= firstYear %> renewal on your next yearly membership. Refunded memberships don’t count. Rewards are applied one at a time.</p>
+      <p>When there’s a waitlist, a referral link can let up to <%= waitlistInvites %> people skip it. Rewards have no cash value and can’t be transferred. The offer can change or end.</p>
+    </section>
+  </main>
+  <%- include('partials/v2-focus-footer') %>
+</body>
+</html>
