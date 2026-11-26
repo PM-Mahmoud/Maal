@@ -1,8 +1,1 @@
-[
-  {
-    "path": "/",
-    "width": 375,
-    "failure": "layout: horizontal overflow",
-    "issue": "https://linear.app/hellomaal/issue/HEL-133/mobile-landing-page-scrolls-horizontally-at-375px"
-  }
-]
+[]

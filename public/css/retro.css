@@ -144,6 +144,12 @@ img, svg { display: block; }
   box-shadow: 2px 2px 0 var(--rf-shadow); cursor: pointer;
 }
 .rf-signup { display: none; }
+@media (max-width: 480px) {
+  .rf-header-inner { padding-inline: 1rem; }
+  .rf-header-right { gap: .5rem; }
+  .rf-header-right > .rf-btn { padding-inline: .75rem; font-size: .75rem; text-align: center; }
+  .rf-hamburger { flex: 0 0 40px; }
+}
 @media (min-width: 900px) {
   .rf-nav { display: flex; }
   .rf-login { display: inline; }
