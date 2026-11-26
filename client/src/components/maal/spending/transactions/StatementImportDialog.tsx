@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import {
-  parseDateCell, parseMappedStatement, previewStatementRows, statementColumns,
+  parseMappedStatement, previewStatementRows, statementColumns,
   type ImportRow, type StatementColumns,
 } from "../../../../../../shared/transactions-list.mjs";
 import { signedCents } from "@/components/maal/home/format";
@@ -31,8 +31,9 @@ export function StatementImportDialog({ onClose, onImport }: {
     setError("");
     try {
       const cells = await readStatementFile(file);
-      const header = !cells[0].some((cell) => parseDateCell(cell));
-      const mapping = statementColumns(cells[0], header);
+      const suggested = statementColumns(cells[0], true);
+      const header = suggested.date >= 0;
+      const mapping = header ? suggested : statementColumns(undefined, false);
       setStatement({ name: file.name, cells });
       setHasHeader(header);
       setColumns(mapping);
@@ -77,7 +78,7 @@ export function StatementImportDialog({ onClose, onImport }: {
           <p className="tx-dialog-text">Choose a CSV exported by your bank. You’ll review the transactions before adding them.</p>
           <label className="tx-field">
             <span className="tx-field-label">CSV statement</span>
-            <input type="file" accept=".csv,text/csv" disabled={busy} onChange={(event) => {
+            <input type="file" className="tx-import-file" accept=".csv,text/csv" disabled={busy} onChange={(event) => {
               const file = event.currentTarget.files?.[0];
               event.currentTarget.value = "";
               if (file) void upload(file);

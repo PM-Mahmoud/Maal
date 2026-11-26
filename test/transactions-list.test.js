@@ -243,7 +243,8 @@ const ROWS = [
   await test('mapped import checks dates, signed amounts and quoted cells before preview', () => {
     const columns = m.statementColumns(undefined, false);
     const map = (csv) => m.parseMappedStatement(m.parseCsv(csv), { hasHeader: false, columns, split: false });
-    assert.deepStrictEqual(map('1/11/2026,Pay,10 CR\n2/11/2026,Card,2 DR\n3/11/2026,EFT,(5.40)').rows.map(row => row.amount), [10, -2, -5.4]);
+    assert.deepStrictEqual(map('1/11/2026,Pay,10 CR\n2/11/2026,Card,2 DR\n3/11/2026,EFT,(5.40)\nClosing balance').rows.map(row => row.amount), [10, -2, -5.4]);
+    assert.equal(m.statementColumns(['31/02/2026', 'Date Cafe', '12'], true).date, -1);
     assert.match(map('31/02/2026,Shop,4').error, /Row 1: enter a date/);
     assert.match(map('2026-11-01,Shop,12abc45').error, /Row 1: enter a valid amount/);
     assert.throws(() => m.parseCsv('Date,Description,Amount\n24/11/2026,"Shop,100', { rejectUnclosedQuotes: true }), /unclosed/);

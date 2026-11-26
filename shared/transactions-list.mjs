@@ -418,7 +418,7 @@ export function statementColumns(cells, hasHeader) {
   const headers = (cells ?? []).map((cell) => cell.trim().toLowerCase().replace(/[_-]/g, " "));
   const column = (pattern) => headers.findIndex((name) => pattern.test(name));
   return {
-    date: column(/\bdate\b/),
+    date: column(/^(?:(?:transaction|posting|value|processed|effective) )?date$/),
     description: column(/\b(description|details|narration|memo|merchant|payee)\b/),
     amount: column(/^(transaction )?amount( \(aud\))?$/),
     debit: column(/\b(debit|withdrawals?|money out)\b/),
@@ -448,6 +448,7 @@ export function parseMappedStatement(cells, { hasHeader, columns, split }) {
   for (let index = hasHeader ? 1 : 0; index < cells.length; index++) {
     const row = cells[index];
     if (!row.some((cell) => cell.trim())) continue;
+    if (row.length === 1 && /^(?:opening|closing) balance\b/i.test(row[0].trim())) continue;
     const date = parseDateCell(row[columns.date]);
     if (!date) return { error: `Row ${index + 1}: enter a date in DD/MM/YYYY or YYYY-MM-DD format.` };
     const description = row[columns.description]?.trim();
