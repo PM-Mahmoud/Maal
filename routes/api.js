@@ -234,6 +234,21 @@ async function advisorMessage(req, res, { stream = false } = {}) {
       });
     }
 
+    const radarTool = require('../services/advisor-radar');
+    const watch = radarTool.watchPrompt(message);
+    if (watch !== null) {
+      if (!watch) {
+        return res.json({ ok: true, reply: 'Which financial event would you like me to watch? Try “Watch the next RBA rate decision for me.”', live: false });
+      }
+      const user = await findUserById(req.session.userId);
+      const plan = await effectivePlanFor(user);
+      const limit = planLimits.limitFor(plan, 'active_radars');
+      signal?.throwIfAborted();
+      const result = await radarTool.runWatchTool({ userId: req.session.userId, prompt: watch, limit, signal });
+      if (result.limited) return send402(res, plan, 'active_radars', limit, limit);
+      return res.json({ ok: true, reply: result.reply, live: false });
+    }
+
     const researchTool = require('../services/advisor-research');
     const question = researchTool.researchQuestion(message, history);
     if (question === '') {
