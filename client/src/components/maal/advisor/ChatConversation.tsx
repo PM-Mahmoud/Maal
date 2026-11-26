@@ -413,7 +413,7 @@ export function ChatConversation({
                 )}
                 {m.widgets?.map((w, wi) => (
                   <div key={wi} className="mx-adv-widget">
-                    <WidgetRenderer widget={w} action={<AddToDashboard widget={w} />} />
+                    <WidgetRenderer widget={w} action={w.canSave !== false ? <AddToDashboard widget={w} /> : undefined} />
                   </div>
                 ))}
                 {m.citations && m.citations.length > 0 && (

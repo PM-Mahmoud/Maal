@@ -175,7 +175,41 @@ const FALLBACK_REPLY =
 // Assemble the verified answer text for a chat turn. `systemExtra` is appended
 // to the system prompt (e.g. widget instructions for the web surface). Returns
 // the final verified text (raw — including any generative-UI directives).
-async function runChat(user, profile, maal, messages, docs, extra, systemExtra, { signal, onStep, requireVerification } = {}) {
+async function runCalculatorCalls(toolCalls, calculators) {
+  const calls = [];
+  const replies = [];
+  const grounding = [];
+  const widgets = [];
+  const seen = new Set();
+  for (const call of toolCalls) {
+    const { id, type, function: invoked } = call || {};
+    if (type !== 'function' || typeof id !== 'string' || !id || id.length > 100 || seen.has(id)
+        || typeof invoked?.name !== 'string' || invoked.name.length > 80 || typeof invoked.arguments !== 'string'
+        || invoked.arguments.length > 4_000) continue;
+    seen.add(id);
+    calls.push({ id, type, function: { name: invoked.name, arguments: invoked.arguments } });
+    let output;
+    try {
+      output = await calculators.run(invoked.name, JSON.parse(invoked.arguments));
+    } catch (error) {
+      calculators.signal?.throwIfAborted();
+      output = { error: 'Calculation unavailable. Use only the allowed inputs and ask for missing assumptions.' };
+    }
+    const summary = output.widget ? {
+      calculator: invoked.name, title: output.widget.title,
+      assumptions: output.widget.data.caption, rows: output.widget.data.rows,
+    } : { error: output.error };
+    if (output.widget) {
+      widgets.push(output.widget);
+      grounding.push(summary);
+    }
+    replies.push({ role: 'tool', tool_call_id: id, content: JSON.stringify(summary) });
+    if (calls.length >= 2) break;
+  }
+  return { calls, replies, grounding, widgets };
+}
+
+async function runChat(user, profile, maal, messages, docs, extra, systemExtra, { signal, onStep, requireVerification, calculators } = {}) {
   signal?.throwIfAborted();
   if (requireVerification && !gateway.hasRole('verifier')) throw new Error('Advisor verifier unavailable');
   // RAG: retrieve relevant knowledge chunks for the latest user message. This is
@@ -212,8 +246,33 @@ async function runChat(user, profile, maal, messages, docs, extra, systemExtra, 
   onStep?.('checking_constants', 'end');
   const opts = { maxTokens: 700, temperature: 0.6, signal, requireVerification };
   onStep?.('drafting', 'start');
-  const draft = await gateway.completeAs('reasoner', promptMessages, opts);
+  let initial;
+  try {
+    initial = await gateway.completeAs('reasoner', promptMessages, { ...opts, tools: calculators?.definitions });
+  } catch (error) {
+    signal?.throwIfAborted();
+    if (!calculators) throw error;
+    console.warn('[advisor] Calculator tool request unavailable:', safeError(error));
+    promptMessages[0].content += '\nThe calculator function is unavailable. Explain the limitation and do not estimate figures manually.';
+    initial = await gateway.completeAs('reasoner', promptMessages, opts);
+  }
   signal?.throwIfAborted();
+  let draft = typeof initial === 'string' ? initial : initial.text;
+  let calculatedWidgets = [];
+  if (calculators && initial?.toolCalls?.length) {
+    const result = await runCalculatorCalls(initial.toolCalls, { ...calculators, signal });
+    if (result.calls.length) {
+      calculatedWidgets = result.widgets;
+      promptMessages[0].content += '\n\nCALCULATOR RESULTS (authoritative; do not recalculate): ' + JSON.stringify(result.grounding);
+      draft = await gateway.completeAs('reasoner', [
+        ...promptMessages,
+        { role: 'assistant', content: draft || null, tool_calls: result.calls },
+        ...result.replies,
+      ], opts);
+    }
+  }
+  signal?.throwIfAborted();
+  if (!draft && calculators) draft = 'I couldn’t run that calculation. Please check the inputs and try again.';
   onStep?.('drafting', 'end');
   // Verify-and-revise pass (blocking, one revision round, ships regardless).
   // Checks math, AU constants, and claims-vs-user-data — never style.
@@ -223,13 +282,13 @@ async function runChat(user, profile, maal, messages, docs, extra, systemExtra, 
   if (verdict.revised) {
     console.log('[advisor] verifier revised answer (' + verdict.issues.length + ' issue(s))');
   }
-  return verdict.text;
+  return { text: verdict.text, calculatedWidgets };
 }
 
 // Text-only chat (SMS, email, any non-web surface): no generative-UI directives.
 async function chat(user, profile, maal, messages, docs, extra = {}) {
   if (!hasAdvisor()) return FALLBACK_REPLY;
-  return runChat(user, profile, maal, messages, docs, extra, '');
+  return (await runChat(user, profile, maal, messages, docs, extra, '')).text;
 }
 
 // Rich web chat: the model may emit widget + follow-up directives, which we
@@ -238,10 +297,13 @@ async function chat(user, profile, maal, messages, docs, extra = {}) {
 async function chatRich(user, profile, maal, messages, docs, extra = {}, options) {
   const widgets = require('./advisor-widgets');
   if (!hasAdvisor()) return { reply: FALLBACK_REPLY, widgets: [], followUps: [], citations: [], live: false };
-  const raw = await runChat(user, profile, maal, messages, docs, extra, widgets.widgetInstructions(), options);
-  const parsed = widgets.parseDirectives(raw);
+  const calculators = user?.id ? require('./advisor-calculators').forAccount(user.id, profile, options?.signal) : undefined;
+  const instructions = widgets.widgetInstructions() +
+    '\nUse the calculator function for requested tax, super, debt or growth figures. Treat its returned figures as authoritative. Ask for missing scenario inputs.';
+  const { text, calculatedWidgets } = await runChat(user, profile, maal, messages, docs, extra, instructions, { ...options, calculators });
+  const parsed = widgets.parseDirectives(text);
   const ctx = { profile, maal, snapshots: extra.snapshots, transactions: extra.transactions, goals: extra.goals };
-  const built = widgets.buildWidgets(parsed.widgetRequests, ctx);
+  const built = [...calculatedWidgets, ...widgets.buildWidgets(parsed.widgetRequests, ctx)].slice(0, 2);
   const citations = widgets.internalCitations(built, extra);
   return { reply: parsed.text, widgets: built, followUps: parsed.followUps, citations, live: true };
 }
