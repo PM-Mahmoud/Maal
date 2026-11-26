@@ -31,7 +31,7 @@ function EntryCard({
 }) {
   return (
     <div className="mb-entry">
-      <button type="button" onClick={onOpen} className="mb-entry-open" aria-label={`Open ${title}: ${subtitle}`}>
+      <button type="button" onClick={onOpen} className="mb-entry-open" aria-haspopup="dialog">
         <div className="mb-entry-head"><span>{kicker}</span></div>
         <div className="mb-entry-body">
           <p className="mb-entry-title">{title}</p>

@@ -393,8 +393,7 @@ export function ConnectAccountsFlow({
             {(["bank", "super", "investment"] as InstitutionCategory[]).map((c) => {
               const logos = byCategory(c);
               return (
-                <button key={c} type="button" className="cx-cat" onClick={() => setCategory(c)}
-                  aria-label={c === "bank" ? "Connect bank accounts and credit cards" : c === "super" ? "Connect your super" : "Connect investment accounts"}>
+                <button key={c} type="button" className="cx-cat" onClick={() => setCategory(c)}>
                   <span className="cx-cat-logos" aria-hidden="true">{logos.map((i) => <Logo key={i.id ?? i.slug ?? i.name} inst={i} size={40} />)}</span>
                   <span className="cx-cat-title">
                     {c === "bank" ? "Connect bank accounts and credit cards" : c === "super" ? "Connect your super" : "Connect investment accounts"}

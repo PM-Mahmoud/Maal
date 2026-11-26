@@ -23,6 +23,7 @@ export function HomeHeader({ name }: { name: string }) {
   // display_name, or the email local part ("sam.lee") as a fallback.
   const first = name ? name.trim().split(/[\s._-]+/)[0] : "";
   const display = first ? first.charAt(0).toUpperCase() + first.slice(1) : "";
+  const avatar = initials(name) || "Me";
   return (
     <header>
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -31,8 +32,8 @@ export function HomeHeader({ name }: { name: string }) {
           <Link to="/app/billing" hash="invite" className="mh-iconbtn mh-iconbtn--gift hidden sm:inline-grid" aria-label="Invite friends" title="Invite friends">
             <Gift aria-hidden />
           </Link>
-          <Link to="/app/onboarding" className="mh-iconbtn mh-iconbtn--avatar" aria-label="Your profile" title="Your profile">
-            {initials(name) || "Me"}
+          <Link to="/app/onboarding" className="mh-iconbtn mh-iconbtn--avatar" aria-label={`${avatar}, your profile`} title="Your profile">
+            {avatar}
           </Link>
           <button type="button" className="mh-iconbtn" onClick={() => router.history.push(CONNECT_PATH)} aria-label="Add account" title="Add account">
             <Plus aria-hidden />
