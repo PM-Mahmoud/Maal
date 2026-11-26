@@ -184,6 +184,16 @@ app.get('/lunchflow/status', (_req, res) => res.json({
 app.get('/api/v1/planning', (_req, res) => res.json(
   require('../lib/planning').buildPlanningSummary({ cash: 21000, monthlyEssentialExpenses: 3200 })
 ));
+// Home estimate fixtures use the real calculation with synthetic numbers.
+app.get('/api/v1/home-insights', (req, res) => {
+  const { buildHomeInsights } = require('../lib/home-insights');
+  const empty = previewEmpty(req);
+  res.json(buildHomeInsights({
+    profile: empty ? {} : { cash_savings: 18000, annual_income: 95000, hecs_balance: 15000 },
+    hasCash: !empty,
+    transactions: empty ? [] : [{ amount: -2400, category_group: 'Housing' }, { amount: -600, category_group: 'Groceries' }],
+  }));
+});
 app.get('/api/v1/planning/history', (_req, res) => res.json([]));
 app.get('/api/v1/wealth-summary', (_req, res) => {
   const { wealthTotalsFromSummary } = require('../db/assets');

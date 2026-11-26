@@ -713,6 +713,9 @@ router.get('/v1/wealth-summary', async (req, res) => {
   }
 });
 
+// Home cash runway and indicative tax estimate.
+router.get('/v1/home-insights', require('../services/home-insights').homeInsightsHandler);
+
 // W1.2 shadow read model. Existing asset tables remain the compatibility
 // projection until parity has been proven in production; this endpoint exposes
 // canonical accounts/holdings/valuations without allowing cross-user reads.
