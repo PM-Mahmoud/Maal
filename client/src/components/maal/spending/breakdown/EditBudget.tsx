@@ -24,7 +24,7 @@ export function EditBudget({ transactions, excluded, budgets, custom, today, loa
   budgetError?: boolean;
   onBack: () => void;
   onAi: () => void;
-  onOpenCategory: (name: string) => void;
+  onOpenCategory: (name: string, trigger: HTMLButtonElement) => void;
   onNewCategory: () => void;
   onBudgetChanged: () => Promise<void> | void;
 }) {
@@ -123,7 +123,7 @@ export function EditBudget({ transactions, excluded, budgets, custom, today, loa
                     <CatIcon name={b.category_group!} custom={custom} />
                     <span className="min-w-0 flex-1"><span className="bd-trunc">{b.category_group}</span><span className="bd-sub"><span className="mh-amount">{aud(lastMonth.get(b.category_group!) ?? 0)}</span> last month</span></span>
                     <span className="mh-amount">{aud(Number(b.monthly_amount))}</span>
-                    <button type="button" className="ss-iconbtn" onClick={() => onOpenCategory(b.category_group!)} aria-label={`Edit ${b.category_group} budget`}><Pencil aria-hidden /></button>
+                    <button type="button" className="ss-iconbtn" onClick={(event) => onOpenCategory(b.category_group!, event.currentTarget)} aria-label={`Edit ${b.category_group} budget`}><Pencil aria-hidden /></button>
                     <button type="button" className="ss-iconbtn bd-danger" onClick={() => remove(b)} disabled={busy} aria-label={`Remove ${b.category_group} budget`}><Trash2 aria-hidden /></button>
                   </li>
                 ))}
@@ -142,7 +142,7 @@ export function EditBudget({ transactions, excluded, budgets, custom, today, loa
               <ul className="ss-card bd-clist">
                 {addable.map((c) => (
                   <li key={c}>
-                    <button type="button" className="bd-crow bd-crow-btn" onClick={() => onOpenCategory(c)}>
+                    <button type="button" className="bd-crow bd-crow-btn" onClick={(event) => onOpenCategory(c, event.currentTarget)}>
                       <CatIcon name={c} custom={custom} />
                       <span className="min-w-0 flex-1"><span className="bd-trunc">{c}</span><span className="bd-sub"><span className="mh-amount">{aud(lastMonth.get(c) ?? 0)}</span> last month</span></span>
                       <Plus aria-label={`Set a ${c} budget`} className="bd-plus" />

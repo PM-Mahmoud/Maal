@@ -19,6 +19,7 @@ export function LatestTransactionsCard({ transactions, excluded, loading, error 
   loading: boolean;
   error?: boolean;
 }) {
+  const privacy = usePrivacy();
   const recent = useMemo(
     () => [...transactions]
       .sort((a, b) => String(b.post_date || "").localeCompare(String(a.post_date || "")))
@@ -49,8 +50,7 @@ export function LatestTransactionsCard({ transactions, excluded, loading, error 
             return (
               <li key={t.id ?? i} className="so-txn" data-muted={!counted}>
                 <button type="button" className="td-txn-open" disabled={t.id == null}
-                  onClick={() => t.id != null && openTransactionDetail(t.id)}
-                  aria-label={`Open ${t.merchant || t.description || "transaction"}, ${shortDate(t.post_date)}`}>
+                  onClick={() => t.id != null && openTransactionDetail(t.id)}>
                 <span className="so-txn-icon cat-chip" style={catVars(group)} aria-hidden><Icon /></span>
                 <span className="min-w-0 flex-1">
                   <span className="so-txn-name">{t.merchant || t.description || "Transaction"}</span>
@@ -59,7 +59,7 @@ export function LatestTransactionsCard({ transactions, excluded, loading, error 
                 {!counted && (
                   <EyeOff className="so-txn-hidden" aria-label="Not counted in your spending" role="img" />
                 )}
-                <span className="so-txn-amt mh-amount" data-in={amt > 0 && counted}>
+                <span className="so-txn-amt mh-amount" data-in={amt > 0 && counted} aria-hidden={privacy || undefined}>
                   {amt > 0 ? signedCents(amt) : signedCents(Math.abs(amt)).replace("+", "")}
                 </span>
                 </button>
@@ -100,7 +100,7 @@ export function UpcomingCard({ recurring, loading, error, today }: {
       actions={<AskSparkButton label="Ask Maal about upcoming bills" question="What bills and subscriptions do I have coming up in the next two weeks, and can I afford them comfortably?" />}>
       {loading ? <div className="mh-skel" style={{ height: 220 }} /> : (
         <div className="so-week-wrap">
-          <div className="so-week" role="grid" aria-label="This week and next">
+          <div className="so-week" role="table" aria-label="This week and next">
             <div role="row" className="so-week-row so-week-head">
               {WEEKDAYS.map((d) => <span key={d} role="columnheader">{d}</span>)}
             </div>
@@ -110,15 +110,16 @@ export function UpcomingCard({ recurring, loading, error, today }: {
                   const iso = isoDay(d);
                   const due = byDay.get(iso) || [];
                   const past = iso < todayIso;
-                  const label = `${d.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" })}`
-                    + (due.length ? `: ${due.map((x) => `${x.merchant} ${privacy ? "" : aud(x.amount)}`).join(", ")}` : "");
                   return (
-                    <div role="gridcell" key={iso} className="so-week-cell" data-past={past} data-today={iso === todayIso} aria-label={label}>
-                      <span className="so-week-num">{d.getDate()}</span>
+                    <div role="cell" key={iso} className="so-week-cell" data-past={past} data-today={iso === todayIso}>
+                      <time className="so-week-num" dateTime={iso}>
+                        <span aria-hidden>{d.getDate()}</span>
+                        <span className="sr-only">{d.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" })}</span>
+                      </time>
                       {due.slice(0, 2).map((x, i) => (
-                        <span key={i} className="so-due" title={`${x.merchant} · ${aud(x.amount)}`}>
+                        <span key={i} className="so-due" title={privacy ? x.merchant : `${x.merchant} · ${aud(x.amount)}`}>
                           <span className="so-due-name">{x.merchant}</span>
-                          <span className="so-due-amt mh-amount">{aud(x.amount)}</span>
+                          <span className="so-due-amt mh-amount" aria-hidden={privacy || undefined}>{aud(x.amount)}</span>
                         </span>
                       ))}
                       {due.length > 2 && <span className="so-due-more">+{due.length - 2} more</span>}
