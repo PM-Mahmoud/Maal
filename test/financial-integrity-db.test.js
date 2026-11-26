@@ -21,6 +21,8 @@ const reliableSnapshotsMigration = require('../migrations/1755000000000_reliable
 const monthlyCloseMigration = require('../migrations/1755100000000_monthly_financial_closes');
 const canonicalWealthMigration = require('../migrations/1755500000000_canonical_wealth');
 const wealthImportsMigration = require('../migrations/1755700000000_wealth_imports_and_links');
+const collaborationMigration = require('../migrations/1756000000000_collaboration_extensibility');
+const householdOwnershipMigration = require('../migrations/1757430000074_household_ownership');
 const ruleConditionsMigration = require('../migrations/1756800000000_transaction_rule_conditions');
 
 async function expectPgError(fn, expectedCode) {
@@ -101,6 +103,8 @@ async function main() {
     await canonicalWealthMigration.up(pool);
     await wealthImportsMigration.up(pool);
     await ruleConditionsMigration.up(pool);
+    await collaborationMigration.up(pool);
+    await householdOwnershipMigration.up(pool);
 
     const firstUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
     const secondUser = (await pool.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
