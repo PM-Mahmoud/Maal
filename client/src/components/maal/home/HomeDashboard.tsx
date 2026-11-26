@@ -41,7 +41,9 @@ export function HomeDashboard() {
           </div>
           <aside className="mh-col" aria-label="Insights">
             {/* Figma "Complete onboarding": the green setup card + its dialog. */}
-            <CompleteOnboardingCard />
+            <CompleteOnboardingCard
+              showAccountNudge={!data.loading && !data.errors.accounts && !data.hasAssetOrLiabilityRows}
+            />
             <HomeBriefCards />
             <MaalScoreCard score={data.score} error={data.errors.score} />
             <MarketWatchCard />
