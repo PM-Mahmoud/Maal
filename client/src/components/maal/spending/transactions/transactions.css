@@ -329,3 +329,15 @@ html.dark .tx-field input, html.dark .tx-field textarea, html.dark .tx-select se
 .tx-btn-ink:disabled, .tx-btn-line:disabled, .tx-btn-soft:disabled { opacity: .45; cursor: not-allowed; }
 .tx-btn-sm { height: 36px; padding: 0 14px; border: 1px solid var(--mh-line-strong); border-radius: 8px; background: var(--mh-card); color: var(--mh-ink); font: inherit; font-size: 14px; cursor: pointer; }
 .tx-btn-sm:hover { background: var(--mh-hover); }
+
+.tx-field input[type="file"] { padding-top: 12px; height: auto; min-height: 50px; padding-bottom: 12px; }
+.tx-import-filename { overflow-wrap: anywhere; }
+.tx-import-check { display: flex; gap: 8px; align-items: center; }
+.tx-import-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.tx-import-preview { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
+.tx-import-preview th, .tx-import-preview td { border-bottom: 1px solid var(--mh-line); padding: 8px 4px; text-align: left; overflow-wrap: anywhere; }
+.tx-import-preview th:nth-child(2) { width: 43%; }
+.tx-import-preview th:last-child, .tx-import-preview td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 480px) {
+  .tx-import-columns { grid-template-columns: 1fr; }
+}

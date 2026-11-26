@@ -328,7 +328,7 @@ export function exportFilename(filters, today = new Date()) {
 // ---------------------------------------------------------------------------
 
 /** Minimal RFC-4180 parser: quoted fields, "" escapes, embedded commas/newlines, CRLF or LF, BOM. */
-export function parseCsv(text) {
+export function parseCsv(text, { rejectUnclosedQuotes = false } = {}) {
   const rows = [];
   let row = [];
   let field = "";
@@ -348,6 +348,7 @@ export function parseCsv(text) {
       rows.push(row); row = [];
     } else field += c;
   }
+  if (inQuotes && rejectUnclosedQuotes) throw new Error("The CSV has an unclosed quoted field.");
   if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
   return rows;
 }
@@ -410,6 +411,77 @@ export function parseStatementCsv(text) {
 /** Fingerprint used to skip rows already imported from this browser. */
 export function rowFingerprint(r) {
   return `${r.occurred_on}|${String(r.description).trim().toLowerCase()}|${Number(r.amount).toFixed(2)}`;
+}
+
+export function statementColumns(cells, hasHeader) {
+  if (!hasHeader) return { date: 0, description: 1, amount: 2, debit: -1, credit: -1 };
+  const headers = (cells ?? []).map((cell) => cell.trim().toLowerCase().replace(/[_-]/g, " "));
+  const column = (pattern) => headers.findIndex((name) => pattern.test(name));
+  return {
+    date: column(/\bdate\b/),
+    description: column(/\b(description|details|narration|memo|merchant|payee)\b/),
+    amount: column(/^(transaction )?amount( \(aud\))?$/),
+    debit: column(/\b(debit|withdrawals?|money out)\b/),
+    credit: column(/\b(credit|deposits?|money in)\b/),
+  };
+}
+
+/** Signed AUD values including thousands separators, parentheses and statement DR/CR suffixes. */
+function statementAmount(raw) {
+  const cell = String(raw ?? "").trim();
+  const match = /^(\()?\s*([+-])?\s*(?:AUD\s*|\$\s*)?(\d{1,3}(?:,\d{3})+|\d+)(\.\d{1,2})?\s*(?:(DR|CR)|(\)))?$/i.exec(cell);
+  if (!match) return null;
+  const [, open, sign, whole, fraction = "", direction, close] = match;
+  if (Boolean(open) !== Boolean(close) || (open && sign) || (sign && direction)) return null;
+  const amount = Number(whole.replace(/,/g, "") + fraction);
+  if (!Number.isSafeInteger(Math.round(amount * 100))) return null;
+  return open || sign === "-" || direction?.toUpperCase() === "DR" ? -amount : amount;
+}
+
+export function parseMappedStatement(cells, { hasHeader, columns, split }) {
+  const amountColumns = split ? [columns.debit, columns.credit] : [columns.amount];
+  const required = [columns.date, columns.description, ...amountColumns];
+  if (required.some((column) => !Number.isInteger(column) || column < 0) || new Set(required).size !== required.length) {
+    return { error: "Choose a different column for each field." };
+  }
+  const rows = [];
+  for (let index = hasHeader ? 1 : 0; index < cells.length; index++) {
+    const row = cells[index];
+    if (!row.some((cell) => cell.trim())) continue;
+    const date = parseDateCell(row[columns.date]);
+    if (!date) return { error: `Row ${index + 1}: enter a date in DD/MM/YYYY or YYYY-MM-DD format.` };
+    const description = row[columns.description]?.trim();
+    if (!description) return { error: `Row ${index + 1}: add a description.` };
+    let amount;
+    if (split) {
+      const debit = row[columns.debit]?.trim();
+      const credit = row[columns.credit]?.trim();
+      const outgoing = debit === "" ? 0 : statementAmount(debit);
+      const incoming = credit === "" ? 0 : statementAmount(credit);
+      if (outgoing === null || incoming === null || Boolean(outgoing) === Boolean(incoming)) {
+        return { error: `Row ${index + 1}: use either the debit or the credit column for the amount.` };
+      }
+      amount = incoming ? Math.abs(incoming) : -Math.abs(outgoing);
+    } else {
+      amount = statementAmount(row[columns.amount]);
+      if (amount === null) return { error: `Row ${index + 1}: enter a valid amount in AUD.` };
+    }
+    rows.push({ occurred_on: date, description: description.slice(0, 160), amount });
+  }
+  return rows.length ? { rows } : { error: "The statement has no transaction rows." };
+}
+
+/** Keep the first row per fingerprint, excluding rows already imported in this browser. */
+export function previewStatementRows(rows, priorKeys = []) {
+  const seen = new Set(priorKeys);
+  const newRows = [];
+  for (const row of rows) {
+    const key = rowFingerprint(row);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    newRows.push(row);
+  }
+  return { rows: newRows, skipped: rows.length - newRows.length };
 }
 
 // ---------------------------------------------------------------------------
