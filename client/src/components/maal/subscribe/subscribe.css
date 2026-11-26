@@ -89,7 +89,7 @@
 .ms-benefits svg { flex-shrink: 0; color: #4A4D4A; }
 
 .ms-link { background: none; border: 0; padding: 0; font-size: 15px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; color: #0A0A0A; }
-.ms-link-soft { color: #626562; }
+.ms-link-soft { color: var(--ms-muted); }
 .ms-terms { margin-top: 20px; }
 .ms-actions { width: 100%; max-width: 371px; display: grid; gap: 10px; margin-top: 26px; }
 .ms-btn {
@@ -99,7 +99,8 @@
 }
 .ms-btn:active { transform: translateY(1px); }
 .ms-btn:disabled { opacity: .5; cursor: progress; }
-.ms-btn-ink { background: var(--ms-btn); color: #fff; border-color: #868983; }
+.ms-btn-ink { background: var(--ms-btn); color: var(--ms-btn-label, #fff); border-color: #868983; }
+:root.dark .msub { --ms-btn-label: #050505; }
 .ms-btn-ink:hover { opacity: .9; }
 .ms-btn-line { background: #fff; color: var(--ms-ink-strong); border-color: #BDBFBA; font-weight: 400; font-size: 17px; height: 52px; }
 .ms-btn-line:hover { border-color: var(--ms-ink-strong); }

@@ -304,8 +304,8 @@ html:not(.dark) .mh-range[aria-pressed="true"] { background: #F5F5F4; }
 }
 .mh-day b { font-weight: 400; font-size: 13px; color: var(--mh-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mh-day[data-past="true"] { background: var(--mh-card); }
-.mh-day[data-today="true"] { background: var(--mh-today); border-color: var(--mh-today); color: rgba(255,255,255,.85); }
-.mh-day[data-today="true"] b { color: #fff; }
+.mh-day[data-today="true"] { background: var(--mh-today); border-color: var(--mh-today); color: #07131c; }
+.mh-day[data-today="true"] b { color: inherit; }
 .mh-day[data-future="true"] b { color: var(--mh-faint); }
 @media (max-width: 480px) {
   .mh-card-body { padding: 16px; }
