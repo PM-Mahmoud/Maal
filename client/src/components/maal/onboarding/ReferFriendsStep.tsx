@@ -98,6 +98,7 @@ export function ReferFriendsStep() {
           <li>It counts friends who sign up with your link and pay for a membership. Refunded memberships don’t count.</li>
           <li>Each link can let up to 20 people skip the waitlist.</li>
           <li>Rewards have no cash value and can’t be transferred. Maal may change or end this offer at any time.</li>
+          {data?.termsUrl === "/terms" && <li><a href={data.termsUrl} className="underline">Read the full terms</a></li>}
         </ul>
       )}
     </div>

@@ -7,6 +7,7 @@ export type ReferralSummary = {
   paid: number;
   towardsNext: number; // paid friends counting toward the next reward (0..needed)
   needed: number; // 3
+  termsUrl?: "/terms";
   rewardStatus: "pending" | "applied" | null;
 };
 

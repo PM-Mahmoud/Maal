@@ -22,6 +22,7 @@ The build runs pending database migrations and builds the React client and its r
 | `DATABASE_URL` | PostgreSQL connection string from Neon |
 | `SESSION_SECRET` | Random secret for signing session cookies |
 | `BASE_URL` | Canonical public HTTPS origin used by checkout and auth links |
+| `PUBLIC_TERMS_LINKS` | Set to `1` only after counsel approves the Terms text and the reviewed copy is deployed. The default keeps links hidden and the draft excluded from indexing. |
 | `PORT` | Assigned by Render |
 | `RESEND_API_KEY` | Sends transactional email through Resend |
 | `EMAIL_FROM` | Verified sender address for signup, password reset and other transactional email |

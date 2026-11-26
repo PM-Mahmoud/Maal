@@ -29,7 +29,9 @@ router.get('/api/v1/referrals', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
     const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-    res.json(await referrals.summaryFor(req.session.userId, baseUrl));
+    const summary = await referrals.summaryFor(req.session.userId, baseUrl);
+    const termsUrl = require('../lib/public-terms').publicTermsUrl();
+    res.json(termsUrl ? { ...summary, termsUrl } : summary);
   } catch (e) {
     console.error('/api/v1/referrals error:', safeError(e));
     res.status(500).json({ error: 'Could not load your referral link.' });

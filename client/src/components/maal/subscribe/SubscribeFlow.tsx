@@ -174,6 +174,7 @@ export function TermsNote({ offer, dark }: { offer: Offer; dark?: boolean }) {
       The {offer.firstYear} first-year price (incl. {gst(offer.firstYearGstCents)} GST) is for new members. Your membership then renews
       automatically each year at {offer.renewal} (incl. {gst(offer.renewalGstCents)} GST) unless you cancel in Plan &amp; Usage before
       the renewal date. All prices in Australian dollars.
+      {offer.termsUrl === "/terms" && <> <a href={offer.termsUrl} className="underline">Read the full terms</a>.</>}
     </p>
   );
 }

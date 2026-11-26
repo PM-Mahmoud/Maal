@@ -243,3 +243,8 @@ html[data-theme="dark"] .v2 .v2-alert { color: #FDBA8C; border-color: rgba(253,1
   .v2-focus-page h1 { font-size: 28px; }
 }
 .v2-wrap-address { overflow-wrap: anywhere; }
+
+.v2-terms { width: min(100%, 720px); margin: 0 auto; padding: clamp(32px, 6vw, 72px) 20px; }
+.v2-terms section { margin-top: 32px; }
+.v2-terms h2 { font-family: var(--v2-serif); font-size: 22px; margin-bottom: 8px; }
+.v2-terms section p { margin-top: 8px; color: var(--v2-muted); line-height: 1.7; }
