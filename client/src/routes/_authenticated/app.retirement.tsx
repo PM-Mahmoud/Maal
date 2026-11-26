@@ -128,7 +128,7 @@ function RetirementPage() {
       <div className="p-6 border border-border rounded-[12px] bg-[var(--surface)] mb-6">
         <div className="flex items-baseline justify-between mb-4">
           <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Balance trajectory (nominal AUD)</p>
-          <p className={`text-[12px] font-semibold ${onTrack ? "text-[var(--mint)]" : "text-[var(--gold)]"}`}>
+          <p className={`text-[12px] font-semibold ${onTrack ? "text-teal-800 dark:text-teal-300" : "text-amber-800 dark:text-amber-300"}`}>
             {onTrack ? `On track — surplus ${formatAUD(shortfall)} (today's $)` : `Shortfall ${formatAUD(Math.abs(shortfall))} (today's $)`}
           </p>
         </div>
@@ -136,7 +136,7 @@ function RetirementPage() {
           <path d={band} fill="hsl(var(--foreground))" opacity={0.08} />
           <path d={medianPath} stroke="hsl(var(--foreground))" strokeWidth={2} fill="none" />
           <line x1={pad} x2={W - pad} y1={targetY} y2={targetY} stroke="var(--gold)" strokeDasharray="4 4" />
-          <text x={W - pad} y={targetY - 6} textAnchor="end" fontSize="10" fill="var(--gold)" fontWeight="700">ASFA target</text>
+          <text x={W - pad} y={targetY - 6} textAnchor="end" fontSize="10" fill="currentColor" className="text-amber-800 dark:text-amber-300" fontWeight="700">ASFA target</text>
           <text x={pad} y={H - 8} fontSize="10" fill="hsl(var(--muted-foreground))">Age {portfolio.age}</text>
           <text x={W - pad} y={H - 8} textAnchor="end" fontSize="10" fill="hsl(var(--muted-foreground))">Age {RETIREMENT_AGE}</text>
         </svg>
@@ -213,7 +213,7 @@ function RetirementPage() {
 }
 
 function Stat({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "mint" | "gold" }) {
-  const color = tone === "mint" ? "text-[var(--mint)]" : tone === "gold" ? "text-[var(--gold)]" : "text-foreground";
+  const color = tone === "mint" ? "text-teal-800 dark:text-teal-300" : tone === "gold" ? "text-amber-800 dark:text-amber-300" : "text-foreground";
   return (
     <div className="p-5 border border-border rounded-[12px] bg-[var(--surface)]">
       <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{label}</p>

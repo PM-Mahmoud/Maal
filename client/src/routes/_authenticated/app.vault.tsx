@@ -165,7 +165,7 @@ function VaultPage() {
                 </li>
               ))}
             </ul>
-            {applyErr && <p className="mb-3 text-[12px] text-[var(--gold)]">{applyErr}</p>}
+            {applyErr && <p className="mb-3 text-[12px] text-amber-800 dark:text-amber-300">{applyErr}</p>}
             <div className="flex items-center justify-end gap-2">
               <button onClick={closeExtractModal} className="px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-foreground">Not now</button>
               <button onClick={applyExtract} disabled={applying}
@@ -193,7 +193,7 @@ function VaultPage() {
                     <span className="text-[11px] text-muted-foreground font-normal">· {items.length}</span>
                   </button>
                   <button onClick={() => setTarget(name)}
-                    className={`text-[11px] px-2 py-1 rounded-[6px] border ${target === name ? "border-[var(--mint)] text-[var(--mint)]" : "border-border text-muted-foreground hover:text-foreground"}`}>
+                    className={`text-[11px] px-2 py-1 rounded-[6px] border ${target === name ? "border-[var(--mint)] text-teal-800 dark:text-teal-300" : "border-border text-muted-foreground hover:text-foreground"}`}>
                     {target === name ? "Upload target" : "Set target"}
                   </button>
                 </header>
@@ -218,7 +218,7 @@ function VaultPage() {
                               <p className="text-[13px] font-medium truncate">{d.filename}</p>
                               <p className="text-[11px] text-muted-foreground">{(d.size_bytes / 1024).toFixed(1)} KB · {new Date(d.created_at).toLocaleDateString()}</p>
                               {d.extracted && (
-                                <p className="text-[11px] text-[var(--mint)] mt-1">{d.extracted.document_type ?? "Extracted"}</p>
+                                <p className="text-[11px] text-teal-800 dark:text-teal-300 mt-1">{d.extracted.document_type ?? "Extracted"}</p>
                               )}
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
@@ -286,12 +286,12 @@ function VaultPage() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-0.5 shrink-0"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
               <p>
                 Documents are private to your account and sent over an encrypted (HTTPS) connection.{" "}
-                <a href="/security" className="text-[var(--mint)] underline">More on security</a>
+                <a href="/security" className="text-teal-800 dark:text-teal-300 underline">More on security</a>
               </p>
             </div>
           </div>
 
-          {err && <p className="text-[12px] text-[var(--gold)]">{err}</p>}
+          {err && <p className="text-[12px] text-amber-800 dark:text-amber-300">{err}</p>}
         </aside>
       </div>
     </div>
