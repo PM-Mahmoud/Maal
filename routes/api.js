@@ -171,6 +171,7 @@ router.get('/v1/usage', async (req, res) => {
     planLimits.MONTHLY_FEATURES.forEach((f) => {
       features[f] = { used: counts[f] || 0, limit: planLimits.limitFor(plan, f) };
     });
+    features.market_briefs = { used: counts.market_briefs || 0, limit: null };
     features.active_radars = { used: activeRadars, limit: planLimits.limitFor(plan, 'active_radars') };
     // The member Ask Maal cap is never shown: send usage but no number to show.
     if (plan === 'member') features.advisor_messages.limit = null;

@@ -289,6 +289,44 @@ async function main() {
     gateway._setFetchForTests(null);
   });
 
+  await test('Market brief verifies source data and rechecks one revision', async () => {
+    const { writeVerifiedBrief } = require('../services/market-brief');
+    const calls = [];
+    const brief = (headline) => JSON.stringify({ headline, story: [], lookingAhead: [] });
+    gateway._setFetchForTests(async (url, init) => {
+      const body = JSON.parse(init.body);
+      const verifier = url.includes('anthropic');
+      calls.push(verifier ? 'verifier' : 'reasoner');
+      if (!verifier) return openaiReply(brief(calls.length === 1 ? 'Unverified figures' : 'ETF proxy gained 1%'));
+      assert.match(body.system, /ETF proxies/);
+      assert.match(body.messages[0].content, /<grounding>[\s\S]*EWA[\s\S]*\+1%[\s\S]*<\/grounding>/);
+      return anthropicReply(calls.length === 2 ? '{"pass":false,"issues":["Use 1% for EWA"]}' : '{"pass":true}');
+    });
+    try {
+      const result = await writeVerifiedBrief({
+        date: '2026-11-26', indices: [{ label: 'ETF proxy', symbol: 'EWA', changePercent: 1 }], aud: null, news: [],
+      });
+      assert.equal(result.headline, 'ETF proxy gained 1%');
+      assert.deepEqual(calls, ['reasoner', 'verifier', 'reasoner', 'verifier']);
+    } finally {
+      gateway._setFetchForTests(null);
+    }
+  });
+
+  await test('Market brief rejects unapproved revisions and skips generation without a verifier', async () => {
+    const { writeVerifiedBrief } = require('../services/market-brief');
+    const data = { date: '2026-11-26', indices: [], aud: null, news: [] };
+    const text = '{"headline":"Unsupported assertion","story":[]}';
+    const model = {
+      hasRole: () => true, completeAs: async () => text,
+      verifyAndRevise: async ({ opts }) => ({ accepted: !opts.verifyOnly, revised: !opts.verifyOnly, text }),
+    };
+    assert.equal(await writeVerifiedBrief(data, model), null);
+    assert.equal(await writeVerifiedBrief(data, {
+      hasRole: (role) => role !== 'verifier', completeAs: async () => { throw new Error('Unexpected generation'); },
+    }), null);
+  });
+
   console.log(`\n${passed} passed, ${failed} failed`);
   if (failed > 0) process.exit(1);
 }

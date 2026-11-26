@@ -248,18 +248,18 @@ const VERIFIER_SYSTEM = [
 // reasoner ONE revision round with the critique, then ship regardless.
 // Never blocks on verifier failure — any error returns the original draft.
 // Returns { text, verified, revised, issues }.
-async function verifyAndRevise({ messages, draft, opts, onStep }) {
+async function verifyAndRevise({ messages, draft, opts, onStep, verification }) {
   const result = { text: draft, verified: false, revised: false, issues: [], accepted: false };
   if (!hasRole('verifier')) {
     console.log('[gateway] verifier not configured (ANTHROPIC_API_KEY unset) — skipping verify pass');
     return result;
   }
   try {
-    const grounding = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
+    const grounding = verification?.grounding ?? messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
     const lastUser = [...messages].reverse().find(m => m.role === 'user');
     onStep?.('verifying', 'start');
     const raw = await completeAs('verifier', [
-      { role: 'system', content: VERIFIER_SYSTEM },
+      { role: 'system', content: verification?.instructions || VERIFIER_SYSTEM },
       {
         role: 'user',
         content:
@@ -280,7 +280,7 @@ async function verifyAndRevise({ messages, draft, opts, onStep }) {
     }
 
     result.issues = Array.isArray(verdict.issues) ? verdict.issues.slice(0, 5).map(String) : [];
-    if (!result.issues.length) return result;
+    if (opts?.verifyOnly || !result.issues.length) return result;
 
     onStep?.('revising', 'start');
     const revised = await completeAs('reasoner', [
@@ -289,7 +289,9 @@ async function verifyAndRevise({ messages, draft, opts, onStep }) {
       {
         role: 'user',
         content:
-          'A fact-checker reviewed your answer against the authoritative FY constants and my actual data, and found these specific issues:\n- ' +
+          (verification
+            ? 'A fact-checker found these issues with the draft compared with the provided source data:\n- '
+            : 'A fact-checker reviewed your answer against the authoritative FY constants and my actual data, and found these specific issues:\n- ') +
           result.issues.join('\n- ') +
           '\n\nRewrite your answer correcting ONLY these issues. Keep everything else (length, tone, structure) the same. Reply with the corrected answer only — do not mention the review.',
       },
