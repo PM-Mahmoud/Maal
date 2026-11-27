@@ -16,9 +16,15 @@
     <script>
       (function () {
         try {
-          var p = localStorage.getItem('maal-theme');
+          var p;
+          try { p = localStorage.getItem('maal-theme'); } catch (e) {}
           var dark = p === 'dark' || (p !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
           var el = document.documentElement;
+          var inApp = location.pathname === '/app' || location.pathname.startsWith('/app/');
+          el.toggleAttribute('data-app-page', inApp);
+          if (inApp) {
+            document.querySelector('meta[name="theme-color"]').content = dark ? '#050505' : '#F8F9F6';
+          }
           el.setAttribute('data-theme', dark ? 'dark' : 'light');
           if (dark) el.classList.add('dark');
           el.style.colorScheme = dark ? 'dark' : 'light';

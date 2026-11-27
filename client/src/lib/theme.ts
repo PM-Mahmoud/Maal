@@ -42,11 +42,18 @@ export function resolveTheme(pref: ThemePref): ResolvedTheme {
 
 export function applyTheme(resolved: ResolvedTheme) {
   const el = document.documentElement;
+  const pathname = window.location.pathname;
+  const inApp = pathname === "/app" || pathname.startsWith("/app/");
+  el.toggleAttribute("data-app-page", inApp);
   el.setAttribute("data-theme", resolved);
   el.classList.toggle("dark", resolved === "dark");
   el.style.colorScheme = resolved;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", resolved === "dark" ? "#050505" : "#020109");
+  // Safari uses this colour for the area exposed by rubber-band scrolling.
+  if (meta) {
+    const canvas = resolved === "dark" ? "#050505" : inApp ? "#F8F9F6" : "#020109";
+    meta.setAttribute("content", canvas);
+  }
 }
 
 export function setThemePref(pref: ThemePref) {
