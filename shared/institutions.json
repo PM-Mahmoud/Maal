@@ -1,0 +1,250 @@
+{
+  "institutions": [
+    {
+      "slug": "commbank",
+      "name": "CommBank",
+      "category": "bank",
+      "url": "https://www.commbank.com.au",
+      "logo": "/images/banks/commbank.svg",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "westpac",
+      "name": "Westpac",
+      "category": "bank",
+      "url": "https://www.westpac.com.au",
+      "logo": "/images/banks/westpac.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "nab",
+      "name": "NAB",
+      "category": "bank",
+      "url": "https://www.nab.com.au",
+      "logo": "/images/banks/nab.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "anz",
+      "name": "ANZ",
+      "category": "bank",
+      "url": "https://www.anz.com.au",
+      "logo": "/images/banks/anz.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "macquarie",
+      "name": "Macquarie",
+      "category": "bank",
+      "url": "https://www.macquarie.com.au",
+      "logo": "/images/banks/macquarie.svg",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "ing",
+      "name": "ING",
+      "category": "bank",
+      "url": "https://www.ing.com.au",
+      "logo": "/images/banks/ing.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "up",
+      "name": "Up",
+      "category": "bank",
+      "url": "https://up.com.au",
+      "logo": "/images/banks/up.svg",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "ubank",
+      "name": "ubank",
+      "category": "bank",
+      "url": "https://www.ubank.com.au",
+      "logo": "/images/banks/ubank.svg",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "bendigo",
+      "name": "Bendigo Bank",
+      "category": "bank",
+      "url": "https://www.bendigobank.com.au",
+      "logo": "/images/banks/bendigo.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "stgeorge",
+      "name": "St.George",
+      "category": "bank",
+      "url": "https://www.stgeorge.com.au",
+      "logo": "/images/banks/stgeorge.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "suncorp",
+      "name": "Suncorp",
+      "category": "bank",
+      "url": "https://www.suncorp.com.au",
+      "logo": "/images/banks/suncorp.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "bankwest",
+      "name": "Bankwest",
+      "category": "bank",
+      "url": "https://www.bankwest.com.au",
+      "logo": "/images/banks/bankwest.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "boq",
+      "name": "BOQ",
+      "category": "bank",
+      "url": "https://www.boq.com.au",
+      "logo": "/images/banks/boq.svg",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "amp",
+      "name": "AMP Bank",
+      "category": "bank",
+      "url": "https://www.amp.com.au",
+      "logo": "/images/banks/amp.svg",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "hsbc",
+      "name": "HSBC Australia",
+      "category": "bank",
+      "url": "https://www.hsbc.com.au",
+      "logo": "/images/banks/hsbc.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "banksa",
+      "name": "BankSA",
+      "category": "bank",
+      "url": "https://www.banksa.com.au",
+      "logo": "/images/banks/banksa.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "greatsouthern",
+      "name": "Great Southern Bank",
+      "category": "bank",
+      "url": "https://www.greatsouthernbank.com.au",
+      "logo": "/images/banks/greatsouthern.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "bankaustralia",
+      "name": "Bank Australia",
+      "category": "bank",
+      "url": "https://www.bankaust.com.au",
+      "logo": "/images/banks/bankaustralia.png",
+      "logoBackground": "#25302A"
+    },
+    {
+      "slug": "australiansuper",
+      "name": "AustralianSuper",
+      "category": "super",
+      "url": "https://www.australiansuper.com",
+      "logo": "/images/banks/australiansuper.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "hostplus",
+      "name": "Hostplus",
+      "category": "super",
+      "url": "https://hostplus.com.au",
+      "logo": "/images/banks/hostplus.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "art",
+      "name": "Australian Retirement Trust",
+      "category": "super",
+      "url": "https://www.australianretirementtrust.com.au",
+      "logo": "/images/banks/art.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "unisuper",
+      "name": "UniSuper",
+      "category": "super",
+      "url": "https://www.unisuper.com.au",
+      "logo": "/images/banks/unisuper.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "aware",
+      "name": "Aware Super",
+      "category": "super",
+      "url": "https://aware.com.au",
+      "logo": "/images/banks/aware.svg",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "rest",
+      "name": "Rest",
+      "category": "super",
+      "url": "https://rest.com.au",
+      "logo": "/images/banks/rest.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "commsec",
+      "name": "CommSec",
+      "category": "investment",
+      "url": "https://www.commsec.com.au",
+      "logo": "/images/banks/commsec.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "stake",
+      "name": "Stake",
+      "category": "investment",
+      "url": "https://www.hellostake.com",
+      "logo": "/images/banks/stake.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "pearler",
+      "name": "Pearler",
+      "category": "investment",
+      "url": "https://pearler.com",
+      "logo": "/images/banks/pearler.svg",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "superhero",
+      "name": "Superhero",
+      "category": "investment",
+      "url": "https://www.superhero.com.au",
+      "logo": "/images/banks/superhero.png",
+      "logoBackground": "#FFFFFF"
+    },
+    {
+      "slug": "selfwealth",
+      "name": "SelfWealth",
+      "category": "investment",
+      "url": "https://www.selfwealth.com.au",
+      "logo": "/images/banks/selfwealth.png",
+      "logoBackground": "#FFFFFF"
+    }
+  ],
+  "popular": [
+    "commbank",
+    "westpac",
+    "nab",
+    "anz",
+    "macquarie",
+    "ing",
+    "up",
+    "ubank",
+    "bendigo",
+    "stgeorge",
+    "suncorp",
+    "bankwest"
+  ]
+}

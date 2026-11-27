@@ -7,6 +7,8 @@
 //   GET  /api/v1/linked_accounts    → accounts after import
 //   POST /api/v1/<table>            → manual accounts (user-scoped server-side)
 
+import { institutions, popular } from "../../../../../shared/institutions.json";
+
 export type InstitutionCategory = "bank" | "super" | "investment";
 
 export interface InstitutionOption {
@@ -35,15 +37,10 @@ export interface LinkedAccountSummary {
 }
 
 // Used only if /basiq/institutions can't be reached at all.
-const FALLBACK: InstitutionOption[] = [
-  ["commbank", "CommBank", "bank"], ["westpac", "Westpac", "bank"], ["nab", "NAB", "bank"], ["anz", "ANZ", "bank"],
-  ["macquarie", "Macquarie", "bank"], ["ing", "ING", "bank"], ["up", "Up", "bank"], ["ubank", "ubank", "bank"],
-  ["bendigo", "Bendigo Bank", "bank"], ["stgeorge", "St.George", "bank"], ["suncorp", "Suncorp", "bank"], ["bankwest", "Bankwest", "bank"],
-  ["australiansuper", "AustralianSuper", "super"], ["hostplus", "Hostplus", "super"], ["commsec", "CommSec", "investment"],
-].map(([slug, name, category]) => ({
-  id: null, slug, name, shortName: name, category: category as InstitutionCategory,
-  logo: ["bankwest"].includes(slug) ? null : `/images/banks/${slug}.png`, url: null,
+const FALLBACK: InstitutionOption[] = institutions.map(({ slug, name, category, logo, url }) => ({
+  id: null, slug, name, shortName: name, category: category as InstitutionCategory, logo, url,
 }));
+const popularSlugs = new Set(popular);
 
 export async function fetchCatalogue(): Promise<InstitutionCatalogue> {
   try {
@@ -53,7 +50,7 @@ export async function fetchCatalogue(): Promise<InstitutionCatalogue> {
     if (!Array.isArray(j.institutions)) throw new Error("bad shape");
     return j;
   } catch {
-    return { live: false, source: "static", popular: FALLBACK.slice(0, 12), institutions: FALLBACK };
+    return { live: false, source: "static", popular: FALLBACK.filter(({ slug }) => slug !== null && popularSlugs.has(slug)), institutions: FALLBACK };
   }
 }
 
