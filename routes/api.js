@@ -2354,14 +2354,9 @@ const MANUAL_NET_WORTH_TABLES = new Set([
 ]);
 
 router.all('/v1/:table', async (req, res) => {
+  if (!req.session?.userId) return res.status(401).json({ error: 'Not authenticated' });
   const { table } = req.params;
-  if (!ASSET_TABLES.has(table)) {
-    // Unknown table — safe stub
-    if (req.method === 'GET') return res.json([]);
-    if (req.method === 'DELETE') return res.json({ ok: true });
-    return res.json({ ok: true, id: `stub-${Date.now()}` });
-  }
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!ASSET_TABLES.has(table)) return res.status(404).json({ error: 'Not found' });
 
   const uid = req.session.userId;
   const ucol = 'user_id';
@@ -2444,7 +2439,6 @@ router.all('/v1/:table', async (req, res) => {
     res.status(405).json({ error: 'Method not allowed' });
   } catch (e) {
     console.error(`api /v1/${table} ${req.method} error:`, safeError(e));
-    if (req.method === 'GET') return res.json([]);
     if (req.method === 'POST') {
       const badField = unknownColumnMessage(e, table);
       if (badField) return res.status(400).json({ error: badField });
@@ -2453,11 +2447,10 @@ router.all('/v1/:table', async (req, res) => {
   }
 });
 
-// Catch-all for unknown sub-paths (e.g. /v1/foo/bar)
-router.all('/v1/*', (req, res) => {
-  if (req.method === 'GET') return res.json([]);
-  if (req.method === 'DELETE') return res.json({ ok: true });
-  return res.json({ ok: true, id: `stub-${Date.now()}` });
+// Keep unknown API paths on the same authentication and JSON error contract.
+router.all(['/v1', '/v1/*'], (req, res) => {
+  if (!req.session?.userId) return res.status(401).json({ error: 'Not authenticated' });
+  return res.status(404).json({ error: 'Not found' });
 });
 
 module.exports = router;

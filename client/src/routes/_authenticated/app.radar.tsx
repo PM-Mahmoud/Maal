@@ -6,7 +6,6 @@ import { listAlerts, createAlert, deleteAlert, toggleAlert, evaluateAlerts } fro
 import { listTemplates } from "@/lib/radar-templates.functions";
 import { getRadarReadiness } from "@/lib/radar-readiness.functions";
 import { exportEventPdf, exportAllEventsPdf } from "@/lib/radar-pdf";
-import { enablePush, disablePush, getPushStatus, pushSupported } from "@/lib/push-client";
 import { getNotificationPrefs, setNotificationPref } from "@/lib/notification-prefs.functions";
 
 import { UsageLimitError } from "@/lib/usage-limit.mjs";
@@ -45,7 +44,6 @@ function RadarPage() {
   const [limit, setLimit] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [showAbout, setShowAbout] = useState(false);
-  const [pushStatus, setPushStatus] = useState<"unsupported" | "denied" | "granted" | "default">("default");
   const [dailyDigest, setDailyDigest] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
@@ -66,7 +64,6 @@ function RadarPage() {
   }
   useEffect(() => {
     refresh();
-    getPushStatus().then(setPushStatus);
     getNotificationPrefs().then((p) => setDailyDigest(p.daily_digest));
   }, []);
 
@@ -88,23 +85,6 @@ function RadarPage() {
       taRef.current?.setSelectionRange(t.prompt.length, t.prompt.length);
       taRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
-  }
-
-  async function togglePush() {
-    try {
-      if (pushStatus === "granted") {
-        await disablePush();
-        setPushStatus("default");
-        setToast("Browser notifications turned off.");
-      } else {
-        await enablePush();
-        setPushStatus("granted");
-        setToast("Browser notifications enabled — you'll get a ping the moment a radar fires.");
-      }
-    } catch (e: any) {
-      setToast(e?.message ?? "Couldn't enable notifications.");
-    }
-    setTimeout(() => setToast(null), 3500);
   }
 
   function showMutationError(error: unknown, fallback: string) {
@@ -169,19 +149,6 @@ function RadarPage() {
               <BellRing className="w-3.5 h-3.5" />
               {dailyDigest ? "Daily digest on" : "Daily email digest"}
             </button>
-            {pushSupported() && (
-              <button
-                onClick={togglePush}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors ${
-                  pushStatus === "granted"
-                    ? "border-[var(--mint)]/40 bg-[var(--mint)]/10 text-[var(--mint)]"
-                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
-                }`}
-              >
-                <BellRing className="w-3.5 h-3.5" />
-                {pushStatus === "granted" ? "Push on" : pushStatus === "denied" ? "Push blocked" : "Enable browser push"}
-              </button>
-            )}
           </div>
         </div>
       </header>
