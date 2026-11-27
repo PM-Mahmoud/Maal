@@ -23,6 +23,7 @@ The build runs pending database migrations and builds the React client and its r
 | `SESSION_SECRET` | Random secret for signing session cookies |
 | `BASE_URL` | Canonical public HTTPS origin used by checkout and auth links |
 | `PUBLIC_TERMS_LINKS` | Set to `1` only after counsel approves the Terms text and the reviewed copy is deployed. The default keeps links hidden and the draft excluded from indexing. |
+| `ORIGIN_SECRET` | Optional shared secret for Cloudflare origin enforcement. An empty value leaves enforcement off |
 | `PORT` | Assigned by Render |
 | `RESEND_API_KEY` | Sends transactional email through Resend |
 | `EMAIL_FROM` | Verified sender address for signup, password reset and other transactional email |
@@ -32,6 +33,22 @@ The build runs pending database migrations and builds the React client and its r
 | `EXA_API_KEY` | Web grounding for research and radar when enabled |
 
 Set environment values in Render. Keep credentials out of the repository. See the private Maal Operating Manual for account access and operating costs.
+
+## Enable Cloudflare origin enforcement
+
+1. Generate and store an origin secret privately. In Cloudflare, add a Modify
+   Request Header rule for the proxied app hostnames and set
+   `X-Maal-Origin-Secret` to that value. Use a **set** operation so it replaces
+   any value a client submitted. All browser, webhook, callback and cron
+   traffic should use the proxied public hostname.
+2. Set `ORIGIN_SECRET` to the same value on Render's web service after the
+   Cloudflare rule is active. Keep it unset while the rule is being prepared.
+3. Check the public site, sign-in, integrations and `GET /health`. The origin
+   accepts direct GET and HEAD health checks for Render. Other requests
+   require the verified header. Rate limits use Cloudflare's visitor address
+   when the header is verified and the address is valid.
+4. To roll back, unset `ORIGIN_SECRET` on Render first. Then remove the
+   Cloudflare rule.
 
 ## Deploy and verify
 

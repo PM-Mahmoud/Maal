@@ -13,6 +13,7 @@ process.on('unhandledRejection', (reason) => console.error('Unhandled rejection:
 process.on('uncaughtException', (err) => { console.error('Uncaught exception:', safeError(err)); process.exit(1); });
 
 const app = express();
+app.use(require('./lib/origin-lock').createOriginLock());
 const port = process.env.PORT || 3000;
 const queryMetrics = require('./db/query-metrics');
 if (queryMetrics.enabled) app.use('/api', queryMetrics.beginRequest);
