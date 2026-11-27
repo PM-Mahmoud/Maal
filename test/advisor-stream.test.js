@@ -6,6 +6,8 @@ const gateway = require('../services/gateway');
 const users = require('../db/users');
 const access = require('../services/access');
 const researchTool = require('../services/advisor-research');
+const radarDb = require('../db/radar');
+const radarTool = require('../services/advisor-radar');
 const grounding = require('../services/grounding');
 const market = require('../services/marketdata');
 const threadValidation = require('../lib/advisor-threads');
@@ -220,5 +222,83 @@ test('the in-thread report preserves only safe, grounded citations and emits a v
     grounding.searchWeb = original.web;
     grounding.searchNews = original.news;
     market.hasMarketData = original.market;
+  }
+});
+
+
+test('watch tool intent requires an explicit request to monitor a financial condition', () => {
+  assert.equal(radarTool.watchPrompt('Can you watch for the next rate announcement?'), 'the next rate announcement');
+  assert.equal(radarTool.watchPrompt('How can I watch a price?'), null);
+  assert.equal(radarTool.watchPrompt('Watch the next RBA rate decision for me.'), 'the next RBA rate decision');
+  assert.equal(radarTool.watchPrompt('Watch for a fall in NVDA'), 'a fall in NVDA');
+  assert.equal(radarTool.watchPrompt('/watch: a change in the RBA cash rate'), 'a change in the RBA cash rate');
+  assert.equal(radarTool.watchPrompt('Watch this for me'), '');
+});
+
+test('a native watch tool uses the request account and never implicitly enables external notifications', async () => {
+  const original = { list: radarDb.listRadars, create: radarDb.createRadarIfUnderActiveLimit };
+  const recorded = [];
+  radarDb.listRadars = async userId => {
+    assert.equal(userId, 7);
+    return [];
+  };
+  radarDb.createRadarIfUnderActiveLimit = async (...args) => { recorded.push(args); return '32'; };
+  let calls = 0;
+  gateway._setFetchForTests(async (_url, options) => {
+    calls++;
+    const request = JSON.parse(options.body);
+    assert.equal(request.tools[0].function.name, 'create_radar_watch');
+    assert.equal(request.messages[1].content, 'falls in NVDA');
+    return new Response(JSON.stringify({ choices: [{ message: { tool_calls: [
+      { id: 'c1', type: 'function', function: { name: 'create_radar_watch', arguments: '{}' } },
+    ] } }] }));
+  });
+  try {
+    const res = await ask(undefined, 'Watch falls in NVDA for me.');
+    assert.equal(res.status, 200);
+    assert.match((await res.json()).reply, /Your watch is active/);
+    assert.deepEqual(recorded, [[7, {
+      prompt: 'falls in NVDA', symbols: ['NVDA'], frequency: 'daily', notifyEmail: false, notifySms: false,
+    }, 10, { reuseActivePrompt: true }]]);
+    assert.equal(calls, 1);
+  } finally {
+    radarDb.listRadars = original.list;
+    radarDb.createRadarIfUnderActiveLimit = original.create;
+  }
+});
+
+test('watch retries at capacity are safe and new requests return the existing quota response', async () => {
+  const list = radarDb.listRadars;
+  const sample = Array.from({ length: 10 }, (_, i) => ({ active: true, prompt: `financial event ${i}` }));
+  radarDb.listRadars = async id => { assert.equal(id, 7); return sample; };
+  let calls = 0;
+  gateway._setFetchForTests(async () => { calls++; return completion('Unexpected model request'); });
+  try {
+    const denied = await ask(undefined, 'Watch a new financial event for me.');
+    assert.equal(denied.status, 402);
+    assert.equal((await denied.json()).feature, 'active_radars');
+    const repeated = await ask(undefined, 'Watch financial event 0 for me.');
+    assert.equal(repeated.status, 200);
+    assert.match((await repeated.json()).reply, /Your watch is active/);
+    assert.equal(calls, 0);
+  } finally { radarDb.listRadars = list; }
+});
+
+test('an invalid watch tool result cannot write a watch', async () => {
+  const original = { list: radarDb.listRadars, create: radarDb.createRadarIfUnderActiveLimit };
+  radarDb.listRadars = async () => [];
+  let writes = 0;
+  radarDb.createRadarIfUnderActiveLimit = async () => { writes++; return '32'; };
+  gateway._setFetchForTests(async () => new Response(JSON.stringify({ choices: [{ message: {
+    tool_calls: [{ id: 'c1', type: 'function', function: { name: 'create_radar_watch', arguments: '{"unexpected":true}' } }],
+  } }] })));
+  try {
+    const res = await ask(undefined, 'Watch the next rate announcement for me.');
+    assert.equal(res.status, 200);
+    assert.match((await res.json()).reply, /Tell me the financial event/);
+    assert.equal(writes, 0);
+  } finally {
+    radarDb.listRadars = original.list;
+    radarDb.createRadarIfUnderActiveLimit = original.create;
   }
 });
