@@ -168,7 +168,7 @@ test('fallback brief only states figures present in the data', () => {
     aud: { rate: 0.6512, changePercent: 0.1 },
     news: [{ title: 'RBA holds cash rate', source: 'abc.net.au' }],
   });
-  assert.match(b.headline, /Australian shares up 0\.42%/);
+  assert.match(b.headline, /Australian shares ETF proxy up 0\.42%/);
   assert.match(b.story[0], /US65\.12c/);
   assert.ok(b.story.join(' ').includes('RBA holds cash rate'));
   const nulls = fallbackBrief({ indices: [{ symbol: 'EWA', label: 'Australian shares', changePercent: null }], aud: { rate: 0.68, changePercent: null }, news: [] });

@@ -71,8 +71,7 @@
   --sidebar-border: var(--dk-line);
 }
 
-/* Canvas + body (globals paints <html> ink for overscroll; home.css paints
-   the body navy while the app shell is mounted). */
+/* Match the dark canvas and body to the page palette. */
 :root.dark, :root.dark body,
 :root.dark:has(.mh-shell), :root.dark:has(.mh-shell) body { background-color: var(--dk-page); }
 :root.dark:has(.mh-shell) {

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Download, PanelLeft, X, Maximize2 } from "lucide-react";
+import { Download, PanelLeft, Radar, X, Maximize2 } from "lucide-react";
 import {
   listThreads, createThread, deleteThread, renameThread, setThreadFavourite, type Thread,
 } from "@/lib/advisor.functions";
 import { MemoryPanel } from "./MemoryPanel";
+import { RadarWatchDialog } from "./RadarWatchDialog";
 import { ChatList } from "./ChatList";
 import { ChatConversation, WelcomeState, MemoryHint, Composer } from "./ChatConversation";
 import { RenameChatDialog, DeleteChatDialog, AdvisorToast, type ToastState } from "./ChatDialogs";
@@ -57,6 +58,7 @@ export function AdvisorWorkspace({
   const store = useAdvisorThreads();
   const [sideOpen, setSideOpen] = useState(false);
   const [showMemory, setShowMemory] = useState(false);
+  const [showRadar, setShowRadar] = useState(false);
   const [renaming, setRenaming] = useState<Thread | null>(null);
   const [deleting, setDeleting] = useState<Thread | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
@@ -124,6 +126,9 @@ export function AdvisorWorkspace({
             <span className="mx-adv-kicker">Maal advisor</span>
           </div>
           <div className="mx-adv-header-actions">
+            <button type="button" className="mx-adv-icon-btn" onClick={() => setShowRadar(true)} aria-label="Radar watches" title="Radar watches">
+              <Radar className="size-[18px]" />
+            </button>
             {activeId && hasMessages && (
               <button type="button" className="mx-adv-icon-btn" onClick={() => downloadRef.current?.()} aria-label="Download chat" title="Download chat">
                 <Download className="size-[18px]" />
@@ -186,6 +191,7 @@ export function AdvisorWorkspace({
         </div>
       </div>
 
+      {showRadar && <RadarWatchDialog onClose={() => setShowRadar(false)} />}
       {showMemory && (
         <div style={{ position: "fixed", inset: 0, zIndex: 85 }}>
           <MemoryPanel onClose={() => setShowMemory(false)} />

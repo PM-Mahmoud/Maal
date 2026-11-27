@@ -5,6 +5,12 @@ const express = require('express');
 const gateway = require('../services/gateway');
 const users = require('../db/users');
 const access = require('../services/access');
+const researchTool = require('../services/advisor-research');
+const radarDb = require('../db/radar');
+const radarTool = require('../services/advisor-radar');
+const grounding = require('../services/grounding');
+const market = require('../services/marketdata');
+const threadValidation = require('../lib/advisor-threads');
 const usage = require('../db/usage');
 const memory = require('../services/advisor-memory');
 const memoryDb = require('../db/advisor-memory');
@@ -13,7 +19,9 @@ let plan = 'member';
 let memoryStarts = 0;
 users.findUserById = async id => ({ id });
 access.forUser = async () => ({ plan });
-usage.incrementIfUnder = async () => 1;
+let researchOverLimit = false;
+let featureCalls = [];
+usage.incrementIfUnder = async (id, feature) => { featureCalls.push([id, feature]); return feature === 'research_runs' && researchOverLimit ? null : 1; };
 memory.shouldMerge = () => { memoryStarts++; return false; };
 
 require('../db/profiles').getProfileByUserId = async () => ({});
@@ -47,10 +55,10 @@ before(async () => {
 });
 after(() => { gateway._setFetchForTests(); server?.closeAllConnections(); server?.close(); });
 
-const ask = (signal) => fetch(url, {
+const ask = (signal, message = 'Explain super in plain language.', history = []) => fetch(url, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ message: 'Explain super in plain language.', history: [] }),
+  body: JSON.stringify({ message, history }),
   signal,
 });
 const completion = (text) => new Response(JSON.stringify({ choices: [{ message: { content: text } }] }));
@@ -144,4 +152,153 @@ test('disconnect aborts the model request and skips answer or memory persistence
   await fetchAborted;
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(memoryStarts, started);
+});
+
+test('only explicit research requests map to the research tool and context stays in the current chat', () => {
+  assert.equal(researchTool.researchQuestion('Why is research useful?', []), null);
+  assert.equal(researchTool.researchQuestion("Don't research this.", []), null);
+  assert.equal(researchTool.researchQuestion('/research: how do dividends work?', []), 'how do dividends work?');
+  assert.equal(researchTool.researchQuestion('Could you research this for me?', [
+    { role: 'user', content: 'How do bond ETFs work?' }, { role: 'assistant', content: 'Untrusted prior assistant text' },
+  ]), 'How do bond ETFs work?');
+  assert.equal(researchTool.researchQuestion('Research this.', []), '');
+});
+
+test('a research quota denial uses the existing upgrade response before a stream or model call', async () => {
+  researchOverLimit = true;
+  featureCalls = [];
+  let requested = false;
+  gateway._setFetchForTests(async () => { requested = true; return completion(''); });
+  try {
+    const res = await ask(undefined, 'Research Australian bonds');
+    assert.equal(res.status, 402);
+    assert.match(res.headers.get('content-type'), /^application\/json/);
+    const result = await res.json();
+    assert.equal(result.code, 'usage_limit');
+    assert.equal(result.feature, 'research_runs');
+    assert.equal(requested, false);
+    assert.deepEqual(featureCalls, [[7, 'research_runs']]);
+  } finally { researchOverLimit = false; }
+});
+
+test('the in-thread report preserves only safe, grounded citations and emits a verified final', async () => {
+  featureCalls = [];
+  const original = { enabled: grounding.hasGrounding, web: grounding.searchWeb, news: grounding.searchNews, market: market.hasMarketData };
+  grounding.hasGrounding = () => true;
+  grounding.searchWeb = async question => {
+    assert.equal(question, 'Australian government bonds');
+    return [
+      { title: 'Primary source', snippet: 'Grounding fixture.', url: 'https://source.example.test/bonds' },
+      { title: 'Invalid link', snippet: 'Excluded link.', url: 'about:blank' },
+    ];
+  };
+  grounding.searchNews = async () => [];
+  market.hasMarketData = () => false;
+  const modelCalls = [];
+  gateway._setFetchForTests(async (_url, options) => {
+    const request = JSON.parse(options.body);
+    modelCalls.push(request.model);
+    if (request.model === 'verifier') {
+      assert.match(request.messages[1].content, /Grounding fixture/);
+      return completion('{"pass":true}');
+    }
+    return completion('## Bond research\nAn educational report.');
+  });
+  try {
+    const res = await ask(undefined, 'Research Australian government bonds');
+    assert.equal(res.status, 200);
+    const events = packets(await res.text());
+    const [name, final] = events.at(-2);
+    const citations = [{ label: 'Primary source', url: 'https://source.example.test/bonds' }];
+    assert.equal(name, 'final');
+    assert.equal(final.reply, '## Bond research\nAn educational report.');
+    assert.deepEqual(final.citations, citations);
+    assert.deepEqual(threadValidation.sanitizeMeta({ citations }).citations, citations);
+    assert.deepEqual(threadValidation.sanitizeMeta({ citations: [{ label: 'Invalid link', url: 'about:blank' }] }).citations, [{ label: 'Invalid link' }]);
+    assert.deepEqual(modelCalls, ['reasoner', 'verifier']);
+    assert.deepEqual(featureCalls, [[7, 'research_runs']]);
+  } finally {
+    grounding.hasGrounding = original.enabled;
+    grounding.searchWeb = original.web;
+    grounding.searchNews = original.news;
+    market.hasMarketData = original.market;
+  }
+});
+
+
+test('watch tool intent requires an explicit request to monitor a financial condition', () => {
+  assert.equal(radarTool.watchPrompt('Can you watch for the next rate announcement?'), 'the next rate announcement');
+  assert.equal(radarTool.watchPrompt('How can I watch a price?'), null);
+  assert.equal(radarTool.watchPrompt('Watch the next RBA rate decision for me.'), 'the next RBA rate decision');
+  assert.equal(radarTool.watchPrompt('Watch for a fall in NVDA'), 'a fall in NVDA');
+  assert.equal(radarTool.watchPrompt('/watch: a change in the RBA cash rate'), 'a change in the RBA cash rate');
+  assert.equal(radarTool.watchPrompt('Watch this for me'), '');
+});
+
+test('a native watch tool uses the request account and never implicitly enables external notifications', async () => {
+  const original = { list: radarDb.listRadars, create: radarDb.createRadarIfUnderActiveLimit };
+  const recorded = [];
+  radarDb.listRadars = async userId => {
+    assert.equal(userId, 7);
+    return [];
+  };
+  radarDb.createRadarIfUnderActiveLimit = async (...args) => { recorded.push(args); return '32'; };
+  let calls = 0;
+  gateway._setFetchForTests(async (_url, options) => {
+    calls++;
+    const request = JSON.parse(options.body);
+    assert.equal(request.tools[0].function.name, 'create_radar_watch');
+    assert.equal(request.messages[1].content, 'falls in NVDA');
+    return new Response(JSON.stringify({ choices: [{ message: { tool_calls: [
+      { id: 'c1', type: 'function', function: { name: 'create_radar_watch', arguments: '{}' } },
+    ] } }] }));
+  });
+  try {
+    const res = await ask(undefined, 'Watch falls in NVDA for me.');
+    assert.equal(res.status, 200);
+    assert.match((await res.json()).reply, /Your watch is active/);
+    assert.deepEqual(recorded, [[7, {
+      prompt: 'falls in NVDA', symbols: ['NVDA'], frequency: 'daily', notifyEmail: false, notifySms: false,
+    }, 10, { reuseActivePrompt: true }]]);
+    assert.equal(calls, 1);
+  } finally {
+    radarDb.listRadars = original.list;
+    radarDb.createRadarIfUnderActiveLimit = original.create;
+  }
+});
+
+test('watch retries at capacity are safe and new requests return the existing quota response', async () => {
+  const list = radarDb.listRadars;
+  const sample = Array.from({ length: 10 }, (_, i) => ({ active: true, prompt: `financial event ${i}` }));
+  radarDb.listRadars = async id => { assert.equal(id, 7); return sample; };
+  let calls = 0;
+  gateway._setFetchForTests(async () => { calls++; return completion('Unexpected model request'); });
+  try {
+    const denied = await ask(undefined, 'Watch a new financial event for me.');
+    assert.equal(denied.status, 402);
+    assert.equal((await denied.json()).feature, 'active_radars');
+    const repeated = await ask(undefined, 'Watch financial event 0 for me.');
+    assert.equal(repeated.status, 200);
+    assert.match((await repeated.json()).reply, /Your watch is active/);
+    assert.equal(calls, 0);
+  } finally { radarDb.listRadars = list; }
+});
+
+test('an invalid watch tool result cannot write a watch', async () => {
+  const original = { list: radarDb.listRadars, create: radarDb.createRadarIfUnderActiveLimit };
+  radarDb.listRadars = async () => [];
+  let writes = 0;
+  radarDb.createRadarIfUnderActiveLimit = async () => { writes++; return '32'; };
+  gateway._setFetchForTests(async () => new Response(JSON.stringify({ choices: [{ message: {
+    tool_calls: [{ id: 'c1', type: 'function', function: { name: 'create_radar_watch', arguments: '{"unexpected":true}' } }],
+  } }] })));
+  try {
+    const res = await ask(undefined, 'Watch the next rate announcement for me.');
+    assert.equal(res.status, 200);
+    assert.match((await res.json()).reply, /Tell me the financial event/);
+    assert.equal(writes, 0);
+  } finally {
+    radarDb.listRadars = original.list;
+    radarDb.createRadarIfUnderActiveLimit = original.create;
+  }
 });

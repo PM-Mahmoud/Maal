@@ -16,9 +16,15 @@
     <script>
       (function () {
         try {
-          var p = localStorage.getItem('maal-theme');
+          var p;
+          try { p = localStorage.getItem('maal-theme'); } catch (e) {}
           var dark = p === 'dark' || (p !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
           var el = document.documentElement;
+          var inApp = location.pathname === '/app' || location.pathname.startsWith('/app/');
+          el.toggleAttribute('data-app-page', inApp);
+          if (inApp) {
+            document.querySelector('meta[name="theme-color"]').content = dark ? '#050505' : '#F8F9F6';
+          }
           el.setAttribute('data-theme', dark ? 'dark' : 'light');
           if (dark) el.classList.add('dark');
           el.style.colorScheme = dark ? 'dark' : 'light';
@@ -33,8 +39,8 @@
     <script type="speculationrules">
       {"prefetch":[{"where":{"or":[{"href_matches":"/login"},{"href_matches":"/signup"},{"href_matches":"/waitlist"},{"href_matches":"/forgot-password"},{"href_matches":"/pricing"},{"href_matches":"/about"},{"href_matches":"/security"},{"href_matches":"/contact"},{"href_matches":"/score"}]},"eagerness":"moderate"}]}
     </script>
-    <script type="module" crossorigin src="/assets/index-BOIvFdlZ.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-DPxw_Voq.css">
+    <script type="module" crossorigin src="/assets/index-DWx_d9xz.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Dw2YDjvY.css">
   </head>
   <body>
     <div id="root"></div>

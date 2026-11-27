@@ -88,8 +88,8 @@ function buildFlow(inputs: {
 }
 
 const NODE_COLORS: Record<string, { bg: string; text: string; bar: string }> = {
-  income: { bg: "bg-mint-soft", text: "text-mint", bar: "bg-mint" },
-  expense: { bg: "bg-rose-50 dark:bg-rose-900/20", text: "text-rose-500", bar: "bg-rose-400" },
+  income: { bg: "bg-mint-soft", text: "text-teal-800 dark:text-teal-300", bar: "bg-mint" },
+  expense: { bg: "bg-rose-50 dark:bg-rose-900/20", text: "text-rose-700 dark:text-rose-300", bar: "bg-rose-400" },
   saving: { bg: "bg-emerald-50 dark:bg-emerald-900/20", text: "text-emerald-600 dark:text-emerald-400", bar: "bg-emerald-500" },
   asset: { bg: "bg-amber-50 dark:bg-amber-900/20", text: "text-amber-600 dark:text-amber-400", bar: "bg-amber-500" },
 };
@@ -137,7 +137,7 @@ function NetWorthFlow() {
         <Reveal className="max-w-2xl">
           <div className="flex items-center gap-3">
             <span className="section-number">📊</span>
-            <span className="eyebrow-bullet">Net Worth Flow</span>
+            <span className="eyebrow-bullet text-teal-800! dark:text-teal-300!">Net Worth Flow</span>
           </div>
           <h2 className="mt-3 tracking-display text-3xl sm:text-4xl">
             See where every dollar <span className="text-gradient-mint">actually goes.</span>
@@ -157,13 +157,13 @@ function NetWorthFlow() {
             </div>
             <div className="kpi-tile rounded-xl border border-hairline bg-card p-4">
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Expenses</p>
-              <p className="mt-1 tracking-display text-lg tabular-nums text-rose-500">{formatAUD(flow.totalExpenses)}</p>
+              <p className="mt-1 tracking-display text-lg tabular-nums text-rose-700 dark:text-rose-300">{formatAUD(flow.totalExpenses)}</p>
             </div>
             <div className="kpi-tile rounded-xl border border-hairline bg-card p-4">
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Savings rate</p>
               <p
                 className={`mt-1 tracking-display text-lg tabular-nums ${
-                  flow.savingsRate >= 20 ? "text-emerald-500" : flow.savingsRate >= 10 ? "text-mint" : "text-amber-500"
+                  flow.savingsRate >= 20 ? "text-emerald-800 dark:text-emerald-300" : flow.savingsRate >= 10 ? "text-teal-800 dark:text-teal-300" : "text-amber-800 dark:text-amber-300"
                 }`}
               >
                 {flow.savingsRate.toFixed(0)}%
@@ -184,7 +184,7 @@ function NetWorthFlow() {
               <div className="grid grid-cols-3 gap-4">
                 {/* Income column */}
                 <div className="space-y-3">
-                  <p className="text-[10px] uppercase tracking-widest text-mint">Income sources</p>
+                  <p className="text-[10px] uppercase tracking-widest text-teal-800 dark:text-teal-300">Income sources</p>
                   {incomeNodes.map((node) => {
                     const Icon = node.icon;
                     const color = NODE_COLORS[node.type];
@@ -209,18 +209,18 @@ function NetWorthFlow() {
                 {/* Center hub */}
                 <div className="flex flex-col items-center justify-center">
                   <div className="rounded-full border-2 border-mint/40 bg-mint-soft p-4 text-center w-full">
-                    <p className="text-[10px] uppercase tracking-widest text-mint">Total income</p>
+                    <p className="text-[10px] uppercase tracking-widest text-teal-800 dark:text-teal-300">Total income</p>
                     <p className="mt-1 tracking-display text-base tabular-nums">{formatAUD(flow.income)}</p>
                   </div>
                   <ArrowDown className="my-2 h-4 w-4 text-muted-foreground" />
                   <div className="grid w-full grid-cols-2 gap-2">
                     <div className="rounded-lg border border-rose-200 bg-rose-50/50 dark:bg-rose-900/10 p-2 text-center">
                       <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Out</p>
-                      <p className="text-[11px] font-medium tabular-nums text-rose-500">{formatAUD(flow.totalExpenses)}</p>
+                      <p className="text-[11px] font-medium tabular-nums text-rose-700 dark:text-rose-300">{formatAUD(flow.totalExpenses)}</p>
                     </div>
                     <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 dark:bg-emerald-900/10 p-2 text-center">
                       <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Saved</p>
-                      <p className="text-[11px] font-medium tabular-nums text-emerald-500">{formatAUD(flow.totalSavings)}</p>
+                      <p className="text-[11px] font-medium tabular-nums text-emerald-800 dark:text-emerald-300">{formatAUD(flow.totalSavings)}</p>
                     </div>
                   </div>
                 </div>
@@ -228,7 +228,7 @@ function NetWorthFlow() {
                 {/* Outflows column */}
                 <div className="space-y-3">
                   <div>
-                    <p className="text-[10px] uppercase tracking-widest text-rose-500">Expenses</p>
+                    <p className="text-[10px] uppercase tracking-widest text-rose-700 dark:text-rose-300">Expenses</p>
                     <div className="mt-2 space-y-2">
                       {expenseNodes.map((node) => {
                         const Icon = node.icon;
@@ -248,7 +248,7 @@ function NetWorthFlow() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-widest text-emerald-500">Savings</p>
+                    <p className="text-[10px] uppercase tracking-widest text-emerald-800 dark:text-emerald-300">Savings</p>
                     <div className="mt-2 space-y-2">
                       {savingNodes.map((node) => {
                         const Icon = node.icon;

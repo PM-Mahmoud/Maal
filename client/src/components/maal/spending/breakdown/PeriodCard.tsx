@@ -48,10 +48,11 @@ export function PeriodCard({ transactions, excluded, year, month, today, onPick,
             {rows.map((r, i) => {
               const selected = r.year === year && r.month === month;
               const h = r.expenses > 0 ? Math.max(4, (r.expenses / max) * 100) : 0;
-              const label = r.month === 0 || i === 0 ? `${new Date(r.year, r.month).toLocaleDateString("en-AU", { month: "short" })} ’${String(r.year).slice(2)}` : new Date(r.year, r.month).toLocaleDateString("en-AU", { month: "short" });
+              const showYear = r.month === 0 || i === 0;
+              const label = showYear ? `${new Date(r.year, r.month).toLocaleDateString("en-AU", { month: "short" })} ’${String(r.year).slice(2)}` : new Date(r.year, r.month).toLocaleDateString("en-AU", { month: "short" });
               return (
                 <button key={r.key} type="button" className="bd-pcol" aria-pressed={selected}
-                  aria-label={`${monthLabel(r.year, r.month)}${privacy ? "" : `, spent ${audCents(r.expenses)}`}`}
+                  aria-label={`${label}${showYear ? "" : ` ${r.year}`}${privacy ? "" : `, spent ${audCents(r.expenses)}`}`}
                   onClick={() => onPick(r.year, r.month)}
                   onMouseEnter={() => setHover(r.key)} onFocus={() => setHover(r.key)} onBlur={() => setHover(null)}>
                   <span className="bd-pplot">

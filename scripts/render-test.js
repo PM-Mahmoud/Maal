@@ -5,6 +5,7 @@
 
 const { safeError } = require('../lib/safe-log');
 const ejs = require('ejs');
+const { existsSync } = require('node:fs');
 const path = require('path');
 
 const VIEWS = path.join(__dirname, '..', 'views');
@@ -30,6 +31,10 @@ const base = { session, user, profile, pageTitle: 'Test' };
 // NOTE: the legacy EJS dashboard-*.ejs views are retired (superseded by the
 // React app at /app) and intentionally no longer rendered here.
 const cases = {
+  'layout': require('../lib/landing-context').buildLandingContext('n0nce'),
+  'waitlist': { analyticsSnippet: '', user: null },
+  'score': { analyticsSnippet: '', themeCSS: '', kiosk: false },
+  'auth-google-link': { email: 'test@example.invalid' },
   'auth-login': { error: null, email: '' },
   'auth-signup': { error: null, email: '', name: '', membership: require('../lib/membership') },
   'pricing': { analyticsSnippet: '', user: null, membership: require('../lib/membership') },
@@ -47,6 +52,9 @@ const cases = {
 };
 
 async function main() {
+  if (existsSync(path.join(VIEWS, "onboarding.ejs"))) {
+    throw new Error("The retired onboarding template must not be rendered.");
+  }
   let failed = 0;
   for (const [view, locals] of Object.entries(cases)) {
     const file = path.join(VIEWS, view + '.ejs');

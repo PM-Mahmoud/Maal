@@ -151,17 +151,23 @@
   --sidebar-ring: #F0754B;
 }
 
+/* Match the light app canvas before the shell's route styles finish loading.
+   The dark palette sets the canvas in theme-dark.css. */
+html[data-app-page]:not(.dark) {
+  --background: #F8F9F6;
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
   }
 
-  /* Overscroll (rubber-band) area: the canvas behind the page is v2 ink,
-     not the page colour. Giving <html> its own background stops the body
-     background propagating to the canvas; the body still paints the page
-     and fills at least the viewport, so black only shows on overscroll. */
   html {
     background-color: #020109;
+  }
+
+  html[data-app-page] {
+    background-color: var(--color-background);
   }
 
   body {

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-AU">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,9 +9,8 @@
   <meta name="description" content="Get your 0–100 Maal Financial Health Score in 2 minutes. No bank login, no credit card.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <%- include('partials/v2-public-styles') %>
   <link rel="stylesheet" href="/css/theme.css">
-  <link rel="stylesheet" href="/css/retro-theme.css">
   <style>
     body { background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
     main { flex: 1; }
@@ -111,8 +110,9 @@
     body.sc-kiosk .sc-kiosk-brand small { font-weight: 600; font-size: 13px; color: var(--fg-muted); }
   </style>
   <link rel="stylesheet" href="/css/v2-kiosk.css">
+  <link rel="stylesheet" href="/css/public-v2.css">
 </head>
-<body class="v2-score<%= locals.kiosk ? ' sc-kiosk' : '' %>">
+<body class="public-v2 v2-score<%= locals.kiosk ? ' sc-kiosk' : '' %>">
   <% if (locals.kiosk) { %>
     <div class="sc-kiosk-brand"><span><svg class="maal-mark" width="20" height="20" viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true"><g fill="currentColor"><rect x="0" y="0" width="1" height="7"/><rect x="6" y="0" width="1" height="7"/><rect x="1" y="1" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/></g></svg>Maal</span><small>Free Maal Score · 2 minutes</small></div>
   <% } else { %>

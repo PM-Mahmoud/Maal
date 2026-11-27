@@ -17,6 +17,7 @@ const router = createRouter({
   context: { queryClient },
   defaultPreload: "intent",
 });
+router.subscribe("onResolved", () => initTheme());
 
 declare module "@tanstack/react-router" {
   interface Register { router: typeof router }

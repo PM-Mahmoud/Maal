@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { monthKey } from "../../../../../../shared/spending-breakdown.mjs";
 import { TransactionDetailMount } from "../transaction-detail/TransactionDetailMount";
 import { AiBudgetBuilder } from "./AiBudgetBuilder";
@@ -43,6 +43,12 @@ export function BreakdownPage({ search, setSearch }: { search: BreakdownSearch; 
   const [toast, setToast] = useState<{ title: string; text?: string } | null>(null);
 
   const common = { transactions: data.transactions, excluded, year, month, loading: data.loading, error: data.errors.transactions };
+  const categoryTrigger = useRef<HTMLButtonElement | null>(null);
+  function openCategory(name: string, trigger: HTMLButtonElement) {
+    categoryTrigger.current = trigger;
+    setSearch({ cat: name });
+  }
+
   const reloadAfterBudget = async () => { await data.reloadBudgets(); };
 
   return (
@@ -59,7 +65,7 @@ export function BreakdownPage({ search, setSearch }: { search: BreakdownSearch; 
               loading={data.loading} budgetError={data.errors.budgets}
               onBack={() => setSearch({ panel: undefined, tab: "budget" })}
               onAi={() => setSearch({ panel: "ai" })}
-              onOpenCategory={(c) => setSearch({ cat: c })}
+              onOpenCategory={openCategory}
               onNewCategory={() => setNewCat("expense")}
               onBudgetChanged={reloadAfterBudget} />
           </div>
@@ -71,7 +77,7 @@ export function BreakdownPage({ search, setSearch }: { search: BreakdownSearch; 
                 <BreakdownCard {...common} tab={tab} onTab={(t) => setSearch({ tab: t === "expenses" ? undefined : t })}
                   budgets={data.budgets} custom={data.custom} groups={data.groups} current={key === curKey}
                   budgetError={data.errors.budgets}
-                  onOpenCategory={(c) => setSearch({ cat: c })}
+                  onOpenCategory={openCategory}
                   onEditBudget={() => setSearch({ panel: "edit" })}
                   onAi={() => setSearch({ panel: "ai" })}
                   onManage={() => setSearch({ panel: "manage" })} />
@@ -90,7 +96,15 @@ export function BreakdownPage({ search, setSearch }: { search: BreakdownSearch; 
 
       {search.cat && (
         <CategoryDetailDrawer name={search.cat} transactions={data.transactions} excluded={excluded} budgets={data.budgets}
-          custom={data.custom} today={today} onClose={() => setSearch({ cat: undefined })} onBudgetChanged={reloadAfterBudget} />
+          custom={data.custom} today={today} onClose={() => setSearch({ cat: undefined })} onBudgetChanged={reloadAfterBudget}
+          onCloseAutoFocus={(event) => {
+            const trigger = categoryTrigger.current;
+            categoryTrigger.current = null;
+            if (trigger?.isConnected) {
+              event.preventDefault();
+              trigger.focus();
+            }
+          }} />
       )}
       {search.panel === "manage" && (
         <ManageCategoriesDrawer custom={data.custom} groups={data.groups} onClose={() => setSearch({ panel: undefined })}

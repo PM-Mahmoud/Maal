@@ -3,6 +3,8 @@
 // mapping, AU fallback list, search ranking) and the consent-URL preselect.
 
 const assert = require('assert');
+const { existsSync } = require('node:fs');
+const { resolve } = require('node:path');
 const inst = require('../services/basiq-institutions');
 
 let passed = 0;
@@ -47,9 +49,17 @@ test('maps a Basiq row to the public whitelist shape only', () => {
 
 test('falls back to the full logo, then a local logo, and rejects non-https logos', () => {
   assert.strictEqual(inst.mapInstitution({ ...RAW_CBA, logo: { links: { full: 'https://cdn.basiq.io/f.png' } } }).logo, 'https://cdn.basiq.io/f.png');
-  assert.strictEqual(inst.mapInstitution({ ...RAW_CBA, logo: { links: { square: 'http://evil.example/x.png' } } }).logo, '/images/banks/commbank.png');
-  assert.strictEqual(inst.mapInstitution({ ...RAW_CBA, logo: { links: { square: 'javascript:alert(1)' } } }).logo, '/images/banks/commbank.png');
+  assert.strictEqual(inst.mapInstitution({ ...RAW_CBA, logo: { links: { square: 'http://evil.example/x.png' } } }).logo, '/images/banks/commbank.svg');
+  assert.strictEqual(inst.mapInstitution({ ...RAW_CBA, logo: { links: { square: 'javascript:alert(1)' } } }).logo, '/images/banks/commbank.svg');
   assert.strictEqual(inst.mapInstitution({ ...RAW_CBA, name: 'Tiny Credit Union', shortName: '', logo: null }).logo, null);
+});
+
+test('every institution in the fallback catalogue has a packaged logo', () => {
+  assert.equal(inst.STATIC_INSTITUTIONS.length, 29);
+  for (const { slug, logo } of inst.STATIC_INSTITUTIONS) {
+    assert.match(logo, new RegExp(`^/images/banks/${slug}\\.(svg|png)$`));
+    assert.ok(existsSync(resolve(__dirname, '../public', logo.slice(1))), `${slug} logo is missing`);
+  }
 });
 
 test('drops rows without a valid id/name or in a major outage', () => {

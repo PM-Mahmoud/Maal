@@ -1,0 +1,12 @@
+.mh-home-budget-summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px 8px; }
+.mh-home-budget-value { font-family: var(--mh-serif); font-size: clamp(24px, 2.4vw, 32px); }
+.mh-home-budget-progress { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 13px; }
+.mh-home-budget-progress .mh-bar { flex: 1; background: var(--mh-chip); }
+.mh-home-budget-progress .mh-bar > i { background: var(--mh-ink); }
+.mh-home-budget-progress .mh-bar > i[data-over="true"] { background: var(--mh-bad); }
+.mh-home-budget-heading { margin: 16px 0 8px; font: inherit; font-size: 14px; font-weight: 600; }
+.mh-home-budget-list { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; font-size: 14px; }
+.mh-home-budget-list li { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.mh-home-budget-list li > i { width: 8px; height: 8px; border-radius: 50%; }
+.mh-home-budget-list li > span:last-child { color: var(--mh-muted); }
+.mh-home-budget-link { display: inline-flex; align-items: center; min-height: 44px; margin-top: 6px; color: var(--mh-ink); text-decoration: underline; text-underline-offset: 3px; }

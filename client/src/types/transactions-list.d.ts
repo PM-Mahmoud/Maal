@@ -47,10 +47,16 @@ declare module "*transactions-list.mjs" {
   export function csvCell(value: unknown, opts?: { text?: boolean }): string;
   export function transactionsToCsv(rows: Txn[], opts?: { accountLabel?: (t: Txn) => string; flags?: { hidden: boolean; reviewed: boolean } }): string;
   export function exportFilename(filters: Partial<TxnFilters>, today?: Date): string;
-  export function parseCsv(text: string): string[][];
+
   export function parseDateCell(raw: string): string | null;
   export function parseAmountCell(raw: string): number | null;
   export function parseStatementCsv(text: string): { rows: ImportRow[]; error?: undefined } | { error: string; rows?: undefined };
+  export type StatementColumns = Record<"date" | "description" | "amount" | "debit" | "credit", number>;
+  export function parseCsv(text: string, options?: { rejectUnclosedQuotes?: boolean }): string[][];
+  export function statementColumns(cells: string[] | undefined, hasHeader: boolean): StatementColumns;
+  export function parseMappedStatement(cells: string[][], mapping: { hasHeader: boolean; columns: StatementColumns; split: boolean }):
+    { rows: ImportRow[]; error?: undefined } | { error: string; rows?: undefined };
+  export function previewStatementRows(rows: ImportRow[], priorKeys?: Iterable<string>): { rows: ImportRow[]; skipped: number };
   export function rowFingerprint(r: ImportRow): string;
   export function buildManualTransaction(form: ManualForm, today?: Date): ManualResult;
 }

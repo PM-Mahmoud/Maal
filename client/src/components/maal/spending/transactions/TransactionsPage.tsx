@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from "react";
-import { Link, useLocation } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import {
   ArrowLeft, Check, Download, ListFilter, MoreVertical, Plus, Repeat, Scale, Search,
@@ -20,7 +20,7 @@ import { ExportDialog } from "./ExportDialog";
 import { FiltersDrawer } from "./FiltersDrawer";
 import { RecurringView, ReconcileView } from "./SecondaryViews";
 import { longDate, TransactionsTable } from "./TransactionsTable";
-import { importStatementFile } from "./csvImport";
+import { StatementImportDialog } from "./StatementImportDialog";
 import { describeAccount, useTransactionsData, type Txn } from "./useTransactionsData";
 import "@/components/maal/home/home.css";
 import "./transactions.css";
@@ -40,6 +40,8 @@ type Toast = { tone: "ok" | "error"; text: string } | null;
  */
 export function TransactionsPage() {
   const search = new URLSearchParams(useLocation({ select: (location) => location.searchStr }));
+  const navigate = useNavigate();
+  const statementRequested = search.get("import") === "statement";
   const importRun = search.get("basiq") === "queued" ? search.get("import_run") : null;
   const bankSyncRunId = importRun && /^[1-9]\d{0,18}$/.test(importRun) ? importRun : null;
   const today = useMemo(() => new Date(), []);
@@ -54,10 +56,20 @@ export function TransactionsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(statementRequested);
   const [toast, setToast] = useState<Toast>(null);
   const [version, setVersion] = useState(0);
-  const fileRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (statementRequested) setImportOpen(true);
+  }, [statementRequested]);
+
+  function closeImport() {
+    setImportOpen(false);
+    if (statementRequested) {
+      search.delete("import");
+      void navigate({ to: "/app/transactions", search: Object.fromEntries(search), replace: true });
+    }
+  }
 
   const refresh = useCallback(async () => { await reload(); setVersion((v) => v + 1); }, [reload]);
   const say = (tone: "ok" | "error", text: string) => setToast({ tone, text });
@@ -108,23 +120,6 @@ export function TransactionsPage() {
     say("ok", `Exported ${sorted.length.toLocaleString("en-AU")} transaction${sorted.length === 1 ? "" : "s"} as CSV.`);
   }
 
-  async function onCsv(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setBusy("import");
-    setToast(null);
-    try {
-      const res = await importStatementFile(file);
-      say(res.ok ? "ok" : "error", res.message);
-      await refresh();
-    } catch (err: any) {
-      say("error", err?.message ?? "Import failed.");
-    } finally {
-      setBusy(null);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  }
-
   const removeChip = (patch: Partial<TxnFilters>) => setFilters((f) => ({ ...f, ...patch }));
   const chips = filterChips(filters, today, (k) => describeAccount(k, data.accounts).label, removeChip);
   // "No transactions yet" only without a date filter; a filtered empty range is a "no match".
@@ -134,7 +129,6 @@ export function TransactionsPage() {
     <div className="mh tx">
       <div className="mh-page tx-page">
         <h1 className="sr-only">Transactions</h1>
-        <input ref={fileRef} type="file" accept=".csv,.pdf" className="sr-only" tabIndex={-1} aria-hidden onChange={onCsv} />
 
         {bankSyncRunId && <BankSyncNotice key={bankSyncRunId} runId={bankSyncRunId} onComplete={refresh} />}
         {toast && (
@@ -181,8 +175,8 @@ export function TransactionsPage() {
                 <Menu.Portal>
                   <Menu.Content align="end" sideOffset={6} className="mh-shell tx-menu">
                     <Menu.Item className="tx-menu-item" disabled={!data.rows.length} onSelect={() => setExportOpen(true)}><Download aria-hidden /> Export as CSV</Menu.Item>
-                    <Menu.Item className="tx-menu-item" disabled={busy === "import"} onSelect={() => fileRef.current?.click()}>
-                      <Upload aria-hidden /> {busy === "import" ? "Importing…" : "Import CSV statement"}
+                    <Menu.Item className="tx-menu-item" onSelect={() => setImportOpen(true)}>
+                      <Upload aria-hidden /> Import CSV statement
                     </Menu.Item>
                     <Menu.Separator className="tx-menu-sep" />
                     <Menu.Item className="tx-menu-item" onSelect={() => setView("recurring")}><Repeat aria-hidden /> Recurring payments</Menu.Item>
@@ -210,8 +204,8 @@ export function TransactionsPage() {
               <p className="tx-muted">Connect a bank and your transactions sync automatically. You can also import a CSV statement or add one by hand.</p>
               <div className="tx-empty-actions">
                 <Link to="/app/accounts/connect" className="tx-btn-ink">Connect a bank</Link>
-                <button type="button" className="tx-btn-line" onClick={() => fileRef.current?.click()} disabled={busy === "import"}>
-                  <Upload aria-hidden /> {busy === "import" ? "Importing…" : "Import CSV"}
+                <button type="button" className="tx-btn-line" onClick={() => setImportOpen(true)}>
+                  <Upload aria-hidden /> Import CSV
                 </button>
                 <button type="button" className="tx-btn-line" onClick={() => setAddOpen(true)}><Plus aria-hidden /> Add transaction</button>
               </div>
@@ -267,6 +261,11 @@ export function TransactionsPage() {
         onAdded={(msg) => { say("ok", msg); void refresh(); }} />
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} count={sorted.length} filtered={narrowing}
         onExport={doExport} onOpenFilters={() => { setExportOpen(false); setFiltersOpen(true); }} />
+      {importOpen && <StatementImportDialog onClose={closeImport} onImport={(result) => {
+        closeImport();
+        say(result.ok ? "ok" : "error", result.message);
+        void refresh();
+      }} />}
       {rulesOpen && <RulesModal onClose={() => setRulesOpen(false)} onApplied={() => void refresh()} />}
       <TransactionDetailMount onChanged={() => void refresh()} />
     </div>

@@ -1,0 +1,1 @@
+import{u as e,j as o,ac as r}from"./index-DWx_d9xz.js";function n(){const t=e();return o.jsx(r,{variant:"page",activeId:null,onSelect:a=>{a&&t({to:"/app/advisor/$threadId",params:{threadId:a}})}})}export{n as component};

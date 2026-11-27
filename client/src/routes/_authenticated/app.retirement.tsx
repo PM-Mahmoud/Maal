@@ -1,12 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
 import { fetchPortfolio, type Portfolio } from "@/lib/portfolio";
 import { projectRetirement, ASFA_SINGLE_TARGET, ASFA_COUPLE_TARGET, RETIREMENT_AGE } from "@/lib/retirement";
 import { formatAUD } from "@/lib/score";
 import { Disclaimer } from "@/components/maal/Disclaimer";
-import { listScenarios, saveScenario, deleteScenario } from "@/lib/retirement.functions";
 
 export const Route = createFileRoute("/_authenticated/app/retirement")({
   component: RetirementPage,
@@ -17,16 +15,10 @@ function RetirementPage() {
   const [contrib, setContrib] = useState(11.5);
   const [ret, setRet] = useState(7);
   const [household, setHousehold] = useState<"single" | "couple">("single");
-  const list = listScenarios;
-  const save = saveScenario;
-  const del = deleteScenario;
-  const [scenarios, setScenarios] = useState<any[]>([]);
-  const [scenarioName, setScenarioName] = useState("");
 
   useEffect(() => {
     fetchPortfolio().then(setPortfolio);
-    list().then((rows) => setScenarios(rows as any[]));
-  }, [list]);
+  }, []);
 
   const projection = useMemo(() => {
     if (!portfolio) return null;
@@ -54,49 +46,6 @@ function RetirementPage() {
   // projection's default inflationPct (2.5) — this page doesn't override it.
   const INFLATION_PCT = 2.5;
   const targetNominal = projection.targetReal * Math.pow(1 + INFLATION_PCT / 100, yearsToRetire);
-
-  async function onSave() {
-    const name = scenarioName.trim() || `${household} · ${contrib}% contrib · ${ret}% return`;
-    const inputs = {
-      age: portfolio!.age,
-      superBalance: portfolio!.superBalance,
-      annualIncome: portfolio!.income,
-      contributionRatePct: contrib,
-      expectedReturnPct: ret,
-      target: projection!.targetReal,
-      household,
-    };
-    const result = {
-      probOfHittingTarget: projection!.probOfHittingTarget,
-      shortfallReal: projection!.shortfallReal,
-      finalMedian: projection!.median[projection!.median.length - 1],
-    };
-    const row = await save({ data: { name, inputs, result } });
-    if (!row) {
-      // Save failed — keep existing scenarios, never prepend a null row
-      toast.error("Couldn't save scenario — please try again.");
-      return;
-    }
-    setScenarios((s) => [row as any, ...s]);
-    setScenarioName("");
-  }
-
-  function loadScenario(s: any) {
-    setContrib(s.inputs.contributionRatePct);
-    setRet(s.inputs.expectedReturnPct);
-    setHousehold(s.inputs.household);
-  }
-
-  async function removeScenario(id: string) {
-    try {
-      // deleteScenario destructures { id } from its argument — pass it directly
-      // (wrapping in { data: { id } } produced an undefined id in the DELETE URL).
-      await del({ id });
-      setScenarios((s) => s.filter((x) => x.id !== id));
-    } catch {
-      toast.error("Couldn't delete scenario — please try again.");
-    }
-  }
 
   // Chart geometry
   const W = 720, H = 240, pad = 32;
@@ -128,7 +77,7 @@ function RetirementPage() {
       <div className="p-6 border border-border rounded-[12px] bg-[var(--surface)] mb-6">
         <div className="flex items-baseline justify-between mb-4">
           <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Balance trajectory (nominal AUD)</p>
-          <p className={`text-[12px] font-semibold ${onTrack ? "text-[var(--mint)]" : "text-[var(--gold)]"}`}>
+          <p className={`text-[12px] font-semibold ${onTrack ? "text-teal-800 dark:text-teal-300" : "text-amber-800 dark:text-amber-300"}`}>
             {onTrack ? `On track — surplus ${formatAUD(shortfall)} (today's $)` : `Shortfall ${formatAUD(Math.abs(shortfall))} (today's $)`}
           </p>
         </div>
@@ -136,7 +85,7 @@ function RetirementPage() {
           <path d={band} fill="hsl(var(--foreground))" opacity={0.08} />
           <path d={medianPath} stroke="hsl(var(--foreground))" strokeWidth={2} fill="none" />
           <line x1={pad} x2={W - pad} y1={targetY} y2={targetY} stroke="var(--gold)" strokeDasharray="4 4" />
-          <text x={W - pad} y={targetY - 6} textAnchor="end" fontSize="10" fill="var(--gold)" fontWeight="700">ASFA target</text>
+          <text x={W - pad} y={targetY - 6} textAnchor="end" fontSize="10" fill="currentColor" className="text-amber-800 dark:text-amber-300" fontWeight="700">ASFA target</text>
           <text x={pad} y={H - 8} fontSize="10" fill="hsl(var(--muted-foreground))">Age {portfolio.age}</text>
           <text x={W - pad} y={H - 8} textAnchor="end" fontSize="10" fill="hsl(var(--muted-foreground))">Age {RETIREMENT_AGE}</text>
         </svg>
@@ -163,47 +112,9 @@ function RetirementPage() {
         </div>
       </div>
 
-      <div className="mt-6 p-6 border border-border rounded-[12px] bg-[var(--surface)]">
-        <div className="flex flex-wrap items-end justify-between mb-4 gap-3">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Saved scenarios</p>
-            <p className="text-[12px] text-muted-foreground mt-1">Snapshot the current sliders to compare strategies later.</p>
-          </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <input
-              value={scenarioName}
-              onChange={(e) => setScenarioName(e.target.value)}
-              placeholder="Name (optional)"
-              className="bg-transparent border border-border rounded-[8px] px-3 py-2 text-[12px] flex-1 min-w-0 sm:flex-none sm:w-56"
-            />
-            <button onClick={onSave} className="bg-foreground text-background px-4 py-2 rounded-[8px] text-[12px] font-semibold">
-              Save scenario
-            </button>
-          </div>
-        </div>
-        {scenarios.length === 0 ? (
-          <p className="text-[12px] text-muted-foreground">No saved scenarios yet.</p>
-        ) : (
-          <ul className="divide-y divide-border">
-            {scenarios.map((s) => (
-              <li key={s.id} className="py-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[13px] font-medium truncate">{s.name}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {s.inputs.contributionRatePct}% contrib · {s.inputs.expectedReturnPct}% return ·{" "}
-                    {Math.round(s.result.probOfHittingTarget * 100)}% chance ·{" "}
-                    {s.result.shortfallReal >= 0 ? "surplus" : "shortfall"} {formatAUD(Math.abs(s.result.shortfallReal))}
-                  </p>
-                </div>
-                <div className="flex gap-3">
-                  <button onClick={() => loadScenario(s)} className="text-[11px] font-semibold text-foreground underline underline-offset-4">Load</button>
-                  <button onClick={() => removeScenario(s.id)} className="text-[11px] text-muted-foreground hover:text-foreground">Delete</button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <p className="mt-6 text-[12px] text-muted-foreground">
+        You can compare scenarios here by adjusting the sliders. Saving scenarios is currently unavailable.
+      </p>
 
       <div className="mt-10">
         <Disclaimer variant="inline" />
@@ -213,7 +124,7 @@ function RetirementPage() {
 }
 
 function Stat({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "mint" | "gold" }) {
-  const color = tone === "mint" ? "text-[var(--mint)]" : tone === "gold" ? "text-[var(--gold)]" : "text-foreground";
+  const color = tone === "mint" ? "text-teal-800 dark:text-teal-300" : tone === "gold" ? "text-amber-800 dark:text-amber-300" : "text-foreground";
   return (
     <div className="p-5 border border-border rounded-[12px] bg-[var(--surface)]">
       <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{label}</p>

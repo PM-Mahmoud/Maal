@@ -228,6 +228,36 @@ const ROWS = [
     assert.strictEqual(m.rowFingerprint({ occurred_on: '2026-01-01', description: ' Coles ', amount: -5 }), '2026-01-01|coles|-5.00');
   });
 
+  await test('mapped import handles reordered AU columns and debit or credit', () => {
+    const cells = m.parseCsv('Narration,Credit,Posting Date,Debit\nRent,,27/11/2026,"$1,234.50"\nSalary,"AUD 2,000.10",2026-11-28,0.00');
+    const columns = m.statementColumns(cells[0], true);
+    assert.deepStrictEqual(columns, { date: 2, description: 0, amount: -1, debit: 3, credit: 1 });
+    assert.deepStrictEqual(m.parseMappedStatement(cells, { hasHeader: true, columns, split: true }).rows, [
+      { occurred_on: '2026-11-27', description: 'Rent', amount: -1234.5 },
+      { occurred_on: '2026-11-28', description: 'Salary', amount: 2000.1 },
+    ]);
+    assert.match(m.parseMappedStatement(m.parseCsv('Rent,10,27/11/2026,5'), { hasHeader: false, columns, split: true }).error, /Row 1: use either/);
+    assert.match(m.parseMappedStatement(cells, { hasHeader: true, columns: { ...columns, debit: 1 }, split: true }).error, /different column/);
+  });
+
+  await test('mapped import checks dates, signed amounts and quoted cells before preview', () => {
+    const columns = m.statementColumns(undefined, false);
+    const map = (csv) => m.parseMappedStatement(m.parseCsv(csv), { hasHeader: false, columns, split: false });
+    assert.deepStrictEqual(map('1/11/2026,Pay,10 CR\n2/11/2026,Card,2 DR\n3/11/2026,EFT,(5.40)\nClosing balance').rows.map(row => row.amount), [10, -2, -5.4]);
+    assert.equal(m.statementColumns(['31/02/2026', 'Date Cafe', '12'], true).date, -1);
+    assert.match(map('31/02/2026,Shop,4').error, /Row 1: enter a date/);
+    assert.match(map('2026-11-01,Shop,12abc45').error, /Row 1: enter a valid amount/);
+    assert.throws(() => m.parseCsv('Date,Description,Amount\n24/11/2026,"Shop,100', { rejectUnclosedQuotes: true }), /unclosed/);
+  });
+
+  await test('mapped preview skips prior and repeated rows by normalized fingerprint', () => {
+    const prior = { occurred_on: '2026-11-25', description: 'Shop', amount: -3 };
+    const fresh = { occurred_on: '2026-11-25', description: 'Coffee', amount: -5 };
+    assert.deepStrictEqual(m.previewStatementRows([prior, fresh, { ...fresh, description: ' coffee ' }], [m.rowFingerprint(prior)]), {
+      rows: [fresh], skipped: 2,
+    });
+  });
+
   await test('manual add: signs the amount by type and validates', () => {
     const today = new Date(2026, 10, 22);
     const ok = m.buildManualTransaction({ type: 'expense', description: '  Bakery   Bondi ', amount: '$1,234.5', date: '2026-11-21', group: 'Food & Dining', category: 'Cafes' }, today);

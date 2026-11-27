@@ -15,6 +15,7 @@ export type Offer = {
   renewalGstCents: number;
   discountPercent: number; // 90
   trialDays: number; // 14
+  termsUrl?: "/terms";
 };
 
 export const FALLBACK_OFFER: Offer = {

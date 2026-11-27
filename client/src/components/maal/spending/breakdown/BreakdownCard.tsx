@@ -37,7 +37,7 @@ export function BreakdownCard({
   loading: boolean;
   error?: boolean;
   budgetError?: boolean;
-  onOpenCategory: (name: string) => void;
+  onOpenCategory: (name: string, trigger: HTMLButtonElement) => void;
   onEditBudget: () => void;
   onAi: () => void;
   onManage: () => void;
@@ -109,21 +109,28 @@ export function BreakdownCard({
                 </span>
               </div>
               {viewBy === "category" ? (
-                <div className="bd-table" role="table" aria-label="Spending by category">
-                  <div className="bd-tr bd-th" role="row">
-                    <span role="columnheader">Category</span>
-                    <span role="columnheader">Spent</span>
-                    <span role="columnheader" className="bd-col-pct">% of expenses</span>
-                    <span role="columnheader">vs last month</span>
+                <div className="bd-table">
+                  <div role="table" aria-label="Spending by category">
+                    <div className="bd-tr bd-th" role="row">
+                      <span role="columnheader">Category</span>
+                      <span role="columnheader">Spent</span>
+                      <span role="columnheader" className="bd-col-pct">% of expenses</span>
+                      <span role="columnheader">vs last month</span>
+                    </div>
+                    {(all ? rows : spendRows.slice(0, 6)).map((r) => (
+                      <div key={r.group} className="bd-tr bd-tr--action" role="row">
+                        <span role="cell">
+                          <button type="button" className="bd-name bd-row-button" onClick={(event) => onOpenCategory(r.group, event.currentTarget)}>
+                            <CatIcon name={r.group} custom={custom} />
+                            <span className="min-w-0"><span className="bd-trunc">{r.group}</span><span className="bd-sub bd-pct-sub">{r.pct.toFixed(r.pct < 10 ? 1 : 0)}%</span></span>
+                          </button>
+                        </span>
+                        <span role="cell" className="mh-amount">{aud(r.amount)}</span>
+                        <span role="cell" className="bd-col-pct">{r.pct.toFixed(r.pct < 10 ? 1 : 0)}%</span>
+                        <span role="cell"><ChangeBadge change={r.change} /></span>
+                      </div>
+                    ))}
                   </div>
-                  {(all ? rows : spendRows.slice(0, 6)).map((r) => (
-                    <button key={r.group} type="button" className="bd-tr" role="row" aria-label={`${r.group}: ${privacy ? "" : `${aud(r.amount)} spent, `}open details`} onClick={() => onOpenCategory(r.group)}>
-                      <span role="cell" className="bd-name"><CatIcon name={r.group} custom={custom} /><span className="min-w-0"><span className="bd-trunc">{r.group}</span><span className="bd-sub bd-pct-sub">{r.pct.toFixed(r.pct < 10 ? 1 : 0)}%</span></span></span>
-                      <span role="cell" className="mh-amount">{aud(r.amount)}</span>
-                      <span role="cell" className="bd-col-pct">{r.pct.toFixed(r.pct < 10 ? 1 : 0)}%</span>
-                      <span role="cell"><ChangeBadge change={r.change} /></span>
-                    </button>
-                  ))}
                   {(all || spendRows.length > 6 || rows.length < expenseNames.length) && (
                     <div className="bd-tfoot">
                       <button type="button" className="mh-btn-outline mh-btn-wide" onClick={() => setAll((a) => !a)}>{all ? "Show less" : "Show all categories"}</button>
@@ -131,21 +138,23 @@ export function BreakdownCard({
                   )}
                 </div>
               ) : (
-                <div className="bd-table" role="table" aria-label="Spending by group">
-                  <div className="bd-tr bd-th bd-tr--3" role="row">
-                    <span role="columnheader">Group</span>
-                    <span role="columnheader">Spent</span>
-                    <span role="columnheader">% of expenses</span>
-                  </div>
-                  {grouped.map((g) => (
-                    <div key={g.group} className="bd-tr bd-tr--3" role="row">
-                      <span role="cell" className="bd-name"><i className="bd-swatch" style={{ background: catColour(g.group, groupColours) }} aria-hidden />
-                        <span className="min-w-0"><span className="bd-trunc">{g.group}</span><span className="bd-sub bd-trunc">{g.members.join(", ") || "No spending yet"}</span></span>
-                      </span>
-                      <span role="cell" className="mh-amount">{aud(g.amount)}</span>
-                      <span role="cell">{g.pct.toFixed(g.pct < 10 ? 1 : 0)}%</span>
+                <div className="bd-table">
+                  <div role="table" aria-label="Spending by group">
+                    <div className="bd-tr bd-th bd-tr--3" role="row">
+                      <span role="columnheader">Group</span>
+                      <span role="columnheader">Spent</span>
+                      <span role="columnheader">% of expenses</span>
                     </div>
-                  ))}
+                    {grouped.map((g) => (
+                      <div key={g.group} className="bd-tr bd-tr--3" role="row">
+                        <span role="cell" className="bd-name"><i className="bd-swatch" style={{ background: catColour(g.group, groupColours) }} aria-hidden />
+                          <span className="min-w-0"><span className="bd-trunc">{g.group}</span><span className="bd-sub bd-trunc">{g.members.join(", ") || "No spending yet"}</span></span>
+                        </span>
+                        <span role="cell" className="mh-amount">{aud(g.amount)}</span>
+                        <span role="cell">{g.pct.toFixed(g.pct < 10 ? 1 : 0)}%</span>
+                      </div>
+                    ))}
+                  </div>
                   {groups.length === 0 && (
                     <div className="bd-tfoot"><p className="mh-muted mh-small m-0">Group categories together (for example “Fun” or “Home”) in <button type="button" className="mh-link-btn mh-small" onClick={onManage}>Manage categories</button>.</p></div>
                   )}
@@ -190,33 +199,37 @@ export function BreakdownCard({
                   </span>
                 </span>
               </div>
-              <div className="bd-table" role="table" aria-label="Budget by category">
-                <div className="bd-tr bd-th bd-tr--budget" role="row">
-                  <span role="columnheader">Category</span>
-                  <span role="columnheader">Spent</span>
-                  <span role="columnheader">Budget</span>
-                  <span role="columnheader">Available</span>
+              <div className="bd-table">
+                <div role="table" aria-label="Budget by category">
+                  <div className="bd-tr bd-th bd-tr--budget" role="row">
+                    <span role="columnheader">Category</span>
+                    <span role="columnheader">Spent</span>
+                    <span role="columnheader">Budget</span>
+                    <span role="columnheader">Available</span>
+                  </div>
+                  {bShown.map((r) => {
+                    const p = r.budget > 0 ? (r.spent / r.budget) * 100 : r.spent > 0 ? 100 : 0;
+                    const name = <><CatIcon name={r.rest ? "Other" : r.group} custom={custom} /><span className="bd-trunc">{r.group}</span></>;
+                    return (
+                      <div key={r.group} className={`bd-tr bd-tr--budget${r.rest ? "" : " bd-tr--action"}`} role="row">
+                        <span role="cell">
+                          {r.rest ? <span className="bd-name">{name}</span> : (
+                            <button type="button" className="bd-name bd-row-button" onClick={(event) => onOpenCategory(r.group, event.currentTarget)}>
+                              {name}
+                            </button>
+                          )}
+                        </span>
+                        <span role="cell" className="bd-spent">
+                          <span className="mh-amount">{aud(r.spent)}</span>
+                          <span className="mh-bar bd-bar cat-bar" style={catVars(r.rest ? "Other" : r.group, custom)}><i style={{ width: `${Math.min(100, p)}%` }} data-over={p > 100} /></span>
+                        </span>
+                        <span role="cell" className="mh-amount">{aud(r.budget)}</span>
+                        <span role="cell" className="mh-amount" data-over={r.available < 0}>{r.available < 0 ? `−${aud(-r.available)}` : aud(r.available)}</span>
+                      </div>
+                    );
+                  })}
                 </div>
                 {bShown.length === 0 && <div className="bd-tfoot"><p className="mh-muted mh-small m-0">Nothing to show for this view.</p></div>}
-                {bShown.map((r) => {
-                  const p = r.budget > 0 ? (r.spent / r.budget) * 100 : r.spent > 0 ? 100 : 0;
-                  const row = (
-                    <>
-                      <span role="cell" className="bd-name"><CatIcon name={r.rest ? "Other" : r.group} custom={custom} /><span className="bd-trunc">{r.group}</span></span>
-                      <span role="cell" className="bd-spent">
-                        <span className="mh-amount">{aud(r.spent)}</span>
-                        <span className="mh-bar bd-bar cat-bar" style={catVars(r.rest ? "Other" : r.group, custom)}><i style={{ width: `${Math.min(100, p)}%` }} data-over={p > 100} /></span>
-                      </span>
-                      <span role="cell" className="mh-amount">{aud(r.budget)}</span>
-                      <span role="cell" className="mh-amount" data-over={r.available < 0}>{r.available < 0 ? `−${aud(-r.available)}` : aud(r.available)}</span>
-                    </>
-                  );
-                  return r.rest ? (
-                    <div key={r.group} className="bd-tr bd-tr--budget" role="row">{row}</div>
-                  ) : (
-                    <button key={r.group} type="button" className="bd-tr bd-tr--budget" role="row" aria-label={`${r.group} budget: open details`} onClick={() => onOpenCategory(r.group)}>{row}</button>
-                  );
-                })}
               </div>
             </>
           )

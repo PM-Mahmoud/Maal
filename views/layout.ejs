@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-AU">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,24 +17,25 @@
   <meta name="description" content="Maal reads your assets, debts, super, and income to deliver a 0–100 Financial Wellbeing Score and a plain-English action plan to improve it.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <%- include('partials/v2-public-styles') %>
   <link rel="stylesheet" href="/css/retro.css">
   <style>html[data-theme="dark"] .maal-mark .mm-a{fill:currentColor}html[data-theme="dark"] .maal-mark .mm-b{fill:currentColor}</style>
+  <link rel="stylesheet" href="/css/public-v2.css">
 </head>
-<body>
+<body class="public-v2 public-landing">
 
   <!-- Ticker -->
   <div class="rf-ticker">
     <div class="rf-ticker-track">
       <span>
         Super · HECS · ATO native <span class="rf-star">✦</span>
-        Read-only via Basiq <span class="rf-star">✦</span>
+        Read-only bank connections <span class="rf-star">✦</span>
         Education, never advice <span class="rf-star">✦</span>
         One score. One plan. No spreadsheets. <span class="rf-star">✦</span>
       </span>
       <span aria-hidden="true">
         Super · HECS · ATO native <span class="rf-star">✦</span>
-        Read-only via Basiq <span class="rf-star">✦</span>
+        Read-only bank connections <span class="rf-star">✦</span>
         Education, never advice <span class="rf-star">✦</span>
         One score. One plan. No spreadsheets. <span class="rf-star">✦</span>
       </span>
@@ -61,7 +62,7 @@
         <a href="/login" class="rf-login">Log in</a>
         <a href="<%= locals.waitlistGated !== false ? '/waitlist' : '/signup' %>" class="rf-btn rf-btn-ghost rf-signup"><%= locals.waitlistGated !== false ? 'Join waitlist' : 'Sign up' %></a>
         <a href="/score" class="rf-btn rf-btn-ink">Get your free score</a>
-        <button class="rf-hamburger" id="rf-hamburger" aria-label="Toggle menu">
+        <button class="rf-hamburger" id="rf-hamburger" aria-label="Toggle menu" aria-controls="rf-mobile-nav" aria-expanded="false">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
       </div>
@@ -84,13 +85,13 @@
         <div>
           <h1 class="rf-hero-h1">Your money,<br><span class="rf-underline">in <span class="rf-mark">balance.</span></span></h1>
           <p class="rf-hero-sub">
-            Your accounts, super and debt, turned into one score and a plan. Free in 2 minutes.
+            See your spending, savings, super and debt in one place. Start with your free Maal Score.
           </p>
           <div class="rf-hero-actions">
             <a href="/score" class="rf-btn rf-btn-lg">Get your free score</a>
             <a href="#how" class="rf-btn rf-btn-lg rf-btn-ghost">See how it works →</a>
           </div>
-          <p class="rf-hero-note">Free to start. No card required. Read-only bank connections via Basiq. Education only, never financial advice.</p>
+          <p class="rf-hero-note">Free to start. No card required. Read-only bank connections. Education only, never financial advice.</p>
         </div>
 
         <div class="rf-card">
@@ -124,7 +125,7 @@
   <div class="rf-strip">
     <div class="rf-strip-grid">
       <div class="rf-strip-item"><div class="rf-strip-big">1 score</div><div class="rf-strip-small">Five pillars: savings, debt, super, trajectory &amp; protection</div></div>
-      <div class="rf-strip-item"><div class="rf-strip-big">100+</div><div class="rf-strip-small">Institutions via Basiq open banking (coming soon)</div></div>
+      <div class="rf-strip-item"><div class="rf-strip-big">100+</div><div class="rf-strip-small">Institutions in our open banking directory</div></div>
       <div class="rf-strip-item"><div class="rf-strip-big">FY-current</div><div class="rf-strip-small">Super, HECS &amp; ATO rules built in</div></div>
       <div class="rf-strip-item"><div class="rf-strip-big">Read-only</div><div class="rf-strip-small">Maal can never move your money</div></div>
     </div>
@@ -145,8 +146,8 @@
             <div class="rf-inner" style="border-radius:16px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;width:100%;max-width:280px;">
               <svg viewBox="0 0 90 90" width="66" height="66" style="flex-shrink:0;">
                 <circle cx="45" cy="45" r="38" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="8"/>
-                <circle cx="45" cy="45" r="38" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-dasharray="172 239" transform="rotate(-90 45 45)"/>
-                <text x="45" y="52" text-anchor="middle" fill="#fff" font-size="24" font-weight="800" font-family="'Bricolage Grotesque',sans-serif">72</text>
+                <circle cx="45" cy="45" r="38" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-dasharray="172 239" transform="rotate(-90 45 45)"/>
+                <text x="45" y="52" text-anchor="middle" fill="currentColor" font-size="24" font-weight="600" font-family="Lora, Georgia, serif">72</text>
               </svg>
               <div><p style="font-weight:700;font-size:14px;">Maal Score</p><p style="font-size:11px;opacity:.8;margin-top:2px;">Strong · tracked daily</p></div>
             </div>
@@ -189,7 +190,7 @@
               </div>
               <svg viewBox="0 0 200 60" style="margin-top:0.75rem;width:100%;height:56px;display:block;">
                 <defs><linearGradient id="rf-sp" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="rgba(34,28,21,0.35)"/><stop offset="100%" stop-color="rgba(34,28,21,0)"/></linearGradient></defs>
-                <path d="M0,50 C30,45 60,40 90,35 C120,30 150,25 200,12" fill="none" stroke="#221C15" stroke-width="2"/>
+                <path d="M0,50 C30,45 60,40 90,35 C120,30 150,25 200,12" fill="none" stroke="currentColor" stroke-width="2"/>
                 <path d="M0,50 C30,45 60,40 90,35 C120,30 150,25 200,12 L200,60 L0,60 Z" fill="url(#rf-sp)"/>
               </svg>
             </div>
@@ -204,7 +205,7 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;width:100%;max-width:600px;">
               <div class="rf-inner" style="border-radius:12px;padding:0.75rem 1rem;display:flex;align-items:center;justify-content:space-between;font-size:12.5px;"><span>CommBank · transactions</span><span style="width:8px;height:8px;border-radius:50%;background:var(--rf-gold);"></span></div>
               <div class="rf-inner" style="border-radius:12px;padding:0.75rem 1rem;display:flex;align-items:center;justify-content:space-between;font-size:12.5px;"><span>AustralianSuper · super</span><span style="width:8px;height:8px;border-radius:50%;background:var(--rf-gold);"></span></div>
-              <div class="rf-inner" style="border-radius:12px;padding:0.75rem 1rem;font-size:12px;opacity:.8;grid-column:span 2;">Read-only via Basiq · revoke anytime</div>
+              <div class="rf-inner" style="border-radius:12px;padding:0.75rem 1rem;font-size:12px;opacity:.8;grid-column:span 2;">Read-only connections · disconnect anytime</div>
             </div>
           </div>
           <div class="rf-product-foot"><span>Accounts</span><span>→</span></div>
@@ -241,13 +242,13 @@
   <!-- Why -->
   <section class="rf-section">
     <div class="rf-wrap rf-reveal">
-      <span class="rf-eyebrow">Why Maal · Read-only · Bank-level security via Basiq (CDR-regulated), coming soon</span>
+      <span class="rf-eyebrow">Why Maal</span>
       <h2 class="rf-h2">Super, HECS and tax, <em>worked into</em> every number.</h2>
       <p class="rf-lede">Super guarantee, HECS indexation, tax brackets, all updated for FY2025–26. Super, EOFY, the ATO, property, debt and open banking all shape how Australians build wealth. Maal brings them into one clear picture.</p>
       <div class="rf-why-list">
         <div class="rf-why-item"><div class="rf-why-title">Clarity by design</div><p class="rf-why-body">Net worth, debt, super, spending and investments in one place, explained in plain language so you always know where you stand.</p></div>
         <div class="rf-why-item"><div class="rf-why-title">Tax and super, kept current</div><p class="rf-why-body">Superannuation, HECS-HELP, EOFY and the ATO, with tax and super figures updated for each financial year.</p></div>
-        <div class="rf-why-item"><div class="rf-why-title">Secure and read-only</div><p class="rf-why-body">Bank connections via Basiq under the Consumer Data Right (coming soon). Maal can never move money. Credentials are never stored. Your data is never sold.</p></div>
+        <div class="rf-why-item"><div class="rf-why-title">Secure and read-only</div><p class="rf-why-body">Bank connections are read-only. Maal can show your balances and transactions, and you can disconnect an account in Settings.</p></div>
         <div class="rf-why-item"><div class="rf-why-title">Education, not instructions</div><p class="rf-why-body">Maal explains what's happening in your finances and why it matters. The decisions stay yours.</p></div>
         <div class="rf-why-item"><div class="rf-why-title">Not a credit score</div><p class="rf-why-body">A credit score measures how safe you are to lend to, and it exists for lenders. The Maal Score measures your whole financial wellbeing, and it exists for you.</p></div>
       </div>
@@ -263,26 +264,16 @@
   <section class="rf-section rf-section-alt" id="pricing">
     <div class="rf-wrap rf-reveal">
       <span class="rf-eyebrow">Pricing</span>
-      <h2 class="rf-h2">Start free. Upgrade when Maal starts paying for itself.</h2>
-      <div class="rf-price-grid">
-        <div class="rf-price">
-          <p class="rf-price-name">Free</p>
-          <div class="rf-price-amt"><span class="rf-price-big">$0</span><span class="rf-price-per">forever</span></div>
-          <p class="rf-price-desc">Maal Score, basic dashboard, manual entry.</p>
-          <a href="/signup" class="rf-btn rf-btn-ghost rf-btn-block">Start free</a>
-        </div>
+      <h2 class="rf-h2">One Maal membership</h2>
+      <div class="rf-price-grid rf-price-grid-single">
         <div class="rf-price featured">
-          <span class="rf-price-popular">Most popular</span>
-          <p class="rf-price-name">Pro</p>
-          <div class="rf-price-amt"><span class="rf-price-big">$20</span><span class="rf-price-per">AUD / month</span></div>
-          <p class="rf-price-desc">Open banking sync, tax &amp; super tools, retirement projections, Ask Maal.</p>
-          <a href="/signup" class="rf-btn rf-btn-block">Get Pro</a>
-        </div>
-        <div class="rf-price">
-          <p class="rf-price-name">Max</p>
-          <div class="rf-price-amt"><span class="rf-price-big">$200</span><span class="rf-price-per">AUD / month</span></div>
-          <p class="rf-price-desc">Multi-entity, Radar alerts, Vault PDF extraction, priority support.</p>
-          <a href="/contact" class="rf-btn rf-btn-ghost rf-btn-block">Talk to us</a>
+          <p class="rf-price-name"><%= membership.MEMBERSHIP.name %></p>
+          <div class="rf-price-amt">
+            <span class="rf-price-big"><%= membership.formatAud(membership.MEMBERSHIP.firstYearCents) %></span>
+            <span class="rf-price-per">for your first year</span>
+          </div>
+          <p class="rf-price-desc">Try Maal free for <%= membership.TRIAL_DAYS %> days. No card needed. After the first year, membership renews at <%= membership.formatAud(membership.MEMBERSHIP.yearCents) %>/year unless you cancel.</p>
+          <a href="/pricing" class="rf-btn rf-btn-block">See what’s included</a>
         </div>
       </div>
     </div>
@@ -293,8 +284,8 @@
     <div class="rf-wrap rf-reveal">
       <div class="rf-cta-block">
         <svg class="rf-star-deco one" style="top:14%;right:8%;color:var(--rf-gold);" viewBox="0 0 100 100" fill="currentColor"><path d="M50 0l9 34 34-9-25 25 25 25-34-9-9 34-9-34-34 9 25-25L7 25l34 9z"/></svg>
-        <h2 class="rf-cta-h2">Stop guessing.<br>Start scoring.</h2>
-        <p class="rf-cta-sub">Two minutes to your first Maal Score. No bank login. No credit card.</p>
+        <h2 class="rf-cta-h2">See how your money fits together.</h2>
+        <p class="rf-cta-sub">Get your Maal Score in about two minutes. No bank connection or card needed.</p>
         <div class="rf-cta-actions">
           <a href="/score" class="rf-btn rf-btn-lg rf-btn-ink">Get your free score</a>
         </div>
@@ -308,7 +299,7 @@
       <div>
         <a href="/" class="rf-wordmark">
           <span class="rf-wordmark-badge"><svg class="maal-mark" width="18" height="18" viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true"><g class="mm-a" fill="currentColor"><rect x="0" y="0" width="1" height="7"/><rect x="6" y="0" width="1" height="7"/><rect x="1" y="1" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/></g><g class="mm-b" fill="currentColor"><rect x="2" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/></g></svg></span>
-          <span class="rf-wordmark-text" style="color:var(--rf-cream);">Maal</span>
+          <span class="rf-wordmark-text">Maal</span>
         </a>
         <p class="rf-footer-desc">A 0–100 financial wellbeing score with a plan to improve it. No spreadsheets.</p>
       </div>
@@ -325,6 +316,7 @@
         <ul>
           <li><a href="/about">About</a></li>
           <li><a href="/security">Security</a></li>
+          <% if (locals.publicTermsUrl) { %><li><a href="<%= publicTermsUrl %>">Terms and conditions</a></li><% } %>
           <li><a href="/contact">Contact</a></li>
         </ul>
       </div>
@@ -352,7 +344,8 @@
   <script nonce="<%= locals.cspNonce || '' %>">
     // Mobile nav
     function rfToggleNav() {
-      document.getElementById('rf-mobile-nav').classList.toggle('open');
+      var open = document.getElementById('rf-mobile-nav').classList.toggle('open');
+      rfBurger.setAttribute('aria-expanded', String(open));
     }
     // Bound here, not via onclick="" (Helmet CSP: script-src-attr 'none').
     var rfBurger = document.getElementById('rf-hamburger');

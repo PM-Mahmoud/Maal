@@ -1,32 +1,6 @@
-/* ============================================================
-   Maal v2 — free score calculator (/score) and its event kiosk
-   mode (/score?kiosk=1). Visual layer only: loads after the
-   page's inline <style> (and theme.css / retro-theme.css), so it
-   restyles the existing .sc-* markup the page's JS renders without
-   touching any behaviour. Scoped to body.v2-score; the shared
-   navbar/footer partials are left alone. !important is needed
-   only where retro-theme.css already uses it.
-   Tokens match public/css/v2.css.
-   ============================================================ */
-@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap');
-
-html { background: #020109; }
-body.v2-score { background: #F8F9F6 !important; }
-/* No top accent ribbon or film grain on v2 pages. */
-body.v2-score::before, body.v2-score::after { display: none !important; }
-
-/* Tokens are set on <main> (and the kiosk brand bar) so the JS-rendered
-   inline colours (var(--fg), var(--gold), var(--surface-2)) pick them up
-   without retoning the shared nav/footer. */
-body.v2-score main, body.v2-score .sc-kiosk-brand {
-  --bg: #F8F9F6; --surface: #FFFFFF; --surface-2: #EFF0ED;
-  --fg: #202120; --fg-muted: #666666; --border: #E4E5E2; --hair-strong: #BDBDBD;
-  --ink: #020109; --mint: #006B87; --accent: #006B87; --accent-strong: #006B87;
-  --accent-soft: #D6F7FF; --gold: #B4541A; --gold-soft: #FBEFE2;
-  --v2-serif: 'Lora', Georgia, 'Times New Roman', serif;
-  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  font-family: var(--font-body); color: var(--fg); -webkit-font-smoothing: antialiased;
-}
+/* Score calculator and event kiosk layout. Public theme tokens and fonts
+   are inherited from public-v2.css. */
+body.v2-score::before, body.v2-score::after { display: none; }
 
 /* ---------- Card ---------- */
 body.v2-score .sc-wrap {
@@ -44,11 +18,11 @@ body.v2-score .sc-kicker {
   letter-spacing: 0; text-transform: none;
 }
 body.v2-score .sc-h1, body.v2-score .sc-result-box .sc-h1 {
-  font-family: var(--v2-serif) !important; font-weight: 400 !important; letter-spacing: -.01em !important;
+  font-family: var(--font-display) !important; font-weight: 400 !important; letter-spacing: -.01em !important;
   font-size: clamp(1.9rem, 4.2vw, 2.5rem); line-height: 1.2; color: var(--fg);
 }
 body.v2-score .sc-ring-num {
-  font-family: var(--v2-serif) !important; font-weight: 400 !important; letter-spacing: 0 !important; font-size: 3rem;
+  font-family: var(--font-display) !important; font-weight: 400 !important; letter-spacing: 0 !important; font-size: 3rem;
 }
 body.v2-score .sc-intro-body, body.v2-score .sc-result-desc { font-size: 16px; line-height: 1.6; }
 body.v2-score .sc-result-desc strong { color: var(--fg); font-weight: 600; }
@@ -62,7 +36,7 @@ body.v2-score .sc-progress-fill { background: var(--ink) !important; }
 
 /* ---------- Inputs ---------- */
 body.v2-score .sc-input, body.v2-score .sc-email-input {
-  border: 1px solid var(--hair-strong) !important; border-radius: 8px !important; background: var(--surface) !important;
+  border: 1px solid var(--border-strong) !important; border-radius: 8px !important; background: var(--surface) !important;
   box-shadow: none !important; font-family: var(--font-body); color: var(--fg);
 }
 body.v2-score .sc-input { height: 56px; font-weight: 500; font-size: 20px; letter-spacing: 0; }
@@ -73,7 +47,7 @@ body.v2-score .sc-input:focus, body.v2-score .sc-email-input:focus {
 
 /* ---------- Buttons (primary = ink, 8px radius) ---------- */
 body.v2-score .sc-next, body.v2-score .sc-intro-start, body.v2-score .sc-email-btn {
-  background: var(--ink) !important; color: #fff !important; border: 1px solid var(--ink) !important;
+  background: var(--ink) !important; color: var(--on-ink); border: 1px solid var(--ink) !important;
   border-radius: 8px !important; box-shadow: none !important; transform: none !important;
   font-family: var(--font-body); font-weight: 400 !important; font-size: 16px; text-transform: none !important; letter-spacing: 0 !important;
   height: 48px; padding: 0 1.4rem;
@@ -84,9 +58,9 @@ body.v2-score .sc-next:hover, body.v2-score .sc-intro-start:hover, body.v2-score
 body.v2-score .sc-next:active, body.v2-score .sc-intro-start:active, body.v2-score .sc-email-btn:active {
   transform: translateY(1px) !important; box-shadow: none !important;
 }
-body.v2-score .sc-email-btn:disabled { background: #D8D6D2 !important; border-color: #D8D6D2 !important; opacity: 1 !important; cursor: default; }
+body.v2-score .sc-email-btn:disabled { background: var(--surface-3) !important; border-color: var(--border) !important; color: var(--fg-muted); opacity: 1 !important; cursor: default; }
 body.v2-score .sc-back, body.v2-score .sc-restart {
-  height: 48px; padding: 0 1.1rem; border-radius: 8px; border: 1px solid #999; background: var(--surface);
+  height: 48px; padding: 0 1.1rem; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface);
   color: var(--ink); font-family: var(--font-body); font-size: 15px; font-weight: 400;
 }
 body.v2-score .sc-back:hover, body.v2-score .sc-restart:hover { border-color: var(--fg); color: var(--ink); }
@@ -109,14 +83,14 @@ body.v2-score .sc-signal-row { font-size: 15px; }
 body.v2-score .sc-pillar-bar-bg { border: 0 !important; background: var(--surface-2); }
 body.v2-score .sc-pillar-row { font-size: 14px; }
 body.v2-score .sc-next-title, body.v2-score .sc-email-title, body.v2-score .sc-email-sent-title {
-  font-family: var(--v2-serif); font-size: 20px; font-weight: 400; line-height: 1.3;
+  font-family: var(--font-display); font-size: 20px; font-weight: 400; line-height: 1.3;
 }
 body.v2-score .sc-next-list li { font-size: 15px; }
 body.v2-score .sc-email-body, body.v2-score .sc-email-sent-body { font-size: 14px; }
 body.v2-score .sc-email-sent { margin-top: 2rem; border: 1px solid var(--border); border-radius: 14px; background: var(--accent-soft); }
-body.v2-score .sc-email-sent-body, body.v2-score .sc-countdown { color: #24444F; }
+body.v2-score .sc-email-sent-body, body.v2-score .sc-countdown { color: var(--accent); }
 body.v2-score .sc-consent { font-size: 14px; }
-body.v2-score .sc-email-error { color: #B42318; font-size: 14px; }
+body.v2-score .sc-email-error { color: var(--danger); font-size: 14px; }
 
 /* ============================================================
    Event kiosk (?kiosk=1): tablet / laptop at a stall. Bigger tap
@@ -131,7 +105,7 @@ body.v2-score .sc-kiosk-brand {
 }
 body.v2-score .sc-kiosk-brand span {
   display: inline-flex; align-items: center; gap: .55rem;
-  font-family: var(--v2-serif); font-weight: 400; font-size: 26px; color: var(--fg);
+  font-family: var(--font-display); font-weight: 400; font-size: 26px; color: var(--fg);
 }
 body.v2-score .sc-kiosk-brand small {
   padding: .35rem .8rem; border-radius: 8px; background: var(--accent-soft); color: var(--accent);

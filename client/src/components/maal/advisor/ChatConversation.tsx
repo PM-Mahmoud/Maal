@@ -6,6 +6,13 @@ import { addWidget, type WidgetSpec } from "@/lib/widgets.functions";
 import { WidgetRenderer } from "@/components/maal/WidgetRenderer";
 import { AdvisorMarkdown } from "./AdvisorMarkdown";
 
+function CitationBadge({ citation }: { citation: Citation }) {
+  const href = citation.url && /^https?:\/\//i.test(citation.url) ? citation.url : undefined;
+  return href
+    ? <a className="mx-adv-cite mx-adv-cite-link" href={href} target="_blank" rel="noopener noreferrer">{citation.label}</a>
+    : <span className="mx-adv-cite">{citation.label}</span>;
+}
+
 type Msg = {
   id?: string;
   role: "user" | "assistant" | "system";
@@ -413,13 +420,13 @@ export function ChatConversation({
                 )}
                 {m.widgets?.map((w, wi) => (
                   <div key={wi} className="mx-adv-widget">
-                    <WidgetRenderer widget={w} action={<AddToDashboard widget={w} />} />
+                    <WidgetRenderer widget={w} action={w.canSave !== false ? <AddToDashboard widget={w} /> : undefined} />
                   </div>
                 ))}
                 {m.citations && m.citations.length > 0 && (
                   <div className="mx-adv-cites">
                     <span className="mx-adv-kicker" style={{ fontSize: 10 }}>Based on</span>
-                    {m.citations.map((c, ci) => <span key={ci} className="mx-adv-cite">{c.label}</span>)}
+                    {m.citations.map((c, ci) => <CitationBadge key={ci} citation={c} />)}
                   </div>
                 )}
                 {i === lastAssistant && m.followUps && m.followUps.length > 0 && (

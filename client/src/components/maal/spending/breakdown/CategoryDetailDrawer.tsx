@@ -23,7 +23,7 @@ const BARS = 6;
  * monochrome bars (pick one to list its transactions), and the transactions,
  * each opening the transaction detail.
  */
-export function CategoryDetailDrawer({ name, transactions, excluded, budgets, custom, today, onClose, onBudgetChanged }: {
+export function CategoryDetailDrawer({ name, transactions, excluded, budgets, custom, today, onClose, onCloseAutoFocus, onBudgetChanged }: {
   name: string;
   transactions: SpendTxn[];
   excluded: string[] | undefined;
@@ -31,6 +31,7 @@ export function CategoryDetailDrawer({ name, transactions, excluded, budgets, cu
   custom: CustomCategory[];
   today: Date;
   onClose: () => void;
+  onCloseAutoFocus: (event: Event) => void;
   onBudgetChanged: () => Promise<void> | void;
 }) {
   const privacy = usePrivacy();
@@ -93,7 +94,8 @@ export function CategoryDetailDrawer({ name, transactions, excluded, budgets, cu
     <DialogPrimitive.Root open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="ss-scrim" />
-        <DialogPrimitive.Content className="mh-shell ss-drawer bd-drawer bd-drawer--cat" style={catVars(name, custom)} aria-describedby={undefined}>
+        <DialogPrimitive.Content className="mh-shell ss-drawer bd-drawer bd-drawer--cat" style={catVars(name, custom)}
+          onCloseAutoFocus={onCloseAutoFocus} aria-describedby={undefined}>
           <header className="ss-head">
             <DialogPrimitive.Title className="ss-eyebrow">Category detail</DialogPrimitive.Title>
             <DialogPrimitive.Close className="ss-iconbtn ss-close" aria-label="Close category detail"><X aria-hidden /></DialogPrimitive.Close>

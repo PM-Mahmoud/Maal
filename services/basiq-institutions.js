@@ -13,58 +13,12 @@
 
 const CATEGORIES = ['bank', 'super', 'investment'];
 
-// Local logo files that already ship in public/images/banks/.
-const LOCAL_LOGOS = new Set([
-  'anz', 'australiansuper', 'banksa', 'bendigo', 'commbank', 'commsec', 'hostplus',
-  'hsbc', 'ing', 'macquarie', 'nab', 'selfwealth', 'stgeorge', 'suncorp', 'ubank', 'up', 'westpac',
-]);
+const { institutions, popular: POPULAR_SLUGS } = require('../shared/institutions.json');
 
-// slug, display name, category, website. `id` is null: without Basiq we
-// cannot preselect an institution in the consent screen.
-const STATIC_ROWS = [
-  ['commbank', 'CommBank', 'bank', 'commbank.com.au'],
-  ['westpac', 'Westpac', 'bank', 'westpac.com.au'],
-  ['nab', 'NAB', 'bank', 'nab.com.au'],
-  ['anz', 'ANZ', 'bank', 'anz.com.au'],
-  ['macquarie', 'Macquarie', 'bank', 'macquarie.com.au'],
-  ['ing', 'ING', 'bank', 'ing.com.au'],
-  ['up', 'Up', 'bank', 'up.com.au'],
-  ['ubank', 'ubank', 'bank', 'ubank.com.au'],
-  ['bendigo', 'Bendigo Bank', 'bank', 'bendigobank.com.au'],
-  ['stgeorge', 'St.George', 'bank', 'stgeorge.com.au'],
-  ['suncorp', 'Suncorp', 'bank', 'suncorp.com.au'],
-  ['bankwest', 'Bankwest', 'bank', 'bankwest.com.au'],
-  ['boq', 'BOQ', 'bank', 'boq.com.au'],
-  ['amp', 'AMP Bank', 'bank', 'amp.com.au'],
-  ['hsbc', 'HSBC Australia', 'bank', 'hsbc.com.au'],
-  ['banksa', 'BankSA', 'bank', 'banksa.com.au'],
-  ['greatsouthern', 'Great Southern Bank', 'bank', 'greatsouthernbank.com.au'],
-  ['bankaustralia', 'Bank Australia', 'bank', 'bankaustralia.com.au'],
-  ['australiansuper', 'AustralianSuper', 'super', 'australiansuper.com'],
-  ['hostplus', 'Hostplus', 'super', 'hostplus.com.au'],
-  ['art', 'Australian Retirement Trust', 'super', 'australianretirementtrust.com.au'],
-  ['unisuper', 'UniSuper', 'super', 'unisuper.com.au'],
-  ['aware', 'Aware Super', 'super', 'aware.com.au'],
-  ['rest', 'Rest', 'super', 'rest.com.au'],
-  ['commsec', 'CommSec', 'investment', 'commsec.com.au'],
-  ['stake', 'Stake', 'investment', 'hellostake.com'],
-  ['pearler', 'Pearler', 'investment', 'pearler.com'],
-  ['superhero', 'Superhero', 'investment', 'superhero.com.au'],
-  ['selfwealth', 'SelfWealth', 'investment', 'selfwealth.com.au'],
-];
-
-const STATIC_INSTITUTIONS = Object.freeze(STATIC_ROWS.map(([slug, name, category, site]) => Object.freeze({
-  id: null,
-  slug,
-  name,
-  shortName: name,
-  category,
-  logo: LOCAL_LOGOS.has(slug) ? `/images/banks/${slug}.png` : null,
-  url: `https://www.${site}`,
+const STATIC_INSTITUTIONS = Object.freeze(institutions.map(({ slug, name, category, logo, url }) => Object.freeze({
+  id: null, slug, name, shortName: name, category, logo, url,
 })));
-
-// Order of the "Popular institutions" grid.
-const POPULAR_SLUGS = ['commbank', 'westpac', 'nab', 'anz', 'macquarie', 'ing', 'up', 'ubank', 'bendigo', 'stgeorge', 'suncorp', 'bankwest'];
+const LOCAL_LOGOS = new Map(STATIC_INSTITUTIONS.map(({ slug, logo }) => [slug, logo]));
 
 // Normalised name → slug for matching Basiq's names to our known brands.
 const ALIASES = {
@@ -156,7 +110,7 @@ function mapInstitution(raw) {
     name,
     shortName,
     category: categorise(raw.institutionType),
-    logo: safeHttpsUrl(links.square) || safeHttpsUrl(links.full) || (slug && LOCAL_LOGOS.has(slug) ? `/images/banks/${slug}.png` : null),
+    logo: safeHttpsUrl(links.square) || safeHttpsUrl(links.full) || LOCAL_LOGOS.get(slug) || null,
     url: safeHttpsUrl(raw.url) || safeHttpsUrl(raw.website) || null,
   };
 }

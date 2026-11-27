@@ -18,7 +18,7 @@ const radar = require('../db/radar');
 const linked = require('../db/linked_accounts');
 const recurring = require('../db/recurring-items');
 const research = require('../db/research');
-const onboardingRouter = require('../routes/onboarding');
+const onboardingRedirect = require('../routes/onboarding-redirect');
 
 function assertOwnerBinding() {
   const { sql, params } = calls.at(-1);
@@ -45,29 +45,18 @@ test('onboarding store binds the caller to every session and answer operation', 
   assertOwnerBinding();
 });
 
-test('onboarding routes require a signed-in session and stop after an unmatched owner', async () => {
-  for (const path of ['/session/:sessionId/step/:step', '/step/:step', '/complete']) {
-    const route = onboardingRouter.stack.find((layer) => layer.route?.path === path).route;
-    let resultStatus;
-    const res = {
-      redirect: () => { resultStatus = 302; },
-      status: (code) => { resultStatus = code; return res; },
-      json: () => {},
-    };
-    route.stack[0].handle({ session: {}, originalUrl: '/onboarding' }, res, () => {
-      assert.fail('blocked sessions must not proceed');
-    });
-    assert.equal(resultStatus, 302);
-
-    if (path === '/session/:sessionId/step/:step') continue;
-    const checksBefore = calls.length;
-    await route.stack[1].handle({
-      session: { userId: owner }, params: { step: '1' }, body: { session_id: recordId },
-    }, res);
-    assert.equal(resultStatus, 404);
-    assert.equal(calls.length, checksBefore + 1);
-    assertOwnerBinding();
-  }
+test('retired onboarding pages redirect to welcome without reading the database', () => {
+  const { route } = onboardingRedirect.stack[0];
+  assert.deepEqual(route.path, ['/', '/*']);
+  assert.equal(route.methods.get, true);
+  const queriesBefore = calls.length;
+  route.stack[0].handle({}, {
+    redirect(code, target) {
+      assert.equal(code, 301);
+      assert.equal(target, '/welcome');
+    },
+  });
+  assert.equal(calls.length, queriesBefore);
 });
 
 test('associated rows and worker writes bind their owner in SQL', async () => {
