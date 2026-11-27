@@ -26,6 +26,7 @@ The build runs pending database migrations and builds the React client and its r
 | `PORT` | Assigned by Render |
 | `RESEND_API_KEY` | Sends transactional email through Resend |
 | `EMAIL_FROM` | Verified sender address for signup, password reset and other transactional email |
+| `FEEDBACK_EMAIL` | Team inbox for in-app feedback and support notifications. Set this to the team feedback alias. If unset, the app saves submissions to the database and skips the notification email |
 | `BASIQ_API_KEY` | Enables bank consent and synchronisation. Set it on both the web service and import worker when bank connections are enabled |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Membership checkout and webhook verification when Stripe is enabled |
 | `EXA_API_KEY` | Web grounding for research and radar when enabled |
