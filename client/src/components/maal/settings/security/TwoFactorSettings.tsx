@@ -1,10 +1,11 @@
 // Settings → Security: two-factor authentication card.
 // Maal's 2FA sends a one-time code by email at sign-in. Authenticator apps are
 // shown as "coming soon" (not built yet — see the redesign deferred backlog).
-import { useCallback, useEffect, useState } from "react";
-import { ArrowUpRight, InfoLine, SettingsCard } from "../risk/ui";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { InfoLine, SettingsCard } from "../risk/ui";
 import { fetchTwoFactor, type TwoFactorStatus } from "./api";
 import { TwoFactorDialog } from "./TwoFactorDialog";
+import "./two-factor.css";
 
 function MailIcon() {
   return (
@@ -26,6 +27,14 @@ export function TwoFactorSettings() {
   const [error, setError] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"enable" | "disable" | null>(null);
 
+  const toggle = useRef<HTMLButtonElement>(null);
+  const emailDescription = useId();
+
+  function closeDialog() {
+    setDialog(null);
+    requestAnimationFrame(() => toggle.current?.focus());
+  }
+
   const load = useCallback(async () => {
     setError(null);
     try { setStatus(await fetchTwoFactor()); }
@@ -37,17 +46,7 @@ export function TwoFactorSettings() {
 
   return (
     <div className="mst mst-page">
-      <SettingsCard
-        kicker="Two-factor authentication"
-        aside={status ? <span className={`mst-badge ${enabled ? "is-on" : "is-off"}`}>{enabled ? "On" : "Off"}</span> : null}
-        foot={status ? (
-          enabled ? (
-            <button type="button" className="mst-btn mst-btn-line" onClick={() => setDialog("disable")}>Turn off two-factor authentication</button>
-          ) : (
-            <button type="button" className="mst-btn mst-btn-ink" onClick={() => setDialog("enable")}>Set up two-factor authentication <ArrowUpRight /></button>
-          )
-        ) : null}
-      >
+      <SettingsCard kicker="Two-factor authentication">
         {error ? (
           <div style={{ display: "grid", gap: 12, justifyItems: "start" }}>
             <p className="mst-alert" role="alert">{error}</p>
@@ -64,13 +63,26 @@ export function TwoFactorSettings() {
               Add a second step when you sign in, so your accounts, balances and documents stay private even if someone learns your password.
             </p>
             <div className="mst-methods">
-              <div className="mst-method">
+              <div className="mst-method mst-2fa-method">
                 <span className="mst-method-icon"><MailIcon /></span>
                 <div className="mst-method-text">
                   <strong>Email code</strong>
-                  <span>{enabled ? `A 6-digit code goes to ${status.email} each time you sign in.` : `We’ll email a 6-digit code to ${status.email} each time you sign in.`}</span>
+                  <span id={emailDescription}>{enabled ? `A 6-digit code goes to ${status.email} each time you sign in.` : `We’ll email a 6-digit code to ${status.email} each time you sign in.`}</span>
                 </div>
-                <span className={`mst-badge ${enabled ? "is-on" : "is-off"}`}>{enabled ? "Active" : "Not set up"}</span>
+                <button
+                  ref={toggle}
+                  type="button"
+                  role="switch"
+                  className="mst-2fa-switch"
+                  aria-label="Two-factor authentication by email"
+                  aria-describedby={emailDescription}
+                  aria-checked={enabled}
+                  aria-haspopup="dialog"
+                  onClick={() => setDialog(enabled ? "disable" : "enable")}
+                >
+                  <span aria-hidden="true">{enabled ? "On" : "Off"}</span>
+                  <span className="mst-2fa-track" aria-hidden="true" />
+                </button>
               </div>
               <div className="mst-method is-disabled" aria-disabled="true">
                 <span className="mst-method-icon"><PhoneKeyIcon /></span>
@@ -90,7 +102,7 @@ export function TwoFactorSettings() {
         <TwoFactorDialog
           mode={dialog}
           status={status}
-          onClose={() => setDialog(null)}
+          onClose={closeDialog}
           onChanged={(on) => setStatus((s) => (s ? { ...s, enabled: on, pending: null } : s))}
         />
       )}
