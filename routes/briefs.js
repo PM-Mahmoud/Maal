@@ -13,6 +13,7 @@ const express = require('express');
 const router = express.Router();
 
 const briefsDb = require('../db/briefs');
+const { recordMarketBriefDelivery } = require('../db/usage');
 const { listGoals } = require('../db/goals');
 const { addFeedback } = require('../db/feedback');
 const { buildWeeklyRecap, recapWindow } = require('../lib/weekly-recap');
@@ -47,7 +48,13 @@ router.get('/weekly-recap', async (req, res) => {
 
 router.get('/market-brief', async (req, res) => {
   try {
-    res.json(await getDailyBrief());
+    const brief = await getDailyBrief();
+    if (brief.available) {
+      await recordMarketBriefDelivery(req.session.userId, brief.date).catch((e) => {
+        console.error('[briefs] market brief metering failed:', safeError(e));
+      });
+    }
+    res.json(brief);
   } catch (e) {
     console.error('[briefs] market brief failed:', safeError(e));
     res.status(500).json({ error: 'Could not load today’s market brief.' });

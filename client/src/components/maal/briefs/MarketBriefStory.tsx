@@ -27,8 +27,8 @@ function colourFor(v: number | null) {
 function buildSlides(b: MarketBrief): StorySlide[] {
   const updated = relativeUpdated(b.generatedAt).toUpperCase();
   const rows = [
-    ...b.indices.filter((i) => i.changePercent != null).map((i) => ({ key: i.symbol, label: i.label, sub: i.symbol, change: i.changePercent, series: i.series })),
-    ...(b.aud ? [{ key: "AUDUSD", label: "Australian dollar", sub: `US${(b.aud.rate * 100).toFixed(2)}c`, change: b.aud.changePercent, series: b.aud.series }] : []),
+    ...b.indices.filter((i) => i.changePercent != null).map((i) => ({ key: i.symbol, label: i.label, trendLabel: `${i.symbol} ETF proxy recent trend`, sub: `${i.symbol} ETF proxy`, change: i.changePercent, series: i.series })),
+    ...(b.aud ? [{ key: "AUDUSD", label: "Australian dollar", trendLabel: "Australian dollar recent trend", sub: `US${(b.aud.rate * 100).toFixed(2)}c`, change: b.aud.changePercent, series: b.aud.series }] : []),
   ];
   const ahead = b.lookingAhead || [];
 
@@ -50,7 +50,7 @@ function buildSlides(b: MarketBrief): StorySlide[] {
               {rows.map((r) => (
                 <div className="mb-index" key={r.key}>
                   {r.series.length >= 2 ? (
-                    <TrendChart values={r.series} color={colourFor(r.change)} height={46} showGrid={false} showPoint={false} label={`${r.label} recent trend`} />
+                    <TrendChart values={r.series} color={colourFor(r.change)} height={46} showGrid={false} showPoint={false} label={r.trendLabel} />
                   ) : null}
                   <div className="mb-index-row">
                     <span>{r.label}</span>
@@ -60,7 +60,7 @@ function buildSlides(b: MarketBrief): StorySlide[] {
                 </div>
               ))}
               <p className="mb-note">
-                Share markets shown via US-listed ETFs (% change in USD) for the latest session. The Australian dollar uses the ECB daily reference rate.
+                Share-market trends and percentage changes show US-listed ETF proxies in USD for the latest session. The Australian dollar uses the ECB daily reference rate.
               </p>
             </div>
           ) : null}
