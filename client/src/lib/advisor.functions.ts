@@ -5,7 +5,7 @@ import type { WidgetSpec } from "@/lib/widgets.functions";
 import { handleUnauthenticated } from "@/integrations/api";
 
 export type Thread = { id: string; title: string; is_favourite: boolean; created_at?: string; updated_at: string };
-export type Citation = { label: string };
+export type Citation = { label: string; url?: string };
 export type FeedbackRating = "up" | "down" | null;
 export type Message = {
   id: string;
@@ -203,7 +203,7 @@ export async function sendAdvisorMessage(
       limited = response.status === 402 && json?.code === "usage_limit";
       if (limited) {
         answer = { reply: `${json.error || "You’ve reached your advisor message limit."} You can upgrade at Plan & Usage in the sidebar.` };
-      } else if (legacy && response.ok && typeof json?.reply === "string") {
+      } else if (response.ok && (legacy || json?.live === false) && typeof json?.reply === "string") {
         answer = json;
       } else {
         throw new Error("Advisor reply unavailable");

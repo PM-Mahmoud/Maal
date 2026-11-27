@@ -5,6 +5,7 @@
 // produces a model-only answer; with no LLM it returns a clear message.
 
 const { safeError } = require('../lib/safe-log');
+const { buildConstantsPrompt } = require('../lib/au-constants');
 const advisor = require('./advisor');
 const gateway = require('./gateway');
 const marketdata = require('./marketdata');
@@ -29,7 +30,9 @@ function profileLine(profile) {
 }
 
 // Returns { report, sources } — sources: [{ title, url, source }]
-async function runResearch(user, profile, maal, question) {
+async function runResearch(user, profile, maal, question, { signal, onStep, requireVerification = false } = {}) {
+  signal?.throwIfAborted();
+  if (requireVerification && !gateway.hasRole('verifier')) throw new Error('Research verifier unavailable');
   if (!advisor.hasAdvisor()) {
     return {
       report: "Research needs the AI engine switched on. Add your Azure OpenAI keys "
@@ -67,6 +70,9 @@ async function runResearch(user, profile, maal, question) {
     } catch (e) { console.error('research: grounding failed:', safeError(e)); }
   }
 
+  signal?.throwIfAborted();
+  onStep?.('retrieving_data', 'end');
+  onStep?.('checking_constants', 'start');
   const dataBlock = contextChunks.length
     ? `\n\nLive context to ground your analysis (use it to inform the answer, but do NOT cite it inline or list any sources):\n${contextChunks.join('\n\n')}`
     : '\n\n(No live market/web data is connected — answer from general knowledge and clearly note that figures may be out of date.)';
@@ -74,16 +80,33 @@ async function runResearch(user, profile, maal, question) {
   const system = [
     'You are Maal Research, an education-only financial research analyst for Australians.',
     'Produce a structured, decision-useful report — NOT personal financial advice. Explain scenarios, trade-offs and mechanisms so the user can decide; remind them to do their own research / see a licensed adviser for big moves.',
-    'Australian context: superannuation (SG 12%), HECS-HELP (indexed 1 June), franking credits, CGT discount, EOFY 30 June, negative gearing, RBA cash rate, ASX.',
+    'Use the Australian financial context, including superannuation, HECS-HELP, franking credits, CGT, negative gearing, the RBA and the ASX.',
+    buildConstantsPrompt(),
     'Structure: a one-line summary, then 2-4 short sections with headers, then a "What this means for you" close. Use AUD. Write clean prose — do NOT cite sources inline (no [1], [2] markers) and do not include a sources or references list.',
     `The user: ${profileLine(profile)}.`,
     maal && maal.hasData ? `Their Maal wellbeing score is ${maal.score}/100 (${maal.band}).` : '',
   ].filter(Boolean).join('\n');
 
-  const report = await advisor.complete([
+  const messages = [
     { role: 'system', content: system },
     { role: 'user', content: `Research question: ${question}${dataBlock}` },
-  ], { maxTokens: 1400, temperature: 0.5 });
+  ];
+  onStep?.('checking_constants', 'end');
+  onStep?.('drafting', 'start');
+  const opts = { maxTokens: 1400, temperature: 0.5, signal };
+  const draft = await advisor.complete(messages, opts);
+  onStep?.('drafting', 'end');
+  let report = draft;
+  if (requireVerification) {
+    const verificationMessages = [
+      { role: 'system', content: system + dataBlock },
+      { role: 'user', content: question },
+    ];
+    const verified = await gateway.verifyAndRevise({ messages: verificationMessages, draft, opts, onStep });
+    if (!verified.accepted) throw new Error('Research verification did not complete');
+    report = verified.text;
+  }
+  signal?.throwIfAborted();
 
   // De-dupe sources by url, keep order
   const seen = new Set();

@@ -234,8 +234,14 @@ async function advisorMessage(req, res, { stream = false } = {}) {
       });
     }
 
-    // Metering: consume one advisor message (402 + upgrade prompt when over).
-    const gate = await gateMonthlyAiUsage(req, res, 'advisor_messages');
+    const researchTool = require('../services/advisor-research');
+    const question = researchTool.researchQuestion(message, history);
+    if (question === '') {
+      const reply = 'What would you like me to research? Send “Research” followed by a topic or question.';
+      return res.json({ ok: true, reply, widgets: [], followUps: [], citations: [], live: false });
+    }
+    // Apply the appropriate quota before sending stream headers.
+    const gate = await gateMonthlyAiUsage(req, res, question === null ? 'advisor_messages' : 'research_runs');
     if (!gate) return;
     signal?.throwIfAborted();
     if (stream) {
@@ -273,6 +279,17 @@ async function advisorMessage(req, res, { stream = false } = {}) {
     signal?.throwIfAborted();
     const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
     const maal = computeMaalScore(profile);
+
+    if (question !== null) {
+      const research = await researchTool.runResearchTool({ user, profile, maal, question, signal, onStep, requireVerification: stream });
+      const { reply, widgets, followUps, citations, live } = research;
+      if (stream) {
+        event('final', { reply, widgets, followUps, citations });
+        event('done', {});
+        return res.end();
+      }
+      return res.json({ ok: true, reply, widgets, followUps, citations, live });
+    }
 
     let docs = [];
     try { docs = await vaultDb.getReadableDocs(req.session.userId); }
