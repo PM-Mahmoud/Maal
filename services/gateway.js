@@ -128,8 +128,23 @@ async function fetchWithTimeout(url, init, timeoutMs, signal) {
   }
 }
 
+function openAITools(definitions) {
+  if (!definitions?.length) return {};
+  return {
+    tools: definitions.map(definition => ({ type: 'function', function: definition })),
+    tool_choice: 'auto',
+  };
+}
+
+function openAIResult(json, tools) {
+  const message = json.choices?.[0]?.message;
+  const text = message?.content || '';
+  if (!tools?.length) return text;
+  return { text, toolCalls: Array.isArray(message?.tool_calls) ? message.tool_calls : [] };
+}
+
 async function azureComplete(cfg, messages, opts) {
-  const body = { messages, max_tokens: opts.maxTokens, temperature: opts.temperature };
+  const body = { messages, max_tokens: opts.maxTokens, temperature: opts.temperature, ...openAITools(opts.tools) };
   if (cfg.useV1) body.model = cfg.model; // v1 routes by model name
   const res = await fetchWithTimeout(cfg.url, {
     method: 'POST',
@@ -141,7 +156,7 @@ async function azureComplete(cfg, messages, opts) {
     throw new Error('Azure OpenAI ' + res.status + ' (' + cfg.label + '): ' + detail.slice(0, 200));
   }
   const json = await res.json();
-  return (json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || '';
+  return openAIResult(json, opts.tools);
 }
 
 async function openaiCompatComplete(cfg, messages, opts) {
@@ -149,14 +164,14 @@ async function openaiCompatComplete(cfg, messages, opts) {
   const res = await fetchWithTimeout(cfg.baseURL + '/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + cfg.apiKey },
-    body: JSON.stringify({ model: cfg.model, messages, max_tokens: opts.maxTokens, temperature: opts.temperature }),
+    body: JSON.stringify({ model: cfg.model, messages, max_tokens: opts.maxTokens, temperature: opts.temperature, ...openAITools(opts.tools) }),
   }, opts.timeoutMs, opts.signal);
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
     throw new Error('LLM provider ' + res.status + ' (' + cfg.label + '): ' + detail.slice(0, 200));
   }
   const json = await res.json();
-  return (json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || '';
+  return openAIResult(json, opts.tools);
 }
 
 async function anthropicComplete(cfg, messages, opts) {
@@ -214,6 +229,7 @@ async function completeAs(role, messages, opts) {
   const base = {
     maxTokens: (opts && opts.maxTokens) || 600,
     signal: opts?.signal,
+    tools: opts?.tools,
     temperature: opts && opts.temperature != null ? opts.temperature : 0.6,
   };
   let lastErr;
