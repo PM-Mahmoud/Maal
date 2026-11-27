@@ -518,7 +518,7 @@ export function ConnectAccountsFlow({
     <Dialog label="Add account" onBack={() => setStep("choose")} onClose={closeDialog}>
       <div className="cx-dbody">
         <div className="cx-manual-grid">
-          <a className="cx-mtile is-wide" href="/app/transactions" style={{ textDecoration: "none" }}>
+          <a className="cx-mtile is-wide" href="/app/transactions?import=statement" style={{ textDecoration: "none" }}>
             <span className="cx-micon"><FileUp className="size-[18px]" strokeWidth={1.5} /></span>
             <span className="cx-mtile-title">Import from a bank statement or .csv</span>
           </a>
