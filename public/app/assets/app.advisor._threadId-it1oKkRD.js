@@ -1,1 +1,0 @@
-import{ad as s,u as o,j as r,a5 as d}from"./index-BOIvFdlZ.js";function p(){const{threadId:t}=s.useParams(),a=o();return r.jsx(d,{variant:"page",activeId:t,onSelect:e=>{a(e?{to:"/app/advisor/$threadId",params:{threadId:e}}:{to:"/app/advisor"})}})}export{p as component};
