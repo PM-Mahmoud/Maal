@@ -2,6 +2,7 @@
 
 const crypto = require('crypto');
 const storeDefault = require('../db/extensibility');
+const { postWebhook } = require('../lib/webhook-http');
 const {
   EVENTS, evaluateRule, signWebhook, validateEventType,
   decryptWebhookSecret, normaliseEvents, validateRuleInput, validateWebhookUrl,
@@ -25,7 +26,7 @@ function actionValue(action, key, fallback = '') {
 
 function createExtensibilityService(dependencies = {}) {
   const store = dependencies.store || storeDefault;
-  const fetchImpl = dependencies.fetch || global.fetch;
+  const fetchImpl = dependencies.fetch || postWebhook;
   const now = dependencies.now || (() => new Date());
   const nextEventId = dependencies.eventId || (() => crypto.randomUUID());
 
@@ -48,7 +49,9 @@ function createExtensibilityService(dependencies = {}) {
       const timeout = controller ? setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS) : null;
       let response;
       try {
-        response = await fetchImpl(webhook.url, { method: 'POST', headers, body, signal: controller?.signal });
+        // redirect:'manual' prevents a webhook target from 3xx-redirecting delivery
+        // to an internal host (SSRF) — a redirect is recorded as a failed delivery.
+        response = await fetchImpl(webhook.url, { method: 'POST', headers, body, redirect: 'manual', signal: controller?.signal });
       } finally {
         if (timeout) clearTimeout(timeout);
       }
