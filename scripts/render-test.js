@@ -40,12 +40,14 @@ const cases = {
   'pricing': { analyticsSnippet: '', user: null, membership: require('../lib/membership') },
   'about': { analyticsSnippet: '', user: null },
   'security': { analyticsSnippet: '', user: null },
+  'ai-transparency': { analyticsSnippet: '', user: null },
   'financial-wellbeing-score': { analyticsSnippet: '', user: null },
   'contact': { analyticsSnippet: '', user: null, success: false, name: '', email: '', message: '' },
   'auth-forgot-password': { error: null, sent: false, email: '' },
   'auth-reset-password': { error: null, success: null, token: 'tok' },
   'auth-verify-otp': { email: 'test@example.com', error: null },
   'auth-verify-email': { success: true, error: null },
+  'auth-unlock-account': { success: false, error: null, token: 'fixture' },
   'auth-layout': { body: '<h1>Test</h1>', title: 'Test' },
   'error': { message: 'Test error' },
   'not-found': { signedIn: false },
@@ -69,7 +71,7 @@ async function main() {
   }
   // Extra states of the auth pages (each state is its own branch of the view).
   const variants = [
-    ['auth-login', { error: 'Incorrect password. 2 attempts remaining before lockout.', notice: 'You’ve been logged out.', email: 'a@b.co', next: '/app/goals' }],
+    ['auth-login', { error: 'Email or password is incorrect', notice: 'You’ve been logged out.', email: 'a@b.co', next: '/app/goals' }],
     ['auth-forgot-password', { error: null, sent: true, email: '' }],
     ['auth-forgot-password', { error: 'Please enter a valid email address.', sent: false, email: 'x' }],
     ['auth-reset-password', { error: 'Password must contain at least one number.', success: null, token: 'tok' }],

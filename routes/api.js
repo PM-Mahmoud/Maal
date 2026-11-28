@@ -2,10 +2,12 @@
 const { safeError } = require('../lib/safe-log');
 const express = require('express');
 const router = express.Router();
-const { findUserById, createUser } = require('../db/users');
-const bcrypt = require('bcryptjs');
+const { findUserById } = require('../db/users');
+const { LOGIN_ERROR, verifyPasswordLogin } = require('../services/password-auth');
+const { requestSignup } = require('../services/signup-verification');
 const pool = require('../db/pool');
 const multer = require('multer');
+const { body, validationResult } = require('express-validator');
 
 // Vault uploads — in-memory buffer, 10MB cap (matches the EJS vault). Files are
 // stored as Postgres bytea via db/vault.js, not on disk or in object storage.
@@ -26,23 +28,16 @@ router.get('/me', async (req, res) => {
 });
 
 const { authLimiter } = require('../lib/rate-limiters');
-const { findUserByEmail: _findUserByEmail, incrementFailedAttempts, resetFailedAttempts, recordLogin: _recordLogin } = require('../db/users');
+const { resetFailedAttempts, recordLogin: _recordLogin } = require('../db/users');
 
 router.post('/auth/login', authLimiter, async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  const { email, password } = req.body || {};
+  if (typeof email !== 'string' || typeof password !== 'string' || !password || !email.trim()) {
+    return res.status(401).json({ error: LOGIN_ERROR });
+  }
   try {
-    const user = await _findUserByEmail(email.toLowerCase().trim());
-    if (!user || !user.password_hash) return res.status(401).json({ error: 'Invalid credentials' });
-    // Check account lockout
-    if (user.locked_until && new Date(user.locked_until) > new Date()) {
-      return res.status(423).json({ error: 'Account temporarily locked. Try again later.' });
-    }
-    const ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) {
-      await incrementFailedAttempts(user.id);
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
+    const user = await verifyPasswordLogin(email.toLowerCase().trim(), password);
+    if (!user) return res.status(401).json({ error: LOGIN_ERROR });
     // Enforce 2FA — don't complete login here if 2FA is enabled
     if (user.two_factor_enabled) {
       req.session.pendingEmail = user.email;
@@ -63,28 +58,23 @@ router.post('/auth/login', authLimiter, async (req, res) => {
   }
 });
 
-router.post('/auth/signup', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+router.post('/auth/signup', authLimiter, body('email').isEmail().normalizeEmail(), async (req, res) => {
+  const { email, password } = req.body || {};
+  if (!validationResult(req).isEmpty() || typeof email !== 'string' || typeof password !== 'string') {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
   const strengthError = require('../lib/password-rules').passwordStrengthError(password);
   if (strengthError) return res.status(400).json({ error: strengthError });
   try {
-    const { findUserByEmail } = require('../db/users');
-    const existing = await findUserByEmail(email.toLowerCase().trim());
-    if (existing) return res.status(409).json({ error: 'Email already in use' });
-    const waitlistAccess = require('../services/waitlist-access');
-    if (!(await waitlistAccess.canSignUp(email.toLowerCase().trim(), req.session.referralCode))) {
-      return res.status(403).json({ error: waitlistAccess.NOT_INVITED_MESSAGE, code: 'not_invited' });
+    if (!(await requestSignup(req, { email: email.toLowerCase().trim(), password }))) {
+      const { NOT_INVITED_MESSAGE } = require('../services/waitlist-access');
+      return res.status(403).json({ error: NOT_INVITED_MESSAGE, code: 'not_invited' });
     }
-    const hash = await bcrypt.hash(password, 12);
-    const user = await createUser({ email: email.toLowerCase().trim(), passwordHash: hash, provider: 'email' });
-    waitlistAccess.recordJoined(user.email);
-    await require('../services/referrals').onSignup(req, user);
-    await new Promise((resolve, reject) => req.session.regenerate(e => e ? reject(e) : resolve()));
-    req.session.userId = user.id;
-    req.session.userEmail = user.email;
-    await new Promise((ok, err) => req.session.save(e => e ? err(e) : ok()));
-    res.json({ user: { id: user.id, email: user.email, plan: 'free' } });
+    await new Promise((resolve, reject) => req.session.save(e => e ? reject(e) : resolve()));
+    res.status(202).json({
+      message: 'If there’s an account for this address, we’ve emailed you the next step.',
+      next: '/verify-email',
+    });
   } catch (e) {
     console.error('/api/auth/signup error:', safeError(e));
     res.status(500).json({ error: 'An internal error occurred' });
@@ -654,6 +644,41 @@ router.post('/v1/notification-prefs', async (req, res) => {
   }
 });
 
+// Model-training consent (Tier 3 PR 1, spec D4). Append-only log; the current
+// state is derived by lib/training-consent.js. Only the 'general' scope can be
+// set here — CDR consent is captured in the bank-connection flow once
+// its lawyer-approved wording ships, never through this endpoint.
+router.get('/v1/privacy/training-consent', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const { listForUser } = require('../db/training-consents');
+    const { summarize } = require('../lib/training-consent');
+    res.json(summarize(await listForUser(req.session.userId)));
+  } catch (e) {
+    console.error('/api/v1/privacy/training-consent GET error:', safeError(e));
+    res.status(500).json({ error: 'Could not load your privacy settings.' });
+  }
+});
+
+router.post('/v1/privacy/training-consent', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const d = (req.body && req.body.data && typeof req.body.data === 'object') ? req.body.data : (req.body || {});
+  if (typeof d.granted !== 'boolean') return res.status(400).json({ error: 'granted must be true or false.' });
+  if (d.scope !== undefined && d.scope !== 'general') {
+    return res.status(400).json({ error: 'Only general training consent can be changed here.' });
+  }
+  const source = d.source === 'notice' ? 'notice' : 'settings';
+  try {
+    const { record, listForUser } = require('../db/training-consents');
+    const { summarize } = require('../lib/training-consent');
+    await record(req.session.userId, { scope: 'general', granted: d.granted, source });
+    res.json(summarize(await listForUser(req.session.userId)));
+  } catch (e) {
+    console.error('/api/v1/privacy/training-consent POST error:', safeError(e));
+    res.status(500).json({ error: 'Could not update your privacy settings.' });
+  }
+});
+
 // ─── Maal Score (authoritative — same engine as the EJS dashboard) ─────────
 // GET /api/v1/score → { ok, score, band, pillars, hasData, history }
 // Computes the real Maal Score for the logged-in user via lib/maal-score.js
@@ -816,6 +841,8 @@ router.get('/v1/collaboration/households/:householdId', collaboration.getHouseho
 router.post('/v1/collaboration/households/:householdId/members', collaboration.addMemberHandler);
 router.patch('/v1/collaboration/households/:householdId/members/:userId', collaboration.updateMemberHandler);
 router.delete('/v1/collaboration/households/:householdId/members/:userId', collaboration.removeMemberHandler);
+router.put('/v1/collaboration/households/:householdId/ownership', collaboration.replaceOwnershipHandler);
+router.get('/v1/collaboration/households/:householdId/wealth', collaboration.householdSnapshotHandler);
 router.get('/v1/collaboration/grants', collaboration.listGrantsHandler);
 router.post('/v1/collaboration/grants', collaboration.createGrantHandler);
 router.post('/v1/collaboration/grants/:grantId/accept', collaboration.acceptGrantHandler);
@@ -2383,6 +2410,28 @@ router.delete('/v1/report-views/:id', async (req, res) => {
   }
 });
 // ─── end Session 2 – Reports ───────────────────────────────────────────────
+
+// ─── HEL-42: account "⋯" menu — Rename / Show in net worth ──────────────────
+// PATCH /api/v1/account-preferences/:table/:id  { display_name?, include_in_net_worth? }
+// Refresh / Disconnect wait for the Fiskil migration (Mahmoud, 29 Nov 2026).
+router.patch('/v1/account-preferences/:table/:id', async (req, res) => {
+  if (!req.session?.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const { validatePreferenceInput } = require('../lib/account-preferences');
+  const body = (req.body && req.body.data && typeof req.body.data === 'object') ? req.body.data : req.body;
+  const check = validatePreferenceInput(req.params.table, req.params.id, body);
+  if (!check.ok) return res.status(check.status).json({ error: check.error });
+  try {
+    const row = await require('../db/account-preferences').setAccountPreference(
+      req.session.userId, req.params.table, req.params.id, check
+    );
+    if (!row) return res.status(404).json({ error: 'Account not found' });
+    res.json(row);
+  } catch (e) {
+    console.error('/api/v1/account-preferences PATCH error:', safeError(e));
+    res.status(500).json({ error: 'Could not update this account.' });
+  }
+});
+// ─── end HEL-42 ───────────────────────────────────────────────────────────
 
 // ─── Manual account net-worth fields ────────────────────────────────────────
 const MANUAL_NET_WORTH_TABLES = new Set([

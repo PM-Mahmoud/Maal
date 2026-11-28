@@ -86,9 +86,9 @@ export const supabaseAuth = {
     });
     const json = await r.json();
     if (!r.ok) return { data: { user: null, session: null }, error: { message: json.error || "Sign up failed" } };
-    _session = { user: json.user };
-    notifyListeners("SIGNED_IN");
-    return { data: { user: json.user, session: _session }, error: null };
+    // Completing signup requires the code sent to the address.
+    if (json.next === '/verify-email') window.location.assign(json.next);
+    return { data: { user: null, session: null }, error: null };
   },
 
   async signInWithOAuth(_provider: string, _opts?: unknown) {

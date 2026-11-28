@@ -63,6 +63,8 @@ async function replaceBasiqAccounts(userId, accounts, quarantinedReferences = []
         throw new Error(`Unsupported Basiq account bucket: ${account.bucket}`);
       }
     }
+    // HEL-42: keep the member's Rename / Show-in-net-worth choices across refreshes.
+    await require('./account-preferences').reapplyAccountPreferences(client, userId);
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');
