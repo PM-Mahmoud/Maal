@@ -177,22 +177,6 @@ async function clearOtp(userId) {
 
 // ─── Lockout ────────────────────────────────────────────────────────────────
 
-async function incrementFailedAttempts(userId) {
-  const result = await pool.query(
-    `UPDATE users SET failed_attempts = failed_attempts + 1, updated_at = NOW()
-     WHERE id = $1 RETURNING failed_attempts`,
-    [userId]
-  );
-  return result.rows[0]?.failed_attempts || 0;
-}
-
-async function lockUser(userId, until) {
-  await pool.query(
-    `UPDATE users SET locked_until = $2, updated_at = NOW() WHERE id = $1`,
-    [userId, until]
-  );
-}
-
 async function resetFailedAttempts(userId) {
   await pool.query(
     `UPDATE users SET failed_attempts = 0, locked_until = NULL, updated_at = NOW() WHERE id = $1`,
@@ -225,7 +209,7 @@ async function getAllUsers() {
 module.exports = {
   ...module.exports,
   setOtp, findUserByOtp, clearOtp,
-  incrementFailedAttempts, lockUser, resetFailedAttempts, recordLogin,
+  resetFailedAttempts, recordLogin,
   getAllUsers,
 };
 

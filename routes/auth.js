@@ -5,27 +5,27 @@ const express = require('express');
 const router = express.Router();
 const { authLimiter, otpLimiter } = require('../lib/rate-limiters');
 const crypto = require('crypto');
-const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 
 const {
-  createUser, findUserByEmail, findUserById,
-  setResetToken, findUserByResetToken, setPasswordHash,
+  findUserByEmail, findUserById,
+  setResetToken,
   setOtp, findUserByOtp, clearOtp,
-  incrementFailedAttempts, lockUser, resetFailedAttempts, recordLogin,
+  resetFailedAttempts, recordLogin,
   markEmailVerified, setPhone,
   incrementOtpAttempts, resetOtpAttempts, getOtpLockStatus,
 } = require('../db/users');
 
 const { sendEmail } = require('../services/email');
+const { sendOtpEmail } = require('../services/auth-otp-email');
+const { LOGIN_ERROR, verifyPasswordLogin } = require('../services/password-auth');
+const { requestSignup } = require('../services/signup-verification');
 const { sendOtpSms } = require('../services/sms');
 const waitlistAccess = require('../services/waitlist-access');
 const { isGateOn } = require('../lib/waitlist-gate');
 
 const RESET_TOKEN_TTL  = 3600 * 1000;       // 1 hour
 const OTP_TTL          = 10 * 60 * 1000;    // 10 minutes
-const MAX_ATTEMPTS     = 5;
-const LOCK_DURATION    = 15 * 60 * 1000;    // 15 minutes
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -42,30 +42,6 @@ function getIp(req) {
 // shared with the sign-up page's live checklist.
 const { passwordStrengthError } = require('../lib/password-rules');
 const { generateResetToken, safeRedirectPath } = require('../lib/auth-tokens');
-
-async function sendOtpEmail(email, name, otp) {
-  const firstName = (name || '').split(' ')[0] || 'there';
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#0A0F0D;font-family:'DM Sans',system-ui,sans-serif;color:#F0EFE9;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0F0D;padding:40px 20px;">
-    <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#0F2E24;border:1px solid rgba(201,168,76,0.15);border-radius:16px;max-width:560px;width:100%;">
-        <tr><td style="padding:40px;">
-          <p style="margin:0 0 24px;font-size:1.4rem;font-weight:600;color:#C9A84C;">◈ Maal</p>
-          <h1 style="margin:0 0 12px;font-size:1.4rem;font-weight:600;">Your verification code</h1>
-          <p style="margin:0 0 28px;font-size:0.9rem;color:#8A8D83;line-height:1.6;">Hi ${firstName}, enter this code to verify your email address. It expires in 10 minutes.</p>
-          <div style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.25);border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
-            <span style="font-size:2.4rem;font-weight:700;letter-spacing:0.3em;color:#C9A84C;">${otp}</span>
-          </div>
-          <p style="margin:0;font-size:0.78rem;color:#8A8D83;">If you didn't create a Maal account, you can ignore this email.</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
-  sendEmail({ to: email, subject: 'Your Maal verification code', html, text: `Your Maal verification code: ${otp}\nExpires in 10 minutes.` })
-    .catch(err => console.error('[auth] OTP email FAILED — user will not receive their code and will be stuck at /verify-email. Check RESEND_API_KEY / EMAIL_FROM (verified domain) in the host env and Resend dashboard Logs. Error:', safeError(err)));
-}
 
 // ─── Page: /login ─────────────────────────────────────────────────────────────
 
@@ -108,32 +84,12 @@ router.post('/login', authLimiter,
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return renderLogin(req, res, { error: 'Please enter a valid email and password.', email: req.body.email });
+      return renderLogin(req, res, { error: LOGIN_ERROR, email: req.body.email });
     }
 
     const { email, password } = req.body;
-    const user = await findUserByEmail(email);
-
-    if (!user || !user.password_hash) {
-      return renderLogin(req, res, { error: 'No account found with that email. Try signing up.', email });
-    }
-
-    // Check lockout
-    if (user.locked_until && new Date(user.locked_until) > new Date()) {
-      const mins = Math.ceil((new Date(user.locked_until) - Date.now()) / 60000);
-      return renderLogin(req, res, { error: `Account locked after too many failed attempts. Try again in ${mins} minute${mins === 1 ? '' : 's'}.`, email });
-    }
-
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) {
-      const attempts = await incrementFailedAttempts(user.id);
-      if (attempts >= MAX_ATTEMPTS) {
-        await lockUser(user.id, new Date(Date.now() + LOCK_DURATION));
-        return renderLogin(req, res, { error: `Too many failed attempts. Account locked for 15 minutes.`, email });
-      }
-      const remaining = MAX_ATTEMPTS - attempts;
-      return renderLogin(req, res, { error: `Incorrect password. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining before lockout.`, email });
-    }
+    const user = await verifyPasswordLogin(email, password);
+    if (!user) return renderLogin(req, res, { error: LOGIN_ERROR, email });
 
     // Check email verified
     if (!user.email_verified) {
@@ -229,42 +185,9 @@ router.post('/signup', authLimiter,
       return res.render('auth-signup', { layout: false, error: strengthError, email, name });
     }
 
-    const existing = await findUserByEmail(email);
-    if (existing) {
-      return res.render('auth-signup', { layout: false, error: 'An account with this email already exists. Sign in instead.', email, name });
-    }
-    if (!(await waitlistAccess.canSignUp(email, req.session.referralCode))) {
+    if (!(await requestSignup(req, { email, name, password, phone: req.body.phone }))) {
       return res.render('auth-signup', { layout: false, error: waitlistAccess.NOT_INVITED_MESSAGE, notInvited: true, gated: true, email, name });
     }
-
-    const passwordHash = await bcrypt.hash(password, 12);
-    const { phone } = req.body;
-    const user = await createUser({ email, name, passwordHash, provider: 'credentials' });
-    waitlistAccess.recordJoined(email);
-    await require('../services/referrals').onSignup(req, user);
-
-    // Save phone if provided
-    if (phone && phone.trim()) {
-      await setPhone(user.id, phone.trim());
-      req.session.pendingPhone = phone.trim();
-    }
-
-    // Generate and send OTP. Email failure must NOT fail the signup — the user
-    // row already exists, so a 500 here strands them ("account already exists"
-    // on retry). Land them on /verify-email where they can hit resend instead.
-    const otp = generateOtp();
-    await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
-    try {
-      await sendOtpEmail(email, name, otp);
-    } catch (e) {
-      console.error('[signup] OTP email failed (user created, continuing to /verify-email):', safeError(e));
-    }
-
-    // Store pending email in session for the verify page. Set the purpose
-    // explicitly: a stale 'login' left over from an abandoned passwordless
-    // sign-in would otherwise skip this new user past onboarding.
-    req.session.pendingEmail = email;
-    req.session.otpPurpose = 'signup';
     req.session.save((err) => {
       if (err) console.error('[signup] Session save error:', safeError(err));
       res.redirect('/verify-email');
@@ -284,15 +207,13 @@ router.post('/login/email-code', authLimiter,
 
     const { email } = req.body;
     const user = await findUserByEmail(email);
-    if (!user) {
-      return renderLogin(req, res, { error: 'No account found with that email. Try signing up.', email });
+    if (user) {
+      const otp = generateOtp();
+      await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
+      await sendOtpEmail(email, user.name, otp);
     }
 
-    const otp = generateOtp();
-    await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
-    await sendOtpEmail(user.email, user.name, otp);
-
-    req.session.pendingEmail = user.email;
+    req.session.pendingEmail = email;
     req.session.otpPurpose = 'login';
     req.session.postLoginRedirect = requestedNext(req) || null;
     req.session.save(() => res.redirect('/verify-email'));
@@ -311,24 +232,9 @@ router.post('/signup/email-code', authLimiter,
     }
 
     const { name, email } = req.body;
-    const existing = await findUserByEmail(email);
-    if (existing) {
-      return res.render('auth-signup', { layout: false, error: 'An account with this email already exists. Sign in instead.', email, name });
-    }
-    if (!(await waitlistAccess.canSignUp(email, req.session.referralCode))) {
+    if (!(await requestSignup(req, { email, name }))) {
       return res.render('auth-signup', { layout: false, error: waitlistAccess.NOT_INVITED_MESSAGE, notInvited: true, gated: true, email, name });
     }
-
-    const user = await createUser({ email, name, passwordHash: null, provider: 'credentials' });
-    waitlistAccess.recordJoined(email);
-    await require('../services/referrals').onSignup(req, user);
-
-    const otp = generateOtp();
-    await setOtp(user.id, otp, new Date(Date.now() + OTP_TTL));
-    await sendOtpEmail(email, name, otp);
-
-    req.session.pendingEmail = email;
-    req.session.otpPurpose = 'signup';
     req.session.save((err) => {
       if (err) console.error('[signup/email-code] Session save error:', safeError(err));
       res.redirect('/verify-email');
@@ -342,7 +248,10 @@ router.post('/signup/email-code', authLimiter,
 // 'login' = passwordless or 2FA sign-in, anything else = confirming a new email.
 function renderOtp(req, res, locals) {
   const purpose = req.session.otpPurpose === 'login' ? 'login' : 'verify';
-  res.render('auth-verify-otp', { layout: false, error: null, purpose, ...locals });
+  const subtitle = req.session.otpPurpose === 'signup'
+    ? "If there’s an account for this address, we’ve emailed you the next step. Enter your verification code below, or sign in if you already have a verified account."
+    : undefined;
+  res.render('auth-verify-otp', { layout: false, error: null, purpose, subtitle, ...locals });
 }
 
 router.get('/verify-email', (req, res) => {
