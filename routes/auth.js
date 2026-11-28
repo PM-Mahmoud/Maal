@@ -1,6 +1,7 @@
 // routes/auth.js
 
 const { safeError } = require('../lib/safe-log');
+const { clearSessionCookie } = require('../lib/session-cookie');
 const express = require('express');
 const router = express.Router();
 const { authLimiter, otpLimiter } = require('../lib/rate-limiters');
@@ -508,12 +509,11 @@ router.post('/api/account/phone/verify', otpLimiter, async (req, res) => {
 // The session row is destroyed server-side and the cookie cleared.
 // The React app calls the JSON twin, POST /api/auth/logout (routes/api.js).
 
-const SESSION_COOKIE = 'connect.sid';
 
 function logout(req, res) {
   req.session.destroy((err) => {
     if (err) console.error('[logout] session destroy failed:', safeError(err));
-    res.clearCookie(SESSION_COOKIE, { path: '/' });
+    clearSessionCookie(res);
     res.redirect(303, '/login?signed_out=1');
   });
 }
