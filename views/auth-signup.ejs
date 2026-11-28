@@ -53,7 +53,7 @@
           <% } %>
 
           <div class="v2-social">
-            <a href="/auth/google" class="v2-btn v2-btn-line">
+            <a href="/auth/google?from=signup" class="v2-btn v2-btn-line">
               <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.75h3.57c2.08-1.92 3.28-4.74 3.28-8.07z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.75c-.99.66-2.26 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -120,6 +120,7 @@
         </div>
 
         <p class="v2-legal">By creating an account you agree to <% if (locals.publicTermsUrl) { %><a href="<%= publicTermsUrl %>">Maal’s terms</a><% } else { %>Maal’s terms<% } %> and acknowledge how we handle your data on our <a href="/security">Security &amp; privacy</a> page.</p>
+        <p class="v2-legal" data-training-disclosure>Maal never uses your data to improve its AI unless you choose to. You can decide after you sign up, under Privacy &amp; Security. <a href="/ai-transparency">How Maal uses AI</a></p>
         <p class="v2-disclaimer-line">Maal does not provide financial advice. Any information provided by Maal is for educational purposes only. You should do your own research. Investing is risky and you can lose all of your money.</p>
       </div>
     </section>

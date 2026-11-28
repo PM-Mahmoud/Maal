@@ -85,6 +85,7 @@ router.get('/auth/google', (req, res) => {
   const state = require('crypto').randomBytes(16).toString('hex');
   req.session.oauthState = state;
   req.session.oauthBase = requestBase(req);
+  req.session.oauthFromSignup = req.query.from === 'signup';
   req.session.save(() => res.redirect(googleAuthUrl(state, req.session.oauthBase)));
 });
 

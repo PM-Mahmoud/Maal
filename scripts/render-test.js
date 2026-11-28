@@ -40,6 +40,7 @@ const cases = {
   'pricing': { analyticsSnippet: '', user: null, membership: require('../lib/membership') },
   'about': { analyticsSnippet: '', user: null },
   'security': { analyticsSnippet: '', user: null },
+  'ai-transparency': { analyticsSnippet: '', user: null },
   'financial-wellbeing-score': { analyticsSnippet: '', user: null },
   'contact': { analyticsSnippet: '', user: null, success: false, name: '', email: '', message: '' },
   'auth-forgot-password': { error: null, sent: false, email: '' },
