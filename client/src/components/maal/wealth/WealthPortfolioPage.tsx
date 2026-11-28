@@ -20,6 +20,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -47,6 +54,10 @@ import {
   Search,
   Lock,
   ChevronRight,
+  MoreVertical,
+  Eye,
+  EyeOff,
+  Trash2,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -87,6 +98,7 @@ type Cat = {
 
 /** Row amount used for category totals — net of any same-row liability. */
 function rowAmount(cat: Cat, r: any): number {
+  if (r.include_in_net_worth === false) return 0;
   const gross = Number(r[cat.amountKey] ?? 0);
   return cat.netAgainst ? gross - Number(r[cat.netAgainst] ?? 0) : gross;
 }
@@ -339,11 +351,109 @@ function useCategoryRows(cat: Cat) {
     if (error) toast.error(error.message); else setRows((r) => r.filter((x) => x.id !== id));
   }
 
-  return { rows, loading, deleteRow, reload };
+  // HEL-42: Rename / Show in net worth. The server also remembers the choice
+  // for bank-linked rows so a refresh doesn't undo it.
+  async function updatePreference(row: any, patch: { display_name?: string; include_in_net_worth?: boolean }) {
+    try {
+      const response = await fetch(`/api/v1/account-preferences/${cat.table}/${encodeURIComponent(row.id)}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (response.status === 401) { handleUnauthenticated(); return false; }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) { toast.error(data?.error || "Couldn’t update this account."); return false; }
+      setRows((current) => current.map((x) => (x.id === row.id ? { ...x, ...data } : x)));
+      return true;
+    } catch {
+      toast.error("Couldn’t update this account.");
+      return false;
+    }
+  }
+
+  return { rows, loading, deleteRow, reload, updatePreference };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Account row "⋯" menu (HEL-42)                                      */
+/* ------------------------------------------------------------------ */
+
+function AccountRowMenu({ cat, row, onEdit, onDelete, onUpdate }: {
+  cat: Cat;
+  row: any;
+  onEdit: (c: Cat, row: any) => void;
+  onDelete: (id: string) => void;
+  onUpdate: (row: any, patch: { display_name?: string; include_in_net_worth?: boolean }) => Promise<boolean>;
+}) {
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const label = row[cat.nameKey] || "Untitled";
+  const hidden = row.include_in_net_worth === false;
+
+  async function saveName(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    const ok = await onUpdate(row, { display_name: name });
+    setSaving(false);
+    if (ok) setRenameOpen(false);
+  }
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button type="button" className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]" aria-label={`Options for ${label}`}>
+            <MoreVertical className="h-4 w-4" aria-hidden />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-[200px]">
+          <DropdownMenuItem onSelect={() => { setName(row[cat.nameKey] || ""); setRenameOpen(true); }}>
+            <Pencil className="h-4 w-4" aria-hidden /> Rename
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => { void onUpdate(row, { include_in_net_worth: hidden }); }}>
+            {hidden ? <Eye className="h-4 w-4" aria-hidden /> : <EyeOff className="h-4 w-4" aria-hidden />}
+            {hidden ? "Show in net worth" : "Hide from net worth"}
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => onEdit(cat, row)}>
+            <Pencil className="h-4 w-4" aria-hidden /> Edit details
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => onDelete(row.id)}>
+            <Trash2 className="h-4 w-4" aria-hidden /> Remove
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <form onSubmit={saveName}>
+            <DialogHeader>
+              <DialogTitle>Rename account</DialogTitle>
+              <DialogDescription>Give this account a name you’ll recognise, like “Joint savings”.</DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Label htmlFor={`rename-${cat.table}-${row.id}`}>Account name</Label>
+              <Input id={`rename-${cat.table}-${row.id}`} value={name} maxLength={60} autoFocus
+                onChange={(e) => setName(e.target.value)} className="mt-1.5" />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setRenameOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={saving || !name.trim()}>{saving ? "Saving…" : "Save"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function HiddenChip() {
+  return <span className="inline-flex items-center px-1.5 py-0.5 rounded-full border border-border text-muted-foreground text-[10px] font-semibold mr-1.5">Not in net worth</span>;
 }
 
 function CategoryCard({ cat, onAdd, onEdit }: { cat: Cat; onAdd: (c: Cat) => void; onEdit: (c: Cat, row: any) => void }) {
-  const { rows, loading, deleteRow } = useCategoryRows(cat);
+  const { rows, loading, deleteRow, updatePreference } = useCategoryRows(cat);
   const total = rows.reduce((a, r) => a + rowAmount(cat, r), 0);
   const isEmpty = !loading && rows.length === 0;
   const latestUpdate = rows.reduce<string | null>((latest, row) => {
@@ -397,22 +507,14 @@ function CategoryCard({ cat, onAdd, onEdit }: { cat: Cat; onAdd: (c: Cat) => voi
                       <p className="text-[13px] font-medium truncate">{r[cat.nameKey] || "Untitled"}</p>
                       <p className="text-[11px] text-muted-foreground truncate">
                         <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-secondary text-foreground text-[10px] font-semibold mr-1.5">{sourceLabel(r.source)}</span>
+                        {r.include_in_net_worth === false && <HiddenChip />}
                         {r.institution || r.ticker || r.account_type || r.kind || cat.title}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="tabular-nums text-[13px] font-semibold">{formatAUD(Number(r[cat.amountKey] ?? 0))}</span>
-                    <button onClick={() => onEdit(cat, r)} className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-muted-foreground hover:text-foreground rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]" aria-label={`Edit ${r[cat.nameKey] || cat.title}`}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => deleteRow(r.id)}
-                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-muted-foreground hover:text-foreground transition-opacity rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
-                      aria-label="Remove"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className={`tabular-nums text-[13px] font-semibold${r.include_in_net_worth === false ? " text-muted-foreground" : ""}`}>{formatAUD(Number(r[cat.amountKey] ?? 0))}</span>
+                    <AccountRowMenu cat={cat} row={r} onEdit={onEdit} onDelete={deleteRow} onUpdate={updatePreference} />
                   </div>
                 </li>
               ))}
@@ -430,7 +532,7 @@ function CategoryCard({ cat, onAdd, onEdit }: { cat: Cat; onAdd: (c: Cat) => voi
 }
 
 function CategoryRow({ cat, onAdd, onEdit }: { cat: Cat; onAdd: (c: Cat) => void; onEdit: (c: Cat, row: any) => void }) {
-  const { rows, deleteRow } = useCategoryRows(cat);
+  const { rows, deleteRow, updatePreference } = useCategoryRows(cat);
   const total = rows.reduce((a, r) => a + rowAmount(cat, r), 0);
 
   return (
@@ -455,15 +557,11 @@ function CategoryRow({ cat, onAdd, onEdit }: { cat: Cat; onAdd: (c: Cat) => void
               <span className="truncate">
                 {r[cat.nameKey] || "Untitled"}
                 <span className="ml-1 text-[10px] text-muted-foreground">{sourceLabel(r.source)}</span>
+                {r.include_in_net_worth === false && <span className="ml-1.5"><HiddenChip /></span>}
               </span>
-              <div className="flex items-center gap-2">
-                <span className="tabular-nums">{formatAUD(Number(r[cat.amountKey] ?? 0))}</span>
-                <button onClick={() => onEdit(cat, r)} className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-muted-foreground hover:text-foreground rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]" aria-label={`Edit ${r[cat.nameKey] || cat.title}`}>
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-                <button onClick={() => deleteRow(r.id)} className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-muted-foreground hover:text-foreground rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]" aria-label="Remove">
-                  <X className="h-3.5 w-3.5" />
-                </button>
+              <div className="flex items-center gap-1.5">
+                <span className={`tabular-nums${r.include_in_net_worth === false ? " text-muted-foreground" : ""}`}>{formatAUD(Number(r[cat.amountKey] ?? 0))}</span>
+                <AccountRowMenu cat={cat} row={r} onEdit={onEdit} onDelete={deleteRow} onUpdate={updatePreference} />
               </div>
             </li>
           ))}

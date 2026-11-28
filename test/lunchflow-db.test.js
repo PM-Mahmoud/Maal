@@ -77,6 +77,8 @@ async function main() {
       );
     `);
     await require('../migrations/1755400000000_provider_connections').up(admin);
+    await require('../migrations/1756000000000_collaboration_extensibility').up(admin);
+    await require('../migrations/1757430000074_household_ownership').up(admin);
     const userId = (await admin.query('INSERT INTO users DEFAULT VALUES RETURNING id')).rows[0].id;
 
     const connections = require('../db/provider-connections');

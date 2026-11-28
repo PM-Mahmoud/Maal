@@ -3,7 +3,9 @@ import { AskMaalTile } from "@/components/maal/dashboard/AskMaalTile";
 import { CompleteOnboardingCard, DashboardOffer } from "@/components/maal/subscribe";
 import { HomeBriefCards } from "@/components/maal/briefs";
 import { filteredTotals } from "../../../../../shared/home-accounts.mjs";
+import { HomeBudgetCard } from "./HomeBudgetCard";
 import { HomeHeader } from "./HomeHeader";
+import { HomeInsights } from "./HomeInsights";
 import { NetWorthCard } from "./NetWorthCard";
 import { SpendingCard } from "./SpendingCard";
 import { InvestmentsCard } from "./InvestmentsCard";
@@ -37,13 +39,17 @@ export function HomeDashboard() {
             />
             <SpendingCard transactions={data.transactions} loading={data.loading} error={data.errors.transactions} />
             <InvestmentsCard total={totals.investments} snapshots={data.snapshots} rows={data.investmentRows} loading={data.loading} />
+            <HomeInsights estimates={data.estimates} loading={data.loading} error={data.errors.estimates} />
             <AskMaalTile />
           </div>
           <aside className="mh-col" aria-label="Insights">
             {/* Figma "Complete onboarding": the green setup card + its dialog. */}
-            <CompleteOnboardingCard />
+            <CompleteOnboardingCard
+              showAccountNudge={!data.loading && !data.errors.accounts && !data.hasAssetOrLiabilityRows}
+            />
             <HomeBriefCards />
             <MaalScoreCard score={data.score} error={data.errors.score} />
+            <HomeBudgetCard budget={data.budget} loading={data.loading} error={data.errors.budget} />
             <MarketWatchCard />
           </aside>
         </div>

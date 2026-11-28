@@ -1,3 +1,5 @@
+import { institutions } from "../../../shared/institutions.json";
+
 /**
  * Institution registry — AU banks, brokers and super funds.
  *
@@ -13,27 +15,35 @@ export interface InstitutionInfo {
   color: string;
   textOnColor?: string;
   logo?: string;
+  logoBackground?: string;
 }
 
-export const INSTITUTIONS: Record<string, InstitutionInfo> = {
-  commbank: { slug: "commbank", name: "CommBank", color: "#FAD300", textOnColor: "#0E0E10", logo: "/images/banks/commbank.png" },
-  anz: { slug: "anz", name: "ANZ", color: "#004B87", logo: "/images/banks/anz.png" },
-  westpac: { slug: "westpac", name: "Westpac", color: "#D5002B", logo: "/images/banks/westpac.png" },
-  nab: { slug: "nab", name: "NAB", color: "#E81E2C", logo: "/images/banks/nab.png" },
-  macquarie: { slug: "macquarie", name: "Macquarie", color: "#1B1B1B", logo: "/images/banks/macquarie.png" },
-  bendigo: { slug: "bendigo", name: "Bendigo", color: "#0F5EA8", logo: "/images/banks/bendigo.png" },
-  ing: { slug: "ing", name: "ING", color: "#FF6200", logo: "/images/banks/ing.png" },
-  ubank: { slug: "ubank", name: "UBank", color: "#19E5C1", textOnColor: "#0E0E10", logo: "/images/banks/ubank.png" },
-  hsbc: { slug: "hsbc", name: "HSBC", color: "#DB0011", logo: "/images/banks/hsbc.png" },
-  stgeorge: { slug: "stgeorge", name: "St.George", color: "#0F8F4D", logo: "/images/banks/stgeorge.png" },
-  banksa: { slug: "banksa", name: "BankSA", color: "#FFC72C", textOnColor: "#0E0E10", logo: "/images/banks/banksa.png" },
-  suncorp: { slug: "suncorp", name: "Suncorp", color: "#FFC629", textOnColor: "#0E0E10", logo: "/images/banks/suncorp.png" },
-  australiansuper: { slug: "australiansuper", name: "AustralianSuper", color: "#E4002B", logo: "/images/banks/australiansuper.png" },
-  hostplus: { slug: "hostplus", name: "Hostplus", color: "#6E2B8A", logo: "/images/banks/hostplus.png" },
-  commsec: { slug: "commsec", name: "CommSec", color: "#003087", logo: "/images/banks/commsec.png" },
-  selfwealth: { slug: "selfwealth", name: "SelfWealth", color: "#101828", logo: "/images/banks/selfwealth.png" },
-  up: { slug: "up", name: "Up", color: "#FF6B35", logo: "/images/banks/up.png" },
+const BRAND_COLOURS: Record<string, { color: string; textOnColor?: string }> = {
+  commbank: { color: "#FAD300", textOnColor: "#0E0E10" },
+  anz: { color: "#004B87" },
+  westpac: { color: "#D5002B" },
+  nab: { color: "#E81E2C" },
+  macquarie: { color: "#1B1B1B" },
+  bendigo: { color: "#0F5EA8" },
+  ing: { color: "#FF6200" },
+  ubank: { color: "#19E5C1", textOnColor: "#0E0E10" },
+  hsbc: { color: "#DB0011" },
+  stgeorge: { color: "#0F8F4D" },
+  banksa: { color: "#FFC72C", textOnColor: "#0E0E10" },
+  suncorp: { color: "#FFC629", textOnColor: "#0E0E10" },
+  australiansuper: { color: "#E4002B" },
+  hostplus: { color: "#6E2B8A" },
+  commsec: { color: "#003087" },
+  selfwealth: { color: "#101828" },
+  up: { color: "#FF6B35" },
 };
+
+export const INSTITUTIONS: Record<string, InstitutionInfo> = Object.fromEntries(
+  institutions.map(({ slug, name, logo, logoBackground }) => {
+    const brand = BRAND_COLOURS[slug];
+    return [slug, { slug, name, logo, logoBackground, color: brand?.color ?? "#0E0E10", textOnColor: brand?.textOnColor }];
+  }),
+);
 
 /** Normalised alias → slug. Keys must already be lowercase alphanumeric. */
 const ALIASES: Record<string, string> = {
@@ -64,6 +74,11 @@ const ALIASES: Record<string, string> = {
   commonwealthsecurities: "commsec",
   upbank: "up",
   upbanking: "up",
+  bankofqueensland: "boq",
+  australianretirementtrust: "art",
+  greatsouthernbank: "greatsouthern",
+  awaresuper: "aware",
+  restsuper: "rest",
 };
 
 function normalize(value: string): string {

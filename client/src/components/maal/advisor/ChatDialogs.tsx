@@ -11,7 +11,7 @@ function useEscape(onClose: () => void, enabled = true) {
   }, [onClose, enabled]);
 }
 
-function DialogFrame({ title, onClose, children, labelId }: { title: string; onClose: () => void; children: ReactNode; labelId: string }) {
+export function DialogFrame({ title, onClose, children, labelId }: { title: string; onClose: () => void; children: ReactNode; labelId: string }) {
   useEscape(onClose);
   if (typeof document === "undefined") return null;
   return createPortal(

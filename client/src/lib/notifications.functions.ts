@@ -18,9 +18,3 @@ export async function markNotificationsRead(ids: Array<number | string> = []): P
     body: JSON.stringify({ ids }),
   });
 }
-export async function savePushSubscription(data?: unknown): Promise<void> {
-  await fetch('/api/v1/push/subscribe', { method: 'POST', credentials: 'include', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
-}
-export async function removePushSubscription(data?: unknown): Promise<void> {
-  await fetch('/api/v1/push/unsubscribe', { method: 'POST', credentials: 'include', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
-}

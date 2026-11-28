@@ -46,13 +46,23 @@ async function listTemplates() {
 // Create a radar only if the user is under their concurrent active-radar limit,
 // enforced atomically. A per-user transaction advisory lock serialises the
 // count-then-insert so two concurrent creates can't both slip past the cap.
-// Returns the new id, or null when already at/over the limit.
-async function createRadarIfUnderActiveLimit(userId, data, limit) {
+// Returns the new id, an explicitly reusable active watch, or null at the limit.
+async function createRadarIfUnderActiveLimit(userId, data, limit, { reuseActivePrompt = false } = {}) {
   if (limit <= 0) return null;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     await client.query('SELECT pg_advisory_xact_lock($1::bigint)', [userId]);
+    if (reuseActivePrompt) {
+      const existing = await client.query(
+        'SELECT id FROM radars WHERE user_id = $1 AND active = true AND lower(prompt) = lower($2) ORDER BY id LIMIT 1',
+        [userId, data.prompt]
+      );
+      if (existing.rowCount) {
+        await client.query('COMMIT');
+        return existing.rows[0].id;
+      }
+    }
     const c = await client.query('SELECT COUNT(*)::int AS n FROM radars WHERE user_id = $1 AND active = true', [userId]);
     if (c.rows[0].n >= limit) { await client.query('ROLLBACK'); return null; }
     const { day, time, slug } = scheduleCols(data);

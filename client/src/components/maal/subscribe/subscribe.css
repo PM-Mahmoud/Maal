@@ -89,7 +89,7 @@
 .ms-benefits svg { flex-shrink: 0; color: #4A4D4A; }
 
 .ms-link { background: none; border: 0; padding: 0; font-size: 15px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; color: #0A0A0A; }
-.ms-link-soft { color: #626562; }
+.ms-link-soft { color: var(--ms-muted); }
 .ms-terms { margin-top: 20px; }
 .ms-actions { width: 100%; max-width: 371px; display: grid; gap: 10px; margin-top: 26px; }
 .ms-btn {
@@ -99,7 +99,8 @@
 }
 .ms-btn:active { transform: translateY(1px); }
 .ms-btn:disabled { opacity: .5; cursor: progress; }
-.ms-btn-ink { background: var(--ms-btn); color: #fff; border-color: #868983; }
+.ms-btn-ink { background: var(--ms-btn); color: var(--ms-btn-label, #fff); border-color: #868983; }
+:root.dark .msub { --ms-btn-label: #050505; }
 .ms-btn-ink:hover { opacity: .9; }
 .ms-btn-line { background: #fff; color: var(--ms-ink-strong); border-color: #BDBFBA; font-weight: 400; font-size: 17px; height: 52px; }
 .ms-btn-line:hover { border-color: var(--ms-ink-strong); }
@@ -210,10 +211,28 @@
 
 /* ---------- Complete onboarding card + dialog ---------- */
 .ms-onb-card {
-  position: relative; border-radius: 21px; padding: 30px 21px 22px; color: #fff; cursor: pointer; text-align: left; width: 100%; border: 0;
+  position: relative; border-radius: 21px; padding: 30px 21px 22px; color: #fff; text-align: left; width: 100%; border: 0;
   background: linear-gradient(131deg, #4B660D 0%, #274200 33%, #3A5300 67%, #284200 83%);
 }
 .ms-onb-card:hover { filter: brightness(1.05); }
+.ms-onb-trigger {
+  position: absolute; inset: 0; border: 0; border-radius: inherit;
+  cursor: pointer; background: transparent;
+}
+.ms-onb-trigger:focus-visible { outline-color: #fff; outline-offset: -3px; }
+.ms-onb-card > .ms-icon-btn { z-index: 1; }
+.ms-onb-nudge {
+  position: relative; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.35);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  font-size: 14px; line-height: 1.5; pointer-events: none;
+}
+.ms-onb-add {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px;
+  border: 1px solid rgba(255,255,255,.75); border-radius: 8px; color: #fff;
+  text-decoration: none; font-weight: 500; pointer-events: auto;
+}
+.ms-onb-add:hover { background: rgba(255,255,255,.12); }
+.ms-onb-add:focus-visible { outline-color: #fff; }
 .ms-mono { font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; letter-spacing: .13em; text-transform: uppercase; }
 .ms-onb-card h3 { font-family: var(--ms-serif); font-size: clamp(22px, 1.6vw, 28px); margin-top: 42px; }
 .ms-segs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 5px; margin-top: 14px; }

@@ -113,14 +113,14 @@ function RoadmapPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-2">
                     {c.kind === "feature" ? (
-                      <Sparkles className="size-4 text-mint" />
+                      <Sparkles className="size-4 text-teal-800 dark:text-teal-300" />
                     ) : (
                       <ArrowUp className="size-4 text-muted-foreground" />
                     )}
                     <h3 className="text-[14px] font-semibold">
                       {c.title}
                       {c.kind === "feature" && (
-                        <span className="ml-2 text-[10px] uppercase tracking-[0.12em] text-mint font-medium">Feature</span>
+                        <span className="ml-2 text-[10px] uppercase tracking-[0.12em] text-teal-800 dark:text-teal-300 font-medium">Feature</span>
                       )}
                     </h3>
                   </div>
@@ -133,7 +133,7 @@ function RoadmapPage() {
                     onClick={() => toggleVote(key)}
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-[11px] font-medium border transition-colors ${
                       voted
-                        ? "bg-mint/15 text-mint border-mint/30"
+                        ? "bg-mint/15 text-teal-800 dark:text-teal-300 border-mint/30"
                         : "border-border text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -173,7 +173,7 @@ function RoadmapPage() {
                       onClick={() => toggleVote(key)}
                       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-[11px] font-medium border transition-colors ${
                         voted
-                          ? "bg-mint/15 text-mint border-mint/30"
+                          ? "bg-mint/15 text-teal-800 dark:text-teal-300 border-mint/30"
                           : "border-border text-muted-foreground hover:text-foreground"
                       }`}
                     >

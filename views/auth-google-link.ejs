@@ -1,48 +1,18 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en-AU">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#020109">
-  <title>Link Google Account — Maal</title>
-  <link rel="stylesheet" href="/css/theme.css">
-  <link rel="stylesheet" href="/css/retro-auth.css">
+  <%- include('partials/v2-head', { title: 'Link your Google account' }) %>
 </head>
-<body class="auth-page">
-  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
-    <div style="max-width:440px;width:100%;background:var(--surface,#fff);border:1px solid var(--border,#E8E8EA);border-radius:12px;padding:40px 36px;text-align:center;">
-
-      <img src="/images/maal-mark.svg" alt="Maal" width="32" height="32" style="image-rendering:pixelated;margin-bottom:32px;">
-
-      <div style="width:48px;height:48px;border-radius:50%;background:var(--accent-soft,#DEF7F4);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#12B5A6)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="12"/>
-          <line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-      </div>
-
-      <h1 style="font-size:1.375rem;font-weight:700;letter-spacing:-0.02em;margin:0 0 10px;color:var(--fg,#0E0E10);">Account already exists</h1>
-
-      <p style="color:var(--muted,#6B6F76);font-size:0.9375rem;line-height:1.6;margin:0 0 8px;">
-        A Maal account with
-      </p>
-      <p style="font-weight:600;color:var(--fg,#0E0E10);margin:0 0 20px;font-size:0.9375rem;word-break:break-all;">
-        <%= email %>
-      </p>
-      <p style="color:var(--muted,#6B6F76);font-size:0.9375rem;line-height:1.6;margin:0 0 28px;">
-        already exists. Sign in with your password to securely link your Google account.
-      </p>
-
-      <a href="/login" class="btn btn-accent" style="display:block;width:100%;box-sizing:border-box;padding:12px 20px;background:var(--fg,#0E0E10);color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:0.9375rem;margin-bottom:12px;">
-        Sign in with password
-      </a>
-
-      <a href="/" style="font-size:0.875rem;color:var(--muted,#6B6F76);text-decoration:none;">
-        Cancel
-      </a>
-
+<body class="v2 v2-focus-page">
+  <%- include('partials/v2-focus-header', { backHref: '/login' }) %>
+  <main class="v2-focus">
+    <div class="v2-focus-inner">
+      <h1 class="v2-focus-title">Link your Google account</h1>
+      <p class="v2-focus-sub">Sign in with the password for <strong class="v2-wrap-address"><%= email %></strong> to link this sign-in method.</p>
+      <div class="v2-focus-actions"><a href="/login" class="v2-btn v2-btn-ink">Sign in with password</a></div>
+      <p class="v2-switch"><a href="/">Cancel</a></p>
     </div>
-  </div>
+  </main>
+  <%- include('partials/v2-focus-footer') %>
 </body>
 </html>

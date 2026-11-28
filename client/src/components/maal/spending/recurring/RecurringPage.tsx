@@ -264,7 +264,7 @@ function Fortnight({ days, occ, today }: { days: Date[]; occ: Occurrence[]; toda
     return m;
   }, [occ]);
   return (
-    <div className="so-week rc-week" role="grid" aria-label="Recurring transactions this fortnight">
+    <div className="so-week rc-week" role="table" aria-label="Recurring transactions this fortnight">
       <div role="row" className="so-week-row so-week-head">
         {WEEKDAYS.map((d) => <span key={d} role="columnheader">{d}</span>)}
       </div>
@@ -273,15 +273,17 @@ function Fortnight({ days, occ, today }: { days: Date[]; occ: Occurrence[]; toda
           {days.slice(w * 7, w * 7 + 7).map((d) => {
             const iso = isoDay(d);
             const due = byDay.get(iso) || [];
-            const label = d.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" })
-              + (due.length ? `: ${due.map((x) => `${x.merchant}${privacy ? "" : ` ${money(x.kind, x.amount)}`}`).join(", ")}` : "");
             return (
-              <div role="gridcell" key={iso} className="so-week-cell rc-cell" data-past={iso < todayIso} data-today={iso === todayIso} aria-label={label}>
-                <span className="so-week-num">{d.getDate()}</span>
+              <div role="cell" key={iso} className="so-week-cell rc-cell" data-past={iso < todayIso} data-today={iso === todayIso}>
+                <time className="so-week-num" dateTime={iso}>
+                  <span aria-hidden>{d.getDate()}</span>
+                  <span className="sr-only">{d.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" })}</span>
+                </time>
                 {due.slice(0, 2).map((x, i) => (
-                  <span key={i} className="rc-due" title={`${x.merchant} · ${money(x.kind, x.amount)}`}>
+                  <span key={i} className="rc-due" title={privacy ? x.merchant : `${x.merchant} · ${money(x.kind, x.amount)}`}>
                     <KindBadge kind={x.kind} size="sm" />
-                    <span className="rc-due-amt mh-amount" data-in={x.kind === "income"}>{cellMoney(x.kind, x.amount)}</span>
+                    <span className="sr-only">{x.merchant}</span>
+                    <span className="rc-due-amt mh-amount" data-in={x.kind === "income"} aria-hidden={privacy || undefined}>{cellMoney(x.kind, x.amount)}</span>
                   </span>
                 ))}
                 {due.length > 2 && <span className="so-due-more">+{due.length - 2} more</span>}

@@ -3,10 +3,12 @@ const { safeError } = require('../lib/safe-log');
 const { clearSessionCookie } = require('../lib/session-cookie');
 const express = require('express');
 const router = express.Router();
-const { findUserById, createUser } = require('../db/users');
-const bcrypt = require('bcryptjs');
+const { findUserById } = require('../db/users');
+const { LOGIN_ERROR, verifyPasswordLogin } = require('../services/password-auth');
+const { requestSignup } = require('../services/signup-verification');
 const pool = require('../db/pool');
 const multer = require('multer');
+const { body, validationResult } = require('express-validator');
 
 // Vault uploads — in-memory buffer, 10MB cap (matches the EJS vault). Files are
 // stored as Postgres bytea via db/vault.js, not on disk or in object storage.
@@ -27,23 +29,16 @@ router.get('/me', async (req, res) => {
 });
 
 const { authLimiter } = require('../lib/rate-limiters');
-const { findUserByEmail: _findUserByEmail, incrementFailedAttempts, resetFailedAttempts, recordLogin: _recordLogin } = require('../db/users');
+const { resetFailedAttempts, recordLogin: _recordLogin } = require('../db/users');
 
 router.post('/auth/login', authLimiter, async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  const { email, password } = req.body || {};
+  if (typeof email !== 'string' || typeof password !== 'string' || !password || !email.trim()) {
+    return res.status(401).json({ error: LOGIN_ERROR });
+  }
   try {
-    const user = await _findUserByEmail(email.toLowerCase().trim());
-    if (!user || !user.password_hash) return res.status(401).json({ error: 'Invalid credentials' });
-    // Check account lockout
-    if (user.locked_until && new Date(user.locked_until) > new Date()) {
-      return res.status(423).json({ error: 'Account temporarily locked. Try again later.' });
-    }
-    const ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) {
-      await incrementFailedAttempts(user.id);
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
+    const user = await verifyPasswordLogin(email.toLowerCase().trim(), password);
+    if (!user) return res.status(401).json({ error: LOGIN_ERROR });
     // Enforce 2FA — don't complete login here if 2FA is enabled
     if (user.two_factor_enabled) {
       req.session.pendingEmail = user.email;
@@ -64,28 +59,23 @@ router.post('/auth/login', authLimiter, async (req, res) => {
   }
 });
 
-router.post('/auth/signup', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+router.post('/auth/signup', authLimiter, body('email').isEmail().normalizeEmail(), async (req, res) => {
+  const { email, password } = req.body || {};
+  if (!validationResult(req).isEmpty() || typeof email !== 'string' || typeof password !== 'string') {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
   const strengthError = require('../lib/password-rules').passwordStrengthError(password);
   if (strengthError) return res.status(400).json({ error: strengthError });
   try {
-    const { findUserByEmail } = require('../db/users');
-    const existing = await findUserByEmail(email.toLowerCase().trim());
-    if (existing) return res.status(409).json({ error: 'Email already in use' });
-    const waitlistAccess = require('../services/waitlist-access');
-    if (!(await waitlistAccess.canSignUp(email.toLowerCase().trim(), req.session.referralCode))) {
-      return res.status(403).json({ error: waitlistAccess.NOT_INVITED_MESSAGE, code: 'not_invited' });
+    if (!(await requestSignup(req, { email: email.toLowerCase().trim(), password }))) {
+      const { NOT_INVITED_MESSAGE } = require('../services/waitlist-access');
+      return res.status(403).json({ error: NOT_INVITED_MESSAGE, code: 'not_invited' });
     }
-    const hash = await bcrypt.hash(password, 12);
-    const user = await createUser({ email: email.toLowerCase().trim(), passwordHash: hash, provider: 'email' });
-    waitlistAccess.recordJoined(user.email);
-    await require('../services/referrals').onSignup(req, user);
-    await new Promise((resolve, reject) => req.session.regenerate(e => e ? reject(e) : resolve()));
-    req.session.userId = user.id;
-    req.session.userEmail = user.email;
-    await new Promise((ok, err) => req.session.save(e => e ? err(e) : ok()));
-    res.json({ user: { id: user.id, email: user.email, plan: 'free' } });
+    await new Promise((resolve, reject) => req.session.save(e => e ? reject(e) : resolve()));
+    res.status(202).json({
+      message: 'If there’s an account for this address, we’ve emailed you the next step.',
+      next: '/verify-email',
+    });
   } catch (e) {
     console.error('/api/auth/signup error:', safeError(e));
     res.status(500).json({ error: 'An internal error occurred' });
@@ -172,6 +162,7 @@ router.get('/v1/usage', async (req, res) => {
     planLimits.MONTHLY_FEATURES.forEach((f) => {
       features[f] = { used: counts[f] || 0, limit: planLimits.limitFor(plan, f) };
     });
+    features.market_briefs = { used: counts.market_briefs || 0, limit: null };
     features.active_radars = { used: activeRadars, limit: planLimits.limitFor(plan, 'active_radars') };
     // The member Ask Maal cap is never shown: send usage but no number to show.
     if (plan === 'member') features.advisor_messages.limit = null;
@@ -235,8 +226,29 @@ async function advisorMessage(req, res, { stream = false } = {}) {
       });
     }
 
-    // Metering: consume one advisor message (402 + upgrade prompt when over).
-    const gate = await gateMonthlyAiUsage(req, res, 'advisor_messages');
+    const radarTool = require('../services/advisor-radar');
+    const watch = radarTool.watchPrompt(message);
+    if (watch !== null) {
+      if (!watch) {
+        return res.json({ ok: true, reply: 'Which financial event would you like me to watch? Try “Watch the next RBA rate decision for me.”', live: false });
+      }
+      const user = await findUserById(req.session.userId);
+      const plan = await effectivePlanFor(user);
+      const limit = planLimits.limitFor(plan, 'active_radars');
+      signal?.throwIfAborted();
+      const result = await radarTool.runWatchTool({ userId: req.session.userId, prompt: watch, limit, signal });
+      if (result.limited) return send402(res, plan, 'active_radars', limit, limit);
+      return res.json({ ok: true, reply: result.reply, live: false });
+    }
+
+    const researchTool = require('../services/advisor-research');
+    const question = researchTool.researchQuestion(message, history);
+    if (question === '') {
+      const reply = 'What would you like me to research? Send “Research” followed by a topic or question.';
+      return res.json({ ok: true, reply, widgets: [], followUps: [], citations: [], live: false });
+    }
+    // Apply the appropriate quota before sending stream headers.
+    const gate = await gateMonthlyAiUsage(req, res, question === null ? 'advisor_messages' : 'research_runs');
     if (!gate) return;
     signal?.throwIfAborted();
     if (stream) {
@@ -274,6 +286,17 @@ async function advisorMessage(req, res, { stream = false } = {}) {
     signal?.throwIfAborted();
     const profile = assetsDb.mergeAssetSummaryIntoProfile(rawProfile, assetSummary);
     const maal = computeMaalScore(profile);
+
+    if (question !== null) {
+      const research = await researchTool.runResearchTool({ user, profile, maal, question, signal, onStep, requireVerification: stream });
+      const { reply, widgets, followUps, citations, live } = research;
+      if (stream) {
+        event('final', { reply, widgets, followUps, citations });
+        event('done', {});
+        return res.end();
+      }
+      return res.json({ ok: true, reply, widgets, followUps, citations, live });
+    }
 
     let docs = [];
     try { docs = await vaultDb.getReadableDocs(req.session.userId); }
@@ -622,6 +645,41 @@ router.post('/v1/notification-prefs', async (req, res) => {
   }
 });
 
+// Model-training consent (Tier 3 PR 1, spec D4). Append-only log; the current
+// state is derived by lib/training-consent.js. Only the 'general' scope can be
+// set here — CDR consent is captured in the bank-connection flow once
+// its lawyer-approved wording ships, never through this endpoint.
+router.get('/v1/privacy/training-consent', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const { listForUser } = require('../db/training-consents');
+    const { summarize } = require('../lib/training-consent');
+    res.json(summarize(await listForUser(req.session.userId)));
+  } catch (e) {
+    console.error('/api/v1/privacy/training-consent GET error:', safeError(e));
+    res.status(500).json({ error: 'Could not load your privacy settings.' });
+  }
+});
+
+router.post('/v1/privacy/training-consent', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const d = (req.body && req.body.data && typeof req.body.data === 'object') ? req.body.data : (req.body || {});
+  if (typeof d.granted !== 'boolean') return res.status(400).json({ error: 'granted must be true or false.' });
+  if (d.scope !== undefined && d.scope !== 'general') {
+    return res.status(400).json({ error: 'Only general training consent can be changed here.' });
+  }
+  const source = d.source === 'notice' ? 'notice' : 'settings';
+  try {
+    const { record, listForUser } = require('../db/training-consents');
+    const { summarize } = require('../lib/training-consent');
+    await record(req.session.userId, { scope: 'general', granted: d.granted, source });
+    res.json(summarize(await listForUser(req.session.userId)));
+  } catch (e) {
+    console.error('/api/v1/privacy/training-consent POST error:', safeError(e));
+    res.status(500).json({ error: 'Could not update your privacy settings.' });
+  }
+});
+
 // ─── Maal Score (authoritative — same engine as the EJS dashboard) ─────────
 // GET /api/v1/score → { ok, score, band, pillars, hasData, history }
 // Computes the real Maal Score for the logged-in user via lib/maal-score.js
@@ -702,6 +760,9 @@ router.get('/v1/profile', async (req, res) => {
 // Current canonical totals for the My Wealth overview. This deliberately uses
 // db/assets.js rather than recomputing in React so every consumer shares the
 // same user-scoped wealth equation.
+// Shared calculator contract for Advisor and Forecast. All inputs are owner-scoped.
+router.post('/v1/calculators/:name', require('../services/advisor-calculators').calculatorHandler);
+
 router.get('/v1/wealth-summary', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
@@ -713,6 +774,9 @@ router.get('/v1/wealth-summary', async (req, res) => {
     res.status(500).json({ error: 'Could not load wealth summary' });
   }
 });
+
+// Home cash runway and indicative tax estimate.
+router.get('/v1/home-insights', require('../services/home-insights').homeInsightsHandler);
 
 // W1.2 shadow read model. Existing asset tables remain the compatibility
 // projection until parity has been proven in production; this endpoint exposes
@@ -778,6 +842,8 @@ router.get('/v1/collaboration/households/:householdId', collaboration.getHouseho
 router.post('/v1/collaboration/households/:householdId/members', collaboration.addMemberHandler);
 router.patch('/v1/collaboration/households/:householdId/members/:userId', collaboration.updateMemberHandler);
 router.delete('/v1/collaboration/households/:householdId/members/:userId', collaboration.removeMemberHandler);
+router.put('/v1/collaboration/households/:householdId/ownership', collaboration.replaceOwnershipHandler);
+router.get('/v1/collaboration/households/:householdId/wealth', collaboration.householdSnapshotHandler);
 router.get('/v1/collaboration/grants', collaboration.listGrantsHandler);
 router.post('/v1/collaboration/grants', collaboration.createGrantHandler);
 router.post('/v1/collaboration/grants/:grantId/accept', collaboration.acceptGrantHandler);
@@ -2346,20 +2412,37 @@ router.delete('/v1/report-views/:id', async (req, res) => {
 });
 // ─── end Session 2 – Reports ───────────────────────────────────────────────
 
+// ─── HEL-42: account "⋯" menu — Rename / Show in net worth ──────────────────
+// PATCH /api/v1/account-preferences/:table/:id  { display_name?, include_in_net_worth? }
+// Refresh / Disconnect wait for the Fiskil migration (Mahmoud, 29 Nov 2026).
+router.patch('/v1/account-preferences/:table/:id', async (req, res) => {
+  if (!req.session?.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const { validatePreferenceInput } = require('../lib/account-preferences');
+  const body = (req.body && req.body.data && typeof req.body.data === 'object') ? req.body.data : req.body;
+  const check = validatePreferenceInput(req.params.table, req.params.id, body);
+  if (!check.ok) return res.status(check.status).json({ error: check.error });
+  try {
+    const row = await require('../db/account-preferences').setAccountPreference(
+      req.session.userId, req.params.table, req.params.id, check
+    );
+    if (!row) return res.status(404).json({ error: 'Account not found' });
+    res.json(row);
+  } catch (e) {
+    console.error('/api/v1/account-preferences PATCH error:', safeError(e));
+    res.status(500).json({ error: 'Could not update this account.' });
+  }
+});
+// ─── end HEL-42 ───────────────────────────────────────────────────────────
+
 // ─── Manual account net-worth fields ────────────────────────────────────────
 const MANUAL_NET_WORTH_TABLES = new Set([
   'cash_accounts', 'investments', 'properties', 'debts', 'super_accounts', 'other_assets',
 ]);
 
 router.all('/v1/:table', async (req, res) => {
+  if (!req.session?.userId) return res.status(401).json({ error: 'Not authenticated' });
   const { table } = req.params;
-  if (!ASSET_TABLES.has(table)) {
-    // Unknown table — safe stub
-    if (req.method === 'GET') return res.json([]);
-    if (req.method === 'DELETE') return res.json({ ok: true });
-    return res.json({ ok: true, id: `stub-${Date.now()}` });
-  }
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!ASSET_TABLES.has(table)) return res.status(404).json({ error: 'Not found' });
 
   const uid = req.session.userId;
   const ucol = 'user_id';
@@ -2442,7 +2525,6 @@ router.all('/v1/:table', async (req, res) => {
     res.status(405).json({ error: 'Method not allowed' });
   } catch (e) {
     console.error(`api /v1/${table} ${req.method} error:`, safeError(e));
-    if (req.method === 'GET') return res.json([]);
     if (req.method === 'POST') {
       const badField = unknownColumnMessage(e, table);
       if (badField) return res.status(400).json({ error: badField });
@@ -2451,11 +2533,10 @@ router.all('/v1/:table', async (req, res) => {
   }
 });
 
-// Catch-all for unknown sub-paths (e.g. /v1/foo/bar)
-router.all('/v1/*', (req, res) => {
-  if (req.method === 'GET') return res.json([]);
-  if (req.method === 'DELETE') return res.json({ ok: true });
-  return res.json({ ok: true, id: `stub-${Date.now()}` });
+// Keep unknown API paths on the same authentication and JSON error contract.
+router.all(['/v1', '/v1/*'], (req, res) => {
+  if (!req.session?.userId) return res.status(401).json({ error: 'Not authenticated' });
+  return res.status(404).json({ error: 'Not found' });
 });
 
 module.exports = router;

@@ -23,6 +23,7 @@ const users = require('../db/users');
 const sessions = require('../db/sessions');
 const { passwordStrengthError } = require('../lib/password-rules');
 const { hashResetToken } = require('../lib/auth-tokens');
+const { consumeAccountUnlock } = require('../db/account-unlock');
 
 const INVALID_LINK = 'This reset link is invalid or has expired. Request a new one below.';
 
@@ -82,5 +83,35 @@ async function submitReset(req, res) {
 router.get('/reset-password', showResetPage);
 router.post('/reset-password', authLimiter, submitReset);
 
+const INVALID_UNLOCK_LINK = 'This unlock link is invalid or has expired. Try signing in again.';
+
+function renderUnlock(res, { token = '', error = null, success = false } = {}) {
+  noLeak(res);
+  res.render('auth-unlock-account', { layout: false, token, error, success });
+}
+
+function showUnlockPage(req, res) {
+  const token = req.query.token;
+  if (!hashResetToken(token)) return renderUnlock(res, { error: INVALID_UNLOCK_LINK });
+  renderUnlock(res, { token });
+}
+
+async function submitUnlock(req, res) {
+  const tokenHash = hashResetToken(req.body?.token);
+  try {
+    if (!(tokenHash && await consumeAccountUnlock(tokenHash))) {
+      return renderUnlock(res, { error: INVALID_UNLOCK_LINK });
+    }
+    renderUnlock(res, { success: true });
+  } catch (error) {
+    console.error('[auth] Account unlock failed:', safeError(error));
+    res.status(500);
+    renderUnlock(res, { error: 'We couldn’t unlock your account. Please try again.' });
+  }
+}
+
+router.get('/unlock-account', showUnlockPage);
+router.post('/unlock-account', authLimiter, submitUnlock);
+
 module.exports = router;
-module.exports._handlers = { showResetPage, submitReset, INVALID_LINK };
+module.exports._handlers = { showResetPage, submitReset, INVALID_LINK, showUnlockPage, submitUnlock };

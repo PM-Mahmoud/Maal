@@ -44,7 +44,7 @@ Keep the mandatory disclaimer on every page. “Maal does not provide financial 
 - **Research and radar** use Finnhub for market data and Exa (`EXA_API_KEY`) for web grounding. `services/grounding.js` handles search. Missing Exa credentials leave the market data path available.
 - **Basiq (CDR open banking)** connects via hosted consent and processes imports through the worker declared in `render.yaml`.
 - **Vault** uses PostgreSQL by default and supports object storage. See [DEPLOY.md](DEPLOY.md#object-storage-for-vault-cloudflare-r2--s3).
-- **Transactional email** uses Resend (`RESEND_API_KEY` and `EMAIL_FROM`).
+- **Transactional email** uses Resend (`RESEND_API_KEY` and `EMAIL_FROM`). In-app feedback and support notification emails use `FEEDBACK_EMAIL`. Submissions are still saved if the team inbox is unset.
 
 ## Engineering rules
 

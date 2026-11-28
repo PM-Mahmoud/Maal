@@ -8,6 +8,7 @@ export type WidgetSpec = {
   type: "donut" | "line" | "table" | "stat-cards";
   title: string;
   data: any;
+  canSave?: boolean;
 };
 
 async function throwServerError(r: Response, fallback: string): Promise<never> {

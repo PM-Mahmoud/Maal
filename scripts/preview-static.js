@@ -60,18 +60,22 @@ function sendPreviewUsageLimit(res, feature) {
   });
 }
 
+const { publicTermsUrl, termsLocals } = require('../lib/public-terms');
+const previewTerms = { publicTermsUrl: publicTermsUrl() };
 const { buildLandingContext } = require('../lib/landing-context');
+
+app.use('/onboarding', require('../routes/onboarding-redirect'));
 
 // ── Landing + auth ──────────────────────────────────────────
 app.get('/', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'layout.ejs'), buildLandingContext())
+  ejs.renderFile(path.join(VIEWS, 'layout.ejs'), { ...buildLandingContext(), ...previewTerms })
     .then(html => res.send(html)).catch(next);
 });
 app.get('/login', (req, res, next) => {
   // ?state=error | signedout previews the alert / notice banners.
   const s = req.query.state;
   ejs.renderFile(path.join(VIEWS, 'auth-login.ejs'), {
-    error: s === 'error' ? 'Incorrect password. 2 attempts remaining before lockout.' : null,
+    error: s === 'error' ? 'Email or password is incorrect' : null,
     notice: s === 'signedout' ? 'You’ve been logged out. See you soon.' : null,
     email: s === 'error' ? 'mahmoud@example.com' : '', next: '',
   }).then(html => res.send(html)).catch(next);
@@ -81,9 +85,18 @@ app.get('/signup', (req, res, next) => {
     // ?ref=1 previews arriving through a friend's referral link.
     referred: req.query.ref === '1', gated: req.query.ref !== '1',
     membership: require('../lib/membership'),
-    error: null, email: '', name: '',
+    error: null, email: '', name: '', ...previewTerms,
   }).then(html => res.send(html)).catch(next);
 });
+// Synthetic confirmation, success and expired-link states for HEL-79.
+app.get('/unlock-account', (req, res, next) => {
+  const success = req.query.state === 'success';
+  const error = req.query.state === 'expired' ? 'This unlock link is invalid or has expired. Try signing in again.' : null;
+  ejs.renderFile(path.join(VIEWS, 'auth-unlock-account.ejs'), {
+    success, error, token: success || error ? '' : 'a'.repeat(64),
+  }).then(html => res.send(html)).catch(next);
+});
+
 app.get('/forgot-password', (req, res, next) => {
   // ?state=sent previews "Check your email".
   ejs.renderFile(path.join(VIEWS, 'auth-forgot-password.ejs'), { error: null, sent: req.query.state === 'sent', email: '' })
@@ -116,7 +129,7 @@ app.get('/google-link', (_req, res, next) => {
 app.get('/score', (req, res, next) => {
   ejs.renderFile(path.join(VIEWS, 'score.ejs'), {
     analyticsSnippet: '',
-    themeCSS: '<link rel="stylesheet" href="/css/theme.css">',
+    ...previewTerms, themeCSS: '<link rel="stylesheet" href="/css/theme.css">',
     kiosk: req.query.kiosk === '1',
     result: null, formData: null, error: null,
   }).then(html => res.send(html)).catch(next);
@@ -127,30 +140,40 @@ app.post('/score/save', express.json(), (req, res) => {
   const consent = req.body && (req.body.consent === true || req.body.consent === 'on');
   res.json({ ok: true, emailed: true, waitlisted: !!consent, score: computeQuickScore(req.body).total });
 });
+app.get('/terms', (_req, res, next) => {
+  const terms = termsLocals();
+  if (terms.draft) res.set('X-Robots-Tag', 'noindex, nofollow');
+  ejs.renderFile(path.join(VIEWS, 'terms.ejs'), terms)
+    .then(html => res.send(html)).catch(next);
+});
 app.get('/pricing', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'pricing.ejs'), { analyticsSnippet: '', user: null, membership: require('../lib/membership') })
+  ejs.renderFile(path.join(VIEWS, 'pricing.ejs'), { ...previewTerms, analyticsSnippet: '', user: null, membership: require('../lib/membership') })
     .then(html => res.send(html)).catch(next);
 });
 app.get('/waitlist', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'waitlist.ejs'), { analyticsSnippet: '', user: null })
+  ejs.renderFile(path.join(VIEWS, 'waitlist.ejs'), { ...previewTerms, analyticsSnippet: '', user: null })
     .then(html => res.send(html)).catch(next);
 });
 app.get('/about', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'about.ejs'), { analyticsSnippet: '', user: null })
+  ejs.renderFile(path.join(VIEWS, 'about.ejs'), { ...previewTerms, analyticsSnippet: '', user: null })
+    .then(html => res.send(html)).catch(next);
+});
+app.get('/ai-transparency', (_req, res, next) => {
+  ejs.renderFile(path.join(VIEWS, 'ai-transparency.ejs'), { analyticsSnippet: '', user: null })
     .then(html => res.send(html)).catch(next);
 });
 app.get('/security', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'security.ejs'), { analyticsSnippet: '', user: null })
+  ejs.renderFile(path.join(VIEWS, 'security.ejs'), { ...previewTerms, analyticsSnippet: '', user: null })
     .then(html => res.send(html)).catch(next);
 });
 app.get('/financial-wellbeing-score', (_req, res, next) => {
-  ejs.renderFile(path.join(VIEWS, 'financial-wellbeing-score.ejs'), { analyticsSnippet: '', user: null })
+  ejs.renderFile(path.join(VIEWS, 'financial-wellbeing-score.ejs'), { ...previewTerms, analyticsSnippet: '', user: null })
     .then(html => res.send(html)).catch(next);
 });
 app.get('/contact', (_req, res, next) => {
   ejs.renderFile(path.join(VIEWS, 'contact.ejs'), {
     analyticsSnippet: '',
-    user: null, success: false, name: '', email: '', message: '',
+    ...previewTerms, user: null, success: false, name: '', email: '', message: '',
   }).then(html => res.send(html)).catch(next);
 });
 
@@ -176,6 +199,16 @@ app.get('/lunchflow/status', (_req, res) => res.json({
 app.get('/api/v1/planning', (_req, res) => res.json(
   require('../lib/planning').buildPlanningSummary({ cash: 21000, monthlyEssentialExpenses: 3200 })
 ));
+// Home estimate fixtures use the real calculation with synthetic numbers.
+app.get('/api/v1/home-insights', (req, res) => {
+  const { buildHomeInsights } = require('../lib/home-insights');
+  const empty = previewEmpty(req);
+  res.json(buildHomeInsights({
+    profile: empty ? {} : { cash_savings: 18000, annual_income: 95000, hecs_balance: 15000 },
+    hasCash: !empty,
+    transactions: empty ? [] : [{ amount: -2400, category_group: 'Housing' }, { amount: -600, category_group: 'Groceries' }],
+  }));
+});
 app.get('/api/v1/planning/history', (_req, res) => res.json([]));
 app.get('/api/v1/wealth-summary', (_req, res) => {
   const { wealthTotalsFromSummary } = require('../db/assets');
@@ -656,6 +689,17 @@ app.get('/api/v1/goals', (_req, res) => res.json([
 ]));
 app.get('/api/v1/vault', (_req, res) => res.json([]));
 app.get('/api/v1/widgets', (_req, res) => res.json([]));
+// Local fixture for the account privacy page and first-run notice.
+const privacyConsent = require('../lib/training-consent');
+const previewConsents = [];
+app.get('/api/v1/privacy/training-consent', (_req, res) => res.json(privacyConsent.summarize(previewConsents)));
+app.post('/api/v1/privacy/training-consent', express.json(), (req, res) => {
+  if (typeof req.body?.granted !== 'boolean') return res.status(400).json({ error: 'granted must be true or false.' });
+  previewConsents.push({
+    scope: 'general', granted: req.body.granted, created_at: new Date(), policy_version: privacyConsent.POLICY_VERSION,
+  });
+  res.json(privacyConsent.summarize(previewConsents));
+});
 app.get('/api/v1/alerts', (req, res) => res.json({
   alerts: [
     { id: 'a1', name: 'BHP price watch', prompt: 'Alert me if BHP drops more than 5% in a week', active: true, last_status: 'OK' },
@@ -674,6 +718,15 @@ app.get('/api/v1/import-runs/:id', (req, res) => {
 });
 app.get('/api/v1/basiq/status', (req, res) => res.json({ connected: false, live: /banks=live/.test(req.headers.referer || '') }));
 app.patch('/api/v1/profile', express.json(), (req, res) => res.json({ ...req.body, ok: true }));
+// ─── HEL-42 mock: account "⋯" menu (Rename / Show in net worth) ─────────────
+app.patch('/api/v1/account-preferences/:table/:id', express.json(), (req, res) => {
+  const nameColumn = req.params.table === 'investments' ? 'name' : 'label';
+  const out = { id: req.params.id };
+  if (typeof req.body.display_name === 'string') out[nameColumn] = req.body.display_name.trim();
+  if (typeof req.body.include_in_net_worth === 'boolean') out.include_in_net_worth = req.body.include_in_net_worth;
+  res.json(out);
+});
+// ─── end HEL-42 mock ─────────────────────────────────────────────────────────
 // Spending settings preview (in-memory; mirrors routes/spending-settings.js shapes).
 {
   const { TAXONOMY } = require('../lib/transaction-categories');
@@ -766,11 +819,11 @@ app.patch('/api/v1/profile', express.json(), (req, res) => res.json({ ...req.bod
 app.get('/api/v1/transaction-categories', (_req, res) => res.json([]));
 app.get('/api/v1/transaction-rules', (_req, res) => res.json([]));
 app.get('/api/v1/radar-templates', (_req, res) => res.json([]));
-app.get('/api/v1/radar-template-versions', (_req, res) => res.json([]));
 app.get('/api/v1/research', (_req, res) => res.json([]));
 app.get('/api/v1/referrals', (_req, res) => res.json({
   code: 'K7MQ2XRP', link: 'http://localhost:4173/r/K7MQ2XRP',
   signedUp: 4, paid: 2, towardsNext: 2, needed: 3, rewardStatus: null,
+  ...(previewTerms.publicTermsUrl ? { termsUrl: previewTerms.publicTermsUrl } : {}),
 }));
 // ?state=trial (default) | ended | member — preview each Plan & Usage state.
 app.get('/api/v1/usage', (req, res) => res.json({
@@ -850,7 +903,7 @@ app.get('/api/v1/:table', (req, res, next) => {
 
 // Mutations + advisor: canned successes so preview clicks never error
 app.post('/api/auth/login', (_req, res) => res.json({ user: PREVIEW_USER }));
-app.post('/api/auth/signup', (_req, res) => res.json({ user: PREVIEW_USER }));
+app.post('/api/auth/signup', (_req, res) => res.status(202).json({ next: '/verify-email' }));
 app.post('/api/auth/logout', (_req, res) => res.json({ ok: true }));
 // The static preview does not invoke the live advisor.
 app.post('/api/v1/advisor/stream', (_req, res) => res.sendStatus(501));

@@ -5,6 +5,7 @@
 
 const { safeError } = require('../lib/safe-log');
 const ejs = require('ejs');
+const { existsSync } = require('node:fs');
 const path = require('path');
 
 const VIEWS = path.join(__dirname, '..', 'views');
@@ -30,23 +31,32 @@ const base = { session, user, profile, pageTitle: 'Test' };
 // NOTE: the legacy EJS dashboard-*.ejs views are retired (superseded by the
 // React app at /app) and intentionally no longer rendered here.
 const cases = {
+  'layout': require('../lib/landing-context').buildLandingContext('n0nce'),
+  'waitlist': { analyticsSnippet: '', user: null },
+  'score': { analyticsSnippet: '', themeCSS: '', kiosk: false },
+  'auth-google-link': { email: 'test@example.invalid' },
   'auth-login': { error: null, email: '' },
   'auth-signup': { error: null, email: '', name: '', membership: require('../lib/membership') },
   'pricing': { analyticsSnippet: '', user: null, membership: require('../lib/membership') },
   'about': { analyticsSnippet: '', user: null },
   'security': { analyticsSnippet: '', user: null },
+  'ai-transparency': { analyticsSnippet: '', user: null },
   'financial-wellbeing-score': { analyticsSnippet: '', user: null },
   'contact': { analyticsSnippet: '', user: null, success: false, name: '', email: '', message: '' },
   'auth-forgot-password': { error: null, sent: false, email: '' },
   'auth-reset-password': { error: null, success: null, token: 'tok' },
   'auth-verify-otp': { email: 'test@example.com', error: null },
   'auth-verify-email': { success: true, error: null },
+  'auth-unlock-account': { success: false, error: null, token: 'fixture' },
   'auth-layout': { body: '<h1>Test</h1>', title: 'Test' },
   'error': { message: 'Test error' },
   'not-found': { signedIn: false },
 };
 
 async function main() {
+  if (existsSync(path.join(VIEWS, "onboarding.ejs"))) {
+    throw new Error("The retired onboarding template must not be rendered.");
+  }
   let failed = 0;
   for (const [view, locals] of Object.entries(cases)) {
     const file = path.join(VIEWS, view + '.ejs');
@@ -61,7 +71,7 @@ async function main() {
   }
   // Extra states of the auth pages (each state is its own branch of the view).
   const variants = [
-    ['auth-login', { error: 'Incorrect password. 2 attempts remaining before lockout.', notice: 'You’ve been logged out.', email: 'a@b.co', next: '/app/goals' }],
+    ['auth-login', { error: 'Email or password is incorrect', notice: 'You’ve been logged out.', email: 'a@b.co', next: '/app/goals' }],
     ['auth-forgot-password', { error: null, sent: true, email: '' }],
     ['auth-forgot-password', { error: 'Please enter a valid email address.', sent: false, email: 'x' }],
     ['auth-reset-password', { error: 'Password must contain at least one number.', success: null, token: 'tok' }],

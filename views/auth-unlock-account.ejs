@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<%- include('partials/v2-head', { title: 'Unlock your account' }) %>
+</head>
+<body class="v2 v2-focus-page">
+<%- include('partials/v2-focus-header', { back: '/login' }) %>
+  <main class="v2-focus">
+    <div class="v2-focus-inner">
+      <h1><%= success ? 'Your account is unlocked' : 'Unlock your account' %></h1>
+      <% if (error) { %>
+        <p class="v2-alert" role="alert"><%= error %></p>
+      <% } %>
+      <% if (success || error) { %>
+        <div class="v2-focus-actions"><a class="v2-btn v2-btn-ink" href="/login">Back to sign in</a></div>
+      <% } else { %>
+        <p class="v2-focus-sub">This link works once and keeps your password unchanged.</p>
+        <form method="POST" action="/unlock-account" class="v2-focus-form">
+          <input type="hidden" name="token" value="<%= token %>">
+          <div class="v2-focus-actions"><button type="submit" class="v2-btn v2-btn-ink">Unlock account</button></div>
+        </form>
+      <% } %>
+    </div>
+  </main>
+<%- include('partials/v2-focus-footer') %>
+</body>
+</html>

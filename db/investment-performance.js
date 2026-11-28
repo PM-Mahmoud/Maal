@@ -33,7 +33,7 @@ async function loadPerformanceInputs(userId, days) {
                SELECT SUM(ownership_percent) / 100.0 AS share
                  FROM ownership_interests own
                 WHERE own.user_id=$1 AND own.subject_type=latest.subject_type
-                  AND own.subject_key=latest.subject_key
+                  AND own.subject_key=latest.subject_key AND own.household_id IS NULL
                   AND own.effective_from < snap.snap_date + INTERVAL '1 day'
                   AND (own.effective_to IS NULL OR own.effective_to >= snap.snap_date)
              ) owner ON TRUE

@@ -13,6 +13,7 @@ process.on('unhandledRejection', (reason) => console.error('Unhandled rejection:
 process.on('uncaughtException', (err) => { console.error('Uncaught exception:', safeError(err)); process.exit(1); });
 
 const app = express();
+app.use(require('./lib/origin-lock').createOriginLock());
 const port = process.env.PORT || 3000;
 const queryMetrics = require('./db/query-metrics');
 if (queryMetrics.enabled) app.use('/api', queryMetrics.beginRequest);
@@ -295,13 +296,23 @@ app.use('/dashboard', require('./routes/dashboard-redirect'));
 app.use('/billing', require('./routes/billing'));
 app.use('/basiq', require('./routes/basiq'));
 app.use('/lunchflow', require('./routes/lunchflow'));
-app.use('/onboarding', require('./routes/onboarding'));
-app.use('/api/onboarding', require('./routes/onboarding'));
+app.use('/onboarding', require('./routes/onboarding-redirect'));
 app.use('/score', require('./routes/score'));
 app.use('/api/waitlist', require('./routes/waitlist'));
 app.use(require('./routes/referrals'));
 
 // Public pages
+const { publicTermsUrl, termsLocals } = require('./lib/public-terms');
+app.locals.publicTermsUrl = publicTermsUrl();
+
+app.get('/terms', (_req, res) => {
+  const terms = termsLocals();
+  if (terms.draft) {
+    res.set({ 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store' });
+  }
+  res.render('terms', { layout: false, ...terms });
+});
+
 app.get('/pricing', (req, res) => {
   const { buildAnalyticsSnippet } = require('./lib/landing-context');
   res.render('pricing', { layout: false,
@@ -322,6 +333,14 @@ app.get('/about', (req, res) => {
   const { buildAnalyticsSnippet } = require('./lib/landing-context');
   res.render('about', { layout: false,
     analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || '', res.locals.cspNonce),
+    user: req.session && req.session.userId ? { id: req.session.userId } : null,
+  });
+});
+
+app.get('/ai-transparency', (req, res) => {
+  const { buildAnalyticsSnippet } = require('./lib/landing-context');
+  res.render('ai-transparency', { layout: false,
+    analyticsSnippet: buildAnalyticsSnippet(process.env.POLSIA_ANALYTICS_SLUG || ''),
     user: req.session && req.session.userId ? { id: req.session.userId } : null,
   });
 });

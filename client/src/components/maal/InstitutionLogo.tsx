@@ -3,9 +3,9 @@ import { resolveInstitution } from "@/lib/institutions";
 
 /**
  * Institution logo with graceful degradation:
- *   1. `logoUrl` passthrough (e.g. a future `logo_url` column) or the local
- *      official logo from the institutions registry → <img>
- *   2. On load failure or unknown institution → brand-coloured monogram tile
+ *   1. An explicit logo URL (when supplied).
+ *   2. The local official logo from the institution registry.
+ *   3. On load failure or unknown institution → brand-coloured monogram tile
  *      (neutral ink tile when the institution isn't in the registry).
  */
 export function InstitutionLogo({
@@ -19,12 +19,13 @@ export function InstitutionLogo({
   size?: number;
   className?: string;
 }) {
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<string[]>([]);
   const info = resolveInstitution(name);
-  const src = logoUrl || info?.logo || null;
+  const src = [logoUrl, info?.logo].find((url) => !!url && !failed.includes(url));
+  const local = !!info && src === info.logo;
   const display = (info?.name || name || "").trim();
 
-  if (src && !failed) {
+  if (src) {
     return (
       <img
         src={src}
@@ -32,9 +33,18 @@ export function InstitutionLogo({
         height={size}
         alt={display || "Institution"}
         loading="lazy"
-        onError={() => setFailed(true)}
+        onError={() => setFailed((urls) => [...urls, src])}
         className={className}
-        style={{ borderRadius: 6, objectFit: "contain", flexShrink: 0 }}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: 6,
+          objectFit: "contain",
+          flexShrink: 0,
+          boxSizing: "border-box",
+          padding: local ? Math.max(2, Math.round(size * 0.1)) : undefined,
+          background: local ? info.logoBackground : undefined,
+        }}
       />
     );
   }

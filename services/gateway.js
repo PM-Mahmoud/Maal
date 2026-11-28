@@ -128,8 +128,23 @@ async function fetchWithTimeout(url, init, timeoutMs, signal) {
   }
 }
 
+function openAITools(definitions) {
+  if (!definitions?.length) return {};
+  return {
+    tools: definitions.map(definition => ({ type: 'function', function: definition })),
+    tool_choice: 'auto',
+  };
+}
+
+function openAIResult(json, tools) {
+  const message = json.choices?.[0]?.message;
+  const text = message?.content || '';
+  if (!tools?.length) return text;
+  return { text, toolCalls: Array.isArray(message?.tool_calls) ? message.tool_calls : [] };
+}
+
 async function azureComplete(cfg, messages, opts) {
-  const body = { messages, max_tokens: opts.maxTokens, temperature: opts.temperature };
+  const body = { messages, max_tokens: opts.maxTokens, temperature: opts.temperature, ...openAITools(opts.tools) };
   if (cfg.useV1) body.model = cfg.model; // v1 routes by model name
   const res = await fetchWithTimeout(cfg.url, {
     method: 'POST',
@@ -141,7 +156,7 @@ async function azureComplete(cfg, messages, opts) {
     throw new Error('Azure OpenAI ' + res.status + ' (' + cfg.label + '): ' + detail.slice(0, 200));
   }
   const json = await res.json();
-  return (json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || '';
+  return openAIResult(json, opts.tools);
 }
 
 async function openaiCompatComplete(cfg, messages, opts) {
@@ -149,14 +164,14 @@ async function openaiCompatComplete(cfg, messages, opts) {
   const res = await fetchWithTimeout(cfg.baseURL + '/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + cfg.apiKey },
-    body: JSON.stringify({ model: cfg.model, messages, max_tokens: opts.maxTokens, temperature: opts.temperature }),
+    body: JSON.stringify({ model: cfg.model, messages, max_tokens: opts.maxTokens, temperature: opts.temperature, ...openAITools(opts.tools) }),
   }, opts.timeoutMs, opts.signal);
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
     throw new Error('LLM provider ' + res.status + ' (' + cfg.label + '): ' + detail.slice(0, 200));
   }
   const json = await res.json();
-  return (json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || '';
+  return openAIResult(json, opts.tools);
 }
 
 async function anthropicComplete(cfg, messages, opts) {
@@ -214,6 +229,7 @@ async function completeAs(role, messages, opts) {
   const base = {
     maxTokens: (opts && opts.maxTokens) || 600,
     signal: opts?.signal,
+    tools: opts?.tools,
     temperature: opts && opts.temperature != null ? opts.temperature : 0.6,
   };
   let lastErr;
@@ -248,18 +264,18 @@ const VERIFIER_SYSTEM = [
 // reasoner ONE revision round with the critique, then ship regardless.
 // Never blocks on verifier failure — any error returns the original draft.
 // Returns { text, verified, revised, issues }.
-async function verifyAndRevise({ messages, draft, opts, onStep }) {
+async function verifyAndRevise({ messages, draft, opts, onStep, verification }) {
   const result = { text: draft, verified: false, revised: false, issues: [], accepted: false };
   if (!hasRole('verifier')) {
     console.log('[gateway] verifier not configured (ANTHROPIC_API_KEY unset) — skipping verify pass');
     return result;
   }
   try {
-    const grounding = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
+    const grounding = verification?.grounding ?? messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
     const lastUser = [...messages].reverse().find(m => m.role === 'user');
     onStep?.('verifying', 'start');
     const raw = await completeAs('verifier', [
-      { role: 'system', content: VERIFIER_SYSTEM },
+      { role: 'system', content: verification?.instructions || VERIFIER_SYSTEM },
       {
         role: 'user',
         content:
@@ -280,7 +296,7 @@ async function verifyAndRevise({ messages, draft, opts, onStep }) {
     }
 
     result.issues = Array.isArray(verdict.issues) ? verdict.issues.slice(0, 5).map(String) : [];
-    if (!result.issues.length) return result;
+    if (opts?.verifyOnly || !result.issues.length) return result;
 
     onStep?.('revising', 'start');
     const revised = await completeAs('reasoner', [
@@ -289,7 +305,9 @@ async function verifyAndRevise({ messages, draft, opts, onStep }) {
       {
         role: 'user',
         content:
-          'A fact-checker reviewed your answer against the authoritative FY constants and my actual data, and found these specific issues:\n- ' +
+          (verification
+            ? 'A fact-checker found these issues with the draft compared with the provided source data:\n- '
+            : 'A fact-checker reviewed your answer against the authoritative FY constants and my actual data, and found these specific issues:\n- ') +
           result.issues.join('\n- ') +
           '\n\nRewrite your answer correcting ONLY these issues. Keep everything else (length, tone, structure) the same. Reply with the corrected answer only — do not mention the review.',
       },

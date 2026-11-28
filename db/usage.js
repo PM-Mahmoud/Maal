@@ -51,6 +51,25 @@ async function incrementIfUnder(userId, feature, limit, period) {
   return r.rows.length ? Number(r.rows[0].used) : null;
 }
 
+// Count delivery of an available brief once per user and Sydney day. The daily
+// claim and monthly increment commit together, so retried or concurrent GETs
+// cannot double-count. Days and months are separate period keys.
+async function recordMarketBriefDelivery(userId, briefDate) {
+  await pool.query(
+    `WITH daily_claim AS (
+       INSERT INTO usage_counters (user_id, feature, period, used)
+       VALUES ($1, 'market_briefs', $2::text, 1)
+       ON CONFLICT (user_id, feature, period) DO NOTHING
+       RETURNING user_id
+     )
+     INSERT INTO usage_counters (user_id, feature, period, used)
+     SELECT user_id, 'market_briefs', left($2::text, 7), 1 FROM daily_claim
+     ON CONFLICT (user_id, feature, period)
+     DO UPDATE SET used = usage_counters.used + 1, updated_at = NOW()`,
+    [userId, briefDate]
+  );
+}
+
 // Concurrent limit input: how many radars are active right now.
 async function countActiveRadars(userId) {
   const r = await pool.query(
@@ -60,4 +79,4 @@ async function countActiveRadars(userId) {
   return r.rows[0].n;
 }
 
-module.exports = { getCounts, increment, incrementIfUnder, countActiveRadars };
+module.exports = { getCounts, increment, incrementIfUnder, recordMarketBriefDelivery, countActiveRadars };

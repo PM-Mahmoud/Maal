@@ -35,6 +35,9 @@ async function main() {
     `);
     await require('../migrations/1756000000000_collaboration_extensibility').up(admin);
     await migration.up(admin);
+    await require('../migrations/1750800000000_asset_tables').up(admin);
+    await require('../migrations/1755500000000_canonical_wealth').up(admin);
+    await require('../migrations/1757430000074_household_ownership').up(admin);
 
     const firstUser = (await admin.query("INSERT INTO users(email,name) VALUES('owner@example.com','Owner') RETURNING id")).rows[0].id;
     const secondUser = (await admin.query("INSERT INTO users(email,name) VALUES('adviser@example.com','Adviser') RETURNING id")).rows[0].id;
@@ -57,6 +60,36 @@ async function main() {
     assert.equal(await collaboration.updateMemberOwnership(household.id, secondUser, thirdUser, 25), null);
     assert.equal((await collaboration.updateMemberOwnership(household.id, firstUser, secondUser, 60)).ownership, '60.00');
     assert.equal(await collaboration.removeMember(household.id, secondUser, thirdUser), null);
+
+    const otherHousehold = await collaboration.createHousehold(firstUser, 'Second household');
+    const subject = 'financial_account:1';
+    await admin.query(
+      `INSERT INTO valuations (user_id,subject_type,subject_key,classification,amount_minor,currency,as_of,source,confidence)
+       VALUES ($1,'financial_account',$2,'cash',10000,'AUD',NOW(),'manual',1)`, [firstUser, subject]
+    );
+    const label = (await admin.query(
+      `INSERT INTO ownership_interests (user_id,subject_type,subject_key,owner_type,ownership_percent,effective_from)
+       VALUES ($1,'financial_account',$2,'joint',100,NOW() - INTERVAL '1 day') RETURNING id`, [firstUser, subject]
+    )).rows[0];
+    const allocation = [{ userId: firstUser, ownershipPercent: 100 }];
+    const update = (id) => collaboration.replaceHouseholdOwnership(id, firstUser, firstUser, 'financial_account', subject, allocation);
+    const [old] = await update(household.id);
+    const [retained] = await update(otherHousehold.id);
+    const [replacement] = await update(household.id);
+    const result = await admin.query(
+      'SELECT id,effective_to FROM ownership_interests WHERE user_id = $1 AND subject_key = $2', [firstUser, subject]
+    );
+    const byId = new Map(result.rows.map(row => [row.id, row]));
+    assert.ok(byId.get(old.id).effective_to, 'previous allocation in the selected household closed');
+    for (const row of [retained, label, replacement]) {
+      assert.equal(byId.get(row.id).effective_to, null, 'other-household allocation and standalone label remain active');
+    }
+    const personal = await require('../db/canonical-wealth').listOwnershipInterests(firstUser, 'financial_account', subject);
+    assert.deepEqual(personal.map(row => row.id), [label.id], 'personal wealth exposes only the standalone label');
+    const snapshot = await collaboration.getHouseholdCanonicalSnapshot(household.id, secondUser);
+    assert.deepEqual(snapshot.ownershipInterests.map(row => row.id), [replacement.id]);
+    assert.equal(await collaboration.getHouseholdCanonicalSnapshot(otherHousehold.id, secondUser), null);
+
 
     const grant = await collaboration.createGrant(firstUser, {
       email: 'adviser@example.com', role: 'adviser', scopes: ['overview', 'documents'], expiresAt: '2099-01-01T00:00:00Z',

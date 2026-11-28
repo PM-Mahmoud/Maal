@@ -77,6 +77,7 @@ export const CALCULATORS: SubPage[] = [
 
 export const ACCOUNT: SubPage[] = [
   { to: "/app/settings", label: "Settings", icon: Settings },
+  { to: "/app/settings/security", label: "Privacy & Security", icon: ShieldCheck },
   { to: "/app/billing", label: "Plan & Usage", icon: CreditCard },
   { to: "/app/roadmap", label: "Roadmap", icon: MapIcon },
 ];
