@@ -2411,6 +2411,28 @@ router.delete('/v1/report-views/:id', async (req, res) => {
 });
 // ─── end Session 2 – Reports ───────────────────────────────────────────────
 
+// ─── HEL-42: account "⋯" menu — Rename / Show in net worth ──────────────────
+// PATCH /api/v1/account-preferences/:table/:id  { display_name?, include_in_net_worth? }
+// Refresh / Disconnect wait for the Fiskil migration (Mahmoud, 29 Nov 2026).
+router.patch('/v1/account-preferences/:table/:id', async (req, res) => {
+  if (!req.session?.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const { validatePreferenceInput } = require('../lib/account-preferences');
+  const body = (req.body && req.body.data && typeof req.body.data === 'object') ? req.body.data : req.body;
+  const check = validatePreferenceInput(req.params.table, req.params.id, body);
+  if (!check.ok) return res.status(check.status).json({ error: check.error });
+  try {
+    const row = await require('../db/account-preferences').setAccountPreference(
+      req.session.userId, req.params.table, req.params.id, check
+    );
+    if (!row) return res.status(404).json({ error: 'Account not found' });
+    res.json(row);
+  } catch (e) {
+    console.error('/api/v1/account-preferences PATCH error:', safeError(e));
+    res.status(500).json({ error: 'Could not update this account.' });
+  }
+});
+// ─── end HEL-42 ───────────────────────────────────────────────────────────
+
 // ─── Manual account net-worth fields ────────────────────────────────────────
 const MANUAL_NET_WORTH_TABLES = new Set([
   'cash_accounts', 'investments', 'properties', 'debts', 'super_accounts', 'other_assets',

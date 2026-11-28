@@ -718,6 +718,15 @@ app.get('/api/v1/import-runs/:id', (req, res) => {
 });
 app.get('/api/v1/basiq/status', (req, res) => res.json({ connected: false, live: /banks=live/.test(req.headers.referer || '') }));
 app.patch('/api/v1/profile', express.json(), (req, res) => res.json({ ...req.body, ok: true }));
+// ─── HEL-42 mock: account "⋯" menu (Rename / Show in net worth) ─────────────
+app.patch('/api/v1/account-preferences/:table/:id', express.json(), (req, res) => {
+  const nameColumn = req.params.table === 'investments' ? 'name' : 'label';
+  const out = { id: req.params.id };
+  if (typeof req.body.display_name === 'string') out[nameColumn] = req.body.display_name.trim();
+  if (typeof req.body.include_in_net_worth === 'boolean') out.include_in_net_worth = req.body.include_in_net_worth;
+  res.json(out);
+});
+// ─── end HEL-42 mock ─────────────────────────────────────────────────────────
 // Spending settings preview (in-memory; mirrors routes/spending-settings.js shapes).
 {
   const { TAXONOMY } = require('../lib/transaction-categories');
