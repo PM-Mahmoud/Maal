@@ -1,0 +1,1 @@
+import{al as s,u as o,j as r,ac as n}from"./index-Bc-C1NKd.js";function d(){const{threadId:t}=s.useParams(),a=o();return r.jsx(n,{variant:"page",activeId:t,onSelect:e=>{a(e?{to:"/app/advisor/$threadId",params:{threadId:e}}:{to:"/app/advisor"})}})}export{d as component};
